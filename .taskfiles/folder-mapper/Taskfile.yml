@@ -1,9 +1,0 @@
-version: "3"
-
-includes: {}
-
-tasks:
-  scan:
-    desc: Generate the canonical repository folder tree under context/agents/store/shared/_repo-GPS/
-    cmds:
-      - node scripts/repo/generate-folder-tree.mjs

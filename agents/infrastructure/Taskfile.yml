@@ -1,0 +1,53 @@
+version: "3"
+
+# Infrastructure Agent - IaC generation and deployment configs
+# Endpoints: POST /generate, GET /templates
+
+vars:
+  AGENT_NAME: infrastructure
+  AGENT_PORT: 8004
+  AGENT_HOST:
+    sh: echo "${AGENT_HOST:-http://localhost}"
+
+tasks:
+  health:
+    desc: Check infrastructure service health
+    cmds:
+      - curl -f {{.AGENT_HOST}}:{{.AGENT_PORT}}/health
+
+  dev:run:
+    desc: Run infrastructure agent locally (development mode)
+    dir: .
+    cmds:
+      - python main.py
+    env:
+      PORT: "{{.AGENT_PORT}}"
+      LOG_LEVEL: debug
+
+  dev:test:
+    desc: Run infrastructure unit tests
+    dir: .
+    cmds:
+      - pytest tests/ -v
+
+  generate:
+    desc: Generate infrastructure code (default Docker Compose)
+    cmds:
+      - echo "Generating infrastructure..."
+
+  templates:
+    desc: List available infrastructure templates
+    cmds:
+      - curl -f {{.AGENT_HOST}}:{{.AGENT_PORT}}/templates
+
+  build:
+    desc: Build infrastructure container image
+    dir: ../../containers/infrastructure
+    cmds:
+      - docker build -t devtools/infrastructure:latest .
+
+  logs:
+    desc: Tail infrastructure container logs
+    dir: ../../compose
+    cmds:
+      - docker compose logs -f infrastructure

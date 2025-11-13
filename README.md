@@ -186,6 +186,44 @@ Generates READMEs, API docs, architecture diagrams.
 
 ## Usage
 
+### Task-Based Workflows
+
+Dev-Tools uses [Task](https://taskfile.dev) for agent workflow automation. Each agent has its own Taskfile with standardized commands.
+
+**Quick Commands:**
+
+```bash
+# Check agent health
+task health
+
+# Build all agent containers
+task build:all
+
+# Start services
+task compose:up
+
+# Stop services
+task compose:down
+```
+
+**Per-Agent Commands:**
+
+```bash
+# Run agent locally
+task <agent>:dev:run
+
+# Build agent container
+task <agent>:build
+
+# Check agent health
+task <agent>:health
+
+# View agent logs
+task <agent>:logs
+```
+
+For complete workflow documentation, see [docs/TASKFILE_WORKFLOWS.md](docs/TASKFILE_WORKFLOWS.md).
+
 ### Submit a Task
 
 ```bash
