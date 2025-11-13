@@ -79,10 +79,12 @@ async def list_doc_templates():
     }
 
 def generate_docs(request: DocRequest) -> List[DocArtifact]:
+    # Placeholder implementation (intentional for MVP demo)
+    # In production, this would analyze code and generate comprehensive documentation
     return [
         DocArtifact(
             file_path="README.md",
-            content="# Generated Documentation\n\nTODO: Actual doc generation",
+            content="# Generated Documentation\\n\\n<!-- Production: Replace with LLM-generated documentation -->\",
             doc_type=request.doc_type
         )
     ]

@@ -211,7 +211,7 @@ async def list_collections():
         raise HTTPException(status_code=500, detail=f"Failed to list collections: {str(e)}")
 
 
-# Mock query endpoint for testing without ChromaDB
+# Mock query endpoint for development/testing
 @app.post("/query/mock", response_model=QueryResponse)
 async def mock_query(request: QueryRequest):
     """

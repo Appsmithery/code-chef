@@ -121,6 +121,27 @@ Dev-Tools (single-root)
 └── Scripts (up, down, rebuild, backup, restore)
 ```
 
+**Current Status:** Phase 5 Complete ✅ - Ready for production deployment
+
+For detailed architecture, see [docs/overview/ARCHITECTURE.md](docs/overview/ARCHITECTURE.md).
+
+## 🚀 Deployment
+
+### Production Deployment
+
+Follow our [45-minute DigitalOcean deployment guide](docs/DIGITALOCEAN_QUICK_DEPLOY.md) for production setup:
+
+- 2GB RAM minimum (4GB recommended)
+- Ubuntu 22.04 LTS
+- Pre-configured Docker Compose
+- Health checks and monitoring included
+
+### Local Development
+
+See [Quick Start](#quick-start) above for local Docker Compose setup.
+
+For AWS, Azure, or GCP deployments, adapt the DigitalOcean guide or see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
 ### Service Ports
 
 | Service             | Port       | Purpose              |
@@ -260,9 +281,12 @@ vectordb:
 
 ## Documentation
 
-- **[Complete Documentation](docs/README.md)** - Full setup and usage guide
-- **[Agent Endpoints](docs/AGENT_ENDPOINTS.md)** - API reference
-- **[Operational Handbook](docs/HANDBOOK.md)** - Troubleshooting and maintenance
+- **[📚 Documentation Index](docs/README.md)** - Complete documentation hub with navigation
+- **[🚀 DigitalOcean Deployment](docs/DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
+- **[🏗️ Architecture Overview](docs/overview/ARCHITECTURE.md)** - System design and components
+- **[📡 Agent Endpoints](docs/AGENT_ENDPOINTS.md)** - Complete API reference
+- **[🔒 Secrets Management](docs/SECRETS_MANAGEMENT.md)** - Security and configuration
+- **[📖 Operational Handbook](docs/HANDBOOK.md)** - Development practices and troubleshooting
 
 ## Development
 
