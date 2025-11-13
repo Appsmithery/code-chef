@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   orchestrator:
@@ -70,10 +70,13 @@ services:
       - "8000:8000"
     environment:
       - SERVICE_NAME=gateway-mcp
+      - NODE_ENV=production
+    env_file:
+      - ../configs/env/.env
     networks:
       - devtools-network
     volumes:
-      - mcp-config:/config
+      - mcp-config:/app/config
 
 volumes:
   orchestrator-data:
