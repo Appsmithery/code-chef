@@ -26,7 +26,14 @@
     "github.copilot.chat.notebook.followCellExecution.enabled": true,
     "github.copilot.chat.responsesApiReasoningEffort": "high",
     "github.copilot.chat.scopeSelection": true,
-    "github.copilot.chat.tools.memory.enabled": true
+    "github.copilot.chat.tools.memory.enabled": true,
+    "workbench.colorTheme": "Vira Ocean",
+    "workbench.iconTheme": "vs-seti-folder",
+    "workbench.preferredDarkColorTheme": "Vira Ocean",
+    "workbench.preferredHighContrastColorTheme": "Vira Palenight High Contrast",
+    "workbench.preferredHighContrastLightColorTheme": "Vira Palenight High Contrast",
+    "workbench.preferredLightColorTheme": "Vira Palenight",
+    "window.autoDetectColorScheme": true
   },
   "extensions": {
     "recommendations": [
