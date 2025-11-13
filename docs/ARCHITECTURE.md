@@ -222,7 +222,7 @@ HIGHLIGHT_PROJECT_ID=your_project_id
 ```
 testing/
 ├── agents/            # Agent-specific tests
-├── configs/           # Vitest/Playwright configs
+├── config/            # Runtime and secrets configs
 ├── fixtures/          # Test data
 ├── integration/       # Integration tests
 │   └── phase5/        # Phase 5 validation tests
@@ -587,7 +587,7 @@ Write mcp-status.json
 
 - **Deprecated Features:** Moved to `scripts/legacy/`
 - **Breaking Changes:** Documented in CHANGELOG
-- **Migration Guides:** In `docs/archive/`
+- **Migration Guides:** Historical migration completed
 
 ---
 

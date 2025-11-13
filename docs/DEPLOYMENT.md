@@ -451,7 +451,7 @@ curl http://localhost:8000/oauth/linear/status
 
 ### .env File Structure
 
-Create `compose/.env` or edit `configs/env/.env`:
+Create `compose/.env` or edit `config/env/.env`:
 
 ```bash
 # Service URLs (internal Docker network)
@@ -721,7 +721,7 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ## Support
 
 - **Documentation:** `docs/`
-- **Architecture:** `docs/overview/ARCHITECTURE.md`
+- **Architecture:** `docs/ARCHITECTURE.md`
 - **API Reference:** `docs/AGENT_ENDPOINTS.md`
 - **Secrets Guide:** `docs/SECRETS_MANAGEMENT.md`
 

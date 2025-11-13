@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SECRETS_DIR="configs/env/secrets"
+SECRETS_DIR="config/env/secrets"
 mkdir -p "$SECRETS_DIR"
 
 echo "Setting up local secrets (gitignored)..."

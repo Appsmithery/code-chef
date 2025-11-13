@@ -16,14 +16,14 @@ During the Phase 1 migration the codebase indexing scripts have not yet been cop
    ```bash
    npm run validate:codebase
    ```
-4. Commit the regenerated `docs/indices/CODEBASE_INDEX.md` together with any supporting report artifacts under `reports/context/latest/`.
+4. Commit the regenerated `docs/CODEBASE_INDEX.md` together with any supporting report artifacts under `reports/context/latest/`.
 
 ## Temporary Content
 
 While the full index is pending regeneration, use the following sources for repository discovery:
 
-- `docs/overview/ARCHITECTURE.md` for the target directory layout.
-- `docs/governance/REFACTOR_CHECKLIST.md` for the migration task list.
-- `context/agents/store/shared/_repo-GPS/repo-folder-tree.txt` (when available) for historical file trees.
+- `docs/ARCHITECTURE.md` for the target directory layout.
+- `docs/REFACTOR_CHECKLIST.md` for the migration task list.
+- `context/_repo-GPS/repo-folder-tree.txt` (when available) for historical file trees.
 
 Once the diagnostics toolkit has been migrated, replace this placeholder with the auto-generated index.

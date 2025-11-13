@@ -11,10 +11,10 @@ jobs:
 
             - name: Write secrets to files
               run: |
-                  mkdir -p configs/env/secrets
-                  echo "${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" > configs/env/secrets/linear_oauth_token.txt
-                  echo "${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}" > configs/env/secrets/linear_webhook_secret.txt
-                  chmod 600 configs/env/secrets/*.txt
+                  mkdir -p config/env/secrets
+                  echo "${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" > config/env/secrets/linear_oauth_token.txt
+                  echo "${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}" > config/env/secrets/linear_webhook_secret.txt
+                  chmod 600 config/env/secrets/*.txt
 
             - name: Deploy stack
               run: |
