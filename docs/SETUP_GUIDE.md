@@ -31,10 +31,10 @@ Complete guide for setting up and using the Dev-Tools diagnostics and automation
 Generate and view the canonical filetree and codebase index:
 
 ```bash
-# Filetree (outputs to context/agents/store/shared/_repo-GPS/repo-folder-tree.txt)
+# Filetree (outputs to context/_repo-GPS/repo-folder-tree.txt)
 brew install node jq
 
-# Codebase index (outputs to docs/indices/CODEBASE_INDEX.md)
+# Codebase index (outputs to docs/CODEBASE_INDEX.md)
 ````
 
 # Or use the task runner for a full scan
@@ -44,10 +44,10 @@ task folder-mapper:scan
 ````
 
 **Canonical filetree location:**
-`context/agents/store/shared/_repo-GPS/repo-folder-tree.txt`
+`context/_repo-GPS/repo-folder-tree.txt`
 
 **Codebase index location:**
-`docs/indices/CODEBASE_INDEX.md`
+`docs/CODEBASE_INDEX.md`
 
 **Ubuntu/Debian**:
 
@@ -267,7 +267,7 @@ Validate all agent context files against the schema:
 npm run context:validate
 ```
 
-This checks all agent context files in `context/agents/store/` against the canonical schema (`context/schemas/agent-context.schema.json`). Errors and warnings will be reported in the console.
+This checks all agent context files in `context/` against the canonical schema (`context/schemas/agent-context.schema.json`). Errors and warnings will be reported in the console.
 
 ### Compact Agent Scratchpads
 
