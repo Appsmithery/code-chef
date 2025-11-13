@@ -15,12 +15,16 @@ from enum import Enum
 from datetime import datetime
 import uvicorn
 import os
+import httpx
 
 app = FastAPI(
     title="DevOps Orchestrator Agent",
     description="Task delegation, context routing, and workflow coordination",
     version="1.0.0"
 )
+
+# State Persistence Layer URL
+STATE_SERVICE_URL = os.getenv("STATE_SERVICE_URL", "http://state-persistence:8008")
 
 # Agent types for task routing
 class AgentType(str, Enum):
@@ -118,10 +122,70 @@ async def orchestrate_task(request: TaskRequest):
         estimated_tokens=estimated_tokens
     )
     
-    # Store in registry
+    # Store in registry (in-memory fallback)
     task_registry[task_id] = response
     
+    # Persist to state database
+    await persist_task_state(task_id, request, response)
+    
     return response
+
+
+async def persist_task_state(task_id: str, request: TaskRequest, response: TaskResponse):
+    """Persist task state to State Persistence Layer"""
+    try:
+        async with httpx.AsyncClient() as client:
+            # Create task record
+            task_payload = {
+                "task_id": task_id,
+                "type": "orchestration",
+                "status": "pending",
+                "assigned_agent": "orchestrator",
+                "payload": {
+                    "description": request.description,
+                    "priority": request.priority,
+                    "subtasks": [
+                        {
+                            "id": st.id,
+                            "agent_type": st.agent_type,
+                            "description": st.description,
+                            "status": st.status
+                        }
+                        for st in response.subtasks
+                    ],
+                    "routing_plan": response.routing_plan
+                }
+            }
+            
+            await client.post(
+                f"{STATE_SERVICE_URL}/tasks",
+                json=task_payload,
+                timeout=5.0
+            )
+            
+            # Create workflow record
+            workflow_payload = {
+                "workflow_id": task_id,
+                "name": f"Task: {request.description[:50]}",
+                "steps": [
+                    {
+                        "step_id": st.id,
+                        "agent": st.agent_type,
+                        "description": st.description
+                    }
+                    for st in response.subtasks
+                ],
+                "status": "pending"
+            }
+            
+            await client.post(
+                f"{STATE_SERVICE_URL}/workflows",
+                json=workflow_payload,
+                timeout=5.0
+            )
+            
+    except Exception as e:
+        print(f"State persistence failed (non-critical): {e}")
 
 @app.get("/tasks/{task_id}")
 async def get_task_status(task_id: str):
