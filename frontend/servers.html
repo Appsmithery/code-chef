@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Installed MCP Servers & Tools</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-top: 1rem;
+      }
+      .back-btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        transition: all 0.3s;
+        margin-bottom: 2rem;
+      }
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-2px);
+      }
+      .server-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 2rem;
+        color: #333;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin-bottom: 2rem;
+      }
+      .server-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 1rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .server-icon {
+        font-size: 3rem;
+      }
+      .server-info h2 {
+        font-size: 1.8rem;
+        color: #667eea;
+        margin-bottom: 0.25rem;
+      }
+      .server-status {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #28a745;
+        color: white;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .server-meta {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+      .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .meta-label {
+        font-size: 0.85rem;
+        color: #666;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .meta-value {
+        font-size: 1.1rem;
+        color: #667eea;
+        font-weight: 700;
+      }
+      .tools-section {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+      .tools-section.open {
+        max-height: 2000px;
+      }
+      .tools-section h3 {
+        font-size: 1.3rem;
+        color: #764ba2;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+      }
+      .tool-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .tool-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .tool-name {
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-size: 1.05rem;
+      }
+      .tool-desc {
+        font-size: 0.9rem;
+        color: #666;
+        line-height: 1.5;
+      }
+      .tool-params {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #ddd;
+      }
+      .param-badge {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+      }
+      .toggle-icon {
+        font-size: 1.5rem;
+        color: #999;
+        transition: transform 0.3s;
+        display: inline-block;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 14px 8px 0 8px;
+        border-color: #999 transparent transparent transparent;
+        margin-left: auto;
+      }
+      .toggle-icon.open {
+        border-width: 8px 0 8px 14px;
+        border-color: transparent transparent transparent #999;
+      }
+      @media (max-width: 768px) {
+        .header h1 {
+          font-size: 2rem;
+        }
+        .tools-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🔌 Installed MCP Servers & Tools</h1>
+      </div>
+      <a href="/" class="back-btn">← Back to Dashboard</a>
+
+      <!-- Docker Hub Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🐳</div>
+          <div class="server-info">
+            <h2>Docker Hub</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">13</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Container Management</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">list_images</div>
+              <div class="tool-desc">
+                List all available Docker images from DockerHub registry with
+                pagination support
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">page</span
+                ><span class="param-badge">limit</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">search_images</div>
+              <div class="tool-desc">
+                Search for Docker images by name or keyword across DockerHub
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">query</span
+                ><span class="param-badge">official</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_image_details</div>
+              <div class="tool-desc">
+                Get comprehensive details about a specific Docker image
+                including tags, pulls, and description
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">image_name</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">list_tags</div>
+              <div class="tool-desc">
+                List all available tags for a specific Docker image
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">image_name</span
+                ><span class="param-badge">page</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">pull_image</div>
+              <div class="tool-desc">
+                Pull a Docker image to local machine with optional tag
+                specification
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">image_name</span
+                ><span class="param-badge">tag</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">run_container</div>
+              <div class="tool-desc">
+                Create and start a container from an image with custom
+                configuration
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">image</span
+                ><span class="param-badge">name</span
+                ><span class="param-badge">ports</span
+                ><span class="param-badge">env</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">list_containers</div>
+              <div class="tool-desc">
+                List all Docker containers (running and stopped) on the local
+                system
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">all</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">stop_container</div>
+              <div class="tool-desc">
+                Stop a running Docker container gracefully
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">container_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">start_container</div>
+              <div class="tool-desc">Start a stopped Docker container</div>
+              <div class="tool-params">
+                <span class="param-badge">container_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">remove_container</div>
+              <div class="tool-desc">Remove a Docker container permanently</div>
+              <div class="tool-params">
+                <span class="param-badge">container_id</span
+                ><span class="param-badge">force</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_container_logs</div>
+              <div class="tool-desc">
+                Fetch logs from a running or stopped container
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">container_id</span
+                ><span class="param-badge">tail</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">inspect_container</div>
+              <div class="tool-desc">
+                Get detailed information about a container's configuration and
+                state
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">container_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">exec_command</div>
+              <div class="tool-desc">
+                Execute a command inside a running container
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">container_id</span
+                ><span class="param-badge">command</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Context7 Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🧠</div>
+          <div class="server-info">
+            <h2>Context7</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Context Management</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">store_context</div>
+              <div class="tool-desc">
+                Store conversation context and memory for future retrieval and
+                agent memory persistence
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">session_id</span
+                ><span class="param-badge">context_data</span
+                ><span class="param-badge">tags</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">retrieve_context</div>
+              <div class="tool-desc">
+                Retrieve stored context by session ID or semantic search
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">session_id</span
+                ><span class="param-badge">query</span
+                ><span class="param-badge">limit</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fetch (Reference) Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🌐</div>
+          <div class="server-info">
+            <h2>Fetch (Reference)</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">1</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Web Scraping</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">fetch</div>
+              <div class="tool-desc">
+                Fetch and extract content from any URL with automatic content
+                parsing and markdown conversion
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">url</span
+                ><span class="param-badge">format</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Google Maps Comprehensive Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🗺️</div>
+          <div class="server-info">
+            <h2>Google Maps Comprehensive</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">8</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Location Services</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">search_places</div>
+              <div class="tool-desc">
+                Search for places using Google Places API with filters and
+                ranking
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">query</span
+                ><span class="param-badge">location</span
+                ><span class="param-badge">radius</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_place_details</div>
+              <div class="tool-desc">
+                Get comprehensive details about a specific place including
+                reviews, photos, and hours
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">place_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_directions</div>
+              <div class="tool-desc">
+                Get turn-by-turn directions between two locations with multiple
+                route options
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">origin</span
+                ><span class="param-badge">destination</span
+                ><span class="param-badge">mode</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">geocode_address</div>
+              <div class="tool-desc">
+                Convert address to geographic coordinates (latitude/longitude)
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">address</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">reverse_geocode</div>
+              <div class="tool-desc">
+                Convert geographic coordinates to human-readable address
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">lat</span
+                ><span class="param-badge">lng</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_distance_matrix</div>
+              <div class="tool-desc">
+                Calculate travel distance and time between multiple origins and
+                destinations
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">origins</span
+                ><span class="param-badge">destinations</span
+                ><span class="param-badge">mode</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">find_nearby</div>
+              <div class="tool-desc">
+                Find places near a specific location by type or keyword
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">location</span
+                ><span class="param-badge">type</span
+                ><span class="param-badge">radius</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_timezone</div>
+              <div class="tool-desc">
+                Get timezone information for a specific location
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">lat</span
+                ><span class="param-badge">lng</span
+                ><span class="param-badge">timestamp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory (Reference) Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🧠</div>
+          <div class="server-info">
+            <h2>Memory (Reference)</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">9</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Knowledge Graph</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">create_entities</div>
+              <div class="tool-desc">
+                Create new entities in the knowledge graph with properties and
+                metadata
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">entities</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">create_relations</div>
+              <div class="tool-desc">
+                Create relationships between entities in the knowledge graph
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">relations</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">add_observations</div>
+              <div class="tool-desc">
+                Add observations or notes about entities
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">observations</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">delete_entities</div>
+              <div class="tool-desc">
+                Remove entities from the knowledge graph
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">entity_names</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">delete_observations</div>
+              <div class="tool-desc">
+                Remove specific observations from entities
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">observation_ids</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">delete_relations</div>
+              <div class="tool-desc">Remove relationships between entities</div>
+              <div class="tool-params">
+                <span class="param-badge">relation_ids</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">read_graph</div>
+              <div class="tool-desc">
+                Read the entire knowledge graph structure
+              </div>
+              <div class="tool-params"></div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">search_nodes</div>
+              <div class="tool-desc">
+                Search for specific entities by name or properties
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">query</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">open_nodes</div>
+              <div class="tool-desc">
+                Get detailed information about specific entities
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">names</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Next.js DevTools Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">▲</div>
+          <div class="server-info">
+            <h2>Next.js DevTools</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">5</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Development Tools</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">analyze_build</div>
+              <div class="tool-desc">
+                Analyze Next.js build output for bundle size and optimization
+                opportunities
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">project_path</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_routes</div>
+              <div class="tool-desc">
+                List all routes in a Next.js application
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">project_path</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">check_performance</div>
+              <div class="tool-desc">
+                Run Lighthouse performance audits on Next.js pages
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">url</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">inspect_cache</div>
+              <div class="tool-desc">
+                Inspect Next.js cache status and invalidation
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">project_path</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">preview_env</div>
+              <div class="tool-desc">
+                Get environment variables configuration for preview/production
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">env_type</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Node.js Sandbox Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🟢</div>
+          <div class="server-info">
+            <h2>Node.js Sandbox</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">7</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Code Execution</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">execute_code</div>
+              <div class="tool-desc">
+                Execute JavaScript/TypeScript code in an isolated sandbox
+                environment
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">code</span
+                ><span class="param-badge">timeout</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">install_package</div>
+              <div class="tool-desc">
+                Install npm packages in the sandbox environment
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">package_name</span
+                ><span class="param-badge">version</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">list_packages</div>
+              <div class="tool-desc">
+                List all installed npm packages in the sandbox
+              </div>
+              <div class="tool-params"></div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">create_file</div>
+              <div class="tool-desc">
+                Create a file in the sandbox workspace
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">path</span
+                ><span class="param-badge">content</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">read_file</div>
+              <div class="tool-desc">
+                Read file content from the sandbox workspace
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">path</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">delete_file</div>
+              <div class="tool-desc">
+                Delete a file from the sandbox workspace
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">path</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">reset_sandbox</div>
+              <div class="tool-desc">
+                Reset the entire sandbox environment to clean state
+              </div>
+              <div class="tool-params"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notion Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">📝</div>
+          <div class="server-info">
+            <h2>Notion</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">19</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Productivity</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">search_pages</div>
+              <div class="tool-desc">
+                Search for Notion pages by title or content
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">query</span
+                ><span class="param-badge">filter</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_page</div>
+              <div class="tool-desc">
+                Retrieve full content of a Notion page
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">create_page</div>
+              <div class="tool-desc">Create a new Notion page with content</div>
+              <div class="tool-params">
+                <span class="param-badge">parent_id</span
+                ><span class="param-badge">title</span
+                ><span class="param-badge">content</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">update_page</div>
+              <div class="tool-desc">
+                Update content or properties of an existing page
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span
+                ><span class="param-badge">properties</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">delete_page</div>
+              <div class="tool-desc">Archive/delete a Notion page</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">list_databases</div>
+              <div class="tool-desc">List all accessible Notion databases</div>
+              <div class="tool-params"></div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">query_database</div>
+              <div class="tool-desc">
+                Query a Notion database with filters and sorts
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">database_id</span
+                ><span class="param-badge">filter</span
+                ><span class="param-badge">sorts</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">create_database_item</div>
+              <div class="tool-desc">Add a new item to a Notion database</div>
+              <div class="tool-params">
+                <span class="param-badge">database_id</span
+                ><span class="param-badge">properties</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">append_blocks</div>
+              <div class="tool-desc">Append content blocks to a page</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span
+                ><span class="param-badge">blocks</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_comments</div>
+              <div class="tool-desc">Get comments on a Notion page</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">add_comment</div>
+              <div class="tool-desc">Add a comment to a Notion page</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span
+                ><span class="param-badge">content</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_users</div>
+              <div class="tool-desc">List workspace users</div>
+              <div class="tool-params"></div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_user</div>
+              <div class="tool-desc">Get details about a specific user</div>
+              <div class="tool-params">
+                <span class="param-badge">user_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">create_template</div>
+              <div class="tool-desc">Create a reusable page template</div>
+              <div class="tool-params">
+                <span class="param-badge">name</span
+                ><span class="param-badge">content</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">duplicate_page</div>
+              <div class="tool-desc">Duplicate an existing page</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">move_page</div>
+              <div class="tool-desc">Move a page to different parent</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span
+                ><span class="param-badge">new_parent_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">export_page</div>
+              <div class="tool-desc">Export page to Markdown or HTML</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span
+                ><span class="param-badge">format</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_page_analytics</div>
+              <div class="tool-desc">Get view/edit analytics for a page</div>
+              <div class="tool-params">
+                <span class="param-badge">page_id</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">bulk_update</div>
+              <div class="tool-desc">Update multiple pages at once</div>
+              <div class="tool-params">
+                <span class="param-badge">page_ids</span
+                ><span class="param-badge">updates</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Perplexity Ask Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🔍</div>
+          <div class="server-info">
+            <h2>Perplexity Ask</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">3</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">AI Search</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">ask</div>
+              <div class="tool-desc">
+                Ask Perplexity AI a question and get AI-powered search results
+                with citations
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">query</span
+                ><span class="param-badge">model</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">search_recent</div>
+              <div class="tool-desc">
+                Search for recent/real-time information using Perplexity
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">query</span
+                ><span class="param-badge">recency</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_citations</div>
+              <div class="tool-desc">
+                Get source citations for a Perplexity response
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">response_id</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playwright Server -->
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🎭</div>
+          <div class="server-info">
+            <h2>Playwright</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">21</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span
+            ><span class="meta-value">Browser Automation</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            <div class="tool-card">
+              <div class="tool-name">navigate</div>
+              <div class="tool-desc">Navigate browser to a URL</div>
+              <div class="tool-params">
+                <span class="param-badge">url</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">screenshot</div>
+              <div class="tool-desc">
+                Take screenshot of current page or element
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span
+                ><span class="param-badge">full_page</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">click</div>
+              <div class="tool-desc">Click on an element by selector</div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">fill</div>
+              <div class="tool-desc">Fill input field with text</div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span
+                ><span class="param-badge">text</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">select</div>
+              <div class="tool-desc">Select option from dropdown</div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span
+                ><span class="param-badge">value</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">hover</div>
+              <div class="tool-desc">Hover over an element</div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">type</div>
+              <div class="tool-desc">
+                Type text character by character (simulates keyboard)
+              </div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span
+                ><span class="param-badge">text</span
+                ><span class="param-badge">delay</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">press</div>
+              <div class="tool-desc">Press a keyboard key</div>
+              <div class="tool-params">
+                <span class="param-badge">key</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">wait_for_selector</div>
+              <div class="tool-desc">Wait for element to appear on page</div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span
+                ><span class="param-badge">timeout</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">wait_for_navigation</div>
+              <div class="tool-desc">Wait for page navigation to complete</div>
+              <div class="tool-params">
+                <span class="param-badge">timeout</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_text</div>
+              <div class="tool-desc">Extract text content from element</div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">get_attribute</div>
+              <div class="tool-desc">Get attribute value from element</div>
+              <div class="tool-params">
+                <span class="param-badge">selector</span
+                ><span class="param-badge">attribute</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">evaluate</div>
+              <div class="tool-desc">Execute JavaScript in browser context</div>
+              <div class="tool-params">
+                <span class="param-badge">script</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">pdf</div>
+              <div class="tool-desc">Generate PDF of current page</div>
+              <div class="tool-params">
+                <span class="param-badge">path</span
+                ><span class="param-badge">format</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">set_viewport</div>
+              <div class="tool-desc">Set browser viewport size</div>
+              <div class="tool-params">
+                <span class="param-badge">width</span
+                ><span class="param-badge">height</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">emulate_device</div>
+              <div class="tool-desc">Emulate mobile/tablet device</div>
+              <div class="tool-params">
+                <span class="param-badge">device_name</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">set_geolocation</div>
+              <div class="tool-desc">Set browser geolocation</div>
+              <div class="tool-params">
+                <span class="param-badge">latitude</span
+                ><span class="param-badge">longitude</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">intercept_request</div>
+              <div class="tool-desc">Intercept and modify network requests</div>
+              <div class="tool-params">
+                <span class="param-badge">pattern</span
+                ><span class="param-badge">action</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">console_messages</div>
+              <div class="tool-desc">Get browser console messages</div>
+              <div class="tool-params"></div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">cookies</div>
+              <div class="tool-desc">Get or set browser cookies</div>
+              <div class="tool-params">
+                <span class="param-badge">action</span
+                ><span class="param-badge">cookies</span>
+              </div>
+            </div>
+            <div class="tool-card">
+              <div class="tool-name">close_browser</div>
+              <div class="tool-desc">Close the browser instance</div>
+              <div class="tool-params"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      function toggleServerCard(header) {
+        const toolsSection = header.nextElementSibling.nextElementSibling;
+        const icon = header.querySelector(".toggle-icon");
+        toolsSection.classList.toggle("open");
+        icon.classList.toggle("open");
+      }
+    </script>
+  </body>
+</html>
