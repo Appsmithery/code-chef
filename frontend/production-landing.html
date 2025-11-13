@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🚀 MCP Central Gateway - Dev-Tools</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        padding: 3rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      .header {
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      h1 {
+        font-size: 2.5rem;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+      }
+      .subtitle {
+        color: #666;
+        font-size: 1.1rem;
+      }
+      .auth-section {
+        text-align: right;
+      }
+      .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: transform 0.2s;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+      .btn-secondary {
+        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+      }
+      .section {
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+      }
+      .section h2 {
+        color: #764ba2;
+        margin-bottom: 1rem;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 600;
+      }
+      .status-active {
+        background: #d4edda;
+        color: #155724;
+      }
+      .services-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+      }
+      .service-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+      }
+      .service-card:hover {
+        transform: translateY(-4px);
+      }
+      .service-card h3 {
+        color: #667eea;
+        margin-bottom: 0.5rem;
+      }
+      .service-card .port {
+        color: #999;
+        font-size: 0.9rem;
+      }
+      .devtools-interface {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        margin-top: 1.5rem;
+      }
+      textarea {
+        width: 100%;
+        padding: 1rem;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        min-height: 120px;
+        margin-bottom: 1rem;
+        font-family: inherit;
+      }
+      .status-message {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-weight: 600;
+      }
+      .status-success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status-error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .status-loading {
+        background: #fff3cd;
+        color: #856404;
+      }
+      .result {
+        margin-top: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+      }
+      .agent-result {
+        margin: 0.5rem 0;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 4px;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 0.9rem;
+      }
+      .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #0066cc;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h1>🚀 MCP Central Gateway</h1>
+          <p class="subtitle">Authenticate to access protected MCP endpoints</p>
+        </div>
+        <div class="auth-section">
+          <a href="/oauth/github/auth" class="btn">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              style="vertical-align: middle; margin-right: 0.5rem"
+            >
+              <path
+                d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+              />
+            </svg>
+            Sign in with GitHub
+          </a>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>📊 Registry & System Status</h2>
+        <div
+          style="display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1rem"
+        >
+          <div>
+            <strong>Registry Status:</strong>
+            <span class="status-badge status-active">✓ Active</span>
+          </div>
+          <div><strong>Total Servers:</strong> 4 Enabled</div>
+          <div><strong>Last Updated:</strong> 2025-11-13</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>🔌 Active MCP Servers</h2>
+        <p style="margin-bottom: 1rem">
+          Click to view all installed servers and tools from MCP Toolkit
+        </p>
+        <div class="services-grid">
+          <div class="service-card">
+            <h3>🐳 MCP_DOCKER</h3>
+            <p>Container management</p>
+          </div>
+          <div class="service-card">
+            <h3>🚀 Supabase</h3>
+            <p>Database operations</p>
+          </div>
+          <div class="service-card">
+            <h3>☄️ Comet</h3>
+            <p>Session memory</p>
+          </div>
+          <div class="service-card">
+            <h3>📁 Rust Filesystem</h3>
+            <p>File operations</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>🤖 Dev-Tools Agent System</h2>
+        <p style="margin-bottom: 1rem">
+          Orchestrate AI agents to build, review, and deploy your code
+        </p>
+
+        <div class="info-box">
+          <strong>Available Agents:</strong> Orchestrator, Feature-Dev,
+          Code-Review, Infrastructure, CI/CD, Documentation
+        </div>
+
+        <div class="services-grid">
+          <div class="service-card">
+            <h3>🎯 Orchestrator</h3>
+            <p class="port">Port 8001</p>
+            <span class="status-badge status-active">✓ Online</span>
+          </div>
+          <div class="service-card">
+            <h3>💻 Feature-Dev</h3>
+            <p class="port">Port 8002</p>
+            <span class="status-badge status-active">✓ Online</span>
+          </div>
+          <div class="service-card">
+            <h3>🔍 Code-Review</h3>
+            <p class="port">Port 8003</p>
+            <span class="status-badge status-active">✓ Online</span>
+          </div>
+          <div class="service-card">
+            <h3>🏗️ Infrastructure</h3>
+            <p class="port">Port 8004</p>
+            <span class="status-badge status-active">✓ Online</span>
+          </div>
+          <div class="service-card">
+            <h3>⚙️ CI/CD</h3>
+            <p class="port">Port 8005</p>
+            <span class="status-badge status-active">✓ Online</span>
+          </div>
+          <div class="service-card">
+            <h3>📚 Documentation</h3>
+            <p class="port">Port 8006</p>
+            <span class="status-badge status-active">✓ Online</span>
+          </div>
+        </div>
+
+        <div class="devtools-interface">
+          <h3 style="color: #764ba2; margin-bottom: 1rem">
+            🚀 Try the Dev-Tools API
+          </h3>
+
+          <div id="status" class="status-message" style="display: none"></div>
+
+          <textarea
+            id="taskInput"
+            placeholder="Describe what you want to build...&#10;&#10;Example: Create a user profile page with avatar upload and form validation"
+          ></textarea>
+
+          <button class="btn" id="submitBtn" onclick="runWorkflow()">
+            Generate Code
+          </button>
+
+          <div id="results"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>📖 Documentation & Resources</h2>
+        <div style="margin-top: 1rem">
+          <a
+            href="/docs/overview"
+            class="btn btn-secondary"
+            style="margin-right: 1rem"
+            >📚 View Documentation</a
+          >
+          <a href="/mcp/servers" class="btn btn-secondary"
+            >🔧 View MCP Servers</a
+          >
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://45.55.173.72:8001";
+
+      function showStatus(message, type = "loading") {
+        const statusEl = document.getElementById("status");
+        statusEl.textContent = message;
+        statusEl.className = `status-message status-${type}`;
+        statusEl.style.display = "block";
+      }
+
+      function hideStatus() {
+        document.getElementById("status").style.display = "none";
+      }
+
+      async function runWorkflow() {
+        const taskInput = document.getElementById("taskInput").value;
+        const submitBtn = document.getElementById("submitBtn");
+        const resultsEl = document.getElementById("results");
+
+        if (!taskInput.trim()) {
+          alert("Please enter a task description");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        resultsEl.innerHTML = "";
+        showStatus("🔄 Creating task...", "loading");
+
+        try {
+          // Step 1: Create task
+          const taskResponse = await fetch(`${API_BASE}/orchestrate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              description: taskInput,
+              priority: "high",
+            }),
+          });
+
+          if (!taskResponse.ok) {
+            throw new Error(
+              `Failed to create task: ${taskResponse.statusText}`
+            );
+          }
+
+          const task = await taskResponse.json();
+          showStatus(`✓ Task created: ${task.task_id}`, "success");
+
+          // Step 2: Execute workflow
+          showStatus("🚀 Executing workflow...", "loading");
+
+          const executeResponse = await fetch(
+            `${API_BASE}/execute/${task.task_id}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+
+          if (!executeResponse.ok) {
+            throw new Error(
+              `Failed to execute task: ${executeResponse.statusText}`
+            );
+          }
+
+          const execution = await executeResponse.json();
+          showStatus(`✅ Workflow ${execution.status}!`, "success");
+
+          // Display results
+          resultsEl.innerHTML = `
+                    <div class="result">
+                        <h3>📊 Execution Results</h3>
+                        <div><strong>Task ID:</strong> ${task.task_id}</div>
+                        <div><strong>Status:</strong> ${execution.status}</div>
+                        <div><strong>Assigned Agents:</strong> ${task.assigned_agents.join(
+                          ", "
+                        )}</div>
+                        <hr style="margin: 1rem 0; border: none; border-top: 1px solid #ddd;">
+                        ${execution.execution_results
+                          .map(
+                            (r) => `
+                            <div class="agent-result">
+                                <strong>🤖 ${r.agent}:</strong> 
+                                <span style="color: ${
+                                  r.status === "completed" ? "green" : "orange"
+                                }">
+                                    ${r.status}
+                                </span>
+                                ${
+                                  r.result
+                                    ? `<pre>${JSON.stringify(
+                                        r.result,
+                                        null,
+                                        2
+                                      )}</pre>`
+                                    : ""
+                                }
+                            </div>
+                        `
+                          )
+                          .join("")}
+                    </div>
+                `;
+        } catch (error) {
+          console.error("Error:", error);
+          showStatus(`❌ Error: ${error.message}`, "error");
+        } finally {
+          submitBtn.disabled = false;
+        }
+      }
+
+      // Test connection on load
+      window.addEventListener("load", async () => {
+        try {
+          const response = await fetch(`${API_BASE}/health`);
+          const data = await response.json();
+          if (data.status === "ok") {
+            console.log("✓ Connected to Dev-Tools API");
+          }
+        } catch (error) {
+          console.warn("Could not connect to Dev-Tools API:", error);
+        }
+      });
+    </script>
+  </body>
+</html>
