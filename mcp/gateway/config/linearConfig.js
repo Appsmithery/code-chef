@@ -1,4 +1,13 @@
+import { readFileSync } from "fs";
 import path from "path";
+
+function readSecret(envVar) {
+  const filePath = process.env[`${envVar}_FILE`];
+  if (filePath) {
+    return readFileSync(filePath, "utf8").trim();
+  }
+  return process.env[envVar];
+}
 
 const {
   LINEAR_OAUTH_CLIENT_ID,
@@ -25,12 +34,12 @@ export function getLinearScopes() {
 export function getLinearOAuthConfig() {
   return {
     clientId: LINEAR_OAUTH_CLIENT_ID,
-    clientSecret: LINEAR_OAUTH_CLIENT_SECRET,
+    clientSecret: readSecret("LINEAR_OAUTH_CLIENT_SECRET"),
     redirectUri: LINEAR_OAUTH_REDIRECT_URI,
     scopes: getLinearScopes(),
-    developerToken: LINEAR_OAUTH_DEV_TOKEN,
+    developerToken: readSecret("LINEAR_OAUTH_DEV_TOKEN"),
     webhookUri: LINEAR_WEBHOOK_URI,
-    webhookSigningSecret: LINEAR_WEBHOOK_SIGNING_SECRET,
+    webhookSigningSecret: readSecret("LINEAR_WEBHOOK_SIGNING_SECRET"),
   };
 }
 
