@@ -1,14 +1,15 @@
 # Vector Database Configuration
 
 vectordb:
-  type: "chromadb"  # or "pinecone", "weaviate", etc.
-  host: "localhost"
-  port: 8001
-  
+  type: "qdrant" # Using Qdrant for production deployment
+  host: "qdrant" # Docker service name for internal communication
+  port: 6333 # HTTP API port
+  grpc_port: 6334 # gRPC API port
+
 embeddings:
   model: "text-embedding-ada-002"
   dimension: 1536
-  
+
 collections:
   - name: "code-knowledge"
     description: "Code snippets and patterns"

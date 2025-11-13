@@ -1,0 +1,78 @@
+{
+    "version": "1.0.0",
+    "secrets": [
+        {
+            "name": "AGENT_DEV_SUPABASE_PROJECT_REF",
+            "required": false,
+            "description": "Supabase project reference for development environment",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        },
+        {
+            "name": "AGENT_DEV_SUPABASE_URL",
+            "required": false,
+            "description": "Supabase URL for development environment",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        },
+        {
+            "name": "AGENT_PROD_SUPABASE_PROJECT_REF",
+            "required": false,
+            "description": "Supabase project reference for production environment",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        },
+        {
+            "name": "AGENT_PROD_SUPABASE_URL",
+            "required": false,
+            "description": "Supabase URL for production environment",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        },
+        {
+            "name": "AGENT_SUPABASE_ACCESS_TOKEN",
+            "required": false,
+            "description": "Supabase access token for agent operations",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        },
+        {
+            "name": "AGENT_SUPABASE_DEFAULT_JWT",
+            "required": false,
+            "description": "Default JWT token for Supabase agent authentication",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        },
+        {
+            "name": "AGENT_TROUBLESHOOT_SUPABASE_PROJECT_REF",
+            "required": false,
+            "description": "Supabase project reference for troubleshooting environment",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        },
+        {
+            "name": "AGENT_TROUBLESHOOT_SUPABASE_URL",
+            "required": false,
+            "description": "Supabase URL for troubleshooting environment",
+            "sources": [
+                ".env.agent.local",
+                "GitHub Secrets"
+            ]
+        }
+    ]
+}
+

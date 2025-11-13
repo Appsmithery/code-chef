@@ -1,0 +1,38 @@
+{
+    "version": "1.0.0",
+    "secrets": [
+        {
+            "name": "ALLOWED_PATH",
+            "required": false,
+            "description": "Filesystem path allowed for agent operations",
+            "sources": [
+                ".env.agent.local"
+            ]
+        },
+        {
+            "name": "MCP_MEMORY_FILE_PATH",
+            "required": false,
+            "description": "Path for agent memory file",
+            "sources": [
+                ".env.agent.local"
+            ]
+        },
+        {
+            "name": "PLAYWRIGHT_HEADED",
+            "required": false,
+            "description": "Run Playwright in headed mode",
+            "sources": [
+                ".env.agent.local"
+            ]
+        },
+        {
+            "name": "SEQUENTIAL_LOG_PATH",
+            "required": false,
+            "description": "Path for sequential log file",
+            "sources": [
+                ".env.agent.local"
+            ]
+        }
+    ]
+}
+
