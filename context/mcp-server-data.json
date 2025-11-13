@@ -1,0 +1,146 @@
+﻿[
+    {
+        "name":  "context7",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Context7",
+        "toolCount":  2
+    },
+    {
+        "name":  "dockerhub",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Dockerhub",
+        "toolCount":  2
+    },
+    {
+        "name":  "fetch",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Fetch",
+        "toolCount":  1
+    },
+    {
+        "name":  "google-maps-comprehensive",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Google maps comprehensive",
+        "toolCount":  2
+    },
+    {
+        "name":  "memory",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Memory",
+        "toolCount":  2
+    },
+    {
+        "name":  "neo4j-cloud-aura-api",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Neo4j cloud aura api",
+        "toolCount":  2
+    },
+    {
+        "name":  "neo4j-data-modeling",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Neo4j data modeling",
+        "toolCount":  2
+    },
+    {
+        "name":  "neo4j-memory",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Neo4j memory",
+        "toolCount":  2
+    },
+    {
+        "name":  "next-devtools-mcp",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Next devtools mcp",
+        "toolCount":  2
+    },
+    {
+        "name":  "node-code-sandbox",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Node code sandbox",
+        "toolCount":  2
+    },
+    {
+        "name":  "notion",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Notion",
+        "toolCount":  2
+    },
+    {
+        "name":  "perplexity-ask",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Perplexity ask",
+        "toolCount":  2
+    },
+    {
+        "name":  "playwright",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Playwright",
+        "toolCount":  2
+    },
+    {
+        "name":  "rust-mcp-filesystem",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Rust mcp filesystem",
+        "toolCount":  3
+    },
+    {
+        "name":  "sequentialthinking",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Sequentialthinking",
+        "toolCount":  1
+    },
+    {
+        "name":  "stripe",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Stripe",
+        "toolCount":  2
+    },
+    {
+        "name":  "time",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Time",
+        "toolCount":  2
+    },
+    {
+        "name":  "youtube_transcript",
+        "icon":  "tool",
+        "protocol":  "MCP 1.0",
+        "category":  "MCP Server",
+        "displayName":  "Youtube transcript",
+        "toolCount":  2
+    }
+]
