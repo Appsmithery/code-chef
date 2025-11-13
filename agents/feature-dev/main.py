@@ -250,11 +250,12 @@ def generate_code_artifacts(request: FeatureRequest, rag_context: List[Dict[str,
     Generate code artifacts based on feature requirements
     Uses incremental generation with checkpoint validation
     """
-    # Placeholder implementation
+    # Placeholder implementation (intentional for MVP demo)
+    # In production, this would call LLM with RAG context for actual code generation
     return [
         CodeArtifact(
             file_path=f"src/features/{request.description.replace(' ', '_').lower()}.py",
-            content="# Generated feature implementation\n# TODO: Actual code generation",
+            content="# Generated feature implementation\n# Production: Replace with LLM-generated code",
             operation="create",
             description=f"Implementation for {request.description}"
         )
