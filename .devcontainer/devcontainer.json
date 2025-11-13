@@ -1,0 +1,20 @@
+{
+  "name": "Dev-Tools",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "features": {},
+  "forwardPorts": [3000, 8080, 5432],
+  "postCreateCommand": "echo 'Dev-Tools environment ready'",
+  "remoteUser": "vscode",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-azuretools.vscode-docker",
+        "ms-python.python",
+        "GitHub.copilot",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  }
+}

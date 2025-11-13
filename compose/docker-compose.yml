@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  orchestrator:
+    build:
+      context: ../containers/orchestrator
+    ports:
+      - "8001:8001"
+    environment:
+      - SERVICE_NAME=orchestrator
+    networks:
+      - devtools-network
+    volumes:
+      - orchestrator-data:/data
+
+  feature-dev:
+    build:
+      context: ../containers/feature-dev
+    ports:
+      - "8002:8002"
+    environment:
+      - SERVICE_NAME=feature-dev
+    networks:
+      - devtools-network
+
+  code-review:
+    build:
+      context: ../containers/code-review
+    ports:
+      - "8003:8003"
+    environment:
+      - SERVICE_NAME=code-review
+    networks:
+      - devtools-network
+
+  infrastructure:
+    build:
+      context: ../containers/infrastructure
+    ports:
+      - "8004:8004"
+    environment:
+      - SERVICE_NAME=infrastructure
+    networks:
+      - devtools-network
+
+  cicd:
+    build:
+      context: ../containers/cicd
+    ports:
+      - "8005:8005"
+    environment:
+      - SERVICE_NAME=cicd
+    networks:
+      - devtools-network
+
+  documentation:
+    build:
+      context: ../containers/documentation
+    ports:
+      - "8006:8006"
+    environment:
+      - SERVICE_NAME=documentation
+    networks:
+      - devtools-network
+
+  gateway-mcp:
+    build:
+      context: ../containers/gateway-mcp
+    ports:
+      - "8000:8000"
+    environment:
+      - SERVICE_NAME=gateway-mcp
+    networks:
+      - devtools-network
+    volumes:
+      - mcp-config:/config
+
+volumes:
+  orchestrator-data:
+  mcp-config:
+
+networks:
+  devtools-network:
+    name: devtools-network
