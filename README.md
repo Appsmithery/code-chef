@@ -123,7 +123,7 @@ Dev-Tools (single-root)
 
 **Current Status:** Phase 5 Complete ✅ - Ready for production deployment
 
-For detailed architecture, see [docs/overview/ARCHITECTURE.md](docs/overview/ARCHITECTURE.md).
+For detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## 🚀 Deployment
 
@@ -321,7 +321,7 @@ vectordb:
 
 - **[📚 Documentation Index](docs/README.md)** - Complete documentation hub with navigation
 - **[🚀 DigitalOcean Deployment](docs/DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
-- **[🏗️ Architecture Overview](docs/overview/ARCHITECTURE.md)** - System design and components
+- **[🏗️ Architecture Overview](docs/ARCHITECTURE.md)** - System design and components
 - **[📡 Agent Endpoints](docs/AGENT_ENDPOINTS.md)** - Complete API reference
 - **[🔒 Secrets Management](docs/SECRETS_MANAGEMENT.md)** - Security and configuration
 - **[📖 Operational Handbook](docs/HANDBOOK.md)** - Development practices and troubleshooting

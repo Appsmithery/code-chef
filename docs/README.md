@@ -4,8 +4,8 @@
 
 ### Getting Started
 
-- **[Setup Guide](onboarding/SETUP_GUIDE.md)** - First-time setup instructions
-- **[Architecture Overview](overview/ARCHITECTURE.md)** - System design and components
+- **[Setup Guide](SETUP_GUIDE.md)** - First-time setup instructions
+- **[Architecture Overview](ARCHITECTURE.md)** - System design and components
 - **[Agent Endpoints](AGENT_ENDPOINTS.md)** - API reference for all agents
 
 ### Deployment
@@ -17,25 +17,14 @@
 ### Development
 
 - **[Codebase Index](CODEBASE_INDEX.md)** - Code structure and organization
-- **[Task Orchestration](overview/TASK_ORCHESTRATION.md)** - Workflow engine details
+- **[Task Orchestration](TASK_ORCHESTRATION.md)** - Workflow engine details
+- **[Taskfile Workflows](TASKFILE_WORKFLOWS.md)** - Per-agent task automation
 - **[Handbook](HANDBOOK.md)** - Development practices and patterns
-
-### Operations
-
-- **[Operations Guide](OPERATIONS.md)** - Day-to-day operational procedures _(coming soon)_
-- **[Troubleshooting Guide](TROUBLESHOOTING.md)** - Common issues and solutions _(coming soon)_
-- **[API Reference](API_REFERENCE.md)** - Comprehensive endpoint documentation _(coming soon)_
 
 ### Governance
 
-- **[Refactor Checklist](governance/REFACTOR_CHECKLIST.md)** - Pre-deployment checklist
-- **[Secrets Management Policy](governance/SECRETS_MANAGEMENT.md)** - Security guidelines
-- **[Documentation Strategy](overview/DOCUMENTATION_STRATEGY.md)** - How we document
-
-### Archive
-
-- **[Completed Phases](archive/phases/)** - Historical phase completion summaries
-- **[Planning Documents](archive/planning/)** - Archived planning artifacts
+- **[Refactor Checklist](REFACTOR_CHECKLIST.md)** - Pre-deployment checklist
+- **[Documentation Strategy](DOCUMENTATION_STRATEGY.md)** - How we document
 
 ---
 
@@ -44,11 +33,11 @@
 ### I want to...
 
 - **Deploy to production** → [DigitalOcean Quick Deploy](DIGITALOCEAN_QUICK_DEPLOY.md)
-- **Set up locally** → [Setup Guide](onboarding/SETUP_GUIDE.md)
-- **Understand the system** → [Architecture Overview](overview/ARCHITECTURE.md)
+- **Set up locally** → [Setup Guide](SETUP_GUIDE.md)
+- **Understand the system** → [Architecture Overview](ARCHITECTURE.md)
 - **Call an agent API** → [Agent Endpoints](AGENT_ENDPOINTS.md)
-- **Fix an issue** → [Troubleshooting](TROUBLESHOOTING.md) _(coming soon)_
 - **Configure secrets** → [Secrets Management](SECRETS_MANAGEMENT.md)
+- **Run agent tasks** → [Taskfile Workflows](TASKFILE_WORKFLOWS.md)
 
 ---
 
@@ -61,6 +50,7 @@
 - ✅ State persistence with PostgreSQL
 - ✅ Inter-agent HTTP communication
 - ✅ End-to-end workflows validated
+- ✅ Per-agent Taskfile automation
 
 **Services:**
 
@@ -68,9 +58,9 @@
 - Orchestrator: Port 8001
 - Feature Dev: Port 8002
 - Code Review: Port 8003
-- Documentation: Port 8004
+- Documentation: Port 8006
 - CI/CD: Port 8005
-- Infrastructure: Port 8006
+- Infrastructure: Port 8004
 - RAG: Port 8007
 - State: Port 8008
 - Qdrant: Ports 6333 (HTTP), 6334 (gRPC)
@@ -87,4 +77,4 @@ This documentation follows a **layered approach**:
 3. **Reference** - API specs, schemas, configurations
 4. **Operations** - Day-to-day management and troubleshooting
 
-For contributing to documentation, see [Documentation Strategy](overview/DOCUMENTATION_STRATEGY.md).
+For contributing to documentation, see [Documentation Strategy](DOCUMENTATION_STRATEGY.md).
