@@ -71,16 +71,27 @@ services:
     environment:
       - SERVICE_NAME=gateway-mcp
       - NODE_ENV=production
+      - LINEAR_OAUTH_DEV_TOKEN_FILE=/run/secrets/linear_oauth_token
+      - LINEAR_WEBHOOK_SIGNING_SECRET_FILE=/run/secrets/linear_webhook_secret
     env_file:
       - ../configs/env/.env
     networks:
       - devtools-network
     volumes:
       - mcp-config:/app/config
+    secrets:
+      - linear_oauth_token
+      - linear_webhook_secret
 
 volumes:
   orchestrator-data:
   mcp-config:
+
+secrets:
+  linear_oauth_token:
+    file: ../configs/env/secrets/linear_oauth_token.txt
+  linear_webhook_secret:
+    file: ../configs/env/secrets/linear_webhook_secret.txt
 
 networks:
   devtools-network:
