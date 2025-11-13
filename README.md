@@ -7,10 +7,11 @@ Dev-Tools consolidates AI agents, MCP gateway, Docker orchestration, and develop
 ## Features
 
 - **AI Agent Suite**: Six specialized agents (Orchestrator, Feature-Dev, Code-Review, Infrastructure, CI/CD, Documentation)
+- **Inter-Agent Communication**: HTTP-based workflow orchestration with automated task routing
 - **MCP Gateway**: Centralized Model Context Protocol routing
 - **Docker Compose Stack**: Complete containerized development environment
 - **VS Code Integration**: Dev Container support with Remote-SSH
-- **RAG Configuration**: Vector database and indexing for context-aware agents
+- **RAG Configuration**: Qdrant vector database and indexing for context-aware agents
 - **State Management**: PostgreSQL-backed task tracking and workflow state
 - **Backup & Restore**: Volume management scripts for data persistence
 
@@ -89,6 +90,8 @@ docker-compose logs -f
    curl http://localhost:8004/health  # Infrastructure
    curl http://localhost:8005/health  # CI/CD
    curl http://localhost:8006/health  # Documentation
+   curl http://localhost:8007/health  # RAG Context
+   curl http://localhost:8008/health  # State Persistence
    ```
 
    **Windows PowerShell:**
@@ -102,6 +105,8 @@ docker-compose logs -f
    Invoke-RestMethod http://localhost:8004/health  # Infrastructure
    Invoke-RestMethod http://localhost:8005/health  # CI/CD
    Invoke-RestMethod http://localhost:8006/health  # Documentation
+   Invoke-RestMethod http://localhost:8007/health  # RAG Context
+   Invoke-RestMethod http://localhost:8008/health  # State Persistence
    ```
 
 ## Architecture
@@ -118,15 +123,19 @@ Dev-Tools (single-root)
 
 ### Service Ports
 
-| Service        | Port | Purpose             |
-| -------------- | ---- | ------------------- |
-| MCP Gateway    | 8000 | MCP routing         |
-| Orchestrator   | 8001 | Task coordination   |
-| Feature-Dev    | 8002 | Code generation     |
-| Code-Review    | 8003 | Quality checks      |
-| Infrastructure | 8004 | IaC generation      |
-| CI/CD          | 8005 | Pipeline automation |
-| Documentation  | 8006 | Doc generation      |
+| Service             | Port       | Purpose              |
+| ------------------- | ---------- | -------------------- |
+| MCP Gateway         | 8000       | MCP routing          |
+| Orchestrator        | 8001       | Task coordination    |
+| Feature-Dev         | 8002       | Code generation      |
+| Code-Review         | 8003       | Quality checks       |
+| Infrastructure      | 8004       | IaC generation       |
+| CI/CD               | 8005       | Pipeline automation  |
+| Documentation       | 8006       | Doc generation       |
+| RAG Context Manager | 8007       | Semantic code search |
+| State Persistence   | 8008       | Task/workflow state  |
+| Qdrant              | 6333, 6334 | Vector database      |
+| PostgreSQL          | 5432       | Relational database  |
 
 ## Agent Responsibilities
 
@@ -243,9 +252,10 @@ Edit `configs/rag/vectordb.config.yaml`:
 
 ```yaml
 vectordb:
-  type: "chromadb"
+  type: "qdrant"
   host: "localhost"
-  port: 8001
+  port: 6333 # HTTP API
+  grpc_port: 6334 # gRPC API
 ```
 
 ## Documentation
