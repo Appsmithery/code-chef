@@ -1,4 +1,227 @@
-# Orchestrator Agent Entry Point
+"""
+DevOps Orchestrator Agent
+
+Primary Role: Task delegation, context routing, and workflow coordination
+- Analyzes incoming development requests and decomposes them into discrete subtasks
+- Routes tasks to appropriate worker agents based on MECE responsibility boundaries
+- Maintains task registry mapping request types to specialized agent capabilities
+- Tracks task completion status and triggers hand-offs between agents
+"""
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, List, Any
+from enum import Enum
+from datetime import datetime
+import uvicorn
+import os
+
+app = FastAPI(
+    title="DevOps Orchestrator Agent",
+    description="Task delegation, context routing, and workflow coordination",
+    version="1.0.0"
+)
+
+# Agent types for task routing
+class AgentType(str, Enum):
+    FEATURE_DEV = "feature-dev"
+    CODE_REVIEW = "code-review"
+    INFRASTRUCTURE = "infrastructure"
+    CICD = "cicd"
+    DOCUMENTATION = "documentation"
+
+# Task status tracking
+class TaskStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+# Request models
+class TaskRequest(BaseModel):
+    """Incoming development request"""
+    description: str = Field(..., description="Natural language description of the task")
+    project_context: Optional[Dict[str, Any]] = Field(default=None, description="Project context references")
+    workspace_config: Optional[Dict[str, Any]] = Field(default=None, description="Workspace configuration")
+    priority: Optional[str] = Field(default="medium", description="Task priority")
+
+class SubTask(BaseModel):
+    """Decomposed subtask for routing"""
+    id: str
+    agent_type: AgentType
+    description: str
+    context_refs: Optional[List[str]] = None
+    dependencies: Optional[List[str]] = None
+    status: TaskStatus = TaskStatus.PENDING
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class TaskResponse(BaseModel):
+    """Orchestration response"""
+    task_id: str
+    subtasks: List[SubTask]
+    routing_plan: Dict[str, Any]
+    estimated_tokens: int
+
+# In-memory task registry (in production, this would use State Persistence Layer)
+task_registry: Dict[str, TaskResponse] = {}
+
+# Agent service endpoints (from docker-compose)
+AGENT_ENDPOINTS = {
+    AgentType.FEATURE_DEV: os.getenv("FEATURE_DEV_URL", "http://feature-dev:8002"),
+    AgentType.CODE_REVIEW: os.getenv("CODE_REVIEW_URL", "http://code-review:8003"),
+    AgentType.INFRASTRUCTURE: os.getenv("INFRASTRUCTURE_URL", "http://infrastructure:8004"),
+    AgentType.CICD: os.getenv("CICD_URL", "http://cicd:8005"),
+    AgentType.DOCUMENTATION: os.getenv("DOCUMENTATION_URL", "http://documentation:8006"),
+}
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "ok",
+        "service": "orchestrator",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+@app.post("/orchestrate", response_model=TaskResponse)
+async def orchestrate_task(request: TaskRequest):
+    """
+    Main orchestration endpoint
+    - Analyzes request and decomposes into subtasks
+    - Routes to appropriate specialized agents
+    - Returns routing plan with minimal context pointers
+    
+    Token Optimization: Processes only task metadata (< 500 tokens per routing decision)
+    """
+    import uuid
+    
+    task_id = str(uuid.uuid4())
+    
+    # Simple rule-based task decomposition (in production, would use Task Router)
+    subtasks = decompose_request(request)
+    
+    # Create routing plan
+    routing_plan = {
+        "execution_order": [st.id for st in subtasks],
+        "parallel_groups": identify_parallel_tasks(subtasks),
+        "estimated_duration_minutes": estimate_duration(subtasks)
+    }
+    
+    # Estimate token usage (orchestrator uses minimal tokens)
+    estimated_tokens = len(request.description.split()) * 2  # Rough estimate
+    
+    response = TaskResponse(
+        task_id=task_id,
+        subtasks=subtasks,
+        routing_plan=routing_plan,
+        estimated_tokens=estimated_tokens
+    )
+    
+    # Store in registry
+    task_registry[task_id] = response
+    
+    return response
+
+@app.get("/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """Retrieve task status and subtask progress"""
+    if task_id not in task_registry:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    return task_registry[task_id]
+
+@app.get("/agents")
+async def list_agents():
+    """List available specialized agents and their endpoints"""
+    return {
+        "agents": [
+            {"type": agent.value, "endpoint": endpoint, "status": "available"}
+            for agent, endpoint in AGENT_ENDPOINTS.items()
+        ]
+    }
+
+def decompose_request(request: TaskRequest) -> List[SubTask]:
+    """
+    Decompose incoming request into discrete subtasks
+    Uses simple keyword matching for MVP (production would use Task Router)
+    """
+    import uuid
+    description_lower = request.description.lower()
+    subtasks = []
+    
+    # Feature development detection
+    if any(keyword in description_lower for keyword in ["implement", "create", "build", "develop", "feature"]):
+        subtasks.append(SubTask(
+            id=str(uuid.uuid4()),
+            agent_type=AgentType.FEATURE_DEV,
+            description=f"Implement feature: {request.description}",
+            context_refs=["codebase"]
+        ))
+    
+    # Code review after feature dev
+    if subtasks and subtasks[-1].agent_type == AgentType.FEATURE_DEV:
+        review_task = SubTask(
+            id=str(uuid.uuid4()),
+            agent_type=AgentType.CODE_REVIEW,
+            description=f"Review implementation: {request.description}",
+            dependencies=[subtasks[-1].id]
+        )
+        subtasks.append(review_task)
+    
+    # Infrastructure changes detection
+    if any(keyword in description_lower for keyword in ["deploy", "infrastructure", "terraform", "docker", "k8s"]):
+        subtasks.append(SubTask(
+            id=str(uuid.uuid4()),
+            agent_type=AgentType.INFRASTRUCTURE,
+            description=f"Infrastructure changes: {request.description}"
+        ))
+    
+    # CI/CD pipeline detection
+    if any(keyword in description_lower for keyword in ["pipeline", "ci/cd", "continuous", "deployment"]):
+        subtasks.append(SubTask(
+            id=str(uuid.uuid4()),
+            agent_type=AgentType.CICD,
+            description=f"Configure CI/CD: {request.description}"
+        ))
+    
+    # Documentation detection
+    if any(keyword in description_lower for keyword in ["document", "readme", "doc", "guide"]):
+        subtasks.append(SubTask(
+            id=str(uuid.uuid4()),
+            agent_type=AgentType.DOCUMENTATION,
+            description=f"Generate documentation: {request.description}"
+        ))
+    
+    # Default to feature dev if no matches
+    if not subtasks:
+        subtasks.append(SubTask(
+            id=str(uuid.uuid4()),
+            agent_type=AgentType.FEATURE_DEV,
+            description=request.description
+        ))
+    
+    return subtasks
+
+def identify_parallel_tasks(subtasks: List[SubTask]) -> List[List[str]]:
+    """Identify subtasks that can run in parallel"""
+    parallel_groups = []
+    independent_tasks = []
+    
+    for task in subtasks:
+        if not task.dependencies:
+            independent_tasks.append(task.id)
+    
+    if len(independent_tasks) > 1:
+        parallel_groups.append(independent_tasks)
+    
+    return parallel_groups
+
+def estimate_duration(subtasks: List[SubTask]) -> int:
+    """Estimate total execution duration in minutes"""
+    # Simple heuristic: 5 minutes per subtask
+    return len(subtasks) * 5
+
 if __name__ == '__main__':
-    print("Orchestrator agent starting...")
-    # TODO: Implement agent logic
+    port = int(os.getenv("PORT", "8001"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
