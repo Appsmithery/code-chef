@@ -1,0 +1,27 @@
+# RAG Indexing Configuration
+
+indexing:
+  strategy: "incremental"  # or "full"
+  schedule: "0 */6 * * *"  # Every 6 hours
+  
+sources:
+  - type: "git"
+    repositories:
+      - "https://github.com/Appsmithery/*"
+    include:
+      - "*.md"
+      - "*.py"
+      - "*.js"
+      - "*.ts"
+    exclude:
+      - "node_modules/**"
+      - "*.lock"
+  
+  - type: "documentation"
+    paths:
+      - "/workspace/docs"
+    
+processing:
+  chunk_size: 1000
+  chunk_overlap: 200
+  metadata_extraction: true
