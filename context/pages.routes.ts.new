@@ -1,0 +1,276 @@
+import express from 'express';
+import { Router } from 'express';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const router = Router();
+
+// MCP Servers and Tools comprehensive page - DYNAMICALLY GENERATED
+router.get('/servers', async (req, res) => {
+  try {
+    // Read all server directories
+    const serversPath = path.join(__dirname, '..', '..', 'servers');
+    const serverDirs = fs.readdirSync(serversPath, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory() && !dirent.name.startsWith('.'))
+      .map(dirent => dirent.name);
+
+    const servers = [];
+
+    for (const dir of serverDirs) {
+      const indexPath = path.join(serversPath, dir, 'index.ts');
+      if (fs.existsSync(indexPath)) {
+        const content = fs.readFileSync(indexPath, 'utf8');
+        
+        // Extract SERVER_INFO
+        const match = content.match(/SERVER_INFO\s*=\s*\{([^}]+)\}/s);
+        if (match) {
+          const infoBlock = match[1];
+          
+          // Parse name
+          const nameMatch = infoBlock.match(/name:\s*['"]([^'"]+)['"]/);
+          const toolCountMatch = infoBlock.match(/toolCount:\s*(\d+)/);
+          const toolsMatch = infoBlock.match(/tools:\s*\[([\s\S]*?)\]/);
+          
+          if (nameMatch && toolCountMatch) {
+            const tools = [];
+            if (toolsMatch) {
+              const toolsStr = toolsMatch[1];
+              const toolNames = toolsStr.match(/['"]([^'"]+)['"]/g)?.map(t => t.replace(/['"]/g, '')) || [];
+              
+              // Get tool descriptions
+              for (const toolName of toolNames) {
+                const toolFile = path.join(serversPath, dir, `${toolName}.ts`);
+                if (fs.existsSync(toolFile)) {
+                  const toolContent = fs.readFileSync(toolFile, 'utf8');
+                  const descMatch = toolContent.match(/description:\s*['"`]([^'"`]+)['"`]/);
+                  const description = descMatch ? descMatch[1] : 'No description';
+                  
+                  // Extract parameters
+                  const paramsMatch = toolContent.match(/properties:\s*\{([^}]+)\}/);
+                  const params = [];
+                  if (paramsMatch) {
+                    const propsStr = paramsMatch[1];
+                    const paramMatches = propsStr.matchAll(/(\w+):/g);
+                    for (const pm of paramMatches) {
+                      params.push(pm[1]);
+                    }
+                  }
+                  
+                  tools.push({ name: toolName, description, params });
+                }
+              }
+            }
+            
+            servers.push({
+              name: nameMatch[1],
+              toolCount: parseInt(toolCountMatch[1]),
+              tools
+            });
+          }
+        }
+      }
+    }
+
+    // Generate HTML
+    const html = generateServersHTML(servers);
+    res.send(html);
+  } catch (error) {
+    console.error('Error generating servers page:', error);
+    res.status(500).send('Error loading servers data');
+  }
+});
+
+function generateServersHTML(servers: any[]) {
+  const serverCards = servers.map(server => {
+    const displayName = server.name.split(/[-_]/).map((w: string) => 
+      w.charAt(0).toUpperCase() + w.slice(1)
+    ).join(' ');
+    
+    const toolCards = server.tools.map((tool: any) => `
+            <div class="tool-card">
+              <div class="tool-name">${tool.name}</div>
+              <div class="tool-desc">${tool.description}</div>
+              ${tool.params.length > 0 ? `
+              <div class="tool-params">
+                ${tool.params.map((p: string) => `<span class="param-badge">${p}</span>`).join('')}
+              </div>
+              ` : ''}
+            </div>
+    `).join('');
+    
+    return `
+      <div class="server-card">
+        <div class="server-header" onclick="toggleServerCard(this)">
+          <div class="server-icon">🔧</div>
+          <div class="server-info">
+            <h2>${displayName}</h2>
+            <span class="server-status">✓ Active</span>
+          </div>
+          <span class="toggle-icon"></span>
+        </div>
+        <div class="server-meta">
+          <div class="meta-item">
+            <span class="meta-label">Tools</span><span class="meta-value">${server.toolCount}</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+          </div>
+        </div>
+        <div class="tools-section">
+          <h3>🛠️ Available Tools</h3>
+          <div class="tools-grid">
+            ${toolCards}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Installed MCP Servers & Tools</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      .container { max-width: 1400px; margin: 0 auto; }
+      .header { text-align: center; margin-bottom: 3rem; }
+      .header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); }
+      .back-btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        border-radius: 8px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        transition: all 0.3s;
+        margin-bottom: 2rem;
+      }
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-2px);
+      }
+      .server-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        padding: 2rem;
+        color: #333;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        margin-bottom: 2rem;
+      }
+      .server-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        border-bottom: 3px solid #667eea;
+        padding-bottom: 1rem;
+        cursor: pointer;
+        user-select: none;
+      }
+      .server-icon { font-size: 3rem; }
+      .server-info h2 { font-size: 1.8rem; color: #667eea; margin-bottom: 0.25rem; }
+      .server-status {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: #28a745;
+        color: white;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+      }
+      .server-meta { display: flex; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+      .meta-item { display: flex; flex-direction: column; gap: 0.25rem; }
+      .meta-label { font-size: 0.85rem; color: #666; font-weight: 600; text-transform: uppercase; }
+      .meta-value { font-size: 1.1rem; color: #667eea; font-weight: 700; }
+      .tools-section { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+      .tools-section.open { max-height: 2000px; }
+      .tools-section h3 { font-size: 1.3rem; color: #764ba2; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+      .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+      .tool-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1rem;
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .tool-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+      .tool-name { font-weight: 700; color: #333; margin-bottom: 0.5rem; font-size: 1.05rem; }
+      .tool-desc { font-size: 0.9rem; color: #666; line-height: 1.5; }
+      .tool-params { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #ddd; }
+      .param-badge {
+        display: inline-block;
+        background: #667eea;
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+      }
+      .toggle-icon {
+        display: inline-block;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 8px 0 8px 14px;
+        border-color: transparent transparent transparent #999;
+        margin-left: auto;
+        transition: transform 0.3s;
+      }
+      .toggle-icon.open {
+        border-width: 14px 8px 0 8px;
+        border-color: #999 transparent transparent transparent;
+      }
+      @media (max-width: 768px) {
+        .header h1 { font-size: 2rem; }
+        .tools-grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>🔌 Installed MCP Servers & Tools</h1>
+      </div>
+      <a href="/" class="back-btn">← Back to Dashboard</a>
+      ${serverCards}
+    </div>
+    <script>
+      function toggleServerCard(header) {
+        const toolsSection = header.nextElementSibling.nextElementSibling;
+        const icon = header.querySelector(".toggle-icon");
+        toolsSection.classList.toggle("open");
+        icon.classList.toggle("open");
+      }
+    </script>
+  </body>
+</html>`;
+}
+
+// Landing page
+router.get('/', (req, res) => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'views', 'landing.html'), 'utf8');
+  res.send(html);
+});
+
+export default router;
