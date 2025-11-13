@@ -1,0 +1,28 @@
+# Task Router Rules
+# Defines how tasks are routed to appropriate agents
+
+routes:
+  - pattern: "feature|implement|build|create"
+    agent: "feature-dev"
+    priority: 1
+
+  - pattern: "review|lint|check|quality"
+    agent: "code-review"
+    priority: 1
+
+  - pattern: "deploy|infrastructure|terraform|docker"
+    agent: "infrastructure"
+    priority: 1
+
+  - pattern: "pipeline|ci|cd|workflow"
+    agent: "cicd"
+    priority: 1
+
+  - pattern: "document|readme|api-docs"
+    agent: "documentation"
+    priority: 1
+
+  - pattern: ".*"
+    agent: "orchestrator"
+    priority: 0
+    note: "Default fallback to orchestrator"
