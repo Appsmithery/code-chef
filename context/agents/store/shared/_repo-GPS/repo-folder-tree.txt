@@ -1,0 +1,207 @@
+Repository: D:\INFRA\Dev-Tools\Dev-Tools
+Generated: 2025-11-13T12:41:30.509Z
+
+├── agents
+│   ├── cicd
+│   │   ├── main.py
+│   │   ├── README.md
+│   │   └── requirements.txt
+│   ├── code-review
+│   │   ├── main.py
+│   │   ├── README.md
+│   │   └── requirements.txt
+│   ├── documentation
+│   │   ├── main.py
+│   │   ├── README.md
+│   │   └── requirements.txt
+│   ├── feature-dev
+│   │   ├── main.py
+│   │   ├── README.md
+│   │   └── requirements.txt
+│   ├── infrastructure
+│   │   ├── main.py
+│   │   ├── README.md
+│   │   └── requirements.txt
+│   ├── orchestrator
+│   │   ├── main.py
+│   │   ├── README.md
+│   │   └── requirements.txt
+│   └── agents-manifest.json
+├── compose
+│   ├── docker-compose.override.yml
+│   ├── docker-compose.yml
+│   └── networks.env
+├── config
+│   ├── secrets
+│   │   ├── hydrate-local-env.sh
+│   │   ├── schema-merger.ts
+│   │   ├── sync-agent-manifest.ts
+│   │   └── validate-secrets.ts
+│   ├── secrets.overlays
+│   │   ├── agent-ops.json
+│   │   ├── supabase-advanced.json
+│   │   ├── supabase.json
+│   │   └── vercel.json
+│   └── secrets.core.json
+├── configs
+│   ├── env
+│   │   ├── secrets
+│   │   │   ├── linear_oauth_token.txt
+│   │   │   └── linear_webhook_secret.txt
+│   │   ├── .env.example
+│   │   └── secrets.template.json
+│   ├── rag
+│   │   ├── indexing.yaml
+│   │   └── vectordb.config.yaml
+│   ├── routing
+│   │   └── task-router.rules.yaml
+│   └── state
+│       └── schema.sql
+├── containers
+│   ├── chromadb
+│   │   └── Dockerfile
+│   ├── cicd
+│   │   └── Dockerfile
+│   ├── code-review
+│   │   └── Dockerfile
+│   ├── devcontainer
+│   │   └── Dockerfile
+│   ├── documentation
+│   │   └── Dockerfile
+│   ├── feature-dev
+│   │   └── Dockerfile
+│   ├── gateway-mcp
+│   │   └── Dockerfile
+│   ├── infrastructure
+│   │   └── Dockerfile
+│   ├── orchestrator
+│   │   └── Dockerfile
+│   ├── rag
+│   │   └── Dockerfile
+│   └── state
+│       └── Dockerfile
+├── context
+│   └── agents
+│       └── store
+│           └── shared
+│               └── _repo-GPS
+│                   └── repo-folder-tree.txt
+├── docs
+│   ├── archive
+│   │   ├── phases
+│   │   │   ├── PHASE4_COMPLETION_SUMMARY.md
+│   │   │   └── PHASE5_COMPLETION_SUMMARY.md
+│   │   └── planning
+│   │       └── DEPLOYMENT_PREP_PHASE_PLAN.md
+│   ├── chatmodes
+│   │   ├── cicd.md
+│   │   ├── code-review.md
+│   │   ├── documentation.md
+│   │   ├── feature-dev.md
+│   │   ├── infrastructure.md
+│   │   └── orchestrator.md
+│   ├── governance
+│   │   ├── REFACTOR_CHECKLIST.md
+│   │   └── SECRETS_MANAGEMENT.md
+│   ├── indices
+│   │   ├── CODEBASE_INDEX.md
+│   │   └── DOCUMENTATION_INDEX.md
+│   ├── onboarding
+│   │   ├── archive
+│   │   │   ├── GETTING_STARTED.archived.md
+│   │   │   └── QUICK_START.archived.md
+│   │   └── SETUP_GUIDE.md
+│   ├── overview
+│   │   ├── ARCHITECTURE.md
+│   │   ├── DOCUMENTATION_STRATEGY.md
+│   │   ├── STANDALONE_STRUCTURE.md
+│   │   └── TASK_ORCHESTRATION.md
+│   ├── repo
+│   ├── temp
+│   │   ├── AI-devops-agent-specs.md
+│   │   ├── devops-AI-workspace-specs.md
+│   │   ├── DigitalOcean-Gradient-config.md
+│   │   ├── FINALIZATION_PLAN.md
+│   │   └── migration roadmap.md
+│   ├── AGENT_ENDPOINTS.md
+│   ├── CODEBASE_INDEX.md
+│   ├── DEPLOYMENT.md
+│   ├── devtools-api.ts
+│   ├── DIGITALOCEAN_QUICK_DEPLOY.md
+│   ├── DOCUMENTATION_INDEX.md
+│   ├── FRONTEND_INTEGRATION.md
+│   ├── HANDBOOK.md
+│   ├── README.md
+│   ├── SECRETS_MANAGEMENT.md
+│   └── test-frontend.html
+├── frontend
+│   ├── docs-overview-new.html
+│   ├── docs-overview.html
+│   ├── production-landing.html
+│   └── servers.html
+├── mcp
+│   ├── gateway
+│   │   ├── config
+│   │   │   └── linearConfig.js
+│   │   ├── services
+│   │   │   └── linear.js
+│   │   ├── storage
+│   │   │   └── tokenStore.js
+│   │   ├── utils
+│   │   │   └── oauthState.js
+│   │   ├── .env.example
+│   │   ├── app.js
+│   │   ├── gateway.py
+│   │   ├── package-lock.json
+│   │   ├── package.json
+│   │   ├── README.md
+│   │   ├── requirements.txt
+│   │   └── routes.js
+│   └── servers
+├── pipelines
+├── reports
+│   ├── reports-index.json
+│   └── secrets-validation.json
+├── scripts
+│   ├── docs
+│   │   ├── generate-index.mjs
+│   │   └── sync-chatmodes.mjs
+│   ├── repo
+│   │   └── generate-folder-tree.mjs
+│   ├── reports
+│   │   ├── build-index.mjs
+│   │   └── clean.mjs
+│   ├── tasks
+│   │   ├── agent-health.mjs
+│   │   ├── env-seed.mjs
+│   │   └── system-audit.mjs
+│   ├── add_cors.py
+│   ├── backup_volumes.sh
+│   ├── down.sh
+│   ├── enable_cors.sh
+│   ├── fix_orchestrator_cors.py
+│   ├── rebuild.sh
+│   ├── restore_volumes.sh
+│   ├── setup_secrets.sh
+│   └── up.sh
+├── services
+│   ├── rag
+│   │   ├── main.py
+│   │   └── requirements.txt
+│   └── state
+│       ├── main.py
+│       └── requirements.txt
+├── temp
+│   └── Dockerfile
+├── templates
+│   ├── docs
+│   ├── infra
+│   └── pipelines
+├── .env.example
+├── dev-tools.code-workspace
+├── LICENSE
+├── Makefile
+├── package-lock.json
+├── package.json
+├── README.md
+└── Taskfile.yml

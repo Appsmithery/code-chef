@@ -1,0 +1,26 @@
+version: "3"
+
+includes: {}
+
+tasks:
+  init:
+    desc: Bootstrap the local Dev-Tools environment (dependencies, docs, repo map)
+    cmds:
+      - task toolchain:init
+      - task docs:update
+      - task folder-mapper:scan
+      - task reports:sync
+
+  validate:
+    desc: Run composite validation across code, docs, and running services
+    cmds:
+      - task toolchain:code-quality
+      - task docs:validate
+      - task reports:sync
+      - task agents:production-ops:test:e2e
+
+  shutdown:
+    desc: Gracefully tear down running services and clean temp reports
+    cmds:
+      - task toolchain:services:down
+      - task reports:clean
