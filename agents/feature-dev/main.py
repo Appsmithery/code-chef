@@ -14,12 +14,16 @@ from typing import Optional, Dict, List, Any
 from datetime import datetime
 import uvicorn
 import os
+import httpx
 
 app = FastAPI(
     title="Feature Development Agent",
     description="Application code generation and feature implementation",
     version="1.0.0"
 )
+
+# RAG Context Manager URL
+RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://rag-context:8007")
 
 class FeatureRequest(BaseModel):
     """Feature implementation request"""
@@ -78,8 +82,11 @@ async def implement_feature(request: FeatureRequest):
     
     feature_id = str(uuid.uuid4())
     
+    # Query RAG for context
+    rag_context = await query_rag_context(request.description)
+    
     # Simulate code generation (in production, would call LLM with RAG context)
-    artifacts = generate_code_artifacts(request)
+    artifacts = generate_code_artifacts(request, rag_context)
     
     # Simulate test execution (in production, would run in sandbox)
     test_results = execute_tests(artifacts)
@@ -89,7 +96,7 @@ async def implement_feature(request: FeatureRequest):
     
     # Token estimation: minimal context + incremental generation
     estimated_tokens = len(request.description.split()) * 10  # Rough estimate
-    context_lines = sum(len(ref.split('/')) * 20 for ref in (request.context_refs or []))
+    context_lines = sum(len(item.get("content", "").split('\n')) for item in rag_context)
     
     response = FeatureResponse(
         feature_id=feature_id,
@@ -102,6 +109,75 @@ async def implement_feature(request: FeatureRequest):
     )
     
     return response
+
+
+async def query_rag_context(description: str) -> List[Dict[str, Any]]:
+    """Query RAG Context Manager for relevant code and documentation"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{RAG_SERVICE_URL}/query",
+                json={
+                    "query": description,
+                    "collection": "code-knowledge",
+                    "n_results": 5
+                },
+                timeout=10.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return [
+                    {
+                        "content": item["content"],
+                        "metadata": item["metadata"],
+                        "relevance": item["relevance_score"]
+                    }
+                    for item in data.get("results", [])
+                ]
+            else:
+                # Fallback to mock if RAG unavailable
+                return await query_mock_rag(description)
+                
+    except Exception as e:
+        print(f"RAG query failed: {e}, using mock data")
+        return await query_mock_rag(description)
+
+
+async def query_mock_rag(description: str) -> List[Dict[str, Any]]:
+    """Fallback mock RAG query for development"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{RAG_SERVICE_URL}/query/mock",
+                json={
+                    "query": description,
+                    "collection": "code-knowledge",
+                    "n_results": 5
+                },
+                timeout=5.0
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return [
+                    {
+                        "content": item["content"],
+                        "metadata": item["metadata"],
+                        "relevance": item["relevance_score"]
+                    }
+                    for item in data.get("results", [])
+                ]
+    except:
+        pass
+    
+    # Ultimate fallback
+    return [{
+        "content": f"Context for: {description}",
+        "metadata": {"source": "fallback"},
+        "relevance": 0.5
+    }]
+
 
 @app.get("/patterns")
 async def get_coding_patterns():
@@ -116,29 +192,9 @@ async def get_coding_patterns():
         "cache_hit_rate": 0.72,
         "token_savings": "60-70%"
     }
-
-@app.post("/query-rag")
-async def query_rag_context(query: Dict[str, Any]):
+def generate_code_artifacts(request: FeatureRequest, rag_context: List[Dict[str, Any]] = None) -> List[CodeArtifact]:
     """
-    Query RAG Context Manager for relevant code snippets
-    Returns 10-50 relevant lines instead of entire files
-    """
-    return {
-        "query": query.get("query", ""),
-        "results": [
-            {
-                "file_path": "src/models/user.py",
-                "lines": "15-35",
-                "relevance_score": 0.92,
-                "snippet": "# User model implementation..."
-            }
-        ],
-        "total_lines": 25,
-        "token_estimate": 150
-    }
-
-def generate_code_artifacts(request: FeatureRequest) -> List[CodeArtifact]:
-    """
+    Generate code artifacts based on feature request and RAG context
     Generate code artifacts based on feature requirements
     Uses incremental generation with checkpoint validation
     """

@@ -9,10 +9,13 @@ services:
       - "8001:8001"
     environment:
       - SERVICE_NAME=orchestrator
+      - STATE_SERVICE_URL=http://state-persistence:8008
     networks:
       - devtools-network
     volumes:
       - orchestrator-data:/data
+    depends_on:
+      - state-persistence
 
   feature-dev:
     build:
@@ -22,8 +25,11 @@ services:
       - "8002:8002"
     environment:
       - SERVICE_NAME=feature-dev
+      - RAG_SERVICE_URL=http://rag-context:8007
     networks:
       - devtools-network
+    depends_on:
+      - rag-context
 
   code-review:
     build:
@@ -90,9 +96,78 @@ services:
       - linear_oauth_token
       - linear_webhook_secret
 
+  # RAG Context Manager
+  rag-context:
+    build:
+      context: ..
+      dockerfile: containers/rag/Dockerfile
+    ports:
+      - "8007:8007"
+    environment:
+      - SERVICE_NAME=rag-context
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+    networks:
+      - devtools-network
+    depends_on:
+      - chromadb
+
+  # State Persistence Layer
+  state-persistence:
+    build:
+      context: ..
+      dockerfile: containers/state/Dockerfile
+    ports:
+      - "8008:8008"
+    environment:
+      - SERVICE_NAME=state-persistence
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=devtools
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=changeme
+    networks:
+      - devtools-network
+    depends_on:
+      - postgres
+
+  # ChromaDB Vector Database
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8009:8000"
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    networks:
+      - devtools-network
+    volumes:
+      - chromadb-data:/chroma/chroma
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=devtools
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=changeme
+    networks:
+      - devtools-network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d devtools"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   orchestrator-data:
   mcp-config:
+  chromadb-data:
+  postgres-data:
 
 secrets:
   linear_oauth_token:
