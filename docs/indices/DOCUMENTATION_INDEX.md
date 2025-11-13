@@ -1,29 +1,65 @@
-# Documentation Index (Migration Placeholder)
+# Documentation Index
 
-**Last Updated:** 2025-11-12
+**Generated:** 2025-11-13T12:39:19.302Z
 
-This index is normally generated automatically by the documentation orchestrator (`operations/environment/update-docs-index.sh`). The automation has not yet been migrated into this repository, so this placeholder records the regeneration steps and interim navigation hints.
+## Top-level Documents
 
-## Regeneration Steps
+- [Agent Endpoints](AGENT_ENDPOINTS.md) — Complete API reference for all Dev-Tools agents.
+- [Dev-Tools Codebase Index](CODEBASE_INDEX.md) — This file mirrors docs/indices/CODEBASEINDEX.md.
+- [Dev-Tools Documentation Index](README.md) — Current Phase: Phase 5 Complete ✅
+- [Dev-Tools Operational Handbook](HANDBOOK.md) — Backups are stored in ./backups/YYYYMMDDHHMMSS/
+- [DigitalOcean Quick Deploy Guide](DIGITALOCEAN_QUICK_DEPLOY.md) — Target Droplet: mcp-gateway (45.55.173.72)
+- [Docker Deployment Guide](DEPLOYMENT.md) — Complete guide for deploying the Dev-Tools MCP agent stack using Docker Compose.
+- [Documentation Index](DOCUMENTATION_INDEX.md) — This stub points to the canonical index under docs/indices/.
+- [Frontend Integration Guide](FRONTEND_INTEGRATION.md) — Frontend URL: https://theshop.appsmithery.co/
+- [Secrets Management](SECRETS_MANAGEMENT.md) — 1. Run ./scripts/setupsecrets.sh to extract secrets from .env
 
-1. Migrate the documentation tooling from the legacy repository:
-   - `operations/environment/update-docs-index.sh`
-   - any referenced helper scripts or Taskfile targets
-2. Ensure the script is executable and referenced from `package.json` (e.g. `npm run validate:docs`).
-3. Run the generator from the repository root:
-   ```bash
-   npm run validate:docs
-   ```
-4. Commit the updated `docs/indices/DOCUMENTATION_INDEX.md` together with any supporting inventory artefacts.
+## Archive
 
-## Interim Navigation
+- [Deployment Prep Phase - Action Plan](archive/planning/DEPLOYMENT_PREP_PHASE_PLAN.md) — Target Platform: DigitalOcean Droplets + Gradient AI Platform
+- [Phase 4 Completion Summary - RAG Integration & State Persistence](archive/phases/PHASE4_COMPLETION_SUMMARY.md) — Completion Date: 2025-11-13
+- [Phase 5 Completion Summary](archive/phases/PHASE5_COMPLETION_SUMMARY.md) — Phase: Inter-Agent Communication & End-to-End Workflows
 
-Until the generator is reinstated, the most relevant documentation can be found at:
+## Chatmodes
 
-- `docs/overview/ARCHITECTURE.md` – repository architecture and structure
-- `docs/overview/STANDALONE_STRUCTURE.md` – end-state layout
-- `docs/onboarding/SETUP_GUIDE.md` – comprehensive setup instructions
-- `docs/governance/REFACTOR_CHECKLIST.md` – migration progress tracker
-- `docs/governance/SECRETS_MANAGEMENT.md` – secrets handling policy
+- [Cicd Agent Chat Mode](chatmodes/cicd.md) — Manages continuous integration and deployment pipelines.
+- [Code Review Agent Chat Mode](chatmodes/code-review.md) — Performs automated code reviews, linting, and quality checks.
+- [Documentation Agent Chat Mode](chatmodes/documentation.md) — Generates and maintains project documentation.
+- [Feature Dev Agent Chat Mode](chatmodes/feature-dev.md) — Handles feature implementation, code generation, and development tasks.
+- [Infrastructure Agent Chat Mode](chatmodes/infrastructure.md) — Manages infrastructure as code, deployments, and system configuration.
+- [Orchestrator Agent Chat Mode](chatmodes/orchestrator.md) — Coordinates task routing and agent hand-offs across the development workflow.
 
-Refer to these documents while porting additional tooling. Replace this placeholder with the generated index once the documentation pipeline is restored.
+## Governance
+
+- [Refactor Checklist - Standalone Dev-Tools Migration](governance/REFACTOR_CHECKLIST.md) — This checklist tracks the migration of Dev-Tools from a ProspectPro-extraction repository to a standalone, production-ready development t...
+- [Secrets Management System](governance/SECRETS_MANAGEMENT.md) — Dev-Tools implements a modular, overlay-based secrets management system with provenance tracking for secure agent orchestration.
+
+## Indices
+
+- [Dev-Tools Codebase Index (Migration Placeholder)](indices/CODEBASE_INDEX.md) — During the Phase 1 migration the codebase indexing scripts have not yet been copied over from the legacy repository. This placeholder kee...
+
+## Onboarding
+
+- [Dev-Tools Setup Guide](onboarding/SETUP_GUIDE.md) — Complete guide for setting up and using the Dev-Tools diagnostics and automation platform.
+- [Integration Modes](onboarding/archive/GETTING_STARTED.archived.md) — Dev-Tools can be integrated into your project in three ways:
+- [QUICK_START.archived](onboarding/archive/QUICK_START.archived.md)
+
+## Overview
+
+- [Dev-Tools Architecture - Standalone Toolset](overview/ARCHITECTURE.md) — Version: 1.0.0
+- [Dev-Tools Standalone Repository Structure](overview/STANDALONE_STRUCTURE.md) — Purpose: Define the end-state directory structure and organization for standalone mode
+- [Documentation Strategy for Dev-Tools](overview/DOCUMENTATION_STRATEGY.md) — Last Updated: 2025-11-02
+- [Task Orchestration Guide](overview/TASK_ORCHESTRATION.md) — Dev-Tools uses [Taskfile.dev](https://taskfile.dev) for organized, hierarchical automation. This enables modular, MECE-aligned workflows...
+
+## Temp
+
+- [**AI DevOps Agent Team Specifications**](temp/AI-devops-agent-specs.md) — This document defines the complete AI agent team for DevOps automation, designed to maximize coding efficiency through MECE (Mutually Exc...
+- [**MCP Migration & Implementation Roadmap**](temp/migration roadmap.md) — • Confirm availability of feature/central-mcp-gateway and reorg/optimized-structure branches or request updated locations.
+- [**Multi-Root Workspace \& MCP Implementation Plan**](temp/devops-AI-workspace-specs.md) — "taskid": "uuid",
+- [Leveraging DigitalOcean Gradient AI Agentic Cloud for Your Dev-Tools Architecture](temp/DigitalOcean-Gradient-config.md) — Based on the DigitalOcean Gradient documentation and your Dev-Tools repository architecture, you can integrate native cloud agent capabil...
+- [Repository Finalization & Refactoring Plan](temp/FINALIZATION_PLAN.md) — Current Branch: feature/phase1-low-inference
+
+
+---
+
+✨ This index is generated by `scripts/docs/generate-index.mjs`. Run `task docs:update` to refresh.

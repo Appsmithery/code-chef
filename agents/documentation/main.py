@@ -84,7 +84,7 @@ def generate_docs(request: DocRequest) -> List[DocArtifact]:
     return [
         DocArtifact(
             file_path="README.md",
-            content="# Generated Documentation\\n\\n<!-- Production: Replace with LLM-generated documentation -->\",
+            content="# Generated Documentation\n\n<!-- Production: Replace with LLM-generated documentation -->",
             doc_type=request.doc_type
         )
     ]

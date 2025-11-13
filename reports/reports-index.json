@@ -1,0 +1,16 @@
+{
+  "generated": "2025-11-13T12:41:19.822Z",
+  "count": 2,
+  "files": [
+    {
+      "path": "reports-index.json",
+      "size": 195,
+      "modified": "2025-11-13T12:36:26.063Z"
+    },
+    {
+      "path": "secrets-validation.json",
+      "size": 3184,
+      "modified": "2025-11-13T05:53:14.605Z"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+version: "3"
+
+includes:
+  agents: ./.taskfiles/agents/Taskfile.yml
+  docs: ./.taskfiles/docs/Taskfile.yml
+  folder-mapper: ./.taskfiles/folder-mapper/Taskfile.yml
+  orchestration: ./.taskfiles/orchestration/Taskfile.yml
+  reports: ./.taskfiles/reports/Taskfile.yml
+  toolchain: ./.taskfiles/toolchain/Taskfile.yml
+
+tasks:
+  default:
+    desc: Display available task namespaces and commands
+    cmds:
+      - task --list
