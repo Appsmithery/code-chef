@@ -232,12 +232,14 @@ function generateServersHTML(servers: any[]) {
         width: 0;
         height: 0;
         border-style: solid;
+        /* Closed = RIGHT arrow pointing to expand */
         border-width: 8px 0 8px 14px;
         border-color: transparent transparent transparent #999;
         margin-left: auto;
-        transition: transform 0.3s;
+        transition: all 0.3s;
       }
       .toggle-icon.open {
+        /* Open = DOWN arrow */
         border-width: 14px 8px 0 8px;
         border-color: #999 transparent transparent transparent;
       }
