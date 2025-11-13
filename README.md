@@ -36,28 +36,72 @@ cd Dev-Tools
 cp configs/env/.env.example configs/env/.env
 # Edit .env with your settings
 
-# Make scripts executable
+# Make scripts executable (Linux/Mac)
 chmod +x scripts/*.sh
 
 # Start services
-./scripts/up.sh
+cd compose
+docker-compose up -d
+
+# Verify services
+docker-compose ps
+```
+
+**Windows PowerShell:**
+
+```powershell
+# Navigate to compose directory
+cd compose
+
+# Start all services
+docker-compose up -d
+
+# Check service status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
 ```
 
 ### Remote Development Setup
 
 1. **Connect to droplet**:
+
    - VS Code → Remote-SSH → Connect to Host
    - Open `/path/to/Dev-Tools`
 
 2. **Attach to container**:
+
    - Click "Reopen in Container" when prompted
    - Wait for devcontainer build
 
 3. **Verify services**:
+
    ```bash
+   cd compose
    docker-compose ps
+
+   # Test health endpoints
    curl http://localhost:8000/health  # MCP Gateway
    curl http://localhost:8001/health  # Orchestrator
+   curl http://localhost:8002/health  # Feature-Dev
+   curl http://localhost:8003/health  # Code-Review
+   curl http://localhost:8004/health  # Infrastructure
+   curl http://localhost:8005/health  # CI/CD
+   curl http://localhost:8006/health  # Documentation
+   ```
+
+   **Windows PowerShell:**
+
+   ```powershell
+   # Test health endpoints
+   Invoke-RestMethod http://localhost:8000/health  # MCP Gateway
+   Invoke-RestMethod http://localhost:8001/health  # Orchestrator
+   Invoke-RestMethod http://localhost:8002/health  # Feature-Dev
+   Invoke-RestMethod http://localhost:8003/health  # Code-Review
+   Invoke-RestMethod http://localhost:8004/health  # Infrastructure
+   Invoke-RestMethod http://localhost:8005/health  # CI/CD
+   Invoke-RestMethod http://localhost:8006/health  # Documentation
    ```
 
 ## Architecture
@@ -74,34 +118,40 @@ Dev-Tools (single-root)
 
 ### Service Ports
 
-| Service | Port | Purpose |
-|---------|------|----------|
-| MCP Gateway | 8000 | MCP routing |
-| Orchestrator | 8001 | Task coordination |
-| Feature-Dev | 8002 | Code generation |
-| Code-Review | 8003 | Quality checks |
-| Infrastructure | 8004 | IaC generation |
-| CI/CD | 8005 | Pipeline automation |
-| Documentation | 8006 | Doc generation |
+| Service        | Port | Purpose             |
+| -------------- | ---- | ------------------- |
+| MCP Gateway    | 8000 | MCP routing         |
+| Orchestrator   | 8001 | Task coordination   |
+| Feature-Dev    | 8002 | Code generation     |
+| Code-Review    | 8003 | Quality checks      |
+| Infrastructure | 8004 | IaC generation      |
+| CI/CD          | 8005 | Pipeline automation |
+| Documentation  | 8006 | Doc generation      |
 
 ## Agent Responsibilities
 
 ### Orchestrator
+
 Coordinates task routing, agent selection, and workflow orchestration.
 
 ### Feature-Dev
+
 Implements features, generates code, sets up testing.
 
 ### Code-Review
+
 Performs quality analysis, security scanning, generates review comments.
 
 ### Infrastructure
+
 Generates IaC (Terraform, Docker Compose), manages deployments.
 
 ### CI/CD
+
 Creates pipelines, automates workflows, orchestrates builds.
 
 ### Documentation
+
 Generates READMEs, API docs, architecture diagrams.
 
 ## Usage
@@ -109,19 +159,47 @@ Generates READMEs, API docs, architecture diagrams.
 ### Submit a Task
 
 ```bash
-curl -X POST http://localhost:8001/task \
+curl -X POST http://localhost:8001/orchestrate \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "feature",
-    "description": "Add user authentication",
-    "context": {"framework": "FastAPI"}
+    "description": "Add user authentication with JWT",
+    "priority": "high"
   }'
 ```
 
-### Check Task Status
+**Windows PowerShell:**
 
-```bash
-curl http://localhost:8001/task/{task_id}
+```powershell
+$body = @{
+    description = "Add user authentication with JWT"
+    priority = "high"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri http://localhost:8001/orchestrate `
+    -Method Post `
+    -Body $body `
+    -ContentType "application/json"
+```
+
+**Response:**
+
+```json
+{
+  "task_id": "uuid",
+  "subtasks": [
+    {
+      "id": "uuid",
+      "agent_type": "feature-dev",
+      "description": "Implement JWT authentication",
+      "status": "pending"
+    }
+  ],
+  "routing_plan": {
+    "execution_order": ["uuid"],
+    "estimated_duration_minutes": 15
+  },
+  "estimated_tokens": 25
+}
 ```
 
 ### Backup Volumes
@@ -141,6 +219,7 @@ curl http://localhost:8001/task/{task_id}
 ### Environment Variables
 
 Edit `configs/env/.env`:
+
 ```bash
 ORCHESTRATOR_URL=http://orchestrator:8001
 MCP_GATEWAY_URL=http://gateway-mcp:8000
@@ -150,6 +229,7 @@ LOG_LEVEL=info
 ### Task Routing Rules
 
 Edit `configs/routing/task-router.rules.yaml`:
+
 ```yaml
 routes:
   - pattern: "feature|implement"
@@ -160,6 +240,7 @@ routes:
 ### RAG Configuration
 
 Edit `configs/rag/vectordb.config.yaml`:
+
 ```yaml
 vectordb:
   type: "chromadb"
@@ -214,6 +295,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Support
 
 For issues, questions, or contributions:
+
 - **Issues**: [GitHub Issues](https://github.com/Appsmithery/Dev-Tools/issues)
 - **Documentation**: [docs/](docs/)
 - **Discussions**: [GitHub Discussions](https://github.com/Appsmithery/Dev-Tools/discussions)
