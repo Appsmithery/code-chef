@@ -1,0 +1,49 @@
+version: "3"
+
+# Code Review Agent - Quality assurance and security scanning
+# Endpoints: POST /review
+
+vars:
+  AGENT_NAME: code-review
+  AGENT_PORT: 8003
+  AGENT_HOST:
+    sh: echo "${AGENT_HOST:-http://localhost}"
+
+tasks:
+  health:
+    desc: Check code-review service health
+    cmds:
+      - curl -f {{.AGENT_HOST}}:{{.AGENT_PORT}}/health
+
+  dev:run:
+    desc: Run code-review locally (development mode)
+    dir: .
+    cmds:
+      - python main.py
+    env:
+      PORT: "{{.AGENT_PORT}}"
+      LOG_LEVEL: debug
+
+  dev:test:
+    desc: Run code-review unit tests
+    dir: .
+    cmds:
+      - pytest tests/ -v
+
+  review:
+    desc: Review code changes (checks git diff)
+    cmds:
+      - echo "Reviewing staged changes..."
+      - git diff --cached
+
+  build:
+    desc: Build code-review container image
+    dir: ../../containers/code-review
+    cmds:
+      - docker build -t devtools/code-review:latest .
+
+  logs:
+    desc: Tail code-review container logs
+    dir: ../../compose
+    cmds:
+      - docker compose logs -f code-review

@@ -1,0 +1,54 @@
+version: "3"
+
+# Feature Development Agent - Code generation and implementation
+# Endpoints: POST /implement, GET /patterns, POST /query-rag
+
+vars:
+  AGENT_NAME: feature-dev
+  AGENT_PORT: 8002
+  AGENT_HOST:
+    sh: echo "${AGENT_HOST:-http://localhost}"
+
+tasks:
+  health:
+    desc: Check feature-dev service health
+    cmds:
+      - curl -f {{.AGENT_HOST}}:{{.AGENT_PORT}}/health
+
+  dev:run:
+    desc: Run feature-dev locally (development mode)
+    dir: .
+    cmds:
+      - python main.py
+    env:
+      PORT: "{{.AGENT_PORT}}"
+      LOG_LEVEL: debug
+
+  dev:test:
+    desc: Run feature-dev unit tests
+    dir: .
+    cmds:
+      - pytest tests/ -v
+
+  test:
+    desc: Run generated tests for last implementation
+    dir: .
+    cmds:
+      - python -m pytest generated_tests/ -v
+
+  patterns:
+    desc: List cached coding patterns for token optimization
+    cmds:
+      - curl -f {{.AGENT_HOST}}:{{.AGENT_PORT}}/patterns
+
+  build:
+    desc: Build feature-dev container image
+    dir: ../../containers/feature-dev
+    cmds:
+      - docker build -t devtools/feature-dev:latest .
+
+  logs:
+    desc: Tail feature-dev container logs
+    dir: ../../compose
+    cmds:
+      - docker compose logs -f feature-dev

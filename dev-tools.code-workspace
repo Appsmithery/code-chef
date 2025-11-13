@@ -46,7 +46,8 @@
       "ms-vscode-remote.remote-ssh",
       "ms-vscode-remote.remote-containers",
       "linear.linear-connect",
-      "chrisdias.promptboost"
+      "chrisdias.promptboost",
+      "task.vscode-task"
     ]
   }
 }

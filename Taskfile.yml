@@ -1,15 +1,57 @@
 version: "3"
 
+# Root orchestration for Dev-Tools agent workflows
+# Per-agent Taskfiles live in agents/<agent>/Taskfile.yml
+
 includes:
-  agents: ./.taskfiles/agents/Taskfile.yml
-  docs: ./.taskfiles/docs/Taskfile.yml
-  folder-mapper: ./.taskfiles/folder-mapper/Taskfile.yml
-  orchestration: ./.taskfiles/orchestration/Taskfile.yml
-  reports: ./.taskfiles/reports/Taskfile.yml
-  toolchain: ./.taskfiles/toolchain/Taskfile.yml
+  orchestrator: ./agents/orchestrator/Taskfile.yml
+  feature-dev: ./agents/feature-dev/Taskfile.yml
+  code-review: ./agents/code-review/Taskfile.yml
+  documentation: ./agents/documentation/Taskfile.yml
+  infrastructure: ./agents/infrastructure/Taskfile.yml
+  cicd: ./agents/cicd/Taskfile.yml
 
 tasks:
   default:
-    desc: Display available task namespaces and commands
+    desc: Display available agent workflows
     cmds:
       - task --list
+
+  # System management
+  health:
+    desc: Check health of all agent services
+    cmds:
+      - task orchestrator:health
+      - task feature-dev:health
+      - task code-review:health
+      - task documentation:health
+      - task infrastructure:health
+      - task cicd:health
+
+  build:all:
+    desc: Build all agent container images
+    cmds:
+      - task orchestrator:build
+      - task feature-dev:build
+      - task code-review:build
+      - task documentation:build
+      - task infrastructure:build
+      - task cicd:build
+
+  compose:up:
+    desc: Start all agent containers
+    dir: compose
+    cmds:
+      - docker compose up -d
+
+  compose:down:
+    desc: Stop all agent containers
+    dir: compose
+    cmds:
+      - docker compose down
+
+  compose:logs:
+    desc: Tail logs for all services
+    dir: compose
+    cmds:
+      - docker compose logs --tail=100 -f

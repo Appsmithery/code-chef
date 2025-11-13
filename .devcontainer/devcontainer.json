@@ -30,7 +30,8 @@
         "chrisdias.promptboost",
         "dbaeumer.vscode-eslint",
         "denoland.vscode-deno",
-        "vscjava.vscode-java-debug"
+        "vscjava.vscode-java-debug",
+        "task.vscode-task"
       ]
     }
   }
