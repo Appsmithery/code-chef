@@ -14,7 +14,17 @@
         "ms-python.python",
         "GitHub.copilot",
         "esbenp.prettier-vscode",
-        "linear.linear-connect"
+        "linear.linear-connect",
+        "ms-vscode-remote.remote-ssh",
+        "ms-vscode.remote-repositories",
+        "ms-vscode-remote.vscode-remote-extensionpack",
+        "redhat.vscode-yaml",
+        "GitHub.remotehub",
+        "github.vscode-github-actions",
+        "GitHub.copilot-chat",
+        "docker.docker",
+        "ms-vscode-remote.remote-containers",
+        "ms-azuretools.vscode-containers"
       ]
     }
   }
