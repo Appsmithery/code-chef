@@ -3,29 +3,38 @@ version: "3.8"
 services:
   orchestrator:
     build:
-      context: ../containers/orchestrator
+      context: ..
+      dockerfile: containers/orchestrator/Dockerfile
     ports:
       - "8001:8001"
     environment:
       - SERVICE_NAME=orchestrator
+      - STATE_SERVICE_URL=http://state-persistence:8008
     networks:
       - devtools-network
     volumes:
       - orchestrator-data:/data
+    depends_on:
+      - state-persistence
 
   feature-dev:
     build:
-      context: ../containers/feature-dev
+      context: ..
+      dockerfile: containers/feature-dev/Dockerfile
     ports:
       - "8002:8002"
     environment:
       - SERVICE_NAME=feature-dev
+      - RAG_SERVICE_URL=http://rag-context:8007
     networks:
       - devtools-network
+    depends_on:
+      - rag-context
 
   code-review:
     build:
-      context: ../containers/code-review
+      context: ..
+      dockerfile: containers/code-review/Dockerfile
     ports:
       - "8003:8003"
     environment:
@@ -35,7 +44,8 @@ services:
 
   infrastructure:
     build:
-      context: ../containers/infrastructure
+      context: ..
+      dockerfile: containers/infrastructure/Dockerfile
     ports:
       - "8004:8004"
     environment:
@@ -45,7 +55,8 @@ services:
 
   cicd:
     build:
-      context: ../containers/cicd
+      context: ..
+      dockerfile: containers/cicd/Dockerfile
     ports:
       - "8005:8005"
     environment:
@@ -55,7 +66,8 @@ services:
 
   documentation:
     build:
-      context: ../containers/documentation
+      context: ..
+      dockerfile: containers/documentation/Dockerfile
     ports:
       - "8006:8006"
     environment:
@@ -65,7 +77,8 @@ services:
 
   gateway-mcp:
     build:
-      context: ../containers/gateway-mcp
+      context: ..
+      dockerfile: containers/gateway-mcp/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -83,9 +96,78 @@ services:
       - linear_oauth_token
       - linear_webhook_secret
 
+  # RAG Context Manager
+  rag-context:
+    build:
+      context: ..
+      dockerfile: containers/rag/Dockerfile
+    ports:
+      - "8007:8007"
+    environment:
+      - SERVICE_NAME=rag-context
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
+    networks:
+      - devtools-network
+    depends_on:
+      - qdrant
+
+  # State Persistence Layer
+  state-persistence:
+    build:
+      context: ..
+      dockerfile: containers/state/Dockerfile
+    ports:
+      - "8008:8008"
+    environment:
+      - SERVICE_NAME=state-persistence
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=devtools
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=changeme
+    networks:
+      - devtools-network
+    depends_on:
+      - postgres
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - devtools-network
+    volumes:
+      - qdrant-data:/qdrant/storage
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=devtools
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=changeme
+    networks:
+      - devtools-network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d devtools"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   orchestrator-data:
   mcp-config:
+  qdrant-data:
+  postgres-data:
 
 secrets:
   linear_oauth_token:

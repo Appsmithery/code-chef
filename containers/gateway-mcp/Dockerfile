@@ -2,10 +2,10 @@ FROM node:18-slim
 
 WORKDIR /app
 
-COPY ../../mcp/gateway/package*.json ./
+COPY mcp/gateway/package*.json ./
 RUN npm install --omit=dev
 
-COPY ../../mcp/gateway/ ./
+COPY mcp/gateway/ ./
 
 ENV NODE_ENV=production
 
