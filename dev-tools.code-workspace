@@ -1,0 +1,26 @@
+{
+  "folders": [
+    {
+      "path": ".",
+      "name": "Dev-Tools Root"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/__pycache__": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-azuretools.vscode-docker",
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "GitHub.copilot",
+      "esbenp.prettier-vscode",
+      "redhat.vscode-yaml",
+      "ms-vscode-remote.remote-ssh",
+      "ms-vscode-remote.remote-containers"
+    ]
+  }
+}
