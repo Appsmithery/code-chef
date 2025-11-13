@@ -3,7 +3,8 @@ version: "3.8"
 services:
   orchestrator:
     build:
-      context: ../containers/orchestrator
+      context: ..
+      dockerfile: containers/orchestrator/Dockerfile
     ports:
       - "8001:8001"
     environment:
@@ -15,7 +16,8 @@ services:
 
   feature-dev:
     build:
-      context: ../containers/feature-dev
+      context: ..
+      dockerfile: containers/feature-dev/Dockerfile
     ports:
       - "8002:8002"
     environment:
@@ -25,7 +27,8 @@ services:
 
   code-review:
     build:
-      context: ../containers/code-review
+      context: ..
+      dockerfile: containers/code-review/Dockerfile
     ports:
       - "8003:8003"
     environment:
@@ -35,7 +38,8 @@ services:
 
   infrastructure:
     build:
-      context: ../containers/infrastructure
+      context: ..
+      dockerfile: containers/infrastructure/Dockerfile
     ports:
       - "8004:8004"
     environment:
@@ -45,7 +49,8 @@ services:
 
   cicd:
     build:
-      context: ../containers/cicd
+      context: ..
+      dockerfile: containers/cicd/Dockerfile
     ports:
       - "8005:8005"
     environment:
@@ -55,7 +60,8 @@ services:
 
   documentation:
     build:
-      context: ../containers/documentation
+      context: ..
+      dockerfile: containers/documentation/Dockerfile
     ports:
       - "8006:8006"
     environment:
@@ -65,7 +71,8 @@ services:
 
   gateway-mcp:
     build:
-      context: ../containers/gateway-mcp
+      context: ..
+      dockerfile: containers/gateway-mcp/Dockerfile
     ports:
       - "8000:8000"
     environment:
