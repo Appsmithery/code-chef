@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dev-Tools API Test</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 2rem;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      }
+      h1 {
+        color: #667eea;
+        margin-bottom: 1.5rem;
+      }
+      .status {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        font-weight: 600;
+      }
+      .status.success {
+        background: #d4edda;
+        color: #155724;
+      }
+      .status.error {
+        background: #f8d7da;
+        color: #721c24;
+      }
+      .status.loading {
+        background: #fff3cd;
+        color: #856404;
+      }
+      textarea {
+        width: 100%;
+        padding: 1rem;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        min-height: 120px;
+        margin-bottom: 1rem;
+      }
+      button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      button:hover {
+        transform: translateY(-2px);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .result {
+        margin-top: 1.5rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+      }
+      .result h3 {
+        color: #764ba2;
+        margin-bottom: 0.5rem;
+      }
+      .agent-result {
+        margin: 0.5rem 0;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 4px;
+      }
+      pre {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 4px;
+        overflow-x: auto;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 Dev-Tools API Test</h1>
+
+      <div id="status" class="status" style="display: none"></div>
+
+      <textarea
+        id="taskInput"
+        placeholder="Describe what you want to build...&#10;&#10;Example: Create a user profile page with avatar upload"
+      ></textarea>
+
+      <button id="submitBtn" onclick="runWorkflow()">Generate Code</button>
+
+      <div id="results"></div>
+    </div>
+
+    <script>
+      const API_BASE = "http://45.55.173.72:8001";
+
+      function showStatus(message, type = "loading") {
+        const statusEl = document.getElementById("status");
+        statusEl.textContent = message;
+        statusEl.className = `status ${type}`;
+        statusEl.style.display = "block";
+      }
+
+      function hideStatus() {
+        document.getElementById("status").style.display = "none";
+      }
+
+      async function runWorkflow() {
+        const taskInput = document.getElementById("taskInput").value;
+        const submitBtn = document.getElementById("submitBtn");
+        const resultsEl = document.getElementById("results");
+
+        if (!taskInput.trim()) {
+          alert("Please enter a task description");
+          return;
+        }
+
+        submitBtn.disabled = true;
+        resultsEl.innerHTML = "";
+        showStatus("🔄 Creating task...", "loading");
+
+        try {
+          // Step 1: Create task
+          const taskResponse = await fetch(`${API_BASE}/orchestrate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              description: taskInput,
+              priority: "high",
+            }),
+          });
+
+          if (!taskResponse.ok) {
+            throw new Error(
+              `Failed to create task: ${taskResponse.statusText}`
+            );
+          }
+
+          const task = await taskResponse.json();
+          showStatus(`✓ Task created: ${task.task_id}`, "success");
+
+          // Step 2: Execute workflow
+          showStatus("🚀 Executing workflow...", "loading");
+
+          const executeResponse = await fetch(
+            `${API_BASE}/execute/${task.task_id}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+
+          if (!executeResponse.ok) {
+            throw new Error(
+              `Failed to execute task: ${executeResponse.statusText}`
+            );
+          }
+
+          const execution = await executeResponse.json();
+          showStatus(`✅ Workflow ${execution.status}!`, "success");
+
+          // Display results
+          resultsEl.innerHTML = `
+                    <div class="result">
+                        <h3>📊 Execution Results</h3>
+                        <div><strong>Task ID:</strong> ${task.task_id}</div>
+                        <div><strong>Status:</strong> ${execution.status}</div>
+                        <div><strong>Assigned Agents:</strong> ${task.assigned_agents.join(
+                          ", "
+                        )}</div>
+                        <hr style="margin: 1rem 0; border: none; border-top: 1px solid #ddd;">
+                        ${execution.execution_results
+                          .map(
+                            (r) => `
+                            <div class="agent-result">
+                                <strong>🤖 ${r.agent}:</strong> 
+                                <span style="color: ${
+                                  r.status === "completed" ? "green" : "orange"
+                                }">
+                                    ${r.status}
+                                </span>
+                                ${
+                                  r.result
+                                    ? `<pre>${JSON.stringify(
+                                        r.result,
+                                        null,
+                                        2
+                                      )}</pre>`
+                                    : ""
+                                }
+                            </div>
+                        `
+                          )
+                          .join("")}
+                    </div>
+                `;
+        } catch (error) {
+          console.error("Error:", error);
+          showStatus(`❌ Error: ${error.message}`, "error");
+        } finally {
+          submitBtn.disabled = false;
+        }
+      }
+
+      // Test connection on load
+      window.addEventListener("load", async () => {
+        try {
+          const response = await fetch(`${API_BASE}/health`);
+          const data = await response.json();
+          if (data.status === "ok") {
+            showStatus("✓ Connected to Dev-Tools API", "success");
+            setTimeout(hideStatus, 3000);
+          }
+        } catch (error) {
+          showStatus(
+            "⚠️ Could not connect to Dev-Tools API. Check CORS configuration.",
+            "error"
+          );
+        }
+      });
+    </script>
+  </body>
+</html>
