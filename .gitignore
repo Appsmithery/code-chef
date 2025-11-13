@@ -1,4 +1,5 @@
 # Environment files
+/.env
 .env
 secrets.json
 *.key
