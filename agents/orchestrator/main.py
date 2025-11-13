@@ -205,6 +205,141 @@ async def list_agents():
         ]
     }
 
+@app.post("/execute/{task_id}")
+async def execute_workflow(task_id: str):
+    """Execute workflow by calling agents in sequence based on routing plan"""
+    if task_id not in task_registry:
+        raise HTTPException(status_code=404, detail="Task not found")
+    
+    task = task_registry[task_id]
+    execution_results = []
+    
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        for subtask in task.subtasks:
+            try:
+                # Update subtask status
+                subtask.status = TaskStatus.IN_PROGRESS
+                
+                # Route to appropriate agent
+                agent_url = AGENT_ENDPOINTS[subtask.agent_type]
+                
+                if subtask.agent_type == AgentType.FEATURE_DEV:
+                    # Call feature-dev agent
+                    response = await client.post(
+                        f"{agent_url}/implement",
+                        json={
+                            "description": subtask.description,
+                            "context_refs": subtask.context_refs or [],
+                            "task_id": task_id
+                        }
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        execution_results.append({
+                            "subtask_id": subtask.id,
+                            "agent": subtask.agent_type,
+                            "status": "completed",
+                            "result": result
+                        })
+                        subtask.status = TaskStatus.COMPLETED
+                    else:
+                        subtask.status = TaskStatus.FAILED
+                        execution_results.append({
+                            "subtask_id": subtask.id,
+                            "agent": subtask.agent_type,
+                            "status": "failed",
+                            "error": f"HTTP {response.status_code}"
+                        })
+                
+                elif subtask.agent_type == AgentType.CODE_REVIEW:
+                    # Call code-review agent with artifacts from previous step
+                    prev_result = execution_results[-1].get("result") if execution_results else None
+                    
+                    if prev_result and "artifacts" in prev_result:
+                        # Prepare review payload (diffs only, test_results is optional dict)
+                        review_payload = {
+                            "task_id": task_id,
+                            "diffs": [
+                                {
+                                    "file_path": artifact["file_path"],
+                                    "changes": artifact["content"],
+                                    "context_lines": 5
+                                }
+                                for artifact in prev_result["artifacts"]
+                            ]
+                        }
+                        
+                        # Don't include test_results for now (it expects dict, we have list)
+                        # Future: convert test_results list to summary dict if needed
+                        
+                        response = await client.post(
+                            f"{agent_url}/review",
+                            json=review_payload
+                        )
+                        
+                        if response.status_code == 200:
+                            result = response.json()
+                            execution_results.append({
+                                "subtask_id": subtask.id,
+                                "agent": subtask.agent_type,
+                                "status": "completed",
+                                "result": result
+                            })
+                            subtask.status = TaskStatus.COMPLETED
+                        else:
+                            subtask.status = TaskStatus.FAILED
+                            execution_results.append({
+                                "subtask_id": subtask.id,
+                                "agent": subtask.agent_type,
+                                "status": "failed",
+                                "error": f"HTTP {response.status_code}"
+                            })
+                    else:
+                        subtask.status = TaskStatus.FAILED
+                        execution_results.append({
+                            "subtask_id": subtask.id,
+                            "agent": subtask.agent_type,
+                            "status": "skipped",
+                            "error": "No artifacts from previous step"
+                        })
+                
+                else:
+                    # Other agent types - placeholder for future implementation
+                    subtask.status = TaskStatus.COMPLETED
+                    execution_results.append({
+                        "subtask_id": subtask.id,
+                        "agent": subtask.agent_type,
+                        "status": "pending_implementation",
+                        "message": "Agent integration not yet implemented"
+                    })
+                    
+            except Exception as e:
+                subtask.status = TaskStatus.FAILED
+                execution_results.append({
+                    "subtask_id": subtask.id,
+                    "agent": subtask.agent_type,
+                    "status": "failed",
+                    "error": str(e)
+                })
+    
+    # Update overall task status
+    overall_status = "completed" if all(
+        r["status"] in ["completed", "pending_implementation"] for r in execution_results
+    ) else "failed"
+    
+    return {
+        "task_id": task_id,
+        "status": overall_status,
+        "execution_results": execution_results,
+        "subtasks": [{
+            "id": st.id,
+            "agent_type": st.agent_type,
+            "status": st.status,
+            "description": st.description
+        } for st in task.subtasks]
+    }
+
 def decompose_request(request: TaskRequest) -> List[SubTask]:
     """
     Decompose incoming request into discrete subtasks

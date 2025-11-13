@@ -110,6 +110,58 @@ async def implement_feature(request: FeatureRequest):
     
     return response
 
+@app.post("/implement-and-review", response_model=Dict[str, Any])
+async def implement_and_review(request: FeatureRequest):
+    """Implement feature and automatically trigger code review"""
+    # Step 1: Implement feature
+    feature_result = await implement_feature(request)
+    
+    # Step 2: Automatically call code-review agent
+    code_review_url = os.getenv("CODE_REVIEW_URL", "http://code-review:8003")
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            review_response = await client.post(
+                f"{code_review_url}/review",
+                json={
+                    "task_id": request.task_id or feature_result.feature_id,
+                    "diffs": [
+                        {
+                            "file_path": artifact.file_path,
+                            "changes": artifact.content,
+                            "context_lines": 5
+                        }
+                        for artifact in feature_result.artifacts
+                    ],
+                    "test_results": {
+                        "results": [result.dict() for result in feature_result.test_results]
+                    }
+                }
+            )
+            
+            if review_response.status_code == 200:
+                review_data = review_response.json()
+                return {
+                    "feature_implementation": feature_result.dict(),
+                    "code_review": review_data,
+                    "workflow_status": "completed",
+                    "approval": review_data.get("approval", False)
+                }
+            else:
+                return {
+                    "feature_implementation": feature_result.dict(),
+                    "code_review": {"error": f"Review failed with status {review_response.status_code}"},
+                    "workflow_status": "partial",
+                    "approval": False
+                }
+    except Exception as e:
+        return {
+            "feature_implementation": feature_result.dict(),
+            "code_review": {"error": str(e)},
+            "workflow_status": "partial",
+            "approval": False
+        }
+
 
 async def query_rag_context(description: str) -> List[Dict[str, Any]]:
     """Query RAG Context Manager for relevant code and documentation"""
