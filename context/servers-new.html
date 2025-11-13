@@ -5,17 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Installed MCP Servers & Tools</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
       body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: #fff;
         min-height: 100vh;
         padding: 2rem;
       }
-      .container { max-width: 1400px; margin: 0 auto; }
-      .header { text-align: center; margin-bottom: 3rem; }
-      .header h1 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+      }
       .back-btn {
         display: inline-block;
         padding: 0.75rem 1.5rem;
@@ -52,8 +68,14 @@
         cursor: pointer;
         user-select: none;
       }
-      .server-icon { font-size: 3rem; }
-      .server-info h2 { font-size: 1.8rem; color: #667eea; margin-bottom: 0.25rem; }
+      .server-icon {
+        font-size: 3rem;
+      }
+      .server-info h2 {
+        font-size: 1.8rem;
+        color: #667eea;
+        margin-bottom: 0.25rem;
+      }
       .server-status {
         display: inline-block;
         padding: 0.25rem 0.75rem;
@@ -63,14 +85,49 @@
         font-size: 0.85rem;
         font-weight: 600;
       }
-      .server-meta { display: flex; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
-      .meta-item { display: flex; flex-direction: column; gap: 0.25rem; }
-      .meta-label { font-size: 0.85rem; color: #666; font-weight: 600; text-transform: uppercase; }
-      .meta-value { font-size: 1.1rem; color: #667eea; font-weight: 700; }
-      .tools-section { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-      .tools-section.open { max-height: 2000px; }
-      .tools-section h3 { font-size: 1.3rem; color: #764ba2; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-      .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
+      .server-meta {
+        display: flex;
+        gap: 2rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+      }
+      .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .meta-label {
+        font-size: 0.85rem;
+        color: #666;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .meta-value {
+        font-size: 1.1rem;
+        color: #667eea;
+        font-weight: 700;
+      }
+      .tools-section {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+      .tools-section.open {
+        max-height: 2000px;
+      }
+      .tools-section h3 {
+        font-size: 1.3rem;
+        color: #764ba2;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+      }
       .tool-card {
         background: #f8f9fa;
         border-radius: 8px;
@@ -78,10 +135,26 @@
         border-left: 4px solid #667eea;
         transition: transform 0.2s, box-shadow 0.2s;
       }
-      .tool-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-      .tool-name { font-weight: 700; color: #333; margin-bottom: 0.5rem; font-size: 1.05rem; }
-      .tool-desc { font-size: 0.9rem; color: #666; line-height: 1.5; }
-      .tool-params { margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #ddd; }
+      .tool-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      }
+      .tool-name {
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 0.5rem;
+        font-size: 1.05rem;
+      }
+      .tool-desc {
+        font-size: 0.9rem;
+        color: #666;
+        line-height: 1.5;
+      }
+      .tool-params {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #ddd;
+      }
       .param-badge {
         display: inline-block;
         background: #667eea;
@@ -97,8 +170,8 @@
         width: 0;
         height: 0;
         border-style: solid;
-        border-width: 8px 0 8px 14px;
-        border-color: transparent transparent transparent #999;
+        border-width: 8px 14px 8px 0;
+        border-color: transparent #999 transparent transparent;
         margin-left: auto;
         transition: transform 0.3s;
       }
@@ -107,8 +180,12 @@
         border-color: #999 transparent transparent transparent;
       }
       @media (max-width: 768px) {
-        .header h1 { font-size: 2rem; }
-        .tools-grid { grid-template-columns: 1fr; }
+        .header h1 {
+          font-size: 2rem;
+        }
+        .tools-grid {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
@@ -118,7 +195,7 @@
         <h1>🔌 Installed MCP Servers & Tools</h1>
       </div>
       <a href="/" class="back-btn">← Back to Dashboard</a>
-      
+
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
           <div class="server-icon">🔧</div>
@@ -130,35 +207,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">search_docs</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">list_docs</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -171,35 +246,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">search_images</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">get_image_info</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -212,29 +285,28 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">1</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">1</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">fetch_url</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -247,35 +319,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">geocode</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">search_places</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -288,35 +358,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">retrieve_memories</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">store_memory</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -329,35 +397,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">list_instances</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">get_instance</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -370,35 +436,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">validate_model</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">generate_schema</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -411,35 +475,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">query_graph</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">store_knowledge</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -452,35 +514,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">analyze_project</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">get_config</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -493,35 +553,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">execute_code</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">list_files</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -534,35 +592,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">search_pages</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">list_databases</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -575,35 +631,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">search</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">ask_question</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -616,35 +670,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">navigate</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">get_page_content</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -657,41 +709,38 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">3</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">3</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">list_directory</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">file_exists</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">directory_tree</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -704,29 +753,28 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">1</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">1</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">think_step</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -739,35 +787,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">list_customers</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">get_payment_intent</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -780,35 +826,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">get_current_time</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">convert_timezone</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
 
       <div class="server-card">
         <div class="server-header" onclick="toggleServerCard(this)">
@@ -821,35 +865,33 @@
         </div>
         <div class="server-meta">
           <div class="meta-item">
-            <span class="meta-label">Tools</span><span class="meta-value">2</span>
+            <span class="meta-label">Tools</span
+            ><span class="meta-value">2</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Category</span><span class="meta-value">MCP Server</span>
+            <span class="meta-label">Category</span
+            ><span class="meta-value">MCP Server</span>
           </div>
           <div class="meta-item">
-            <span class="meta-label">Protocol</span><span class="meta-value">MCP 1.0</span>
+            <span class="meta-label">Protocol</span
+            ><span class="meta-value">MCP 1.0</span>
           </div>
         </div>
         <div class="tools-section">
           <h3>🛠️ Available Tools</h3>
           <div class="tools-grid">
-            
             <div class="tool-card">
               <div class="tool-name">get_transcript</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
+
             <div class="tool-card">
               <div class="tool-name">search_videos</div>
               <div class="tool-desc">No description</div>
-              
             </div>
-    
           </div>
         </div>
       </div>
-    
     </div>
     <script>
       function toggleServerCard(header) {
