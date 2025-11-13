@@ -12,6 +12,13 @@
 - Task routing rules belong in `configs/routing/task-router.rules.yaml`; prioritize explicit patterns before the catch-all orchestrator rule.
 - `configs/rag/indexing.yaml` + `configs/rag/vectordb.config.yaml` define RAG sources and embedding targets; update both when adding new corpora or providers.
 - Persistent workflow state is PostgreSQL-backed using `configs/state/schema.sql`; migrate schema by extending this file and rebuilding the stack.
+- Secrets are surfaced to containers via Docker Compose secrets in `configs/env/secrets/*.txt`; run `./scripts/setup_secrets.sh` locally (gitignored) and set matching GitHub Actions repo secrets for CI/CD.
+
+## Linear roadmap access
+
+- Gateway service exposes `/oauth/linear/install` (initiate OAuth) and `/oauth/linear/status` (check token). Issues live under `/api/linear-issues`; project snapshots via `/api/linear-project/:projectId`.
+- Tokens resolve from `LINEAR_*` envs or their `*_FILE` counterparts; keep `configs/env/secrets/linear_oauth_token.txt` up to date and never commit raw `.env` secrets.
+- To track progress, authorize once per workspace, then poll the above endpoints or integrate against `services/linear.js` helpers for programmatic access.
 
 ## Local workflows
 
