@@ -1,0 +1,256 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2025-11-03T00:28:24.779Z",
+  "profiles": [
+    {
+      "name": "development-workflow",
+      "directory": "_development-workflow",
+      "configPath": "agents/_development-workflow/config.json",
+      "toolsetPath": "agents/_development-workflow/toolset.jsonc",
+      "mcpServers": [
+        "github/github-mcp-server",
+        "microsoft/playwright-mcp",
+        "supabase",
+        "utility"
+      ],
+      "requiredSecrets": [
+        "ALLOWED_PATH",
+        "MCP_MEMORY_FILE_PATH",
+        "PLAYWRIGHT_HEADED",
+        "SEQUENTIAL_LOG_PATH"
+      ],
+      "secretsWithProvenance": [
+        {
+          "name": "ALLOWED_PATH",
+          "provenance": "agent-ops.json"
+        },
+        {
+          "name": "MCP_MEMORY_FILE_PATH",
+          "provenance": "agent-ops.json"
+        },
+        {
+          "name": "PLAYWRIGHT_HEADED",
+          "provenance": "agent-ops.json"
+        },
+        {
+          "name": "SEQUENTIAL_LOG_PATH",
+          "provenance": "agent-ops.json"
+        }
+      ],
+      "missingFromSchema": [],
+      "warnings": []
+    },
+    {
+      "name": "observability",
+      "directory": "_observability",
+      "configPath": "agents/_observability/config.json",
+      "toolsetPath": "agents/_observability/toolset.jsonc",
+      "mcpServers": ["supabase", "supabase-troubleshooting"],
+      "requiredSecrets": [
+        "AGENT_DEV_SUPABASE_PROJECT_REF",
+        "AGENT_DEV_SUPABASE_URL",
+        "AGENT_DEV_VERCEL_PROJECT",
+        "AGENT_PROD_SUPABASE_PROJECT_REF",
+        "AGENT_PROD_SUPABASE_URL",
+        "AGENT_PROD_VERCEL_PROJECT",
+        "AGENT_SUPABASE_ACCESS_TOKEN",
+        "AGENT_SUPABASE_DEFAULT_JWT",
+        "AGENT_TROUBLESHOOT_SUPABASE_PROJECT_REF",
+        "AGENT_TROUBLESHOOT_SUPABASE_URL",
+        "AGENT_TROUBLESHOOT_VERCEL_PROJECT"
+      ],
+      "secretsWithProvenance": [
+        {
+          "name": "AGENT_DEV_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_DEV_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_DEV_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        },
+        {
+          "name": "AGENT_PROD_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_PROD_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_PROD_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        },
+        {
+          "name": "AGENT_SUPABASE_ACCESS_TOKEN",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_SUPABASE_DEFAULT_JWT",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        }
+      ],
+      "missingFromSchema": [],
+      "warnings": [
+        "Server 'supabase-troubleshooting' missing from active registry"
+      ]
+    },
+    {
+      "name": "production-ops",
+      "directory": "_production-ops",
+      "configPath": "agents/_production-ops/config.json",
+      "toolsetPath": "agents/_production-ops/toolset.jsonc",
+      "mcpServers": ["github", "supabase", "supabase-troubleshooting"],
+      "requiredSecrets": [
+        "AGENT_DEV_SUPABASE_PROJECT_REF",
+        "AGENT_DEV_SUPABASE_URL",
+        "AGENT_DEV_VERCEL_PROJECT",
+        "AGENT_PROD_SUPABASE_PROJECT_REF",
+        "AGENT_PROD_SUPABASE_URL",
+        "AGENT_PROD_VERCEL_PROJECT",
+        "AGENT_SUPABASE_ACCESS_TOKEN",
+        "AGENT_SUPABASE_DEFAULT_JWT",
+        "AGENT_TROUBLESHOOT_SUPABASE_PROJECT_REF",
+        "AGENT_TROUBLESHOOT_SUPABASE_URL",
+        "AGENT_TROUBLESHOOT_VERCEL_PROJECT"
+      ],
+      "secretsWithProvenance": [
+        {
+          "name": "AGENT_DEV_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_DEV_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_DEV_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        },
+        {
+          "name": "AGENT_PROD_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_PROD_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_PROD_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        },
+        {
+          "name": "AGENT_SUPABASE_ACCESS_TOKEN",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_SUPABASE_DEFAULT_JWT",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        }
+      ],
+      "missingFromSchema": [],
+      "warnings": [
+        "Server 'github' missing from active registry",
+        "Server 'supabase-troubleshooting' missing from active registry"
+      ]
+    },
+    {
+      "name": "system-architect",
+      "directory": "_system-architect",
+      "configPath": "agents/_system-architect/config.json",
+      "toolsetPath": "agents/_system-architect/toolset.jsonc",
+      "mcpServers": ["supabase", "supabase-troubleshooting"],
+      "requiredSecrets": [
+        "AGENT_DEV_SUPABASE_PROJECT_REF",
+        "AGENT_DEV_SUPABASE_URL",
+        "AGENT_DEV_VERCEL_PROJECT",
+        "AGENT_PROD_SUPABASE_PROJECT_REF",
+        "AGENT_PROD_SUPABASE_URL",
+        "AGENT_PROD_VERCEL_PROJECT",
+        "AGENT_SUPABASE_ACCESS_TOKEN",
+        "AGENT_SUPABASE_DEFAULT_JWT",
+        "AGENT_TROUBLESHOOT_SUPABASE_PROJECT_REF",
+        "AGENT_TROUBLESHOOT_SUPABASE_URL",
+        "AGENT_TROUBLESHOOT_VERCEL_PROJECT"
+      ],
+      "secretsWithProvenance": [
+        {
+          "name": "AGENT_DEV_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_DEV_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_DEV_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        },
+        {
+          "name": "AGENT_PROD_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_PROD_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_PROD_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        },
+        {
+          "name": "AGENT_SUPABASE_ACCESS_TOKEN",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_SUPABASE_DEFAULT_JWT",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_SUPABASE_PROJECT_REF",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_SUPABASE_URL",
+          "provenance": "supabase-advanced.json"
+        },
+        {
+          "name": "AGENT_TROUBLESHOOT_VERCEL_PROJECT",
+          "provenance": "vercel.json"
+        }
+      ],
+      "missingFromSchema": [],
+      "warnings": [
+        "Server 'supabase-troubleshooting' missing from active registry"
+      ]
+    }
+  ],
+  "warnings": []
+}
