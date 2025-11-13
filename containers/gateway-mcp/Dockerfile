@@ -1,12 +1,14 @@
-FROM python:3.11-slim
+FROM node:18-slim
 
 WORKDIR /app
 
-COPY ../../mcp/gateway/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt || echo "requirements.txt not found yet"
+COPY ../../mcp/gateway/package*.json ./
+RUN npm install --omit=dev
 
 COPY ../../mcp/gateway/ ./
 
+ENV NODE_ENV=production
+
 EXPOSE 8000
 
-CMD ["python", "gateway.py"]
+CMD ["node", "app.js"]

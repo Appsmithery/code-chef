@@ -1,6 +1,10 @@
-# MCP Gateway Entry Point
-# Handles routing to MCP servers and agent coordination
+"""Legacy placeholder.
 
-if __name__ == '__main__':
-    print("MCP Gateway starting on port 8000...")
-    # TODO: Implement gateway logic
+The MCP gateway is now implemented as a Node.js service. See `app.js`
+and accompanying modules in this directory for the active entrypoint.
+This file remains only so existing import paths fail loudly if used.
+"""
+
+raise RuntimeError(
+    "The MCP gateway now runs via Node.js. Use npm scripts in mcp/gateway."
+)
