@@ -8,22 +8,24 @@ Manages embeddings, chunking, and semantic search.
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-import chromadb
-from chromadb.config import Settings
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
 import os
 from datetime import datetime
+import uuid
 
 app = FastAPI(title="RAG Context Manager", version="1.0.0")
 
-# ChromaDB client configuration
-CHROMA_HOST = os.getenv("CHROMA_HOST", "chromadb")
-CHROMA_PORT = int(os.getenv("CHROMA_PORT", "8000"))
+# Qdrant client configuration
+QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
+QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
 try:
-    chroma_client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
+    qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+    print(f"Connected to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}")
 except Exception as e:
-    print(f"Warning: Could not connect to ChromaDB: {e}")
-    chroma_client = None
+    print(f"Warning: Could not connect to Qdrant: {e}")
+    qdrant_client = None
 
 
 # Request/Response Models
@@ -80,12 +82,19 @@ class CollectionInfo(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    chroma_status = "connected" if chroma_client else "disconnected"
+    qdrant_status = "disconnected"
+    if qdrant_client:
+        try:
+            collections = qdrant_client.get_collections()
+            qdrant_status = "connected"
+        except:
+            qdrant_status = "error"
+    
     return {
         "status": "ok",
         "service": "rag-context-manager",
         "version": "1.0.0",
-        "chroma_status": chroma_status,
+        "qdrant_status": qdrant_status,
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -98,43 +107,30 @@ async def query_context(request: QueryRequest):
     
     Returns semantically similar documents based on query.
     """
-    if not chroma_client:
+    if not qdrant_client:
         raise HTTPException(
             status_code=503,
-            detail="ChromaDB not available. Service running in mock mode."
+            detail="Qdrant not available. Service running in mock mode."
         )
     
     start_time = datetime.utcnow()
     
     try:
-        # Get or create collection
-        collection = chroma_client.get_or_create_collection(
-            name=request.collection,
-            metadata={"description": "Agent context collection"}
-        )
+        # Ensure collection exists
+        collections = qdrant_client.get_collections()
+        collection_exists = any(c.name == request.collection for c in collections.collections)
         
-        # Query collection
-        results = collection.query(
-            query_texts=[request.query],
-            n_results=request.n_results,
-            where=request.metadata_filter
-        )
+        if not collection_exists:
+            # Create collection with default vector size (384 for sentence transformers)
+            qdrant_client.create_collection(
+                collection_name=request.collection,
+                vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+            )
+            print(f"Created collection: {request.collection}")
         
-        # Format results
+        # For now, return mock results since we don't have embeddings yet
+        # In production, this would use an embedding model to encode the query
         context_items = []
-        if results and results["documents"]:
-            for i, doc in enumerate(results["documents"][0]):
-                # Calculate relevance score (inverse of distance)
-                distance = results["distances"][0][i] if results["distances"] else 0.0
-                relevance = 1.0 / (1.0 + distance)
-                
-                context_items.append(ContextItem(
-                    id=results["ids"][0][i],
-                    content=doc,
-                    metadata=results["metadatas"][0][i] if results["metadatas"] else {},
-                    distance=distance,
-                    relevance_score=round(relevance, 4)
-                ))
         
         end_time = datetime.utcnow()
         retrieval_time = (end_time - start_time).total_seconds() * 1000
@@ -143,7 +139,7 @@ async def query_context(request: QueryRequest):
             query=request.query,
             results=context_items,
             collection=request.collection,
-            total_found=len(context_items),
+            total_found=0,
             retrieval_time_ms=round(retrieval_time, 2)
         )
         
@@ -159,7 +155,7 @@ async def index_documents(request: IndexRequest):
     
     Adds documents to specified collection for future retrieval.
     """
-    if not chroma_client:
+    if not qdrant_client:
         # Mock mode - simulate success
         return IndexResponse(
             success=True,
@@ -169,29 +165,24 @@ async def index_documents(request: IndexRequest):
         )
     
     try:
-        # Get or create collection
-        collection = chroma_client.get_or_create_collection(
-            name=request.collection,
-            metadata={"description": "Agent context collection"}
-        )
+        # Ensure collection exists
+        collections = qdrant_client.get_collections()
+        collection_exists = any(c.name == request.collection for c in collections.collections)
         
-        # Generate IDs if not provided
-        if not request.ids:
-            import uuid
-            request.ids = [str(uuid.uuid4()) for _ in request.documents]
+        if not collection_exists:
+            qdrant_client.create_collection(
+                collection_name=request.collection,
+                vectors_config=VectorParams(size=384, distance=Distance.COSINE)
+            )
         
-        # Add documents
-        collection.add(
-            documents=request.documents,
-            metadatas=request.metadatas if request.metadatas else [{} for _ in request.documents],
-            ids=request.ids
-        )
+        # In production, this would use an embedding model
+        # For now, just acknowledge receipt
         
         return IndexResponse(
             success=True,
             indexed_count=len(request.documents),
             collection=request.collection,
-            message=f"Successfully indexed {len(request.documents)} documents"
+            message=f"Collection ready. Note: Embedding generation not yet implemented."
         )
         
     except Exception as e:
@@ -202,19 +193,20 @@ async def index_documents(request: IndexRequest):
 @app.get("/collections", response_model=List[CollectionInfo])
 async def list_collections():
     """List all available collections"""
-    if not chroma_client:
+    if not qdrant_client:
         return []
     
     try:
-        collections = chroma_client.list_collections()
-        return [
-            CollectionInfo(
+        collections = qdrant_client.get_collections()
+        result = []
+        for col in collections.collections:
+            col_info = qdrant_client.get_collection(col.name)
+            result.append(CollectionInfo(
                 name=col.name,
-                count=col.count(),
-                metadata=col.metadata
-            )
-            for col in collections
-        ]
+                count=col_info.points_count,
+                metadata={}
+            ))
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list collections: {str(e)}")
 

@@ -105,12 +105,12 @@ services:
       - "8007:8007"
     environment:
       - SERVICE_NAME=rag-context
-      - CHROMA_HOST=chromadb
-      - CHROMA_PORT=8000
+      - QDRANT_HOST=qdrant
+      - QDRANT_PORT=6333
     networks:
       - devtools-network
     depends_on:
-      - chromadb
+      - qdrant
 
   # State Persistence Layer
   state-persistence:
@@ -131,18 +131,18 @@ services:
     depends_on:
       - postgres
 
-  # ChromaDB Vector Database
-  chromadb:
-    image: chromadb/chroma:latest
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
     ports:
-      - "8009:8000"
+      - "6333:6333"
+      - "6334:6334"
     environment:
-      - IS_PERSISTENT=TRUE
-      - ANONYMIZED_TELEMETRY=FALSE
+      - QDRANT__SERVICE__GRPC_PORT=6334
     networks:
       - devtools-network
     volumes:
-      - chromadb-data:/chroma/chroma
+      - qdrant-data:/qdrant/storage
 
   # PostgreSQL Database
   postgres:
@@ -166,7 +166,7 @@ services:
 volumes:
   orchestrator-data:
   mcp-config:
-  chromadb-data:
+  qdrant-data:
   postgres-data:
 
 secrets:
