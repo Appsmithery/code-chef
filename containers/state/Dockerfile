@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY services/state/ /app/
-COPY configs/state/schema.sql /app/schema.sql
+COPY config/state/schema.sql /app/schema.sql
 
 # Expose port
 EXPOSE 8008

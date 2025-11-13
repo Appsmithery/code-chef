@@ -70,7 +70,7 @@ git checkout feature/phase1-low-inference
 Create production environment file:
 
 ```bash
-cd configs/env
+cd config/env
 cp .env.example .env
 nano .env
 ```
@@ -561,7 +561,7 @@ Generate API key:
 
 ```bash
 export API_KEY=$(openssl rand -hex 32)
-echo "API_KEY=$API_KEY" >> configs/env/.env
+echo "API_KEY=$API_KEY" >> config/env/.env
 ```
 
 ### 3. Restrict Database Access

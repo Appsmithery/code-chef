@@ -34,7 +34,7 @@ git clone https://github.com/Appsmithery/Dev-Tools.git
 cd Dev-Tools
 
 # Configure environment
-cp configs/env/.env.example configs/env/.env
+cp config/env/.env.example config/env/.env
 # Edit .env with your settings
 
 # Make scripts executable (Linux/Mac)
@@ -286,7 +286,7 @@ Invoke-RestMethod -Uri http://localhost:8001/orchestrate `
 
 ### Environment Variables
 
-Edit `configs/env/.env`:
+Edit `config/env/.env`:
 
 ```bash
 ORCHESTRATOR_URL=http://orchestrator:8001
@@ -296,7 +296,7 @@ LOG_LEVEL=info
 
 ### Task Routing Rules
 
-Edit `configs/routing/task-router.rules.yaml`:
+Edit `config/routing/task-router.rules.yaml`:
 
 ```yaml
 routes:
@@ -307,7 +307,7 @@ routes:
 
 ### RAG Configuration
 
-Edit `configs/rag/vectordb.config.yaml`:
+Edit `config/rag/vectordb.config.yaml`:
 
 ```yaml
 vectordb:
@@ -349,7 +349,7 @@ make down
 1. Create agent directory: `agents/new-agent/`
 2. Add Dockerfile: `containers/new-agent/Dockerfile`
 3. Update `compose/docker-compose.yml`
-4. Add routing rules: `configs/routing/task-router.rules.yaml`
+4. Add routing rules: `config/routing/task-router.rules.yaml`
 5. Document endpoints: `docs/AGENT_ENDPOINTS.md`
 
 ## Contributing

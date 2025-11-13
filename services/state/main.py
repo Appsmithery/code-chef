@@ -146,7 +146,7 @@ async def initialize_schema():
         # Read schema file
         schema_path = "/app/schema.sql"
         if not os.path.exists(schema_path):
-            schema_path = "../../configs/state/schema.sql"
+            schema_path = "../../config/state/schema.sql"
         
         with open(schema_path, 'r') as f:
             schema_sql = f.read()

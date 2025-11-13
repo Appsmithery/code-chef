@@ -322,4 +322,4 @@ task compose:up
 - Review agent READMEs in `agents/<agent>/README.md`
 - Check API endpoints in `docs/AGENT_ENDPOINTS.md`
 - Explore templates in `templates/` directories
-- Configure environment in `configs/env/.env`
+- Configure environment in `config/env/.env`
