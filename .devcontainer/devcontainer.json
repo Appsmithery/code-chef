@@ -24,7 +24,13 @@
         "GitHub.copilot-chat",
         "docker.docker",
         "ms-vscode-remote.remote-containers",
-        "ms-azuretools.vscode-containers"
+        "ms-azuretools.vscode-containers",
+        "ms-vscode.remote-explorer",
+        "rust-lang.rust-analyzer",
+        "chrisdias.promptboost",
+        "dbaeumer.vscode-eslint",
+        "denoland.vscode-deno",
+        "vscjava.vscode-java-debug"
       ]
     }
   }
