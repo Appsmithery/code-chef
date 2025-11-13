@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCP Gateway - Complete Overview</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#333;min-height:100vh;padding:2rem}
+.container{max-width:1000px;margin:0 auto;background:white;border-radius:12px;padding:3rem;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.header{border-bottom:3px solid #667eea;padding-bottom:1.5rem;margin-bottom:2rem}
+h1{font-size:2.5rem;color:#667eea;margin-bottom:.5rem}
+h2{font-size:1.8rem;color:#764ba2;margin-top:2rem;margin-bottom:1rem;border-left:4px solid #667eea;padding-left:1rem}
+h3{font-size:1.3rem;color:#555;margin-top:1.5rem;margin-bottom:.75rem}
+p,li{line-height:1.8;color:#555;margin-bottom:.75rem}
+ul{margin-left:1.5rem}
+.info-box{background:#f8f9fa;border-left:4px solid #667eea;padding:1rem;margin:1rem 0;border-radius:4px}
+.back-btn{display:inline-block;margin-top:2rem;padding:.75rem 1.5rem;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:8px;font-weight:600;transition:transform .2s}
+.back-btn:hover{transform:translateY(-2px)}
+code{background:#f8f9fa;padding:.2rem .4rem;border-radius:4px;font-family:'Courier New',monospace;color:#667eea;font-size:.9em}
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>📖 MCP Central Gateway - Complete Overview</h1>
+<p>Comprehensive documentation for the Docker-First MCP Gateway Architecture</p>
+</div>
+<h2>🎯 What is the MCP Central Gateway?</h2>
+<p>The MCP Central Gateway is a unified API gateway that orchestrates multiple Model Context Protocol (MCP) servers through a Docker-first architecture. It provides a single entry point for AI agents to access various tools, data sources, and services while maintaining centralized authentication, rate limiting, and observability.</p>
+<div class="info-box"><strong>Key Philosophy:</strong> Pre-generate TypeScript APIs from MCP server schemas at startup, enabling type-safe agent interactions without runtime schema discovery overhead.</div>
+<h2>🏗️ Architecture Components</h2>
+<h3>1. MCP Registry & Router</h3>
+<ul>
+<li><strong>Dynamic Discovery:</strong> Automatically detects MCP servers from Docker containers at startup</li>
+<li><strong>Schema Caching:</strong> Fetches and caches tool schemas to generate TypeScript wrapper APIs</li>
+<li><strong>Intelligent Routing:</strong> Routes agent requests to appropriate MCP servers based on tool names</li>
+<li><strong>Health Monitoring:</strong> Tracks server availability and circuit breaker states</li>
+</ul>
+<h3>2. OAuth & Authentication</h3>
+<ul>
+<li><strong>Centralized OAuth:</strong> Single OAuth flow for GitHub (Linear, etc.) shared across all MCP servers</li>
+<li><strong>Token Management:</strong> Encrypted token storage with automatic refresh handling</li>
+<li><strong>Session Handling:</strong> JWT-based sessions with secure cookie management</li>
+<li><strong>Provider Abstraction:</strong> Extensible provider pattern for adding new OAuth services</li>
+</ul>
+<h3>3. Multi-Agent Controls</h3>
+<ul>
+<li><strong>Agent Queue:</strong> Priority-based fair scheduling to prevent resource hogging</li>
+<li><strong>Rate Limiting:</strong> Per-agent quotas with configurable burst allowances (default: 1000 req/min)</li>
+<li><strong>Quota Management:</strong> Time-windowed quotas with graceful degradation</li>
+<li><strong>Request Correlation:</strong> Track agent behavior across multiple tool invocations</li>
+</ul>
+<h3>4. Observability & Metrics</h3>
+<ul>
+<li><strong>Prometheus Metrics:</strong> <code>/mcp/metrics</code> endpoint exports registry stats, latency histograms, circuit breaker states</li>
+<li><strong>Structured Logging:</strong> Winston-based logging with correlation IDs for request tracing</li>
+<li><strong>OpenTelemetry:</strong> Distributed tracing for HTTP requests with Express auto-instrumentation</li>
+<li><strong>Health Endpoints:</strong> <code>/health</code> for container health checks and load balancer probes</li>
+</ul>
+<h2>🔧 MCP Server Integration</h2>
+<h3>Registered Servers</h3>
+<ul>
+<li><strong>MCP_DOCKER:</strong> Container management (start, stop, inspect, logs, prune)</li>
+<li><strong>Supabase:</strong> Database CRUD operations and SQL queries</li>
+<li><strong>Comet:</strong> Session memory and context management</li>
+<li><strong>Rust Filesystem:</strong> Secure file operations with sandboxing</li>
+</ul>
+<div class="info-box"><strong>How it Works:</strong> Each server exposes MCP-compliant tool schemas. The gateway fetches these at startup, generates TypeScript wrapper functions, and exposes them through <code>/mcp/servers/:serverName/:toolName</code>.</div>
+<h2>🚀 Deployment & Production</h2>
+<h3>Docker Configuration</h3>
+<ul>
+<li><strong>Multi-stage Builds:</strong> Optimized production images with minimal attack surface</li>
+<li><strong>Security Hardening:</strong> Non-root user (1001:1001), read-only filesystem, tmpfs for /tmp only</li>
+<li><strong>Health Checks:</strong> Built-in Docker health checks on port 3456</li>
+<li><strong>Environment Variables:</strong> Externalized configuration via .env files</li>
+</ul>
+<h3>Reverse Proxy Setup (Caddy Recommended)</h3>
+<ul>
+<li><strong>Automatic HTTPS:</strong> Caddy provisions Let's Encrypt certificates with zero configuration</li>
+<li><strong>Security Headers:</strong> HSTS, CSP, X-Frame-Options automatically applied</li>
+<li><strong>Health-aware Routing:</strong> Proxy passes only to healthy gateway instances</li>
+<li><strong>TLS Termination:</strong> Handles SSL/TLS at the edge, internal HTTP to container</li>
+</ul>
+<div class="info-box"><strong>See Also:</strong> <code>CADDY_SETUP_PLAN.md</code> for complete Caddy deployment instructions with Caddyfile examples and troubleshooting guide.</div>
+<h2>📊 API Endpoints</h2>
+<h3>Core Endpoints</h3>
+<ul>
+<li><code>GET /</code> - Landing page with gateway status</li>
+<li><code>GET /health</code> - Health check for load balancers</li>
+<li><code>GET /mcp/registry/status</code> - Registry load status and server list</li>
+<li><code>GET /mcp/servers</code> - List all available MCP servers</li>
+<li><code>GET /mcp/capabilities</code> - All available tools across servers</li>
+<li><code>POST /mcp/servers/:serverName/:toolName</code> - Invoke a specific tool</li>
+</ul>
+<h3>OAuth Endpoints</h3>
+<ul>
+<li><code>GET /oauth/:provider/auth</code> - Initiate OAuth flow</li>
+<li><code>GET /oauth/:provider/callback</code> - OAuth callback handler</li>
+<li><code>POST /oauth/:provider/refresh</code> - Refresh access tokens</li>
+</ul>
+<h3>Monitoring Endpoints</h3>
+<ul>
+<li><code>GET /mcp/metrics</code> - Prometheus-compatible metrics</li>
+<li><code>GET /mcp/monitoring</code> - Real-time monitoring dashboard data</li>
+<li><code>GET /mcp/queue/stats</code> - Agent queue statistics</li>
+</ul>
+<h2>🔐 Security Best Practices</h2>
+<ul>
+<li><strong>API Key Authentication:</strong> <code>MCP_API_KEY</code> for internal service-to-service calls</li>
+<li><strong>OAuth Token Encryption:</strong> All stored tokens encrypted at rest</li>
+<li><strong>Rate Limiting:</strong> Prevents DoS and ensures fair resource allocation</li>
+<li><strong>CORS Configuration:</strong> Whitelisted origins for production deployments</li>
+<li><strong>Read-only Filesystem:</strong> Container immutability prevents runtime tampering</li>
+</ul>
+<h2>🛠️ Development Workflow</h2>
+<ol>
+<li><strong>Local Development:</strong> Run <code>npm run dev</code> with hot-reload enabled</li>
+<li><strong>Schema Discovery:</strong> Use <code>npm run discover</code> to scan and document MCP servers</li>
+<li><strong>Build:</strong> <code>npm run build</code> compiles TypeScript to production-ready JavaScript</li>
+<li><strong>Docker Build:</strong> <code>docker compose build</code> creates optimized container images</li>
+<li><strong>Production Deploy:</strong> Push to registry, pull on VPS, start with Caddy reverse proxy</li>
+</ol>
+<h2>📚 Additional Resources</h2>
+<ul>
+<li><a href="https://github.com/modelcontextprotocol/servers" target="_blank">MCP Official Specification</a></li>
+<li><code>DOCKER_FIRST_ARCHITECTURE.md</code> - Detailed architecture decisions</li>
+<li><code>INTEGRATION_PLAN.md</code> - OAuth and service integration guide</li>
+<li><code>MCP_ENDPOINTS.md</code> - Complete API endpoint reference</li>
+<li><code>CADDY_SETUP_PLAN.md</code> - Production deployment with reverse proxy</li>
+</ul>
+<a href="/" class="back-btn">← Back to Dashboard</a>
+</div>
+</body>
+</html>

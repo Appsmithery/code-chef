@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MCP Gateway + Dev-Tools - Complete Overview</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#333;min-height:100vh;padding:2rem}
+      .container{max-width:1000px;margin:0 auto;background:white;border-radius:12px;padding:3rem;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+      .header{border-bottom:3px solid #667eea;padding-bottom:1.5rem;margin-bottom:2rem}
+      h1{font-size:2.5rem;color:#667eea;margin-bottom:.5rem}
+      h2{font-size:1.8rem;color:#764ba2;margin-top:2rem;margin-bottom:1rem;border-left:4px solid #667eea;padding-left:1rem}
+      h3{font-size:1.3rem;color:#555;margin-top:1.5rem;margin-bottom:.75rem}
+      p,li{line-height:1.8;color:#555;margin-bottom:.75rem}
+      ul{margin-left:1.5rem}
+      ol{margin-left:1.5rem}
+      .info-box{background:#f8f9fa;border-left:4px solid #667eea;padding:1rem;margin:1rem 0;border-radius:4px}
+      .warning-box{background:#fff3cd;border-left:4px solid:#ffc107;padding:1rem;margin:1rem 0;border-radius:4px}
+      .success-box{background:#d4edda;border-left:4px solid:#28a745;padding:1rem;margin:1rem 0;border-radius:4px}
+      .back-btn{display:inline-block;margin-top:2rem;padding:.75rem 1.5rem;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:8px;font-weight:600;transition:transform .2s}
+      .back-btn:hover{transform:translateY(-2px)}
+      code{background:#f8f9fa;padding:.2rem .4rem;border-radius:4px;font-family:'Courier New',monospace;color:#667eea;font-size:.9em}
+      .agent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;margin:1rem 0}
+      .agent-card{background:#f8f9fa;padding:1rem;border-radius:8px;border-left:4px solid #764ba2}
+      .agent-card h4{color:#764ba2;margin-bottom:.5rem}
+      .agent-card .port{color:#999;font-size:.9em;margin-top:.5rem}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📖 MCP Gateway + Dev-Tools Platform</h1>
+        <p>
+          Complete documentation for the integrated AI-powered development
+          platform
+        </p>
+      </div>
+
+      <div class="success-box">
+        <strong>🎉 Latest Update:</strong> The MCP Central Gateway now
+        integrates with the Dev-Tools Agent System, providing a unified platform
+        for AI-powered development workflows and MCP server orchestration.
+      </div>
+
+      <h2>🎯 Platform Overview</h2>
+      <p>This platform combines two powerful systems:</p>
+      <ul>
+        <li>
+          <strong>MCP Central Gateway:</strong> Unified API gateway
+          orchestrating 10+ Model Context Protocol (MCP) servers with
+          centralized authentication and observability
+        </li>
+        <li>
+          <strong>Dev-Tools Agent System:</strong> AI-powered development agents
+          for feature implementation, code review, infrastructure management,
+          CI/CD automation, and documentation generation
+        </li>
+      </ul>
+
+      <div class="info-box">
+        <strong>Key Integration:</strong> The platform provides a single sign-on
+        experience via GitHub OAuth, allowing developers to authenticate once
+        and access both MCP tools and Dev-Tools agents seamlessly.
+      </div>
+
+      <h2>🤖 Dev-Tools Agent System</h2>
+      <p>
+        Six specialized AI agents handle the complete software development
+        lifecycle:
+      </p>
+
+      <div class="agent-grid">
+        <div class="agent-card">
+          <h4>🎯 Orchestrator</h4>
+          <p>
+            Coordinates task routing and agent hand-offs across the development
+            workflow
+          </p>
+          <div class="port">
+            Port: 8001 | Endpoints: /orchestrate, /task, /route
+          </div>
+        </div>
+
+        <div class="agent-card">
+          <h4>💻 Feature Development</h4>
+          <p>
+            Handles feature implementation, code generation, and development
+            tasks
+          </p>
+          <div class="port">Port: 8002 | Endpoints: /feature, /code</div>
+        </div>
+
+        <div class="agent-card">
+          <h4>🔍 Code Review</h4>
+          <p>
+            Performs automated code reviews, linting, security scanning, and
+            quality checks
+          </p>
+          <div class="port">Port: 8003 | Endpoints: /review, /results</div>
+        </div>
+
+        <div class="agent-card">
+          <h4>🏗️ Infrastructure</h4>
+          <p>
+            Manages infrastructure as code, deployments, and system
+            configuration
+          </p>
+          <div class="port">
+            Port: 8004 | Endpoints: /infrastructure, /deploy
+          </div>
+        </div>
+
+        <div class="agent-card">
+          <h4>⚙️ CI/CD</h4>
+          <p>Manages continuous integration and deployment pipelines</p>
+          <div class="port">Port: 8005 | Endpoints: /pipeline, /trigger</div>
+        </div>
+
+        <div class="agent-card">
+          <h4>📚 Documentation</h4>
+          <p>
+            Generates and maintains project documentation, READMEs, and API docs
+          </p>
+          <div class="port">
+            Port: 8006 | Endpoints: /documentation, /update
+          </div>
+        </div>
+      </div>
+
+      <h3>Agent Workflow Example</h3>
+      <ol>
+        <li>
+          <strong>Submit Task:</strong> POST to <code>/orchestrate</code> with
+          your development request
+        </li>
+        <li>
+          <strong>Task Analysis:</strong> Orchestrator analyzes requirements and
+          routes to appropriate agents
+        </li>
+        <li>
+          <strong>Agent Execution:</strong> Agents collaborate to implement
+          features, review code, generate tests
+        </li>
+        <li>
+          <strong>Results:</strong> Receive complete implementation with code,
+          tests, docs, and deployment pipeline
+        </li>
+      </ol>
+
+      <h2>🏗️ MCP Gateway Architecture</h2>
+
+      <h3>1. MCP Registry & Router</h3>
+      <ul>
+        <li>
+          <strong>Dynamic Discovery:</strong> Automatically detects MCP servers
+          from Docker containers at startup
+        </li>
+        <li>
+          <strong>Schema Caching:</strong> Fetches and caches tool schemas for
+          fast access
+        </li>
+        <li>
+          <strong>Intelligent Routing:</strong> Routes requests to appropriate
+          MCP servers based on tool names
+        </li>
+        <li>
+          <strong>Health Monitoring:</strong> Tracks server availability with
+          circuit breaker patterns
+        </li>
+      </ul>
+
+      <h3>2. OAuth & Authentication</h3>
+      <ul>
+        <li>
+          <strong>GitHub OAuth:</strong> Single sign-on authentication shared
+          across all services
+        </li>
+        <li>
+          <strong>Token Management:</strong> Encrypted token storage with
+          automatic refresh
+        </li>
+        <li><strong>Session Handling:</strong> Secure cookie-based sessions</li>
+        <li>
+          <strong>Dynamic UI Updates:</strong> Auth button reflects login state
+          (green when authenticated)
+        </li>
+      </ul>
+
+      <h3>3. MCP Server Ecosystem</h3>
+      <p>10+ integrated MCP servers providing specialized capabilities:</p>
+      <ul>
+        <li>
+          <strong>Docker Hub:</strong> Container registry search, image
+          management, repository operations
+        </li>
+        <li>
+          <strong>Context7:</strong> Advanced code understanding and semantic
+          search
+        </li>
+        <li>
+          <strong>Fetch (Reference):</strong> Web content retrieval and
+          processing
+        </li>
+        <li>
+          <strong>Google Maps:</strong> Location services, geocoding, place
+          details, directions
+        </li>
+        <li>
+          <strong>Memory (Reference):</strong> Knowledge graph operations and
+          entity management
+        </li>
+        <li>
+          <strong>Next.js DevTools:</strong> Framework-specific development
+          utilities
+        </li>
+        <li>
+          <strong>Node.js Sandbox:</strong> Safe code execution environment
+        </li>
+        <li>
+          <strong>Notion:</strong> Workspace integration, page management,
+          database operations
+        </li>
+        <li>
+          <strong>Perplexity:</strong> AI-powered research and question
+          answering
+        </li>
+        <li><strong>Playwright:</strong> Browser automation and web testing</li>
+      </ul>
+
+      <div class="info-box">
+        <strong>View All Servers:</strong> Visit
+        <a href="/servers" style="color: #667eea; font-weight: 600">/servers</a>
+        to see detailed tool documentation for each MCP server.
+      </div>
+
+      <h2>🚀 Production Deployment</h2>
+
+      <h3>Current Infrastructure</h3>
+      <ul>
+        <li>
+          <strong>Platform:</strong> DigitalOcean VPS (Ubuntu 22.04, 2GB RAM)
+        </li>
+        <li><strong>Domain:</strong> <code>theshop.appsmithery.co</code></li>
+        <li>
+          <strong>Reverse Proxy:</strong> Caddy v2 with automatic HTTPS via
+          Let's Encrypt
+        </li>
+        <li>
+          <strong>Gateway Port:</strong> 3456 (internal), 443 (external HTTPS)
+        </li>
+        <li>
+          <strong>Agent Ports:</strong> 8001-8006 (internal, CORS-enabled)
+        </li>
+      </ul>
+
+      <h3>Docker Configuration</h3>
+      <ul>
+        <li>
+          <strong>Multi-stage Builds:</strong> Optimized production images
+        </li>
+        <li>
+          <strong>Security:</strong> Non-root user (1001:1001), read-only
+          filesystem
+        </li>
+        <li>
+          <strong>Health Checks:</strong> Built-in Docker health monitoring
+        </li>
+        <li>
+          <strong>Networking:</strong> Custom Docker network for service
+          communication
+        </li>
+      </ul>
+
+      <h3>Caddy Reverse Proxy Features</h3>
+      <ul>
+        <li>
+          <strong>Automatic HTTPS:</strong> Zero-config SSL/TLS with Let's
+          Encrypt
+        </li>
+        <li>
+          <strong>Security Headers:</strong> HSTS, X-Frame-Options, CSP
+          automatically applied
+        </li>
+        <li>
+          <strong>Health Probes:</strong> Routes traffic only to healthy
+          services
+        </li>
+        <li>
+          <strong>Logging:</strong> JSON-formatted access logs for analysis
+        </li>
+      </ul>
+
+      <h2>📊 API Endpoints</h2>
+
+      <h3>Landing & Navigation</h3>
+      <ul>
+        <li>
+          <code>GET /</code> - Main dashboard with system status and quick
+          actions
+        </li>
+        <li>
+          <code>GET /servers</code> - Complete MCP server catalog with tool
+          documentation
+        </li>
+        <li><code>GET /docs/overview</code> - This documentation page</li>
+      </ul>
+
+      <h3>Gateway Core</h3>
+      <ul>
+        <li><code>GET /health</code> - Health check for load balancers</li>
+        <li><code>GET /mcp/health</code> - MCP subsystem health status</li>
+        <li>
+          <code>GET /mcp/servers</code> - JSON list of available MCP servers
+        </li>
+        <li>
+          <code>GET /mcp/capabilities</code> - All available tools across
+          servers
+        </li>
+        <li>
+          <code>POST /mcp/servers/:serverName/:toolName</code> - Invoke specific
+          MCP tool
+        </li>
+      </ul>
+
+      <h3>Authentication</h3>
+      <ul>
+        <li>
+          <code>GET /oauth/github/authorize</code> - Initiate GitHub OAuth flow
+        </li>
+        <li>
+          <code>GET /oauth/github/callback</code> - OAuth callback handler
+        </li>
+        <li>
+          <code>GET /oauth/github/status</code> - Check authentication status
+        </li>
+        <li>
+          <code>POST /oauth/github/logout</code> - Logout and clear session
+        </li>
+        <li><code>POST /oauth/github/refresh</code> - Refresh access tokens</li>
+      </ul>
+
+      <h3>Dev-Tools Agents</h3>
+      <ul>
+        <li>
+          <code>POST http://45.55.173.72:8001/orchestrate</code> - Submit task
+          to orchestrator
+        </li>
+        <li>
+          <code>GET http://45.55.173.72:8001/health</code> - Check orchestrator
+          health
+        </li>
+        <li>
+          <code>POST http://45.55.173.72:800X/[endpoint]</code> - Direct agent
+          access (replace X with agent port)
+        </li>
+      </ul>
+
+      <div class="warning-box">
+        <strong>Note:</strong> Dev-Tools agents are currently exposed on direct
+        IP:port. Future updates will route them through the gateway at
+        <code>/agents/:agentName/:endpoint</code>.
+      </div>
+
+      <h2>🔐 Security Features</h2>
+      <ul>
+        <li>
+          <strong>GitHub OAuth:</strong> Secure authentication with token
+          encryption
+        </li>
+        <li>
+          <strong>CORS Configuration:</strong> Enabled for Dev-Tools agents on
+          ports 8000-8008
+        </li>
+        <li>
+          <strong>Rate Limiting:</strong> Per-agent quotas (1000 req/min
+          default)
+        </li>
+        <li><strong>HTTPS Only:</strong> TLS 1.2+ enforced via Caddy</li>
+        <li>
+          <strong>Read-only Containers:</strong> Immutable runtime environment
+        </li>
+        <li>
+          <strong>Security Headers:</strong> HSTS, CSP, X-Frame-Options,
+          X-Content-Type-Options
+        </li>
+      </ul>
+
+      <h2>🛠️ Development Workflow</h2>
+
+      <h3>Local Development</h3>
+      <ol>
+        <li>
+          <strong>Clone Repository:</strong> Get the Dev-Tools source code
+        </li>
+        <li>
+          <strong>Configure Environment:</strong> Copy
+          <code>.env.example</code> to <code>.env</code>
+        </li>
+        <li>
+          <strong>Start Services:</strong> <code>make up</code> or
+          <code>docker compose up</code>
+        </li>
+        <li>
+          <strong>Access Gateway:</strong> <code>http://localhost:3456</code>
+        </li>
+        <li>
+          <strong>Access Agents:</strong>
+          <code>http://localhost:8001-8006</code>
+        </li>
+      </ol>
+
+      <h3>Making Changes</h3>
+      <ol>
+        <li>
+          <strong>Edit Frontend:</strong> Modify files in
+          <code>frontend/</code> directory
+        </li>
+        <li>
+          <strong>Upload to Gateway:</strong>
+          <code
+            >scp frontend/*.html
+            root@server:/opt/central-mcp-gateway/src/views/</code
+          >
+        </li>
+        <li>
+          <strong>Rebuild Container:</strong>
+          <code
+            >cd /opt/central-mcp-gateway && docker compose down && docker
+            compose up -d --build</code
+          >
+        </li>
+        <li>
+          <strong>Verify Deployment:</strong> Check
+          <code>https://theshop.appsmithery.co</code>
+        </li>
+      </ol>
+
+      <h3>Agent Development</h3>
+      <ol>
+        <li>
+          <strong>Create Agent:</strong> Add new directory in
+          <code>agents/</code>
+        </li>
+        <li>
+          <strong>Implement FastAPI App:</strong> Create
+          <code>main.py</code> with endpoints
+        </li>
+        <li>
+          <strong>Add Dependencies:</strong> Create
+          <code>requirements.txt</code>
+        </li>
+        <li>
+          <strong>Create Dockerfile:</strong> Add in
+          <code>containers/[agent-name]/</code>
+        </li>
+        <li>
+          <strong>Update Compose:</strong> Add service to
+          <code>compose/docker-compose.yml</code>
+        </li>
+        <li>
+          <strong>Enable CORS:</strong> Run
+          <code>scripts/enable_cors.sh [agent-name]</code>
+        </li>
+      </ol>
+
+      <h2>📚 Additional Resources</h2>
+      <ul>
+        <li>
+          <strong>MCP Specification:</strong>
+          <a
+            href="https://github.com/modelcontextprotocol/servers"
+            target="_blank"
+            style="color: #667eea"
+            >Official MCP Documentation</a
+          >
+        </li>
+        <li>
+          <strong>Repository Structure:</strong> See
+          <code>docs/CODEBASE_INDEX.md</code>
+        </li>
+        <li>
+          <strong>Agent Endpoints:</strong> See
+          <code>docs/AGENT_ENDPOINTS.md</code>
+        </li>
+        <li>
+          <strong>Deployment Guide:</strong> See <code>docs/DEPLOYMENT.md</code>
+        </li>
+        <li>
+          <strong>Secrets Management:</strong> See
+          <code>docs/SECRETS_MANAGEMENT.md</code>
+        </li>
+      </ul>
+
+      <h2>🔄 What's Next?</h2>
+      <ul>
+        <li>
+          <strong>Agent Gateway Integration:</strong> Route Dev-Tools agents
+          through <code>/agents/:agentName</code>
+        </li>
+        <li>
+          <strong>Unified Monitoring:</strong> Single dashboard for both MCP and
+          agent metrics
+        </li>
+        <li>
+          <strong>Workflow Templates:</strong> Pre-built automation workflows
+          for common tasks
+        </li>
+        <li>
+          <strong>Multi-Model Support:</strong> Agent swarm coordination with
+          different LLM backends
+        </li>
+        <li>
+          <strong>Real-time Collaboration:</strong> WebSocket support for live
+          agent interaction
+        </li>
+      </ul>
+
+      <a href="/" class="back-btn">← Back to Dashboard</a>
+    </div>
+  </body>
+</html>
