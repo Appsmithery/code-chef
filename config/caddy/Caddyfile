@@ -6,9 +6,9 @@
 {$CADDY_DOMAIN:-:80} {
 	encode gzip zstd
 
-	@prometheus path /prometheus*
-	route @prometheus {
-		uri strip_prefix /prometheus
+	redir /prometheus /prometheus/
+
+	handle_path /prometheus/* {
 		reverse_proxy oauth2-proxy:4180
 	}
 
