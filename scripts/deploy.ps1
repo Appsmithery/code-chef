@@ -247,9 +247,21 @@ cd {DEPLOY_PATH}
 git remote set-url origin https://github.com/Appsmithery/Dev-Tools.git
 '@
             $remoteGitConfigScript = $remoteGitConfigScript.Replace('{DEPLOY_PATH}', $DEPLOY_PATH)
-            $remoteGitConfigScript = $remoteGitConfigScript.Replace("`r`n", "`n")
+            $remoteGitConfigScript = $remoteGitConfigScript.Replace("`r", "")
 
-            $remoteGitConfigScript | ssh "$DROPLET_USER@$DROPLET_IP" 'bash -s'
+            $tempScriptPath = [System.IO.Path]::GetTempFileName()
+            [System.IO.File]::WriteAllText($tempScriptPath, $remoteGitConfigScript, (New-Object System.Text.UTF8Encoding($false)))
+
+            $remoteScriptPath = "$DEPLOY_PATH/configure_git_credentials.sh"
+            scp $tempScriptPath "${DROPLET_USER}@${DROPLET_IP}:${remoteScriptPath}" | Out-Null
+            if ($LASTEXITCODE -ne 0) {
+                Remove-Item $tempScriptPath -ErrorAction SilentlyContinue
+                Write-Error-Custom "Failed to copy git credential helper script to droplet"
+                exit 1
+            }
+            Remove-Item $tempScriptPath -ErrorAction SilentlyContinue
+
+            ssh "$DROPLET_USER@$DROPLET_IP" "chmod +x $remoteScriptPath && bash $remoteScriptPath && rm -f $remoteScriptPath" | Out-Null
             if ($LASTEXITCODE -ne 0) {
                 Write-Error-Custom "Failed to configure git credentials on droplet"
                 exit 1
