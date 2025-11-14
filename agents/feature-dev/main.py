@@ -18,6 +18,7 @@ import httpx
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
+from agents._shared.gradient_client import get_gradient_client
 
 app = FastAPI(
     title="Feature Development Agent",
@@ -33,6 +34,9 @@ RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://rag-context:8007")
 
 # Shared MCP client for tool access and telemetry
 mcp_client = MCPClient(agent_name="feature-dev")
+
+# Gradient AI client for LLM inference (with Langfuse tracing)
+gradient_client = get_gradient_client("feature-dev")
 
 class FeatureRequest(BaseModel):
     """Feature implementation request"""
@@ -101,8 +105,13 @@ async def implement_feature(request: FeatureRequest):
     # Query RAG for context
     rag_context = await query_rag_context(request.description)
     
-    # Simulate code generation (in production, would call LLM with RAG context)
-    artifacts = generate_code_artifacts(request, rag_context)
+    # Check if Gradient is available for LLM calls
+    if gradient_client.is_enabled():
+        # Generate code using Gradient AI with Langfuse tracing
+        artifacts = await generate_code_with_llm(request, rag_context, feature_id)
+    else:
+        # Fallback to mock generation (for testing without API key)
+        artifacts = generate_code_artifacts(request, rag_context)
     
     # Simulate test execution (in production, would run in sandbox)
     test_results = execute_tests(artifacts)
@@ -131,6 +140,7 @@ async def implement_feature(request: FeatureRequest):
             "artifact_count": len(artifacts),
             "test_pass_rate": sum(1 for t in test_results if t.status == "passed") / max(len(test_results), 1),
             "status": response.status,
+            "llm_enabled": gradient_client.is_enabled(),
         },
     )
     
@@ -296,8 +306,7 @@ async def get_coding_patterns():
     }
 def generate_code_artifacts(request: FeatureRequest, rag_context: List[Dict[str, Any]] = None) -> List[CodeArtifact]:
     """
-    Generate code artifacts based on feature request and RAG context
-    Generate code artifacts based on feature requirements
+    Generate code artifacts based on feature request and RAG context (mock fallback)
     Uses incremental generation with checkpoint validation
     """
     # Placeholder implementation (intentional for MVP demo)
@@ -310,6 +319,80 @@ def generate_code_artifacts(request: FeatureRequest, rag_context: List[Dict[str,
             description=f"Implementation for {request.description}"
         )
     ]
+
+
+async def generate_code_with_llm(
+    request: FeatureRequest,
+    rag_context: List[Dict[str, Any]],
+    feature_id: str
+) -> List[CodeArtifact]:
+    """
+    Generate code artifacts using Gradient AI with Langfuse tracing.
+    Incorporates RAG context for improved accuracy.
+    """
+    # Build context-aware prompt
+    context_str = "\n\n".join([
+        f"Context {i+1}:\n{item['content']}"
+        for i, item in enumerate(rag_context[:3])  # Limit to top 3 contexts
+    ])
+    
+    system_prompt = """You are an expert software engineer. Generate production-ready code based on the feature description and context provided.
+
+Return your response as JSON with this structure:
+{
+  "files": [
+    {
+      "path": "src/path/to/file.py",
+      "content": "# Full file content here",
+      "operation": "create",
+      "description": "Brief description"
+    }
+  ]
+}"""
+    
+    user_prompt = f"""Feature Request: {request.description}
+
+Relevant Context:
+{context_str}
+
+Project Context: {request.project_context or "General Python project"}
+
+Generate implementation files with proper error handling, type hints, and docstrings."""
+    
+    try:
+        # Call Gradient AI with Langfuse tracing
+        result = await gradient_client.complete_structured(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            temperature=0.7,
+            max_tokens=2000,
+            metadata={
+                "task_id": feature_id,
+                "feature_description": request.description,
+                "rag_contexts": len(rag_context)
+            }
+        )
+        
+        # Parse LLM response into CodeArtifact objects
+        llm_files = result["content"].get("files", [])
+        
+        artifacts = [
+            CodeArtifact(
+                file_path=file["path"],
+                content=file["content"],
+                operation=file.get("operation", "create"),
+                description=file.get("description", "")
+            )
+            for file in llm_files
+        ]
+        
+        print(f"[LLM] Generated {len(artifacts)} artifacts using {result['tokens']} tokens")
+        return artifacts
+        
+    except Exception as e:
+        print(f"[ERROR] LLM generation failed: {e}, falling back to mock")
+        return generate_code_artifacts(request, rag_context)
+
 
 def execute_tests(artifacts: List[CodeArtifact]) -> List[TestResult]:
     """
