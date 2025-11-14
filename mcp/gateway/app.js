@@ -1,3 +1,5 @@
+// Must import instrumentation FIRST for OpenTelemetry to auto-instrument Express
+import "./instrumentation.js";
 import "dotenv/config";
 import express from "express";
 import routes from "./routes.js";
