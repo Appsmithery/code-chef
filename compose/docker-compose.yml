@@ -17,6 +17,9 @@ services:
       - DOCUMENTATION_URL=http://documentation:8006
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - MCP_TIMEOUT=30
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
     networks:
       - devtools-network
     volumes:
@@ -37,6 +40,9 @@ services:
       - CODE_REVIEW_URL=http://code-review:8003
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - MCP_TIMEOUT=30
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
     networks:
       - devtools-network
     depends_on:
@@ -53,6 +59,9 @@ services:
       - SERVICE_NAME=code-review
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - MCP_TIMEOUT=30
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
     networks:
       - devtools-network
     depends_on:
@@ -68,6 +77,9 @@ services:
       - SERVICE_NAME=infrastructure
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - MCP_TIMEOUT=30
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
     networks:
       - devtools-network
     depends_on:
@@ -83,6 +95,9 @@ services:
       - SERVICE_NAME=cicd
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - MCP_TIMEOUT=30
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
     networks:
       - devtools-network
     depends_on:
@@ -98,6 +113,9 @@ services:
       - SERVICE_NAME=documentation
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - MCP_TIMEOUT=30
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
     networks:
       - devtools-network
     depends_on:
