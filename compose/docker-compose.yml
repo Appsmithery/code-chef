@@ -135,10 +135,13 @@ services:
       - SERVICE_NAME=rag-context
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - MCP_TIMEOUT=30
     networks:
       - devtools-network
     depends_on:
       - qdrant
+      - gateway-mcp
 
   # State Persistence Layer
   state-persistence:
