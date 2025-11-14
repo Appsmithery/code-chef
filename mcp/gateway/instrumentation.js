@@ -1,23 +1,25 @@
 /**
  * OpenTelemetry instrumentation with Langfuse integration
- * 
+ *
  * Must be imported FIRST before any other imports in app.js
  * Automatically traces all HTTP requests, database calls, and external API calls
  */
 
-import "dotenv/config";
-import { NodeSDK } from "@opentelemetry/sdk-node";
+import { Langfuse } from "@langfuse/node";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { Resource } from "@opentelemetry/resources";
+import { NodeSDK } from "@opentelemetry/sdk-node";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
-import { Langfuse } from "@langfuse/node";
+import "dotenv/config";
 
 // Initialize Langfuse client
 const langfuse = new Langfuse({
   secretKey: process.env.LANGFUSE_SECRET_KEY,
   publicKey: process.env.LANGFUSE_PUBLIC_KEY,
   baseUrl: process.env.LANGFUSE_HOST || "https://us.cloud.langfuse.com",
-  enabled: !!(process.env.LANGFUSE_SECRET_KEY && process.env.LANGFUSE_PUBLIC_KEY),
+  enabled: !!(
+    process.env.LANGFUSE_SECRET_KEY && process.env.LANGFUSE_PUBLIC_KEY
+  ),
   flushAt: 1, // Send traces immediately for testing
   flushInterval: 1000, // Flush every second
 });
