@@ -83,6 +83,109 @@ AGENT_ENDPOINTS = {
     AgentType.DOCUMENTATION: os.getenv("DOCUMENTATION_URL", "http://documentation:8006"),
 }
 
+# Agent manifest for tool-aware routing
+def load_agent_manifest() -> Dict[str, Any]:
+    """Load agent manifest with tool allocations"""
+    import json
+    manifest_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "agents-manifest.json")
+    )
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Failed to load agent manifest: {e}")
+        return {"profiles": []}
+
+AGENT_MANIFEST = load_agent_manifest()
+
+def get_agent_profile(agent_name: str) -> Optional[Dict[str, Any]]:
+    """Retrieve agent profile from manifest"""
+    for profile in AGENT_MANIFEST.get("profiles", []):
+        if profile.get("name") == agent_name:
+            return profile
+    return None
+
+def get_required_tools_for_task(description: str) -> List[Dict[str, str]]:
+    """
+    Analyze task description to determine required MCP tools
+    Returns list of {server, tool} dictionaries
+    """
+    description_lower = description.lower()
+    required_tools = []
+    
+    # File operations
+    if any(kw in description_lower for kw in ["file", "code", "implement", "create", "write", "read"]):
+        required_tools.append({"server": "rust-mcp-filesystem", "tool": "write_file"})
+        required_tools.append({"server": "rust-mcp-filesystem", "tool": "read_file"})
+    
+    # Git operations
+    if any(kw in description_lower for kw in ["commit", "branch", "pull request", "pr", "git"]):
+        required_tools.append({"server": "gitmcp", "tool": "create_branch"})
+        required_tools.append({"server": "gitmcp", "tool": "commit_changes"})
+    
+    # Docker/Container operations
+    if any(kw in description_lower for kw in ["docker", "container", "image", "deploy"]):
+        required_tools.append({"server": "dockerhub", "tool": "list_images"})
+    
+    # Documentation operations
+    if any(kw in description_lower for kw in ["document", "readme", "doc", "api doc"]):
+        required_tools.append({"server": "notion", "tool": "create_page"})
+    
+    # Testing operations
+    if any(kw in description_lower for kw in ["test", "e2e", "selenium", "playwright"]):
+        required_tools.append({"server": "playwright", "tool": "goto"})
+    
+    return required_tools
+
+async def check_agent_tool_availability(agent_type: AgentType, required_tools: List[Dict[str, str]]) -> Dict[str, Any]:
+    """
+    Check if agent has required tools available via manifest
+    Returns availability status and missing tools
+    """
+    agent_name = agent_type.value
+    profile = get_agent_profile(agent_name)
+    
+    if not profile:
+        return {
+            "available": False,
+            "reason": f"Agent profile not found in manifest: {agent_name}",
+            "missing_tools": required_tools
+        }
+    
+    recommended_tools = profile.get("mcp_tools", {}).get("recommended", [])
+    shared_tools = profile.get("mcp_tools", {}).get("shared", [])
+    
+    # Build set of available tools
+    available_tool_set = set()
+    for tool_entry in recommended_tools:
+        server = tool_entry.get("server")
+        tools = tool_entry.get("tools", [])
+        for tool in tools:
+            available_tool_set.add(f"{server}/{tool}")
+    
+    # Shared tools have all capabilities (simplified assumption)
+    for server in shared_tools:
+        available_tool_set.add(f"{server}/*")
+    
+    # Check required tools
+    missing_tools = []
+    for req_tool in required_tools:
+        server = req_tool["server"]
+        tool = req_tool["tool"]
+        tool_key = f"{server}/{tool}"
+        wildcard_key = f"{server}/*"
+        
+        if tool_key not in available_tool_set and wildcard_key not in available_tool_set:
+            missing_tools.append(req_tool)
+    
+    return {
+        "available": len(missing_tools) == 0,
+        "reason": f"Missing {len(missing_tools)} required tools" if missing_tools else "All required tools available",
+        "missing_tools": missing_tools,
+        "agent_capabilities": profile.get("capabilities", [])
+    }
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -103,8 +206,9 @@ async def health_check():
 @app.post("/orchestrate", response_model=TaskResponse)
 async def orchestrate_task(request: TaskRequest):
     """
-    Main orchestration endpoint
+    Main orchestration endpoint with tool-aware routing
     - Analyzes request and decomposes into subtasks
+    - Validates tool availability before routing
     - Routes to appropriate specialized agents
     - Returns routing plan with minimal context pointers
     
@@ -114,14 +218,41 @@ async def orchestrate_task(request: TaskRequest):
     
     task_id = str(uuid.uuid4())
     
+    # Analyze required tools for this task
+    required_tools = get_required_tools_for_task(request.description)
+    
     # Simple rule-based task decomposition (in production, would use Task Router)
     subtasks = decompose_request(request)
     
-    # Create routing plan
+    # Validate tool availability for each subtask
+    validation_results = {}
+    for subtask in subtasks:
+        # Determine required tools for this specific subtask
+        subtask_required_tools = get_required_tools_for_task(subtask.description)
+        availability = await check_agent_tool_availability(subtask.agent_type, subtask_required_tools)
+        validation_results[subtask.id] = availability
+        
+        # Log warning if tools are missing (but don't block - fallback available)
+        if not availability["available"]:
+            print(f"Warning: Agent {subtask.agent_type} missing tools for subtask {subtask.id}: {availability['missing_tools']}")
+            await mcp_client.log_event(
+                "tool_availability_warning",
+                metadata={
+                    "task_id": task_id,
+                    "subtask_id": subtask.id,
+                    "agent": subtask.agent_type.value,
+                    "missing_tools": availability["missing_tools"],
+                },
+                entity_type="orchestrator_warning",
+            )
+    
+    # Create routing plan with tool availability info
     routing_plan = {
         "execution_order": [st.id for st in subtasks],
         "parallel_groups": identify_parallel_tasks(subtasks),
-        "estimated_duration_minutes": estimate_duration(subtasks)
+        "estimated_duration_minutes": estimate_duration(subtasks),
+        "tool_validation": validation_results,
+        "required_tools": required_tools
     }
     
     # Estimate token usage (orchestrator uses minimal tokens)
@@ -147,6 +278,7 @@ async def orchestrate_task(request: TaskRequest):
             "subtask_count": len(subtasks),
             "priority": request.priority,
             "agent": "orchestrator",
+            "tools_validated": all(v["available"] for v in validation_results.values()),
         },
     )
     
@@ -242,6 +374,53 @@ async def list_agents():
             {"type": agent.value, "endpoint": endpoint, "status": "available"}
             for agent, endpoint in AGENT_ENDPOINTS.items()
         ]
+    }
+
+@app.get("/agents/{agent_name}/tools")
+async def get_agent_tools(agent_name: str):
+    """
+    Get tool allocations for a specific agent from manifest
+    Includes recommended tools, shared tools, and capabilities
+    """
+    profile = get_agent_profile(agent_name)
+    
+    if not profile:
+        raise HTTPException(status_code=404, detail=f"Agent profile not found: {agent_name}")
+    
+    return {
+        "agent": agent_name,
+        "display_name": profile.get("display_name"),
+        "mission": profile.get("mission"),
+        "mcp_tools": profile.get("mcp_tools", {}),
+        "capabilities": profile.get("capabilities", []),
+        "status": profile.get("status", "unknown")
+    }
+
+@app.post("/validate-routing")
+async def validate_routing(request: Dict[str, Any]):
+    """
+    Validate if an agent has required tools for a task
+    Request: {"agent": "feature-dev", "description": "implement authentication"}
+    """
+    agent_name = request.get("agent")
+    description = request.get("description", "")
+    
+    if not agent_name:
+        raise HTTPException(status_code=400, detail="Agent name required")
+    
+    try:
+        agent_type = AgentType(agent_name)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid agent type: {agent_name}")
+    
+    required_tools = get_required_tools_for_task(description)
+    availability = await check_agent_tool_availability(agent_type, required_tools)
+    
+    return {
+        "agent": agent_name,
+        "task_description": description,
+        "required_tools": required_tools,
+        "availability": availability
     }
 
 @app.post("/execute/{task_id}")
