@@ -9,6 +9,12 @@ RUN apt-get update && apt-get install -y curl && \
 COPY agents/infrastructure/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy shared modules
+COPY agents/_shared/ ./agents/_shared/
+
+# Copy agent manifest
+COPY agents/agents-manifest.json ./agents/agents-manifest.json
+
 COPY agents/infrastructure/ ./
 
 EXPOSE 8004

@@ -9,6 +9,12 @@ RUN apt-get update && apt-get install -y curl && \
 COPY agents/feature-dev/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy shared modules
+COPY agents/_shared/ ./agents/_shared/
+
+# Copy agent manifest
+COPY agents/agents-manifest.json ./agents/agents-manifest.json
+
 COPY agents/feature-dev/ ./
 
 EXPOSE 8002
