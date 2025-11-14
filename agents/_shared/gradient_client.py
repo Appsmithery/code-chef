@@ -9,6 +9,11 @@ import os
 from typing import Optional, Dict, Any, List
 from langfuse.openai import openai
 
+# Langfuse configuration (must be set before importing langfuse)
+os.environ.setdefault("LANGFUSE_HOST", os.getenv("LANGFUSE_HOST", "https://us.cloud.langfuse.com"))
+os.environ.setdefault("LANGFUSE_SECRET_KEY", os.getenv("LANGFUSE_SECRET_KEY", ""))
+os.environ.setdefault("LANGFUSE_PUBLIC_KEY", os.getenv("LANGFUSE_PUBLIC_KEY", ""))
+
 # Gradient configuration
 GRADIENT_API_KEY = os.getenv("GRADIENT_API_KEY")
 GRADIENT_BASE_URL = os.getenv("GRADIENT_BASE_URL", "https://api.digitalocean.com/v2/ai")
@@ -16,6 +21,7 @@ GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama-3.1-8b-instruct")
 
 # Validate configuration
 GRADIENT_ENABLED = bool(GRADIENT_API_KEY)
+LANGFUSE_ENABLED = bool(os.getenv("LANGFUSE_SECRET_KEY") and os.getenv("LANGFUSE_PUBLIC_KEY"))
 
 
 class GradientClient:
@@ -58,6 +64,10 @@ class GradientClient:
                 base_url=self.base_url
             )
             print(f"[GRADIENT] {agent_name}: Initialized with model {self.model}")
+            if LANGFUSE_ENABLED:
+                print(f"[LANGFUSE] {agent_name}: Tracing ENABLED (host: {os.getenv('LANGFUSE_HOST')})")
+            else:
+                print(f"[LANGFUSE] {agent_name}: Tracing DISABLED (missing keys)")
     
     async def complete(
         self,
