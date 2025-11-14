@@ -228,17 +228,12 @@ if ($Target -eq 'remote') {
     
     # Deploy on droplet
     Write-Info "Executing deployment on droplet..."
-    $remote_script = @"
-cd $DEPLOY_PATH
-git pull origin main
-cd compose
-docker-compose build
-docker-compose up -d
-sleep 10
-docker-compose ps
-"@
     
-    ssh "$DROPLET_USER@$DROPLET_IP" "$remote_script"
+    # Execute commands directly via SSH (avoiding multiline script issues)
+    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH && git pull origin main"
+    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose build"
+    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose up -d"
+    ssh "$DROPLET_USER@$DROPLET_IP" "sleep 10 && cd $DEPLOY_PATH/compose && docker compose ps"
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Remote deployment completed"
