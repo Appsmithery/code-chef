@@ -17,6 +17,7 @@ import os
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
+from agents._shared.gradient_client import get_gradient_client
 
 app = FastAPI(
     title="Code Review Agent",
@@ -29,6 +30,9 @@ Instrumentator().instrument(app).expose(app)
 
 # Shared MCP client for tool access and telemetry
 mcp_client = MCPClient(agent_name="code-review")
+
+# Gradient AI client for LLM inference (with Langfuse tracing)
+gradient_client = get_gradient_client("code-review")
 
 class CodeDiff(BaseModel):
     file_path: str
