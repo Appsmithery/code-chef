@@ -17,6 +17,7 @@ import os
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
+from agents._shared.gradient_client import get_gradient_client
 
 app = FastAPI(
     title="Infrastructure Agent",
@@ -29,6 +30,9 @@ Instrumentator().instrument(app).expose(app)
 
 # Shared MCP client for tool access and telemetry
 mcp_client = MCPClient(agent_name="infrastructure")
+
+# Gradient AI client for LLM inference (with Langfuse tracing)
+gradient_client = get_gradient_client("infrastructure")
 
 class InfraRequest(BaseModel):
     task_id: str

@@ -18,6 +18,7 @@ import os
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
+from agents._shared.gradient_client import get_gradient_client
 
 app = FastAPI(
     title="CI/CD Pipeline Agent",
@@ -30,6 +31,9 @@ Instrumentator().instrument(app).expose(app)
 
 # Shared MCP client for tool access and telemetry
 mcp_client = MCPClient(agent_name="cicd")
+
+# Gradient AI client for LLM inference (with Langfuse tracing)
+gradient_client = get_gradient_client("cicd")
 
 class PipelineRequest(BaseModel):
     task_id: str
