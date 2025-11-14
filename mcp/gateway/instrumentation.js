@@ -5,7 +5,7 @@
  * Automatically traces all HTTP requests, database calls, and external API calls
  */
 
-import { Langfuse } from "@langfuse/node";
+import { Langfuse } from "langfuse";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { Resource } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
