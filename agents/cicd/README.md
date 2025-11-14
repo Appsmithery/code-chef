@@ -6,6 +6,25 @@ Automation specialist responsible for designing, provisioning, and operating con
 
 The CI/CD Agent composes workflow definitions (GitHub Actions, GitLab CI, Azure Pipelines, etc.), manages pipeline executions, and enforces delivery policies. It integrates with artifact stores, testing frameworks, and deployment strategies to deliver consistent build automation. This README is tuned for AI orchestrators requiring precise operational metadata.
 
+### MCP Integration Architecture
+
+CI/CD agent connects to **MCP Gateway** at `http://gateway-mcp:8000` with automation-focused tools:
+
+**Recommended Tool Servers:**
+
+- `gitmcp` (clone, checkout, commit, push, create_pull_request, webhook) - Pipeline trigger and repository operations
+- `rust-mcp-filesystem` (read_file, write_file, create_directory) - Workflow YAML generation and artifact management
+- `dockerhub` (search_images, inspect_image, push_image, list_tags) - Container registry operations
+- `github` (create_workflow, dispatch_workflow, list_runs) - GitHub Actions management
+- `memory` (create_entities, create_relations, search_nodes) - Pipeline execution history and metrics
+- `fetch` (http_get, http_post) - CI platform API interactions (GitLab, CircleCI, etc.)
+- `context7` (search_docs) - Pipeline best practices and security scanning configs
+- `playwright` (navigate, screenshot) - Deployment smoke test automation
+
+**Shared Tool Servers:** `time` (build timestamps), additional context/filesystem tools
+
+The agent uses `MCPClient` to generate workflows, trigger builds, and log pipeline events (runs, deployments, promotions) to memory server. All CI/CD operations are traced for compliance and post-mortem analysis.
+
 ## Core Responsibilities
 
 - **Pipeline synthesis:** Generate CI/CD definitions tailored to target platforms, build matrices, and compliance requirements.

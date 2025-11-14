@@ -6,6 +6,25 @@ LLM-guided implementer that turns product requirements into production-ready app
 
 The Feature Development Agent consumes structured or natural-language feature briefs and produces ready-to-merge code artifacts. It scaffolds new modules, writes unit/integration tests, updates docs, and packages deliverables for review pipelines. This README emphasizes the inputs/outputs required for AI orchestration.
 
+### MCP Integration Architecture
+
+Feature-dev connects to the **MCP Gateway** at `http://gateway-mcp:8000` with specialized tooling:
+
+**Recommended Tool Servers:**
+
+- `rust-mcp-filesystem` (read_file, write_file, edit_file, create_directory) - Code generation and workspace management
+- `gitmcp` (clone, branch, commit, push, create_pull_request) - Version control workflows
+- `context7` (search_docs, retrieve_context) - Framework/API documentation lookup
+- `memory` (create_entities, create_relations) - Feature implementation tracking
+- `notion` (create_page, add_block) - Design doc and spec management
+- `fetch` (http_get, http_post) - API contract validation
+- `dockerhub` (search_images, inspect_image) - Base image and dependency queries
+- `playwright` (navigate, fill, click, screenshot) - E2E test generation
+
+**Shared Tool Servers:** `time` (timestamps), additional context/filesystem tools
+
+The agent uses `MCPClient` from `agents._shared.mcp_client` to execute file operations, commit code, and log implementation events to the memory server. All tool invocations are traced for debugging and compliance.
+
 ## Core Responsibilities
 
 - **Requirement ingestion:** Normalize user stories into explicit acceptance criteria, edge cases, and dependencies.

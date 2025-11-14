@@ -6,6 +6,25 @@ Self-service infrastructure engineer that converts platform requirements into re
 
 The Infrastructure Agent handles the full lifecycle from IaC authoring to rollout execution and verification. By describing desired environments declaratively, orchestration systems can offload provisioning, configuration drift detection, and rollout status reporting to this agent. Documentation emphasizes machine-readable contracts and operational safeguards.
 
+### MCP Integration Architecture
+
+Infrastructure agent connects to **MCP Gateway** at `http://gateway-mcp:8000` with provisioning-focused tools:
+
+**Recommended Tool Servers:**
+
+- `rust-mcp-filesystem` (read_file, write_file, create_directory, search) - IaC template generation and management
+- `gitmcp` (clone, commit, push, tag, create_pull_request) - Infrastructure-as-code version control
+- `dockerhub` (search_images, inspect_image, list_tags) - Container image selection and validation
+- `memory` (create_entities, create_relations, search_nodes) - Deployment state and drift tracking
+- `context7` (search_docs) - Cloud provider best practices and module documentation
+- `fetch` (http_get, http_post) - Cloud provider API interactions and validation
+- `notion` (create_page, update_page) - Runbook and architecture diagram publishing
+- `github` (list_repos, get_file_contents) - Terraform/Helm module registry queries
+
+**Shared Tool Servers:** `time` (deployment timestamps), additional context/filesystem tools
+
+The agent uses `MCPClient` to generate templates, execute deployments, and log infrastructure events to memory server. Drift detection and compliance checks are executed via MCP tools and tracked for audit trails.
+
 ## Core Responsibilities
 
 - **Blueprint authoring:** Generate Terraform, Pulumi, Docker Compose, or Kubernetes manifests aligned with platform standards.

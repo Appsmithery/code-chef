@@ -6,6 +6,26 @@ Autonomous technical writer that synthesizes, curates, and maintains product doc
 
 The Documentation Agent transforms raw engineering knowledge (code, ADRs, design notes) into audience-specific documentation. It ensures that new features ship with aligned docs, maintains single sources of truth, and keeps diagrams/knowledge bases synchronized. This README presents machine-actionable metadata for orchestrators.
 
+### MCP Integration Architecture
+
+Documentation agent connects to **MCP Gateway** at `http://gateway-mcp:8000` with publishing-focused tools:
+
+**Recommended Tool Servers:**
+
+- `notion` (create_page, update_page, query_database, search_pages, append_block) - Primary documentation publishing
+- `rust-mcp-filesystem` (read_file, write_file, list_directory, search) - Local doc generation and sync
+- `gitmcp` (clone, log, show) - Source code and commit message mining
+- `context7` (search_docs, list_docs, retrieve_context) - Knowledge graph and cross-reference building
+- `memory` (create_entities, create_relations, read_graph) - Documentation dependency tracking
+- `fetch` (http_get) - External API spec and reference fetching
+- `github` (list_repos, get_file_contents, search_issues) - Repository documentation discovery
+- `dockerhub` (search_images) - Container registry documentation links
+- `playwright` (navigate, screenshot) - UI documentation screenshot generation
+
+**Shared Tool Servers:** `time` (version timestamps), additional context/filesystem tools
+
+The agent uses `MCPClient` to crawl sources, generate content, and publish to Notion/filesystem. Documentation events (create, update, audit) are logged to memory server for freshness tracking.
+
 ## Core Responsibilities
 
 - **Doc discovery:** Crawl repositories, ADRs, and API definitions to build a knowledge graph of documentation assets.
