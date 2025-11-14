@@ -6,6 +6,24 @@ Central command layer that interprets incoming work, breaks it into autonomous s
 
 The Orchestrator Agent is the first touchpoint for any automation request. It performs natural-language intent parsing, plans a multi-step workflow, assigns each unit of work to the most capable specialist agent, and aggregates progress back into a single timeline. This README is optimized for both human operators and AI-driven orchestrators consuming metadata about the agent.
 
+### MCP Integration Architecture
+
+The orchestrator leverages the **Model Context Protocol (MCP)** through a centralized HTTP gateway at `http://gateway-mcp:8000`. It has access to:
+
+**Recommended Tool Servers:**
+
+- `memory` (create_entities, create_relations, read_graph, search_nodes) - Task graph persistence and context management
+- `context7` (search_docs, list_docs) - Documentation and knowledge base access
+- `notion` (create_page, update_page, search_pages, query_database) - Planning artifacts and team collaboration
+- `gitmcp` (clone, commit, push, status, diff) - Repository operations and version control
+- `dockerhub` (list_tags, inspect_image, search_images) - Container image registry queries
+- `playwright` (navigate, click, screenshot, pdf) - UI validation and workflow testing
+- `rust-mcp-filesystem` (read_file, write_file, list_directory, search) - Workspace file operations
+
+**Shared Tool Servers:** `time`, `fetch`, additional filesystem/context tools
+
+The orchestrator uses the **MCPClient** from `agents._shared.mcp_client` to invoke tools, log telemetry, and validate agent capabilities before routing subtasks. Tool allocations are pre-loaded from `agents/agents-manifest.json` for zero-latency routing decisions.
+
 ## Core Responsibilities
 
 - **Task understanding:** Use LLM-powered parsing to convert free-form requests into structured objectives, constraints, and acceptance criteria.

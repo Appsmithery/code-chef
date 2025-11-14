@@ -6,6 +6,24 @@ Autonomous reviewer that inspects proposed changesets for quality, security, sty
 
 This agent ingests diffs or repository references, performs multilayer analysis (static analysis, dependency checks, secret scanning), and produces structured review feedback suitable for CI gating or human triage. Documentation is optimized for AI orchestration pipelines.
 
+### MCP Integration Architecture
+
+Code-review leverages **MCP Gateway** at `http://gateway-mcp:8000` for comprehensive analysis:
+
+**Recommended Tool Servers:**
+
+- `gitmcp` (clone, diff, log, blame, show) - Fetch changesets and commit history
+- `rust-mcp-filesystem` (read_file, read_multiple_files, search) - Static analysis file access
+- `memory` (create_entities, create_relations, search_nodes) - Review findings and issue tracking
+- `context7` (search_docs) - Best practice and security pattern lookup
+- `fetch` (http_get, http_post) - Vulnerability database queries (OSV, npm, CVE)
+- `dockerhub` (inspect_image, list_tags) - Container image security scanning
+- `notion` (create_page, update_page) - Review report publishing
+
+**Shared Tool Servers:** `time` (review timestamps), additional context tools
+
+The agent uses `MCPClient` to fetch code, run analyses, and persist findings to the memory server. Each review event is logged with severity, confidence scores, and suggested fixes for downstream automation.
+
 ## Core Responsibilities
 
 - **Diff analysis:** Parse git patches or file bundles, compute semantic impact, and map findings to source locations.
