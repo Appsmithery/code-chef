@@ -5,12 +5,12 @@
  * Automatically traces all HTTP requests, database calls, and external API calls
  */
 
-import { Langfuse } from "langfuse";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { Resource } from "@opentelemetry/resources";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { ATTR_SERVICE_NAME } from "@opentelemetry/semantic-conventions";
 import "dotenv/config";
+import { Langfuse } from "langfuse";
 
 // Initialize Langfuse client
 const langfuse = new Langfuse({
