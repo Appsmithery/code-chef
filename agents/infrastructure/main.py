@@ -15,11 +15,16 @@ from datetime import datetime
 import uvicorn
 import os
 
+from agents._shared.mcp_client import MCPClient
+
 app = FastAPI(
     title="Infrastructure Agent",
     description="Infrastructure-as-code generation and deployment configuration",
     version="1.0.0"
 )
+
+# Shared MCP client for tool access and telemetry
+mcp_client = MCPClient(agent_name="infrastructure")
 
 class InfraRequest(BaseModel):
     task_id: str
@@ -41,11 +46,18 @@ class InfraResponse(BaseModel):
 
 @app.get("/health")
 async def health_check():
+    gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
         "service": "infrastructure",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "mcp": {
+            "gateway": gateway_health,
+            "recommended_tool_servers": [entry.get("server") for entry in mcp_client.recommended_tools],
+            "shared_tool_servers": mcp_client.shared_tools,
+            "capabilities": mcp_client.capabilities,
+        },
     }
 
 @app.post("/generate", response_model=InfraResponse)
@@ -61,13 +73,26 @@ async def generate_infrastructure(request: InfraRequest):
     infra_id = str(uuid.uuid4())
     artifacts = generate_from_template(request)
     
-    return InfraResponse(
+    response = InfraResponse(
         infra_id=infra_id,
         artifacts=artifacts,
         validation_status="passed",
         estimated_tokens=len(str(request.requirements)) * 3,
         template_reuse_pct=0.80
     )
+
+    await mcp_client.log_event(
+        "infrastructure_generated",
+        metadata={
+            "infra_id": infra_id,
+            "task_id": request.task_id,
+            "artifacts": [artifact.file_path for artifact in artifacts],
+            "infrastructure_type": request.infrastructure_type,
+            "status": response.validation_status,
+        },
+    )
+
+    return response
 
 @app.get("/templates")
 async def list_templates():

@@ -15,11 +15,16 @@ from datetime import datetime
 import uvicorn
 import os
 
+from agents._shared.mcp_client import MCPClient
+
 app = FastAPI(
     title="Documentation Agent",
     description="Documentation generation and maintenance",
     version="1.0.0"
 )
+
+# Shared MCP client for tool access and telemetry
+mcp_client = MCPClient(agent_name="documentation")
 
 class DocRequest(BaseModel):
     task_id: str
@@ -41,11 +46,18 @@ class DocResponse(BaseModel):
 
 @app.get("/health")
 async def health_check():
+    gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
         "service": "documentation",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "mcp": {
+            "gateway": gateway_health,
+            "recommended_tool_servers": [entry.get("server") for entry in mcp_client.recommended_tools],
+            "shared_tool_servers": mcp_client.shared_tools,
+            "capabilities": mcp_client.capabilities,
+        },
     }
 
 @app.post("/generate", response_model=DocResponse)
@@ -61,12 +73,25 @@ async def generate_documentation(request: DocRequest):
     doc_id = str(uuid.uuid4())
     artifacts = generate_docs(request)
     
-    return DocResponse(
+    response = DocResponse(
         doc_id=doc_id,
         artifacts=artifacts,
         estimated_tokens=len(request.doc_type) * 100,
         template_used=f"{request.doc_type}-standard"
     )
+
+    await mcp_client.log_event(
+        "documentation_generated",
+        metadata={
+            "doc_id": doc_id,
+            "task_id": request.task_id,
+            "doc_type": request.doc_type,
+            "artifact_count": len(artifacts),
+            "target_audience": request.target_audience,
+        },
+    )
+
+    return response
 
 @app.get("/templates")
 async def list_doc_templates():

@@ -15,11 +15,16 @@ from datetime import datetime
 import uvicorn
 import os
 
+from agents._shared.mcp_client import MCPClient
+
 app = FastAPI(
     title="Code Review Agent",
     description="Quality assurance, static analysis, and security scanning",
     version="1.0.0"
 )
+
+# Shared MCP client for tool access and telemetry
+mcp_client = MCPClient(agent_name="code-review")
 
 class CodeDiff(BaseModel):
     file_path: str
@@ -49,11 +54,18 @@ class ReviewResponse(BaseModel):
 
 @app.get("/health")
 async def health_check():
+    gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
         "service": "code-review",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "mcp": {
+            "gateway": gateway_health,
+            "recommended_tool_servers": [entry.get("server") for entry in mcp_client.recommended_tools],
+            "shared_tool_servers": mcp_client.shared_tools,
+            "capabilities": mcp_client.capabilities,
+        },
     }
 
 @app.post("/review", response_model=ReviewResponse)
@@ -75,8 +87,8 @@ async def review_code(request: ReviewRequest):
     
     # Token estimation: only diffs loaded
     token_estimate = sum(len(d.changes.split()) * 2 for d in request.diffs)
-    
-    return ReviewResponse(
+
+    response = ReviewResponse(
         review_id=review_id,
         status="approved" if approval else "revision_required",
         findings=findings,
@@ -84,6 +96,19 @@ async def review_code(request: ReviewRequest):
         summary=f"Found {len(findings)} issue(s), {len(critical_findings)} critical",
         estimated_tokens=token_estimate
     )
+
+    await mcp_client.log_event(
+        "code_review_completed",
+        metadata={
+            "review_id": review_id,
+            "task_id": request.task_id,
+            "finding_count": len(findings),
+            "critical_findings": len(critical_findings),
+            "approved": approval,
+        },
+    )
+
+    return response
 
 def analyze_diffs(diffs: List[CodeDiff]) -> List[ReviewFinding]:
     # Placeholder static analysis
