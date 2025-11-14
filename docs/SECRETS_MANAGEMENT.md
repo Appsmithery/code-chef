@@ -201,6 +201,32 @@ Add the new secret to `.env.example` and document in setup guides.
 
 Run `npm run agents:manifest` to regenerate the manifest with new secrets.
 
+## Deployment-Specific Secrets
+
+### GitHub Deployment PAT
+
+- **Path**: `config/env/secrets/github_pat.txt` (gitignored)
+- **Purpose**: Enables automated `git pull` on the droplet by configuring a stored credential via the deployment script.
+- **Scopes**: `repo` is sufficient. Add `workflow` if deployments need to trigger actions.
+- **Usage**: The deployment script copies this file to the droplet and configures `~/.git-credentials`. If the file is absent or empty, it logs a warning and skips the configuration.
+
+> ⚠️ Never commit this file. Store it securely (password manager or secret store) and rotate routinely.
+
+### OAuth2 Proxy (GitHub Provider)
+
+Add the following fields to `.env` (or your preferred secret store) when wiring the new `oauth2-proxy` service that protects Prometheus behind Caddy:
+
+| Variable                      | Description                                          |
+| ----------------------------- | ---------------------------------------------------- |
+| `OAUTH2_PROXY_CLIENT_ID`      | GitHub OAuth App client ID                           |
+| `OAUTH2_PROXY_CLIENT_SECRET`  | GitHub OAuth App client secret                       |
+| `OAUTH2_PROXY_COOKIE_SECRET`  | 32-byte base64 string securing oauth2-proxy cookies  |
+| `OAUTH2_PROXY_REDIRECT_URL`   | Callback URL (`https://your-domain/oauth2/callback`) |
+| `OAUTH2_PROXY_ALLOWED_EMAILS` | Comma-separated allowlist or `*`                     |
+| `OAUTH2_PROXY_GITHUB_ORG`     | Optional org/team restriction                        |
+
+These values flow into Docker Compose automatically and should be managed like any other sensitive credential.
+
 ## Troubleshooting
 
 ### Validation Fails
