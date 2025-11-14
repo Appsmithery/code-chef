@@ -19,6 +19,7 @@ import httpx
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
+from agents._shared.gradient_client import get_gradient_client
 
 app = FastAPI(
     title="DevOps Orchestrator Agent",
@@ -34,6 +35,9 @@ STATE_SERVICE_URL = os.getenv("STATE_SERVICE_URL", "http://state-persistence:800
 
 # Shared MCP client for tool access and telemetry
 mcp_client = MCPClient(agent_name="orchestrator")
+
+# Gradient AI client for LLM inference (with Langfuse tracing)
+gradient_client = get_gradient_client("orchestrator")
 
 # Agent types for task routing
 class AgentType(str, Enum):
@@ -225,8 +229,11 @@ async def orchestrate_task(request: TaskRequest):
     # Analyze required tools for this task
     required_tools = get_required_tools_for_task(request.description)
     
-    # Simple rule-based task decomposition (in production, would use Task Router)
-    subtasks = decompose_request(request)
+    # Decompose request into subtasks (use LLM if available, else rule-based)
+    if gradient_client.is_enabled():
+        subtasks = await decompose_with_llm(request, task_id)
+    else:
+        subtasks = decompose_request(request)
     
     # Validate tool availability for each subtask
     validation_results = {}
@@ -564,8 +571,8 @@ async def execute_workflow(task_id: str):
 
 def decompose_request(request: TaskRequest) -> List[SubTask]:
     """
-    Decompose incoming request into discrete subtasks
-    Uses simple keyword matching for MVP (production would use Task Router)
+    Decompose incoming request into discrete subtasks (rule-based fallback)
+    Uses simple keyword matching for MVP (production would use Task Router or LLM)
     """
     import uuid
     description_lower = request.description.lower()
@@ -642,6 +649,94 @@ def estimate_duration(subtasks: List[SubTask]) -> int:
     """Estimate total execution duration in minutes"""
     # Simple heuristic: 5 minutes per subtask
     return len(subtasks) * 5
+
+
+async def decompose_with_llm(request: TaskRequest, task_id: str) -> List[SubTask]:
+    """
+    Decompose task using Gradient AI with Langfuse tracing.
+    Provides intelligent task breakdown with dependency analysis.
+    """
+    import uuid
+    import json
+    
+    system_prompt = """You are an expert DevOps orchestrator. Analyze development requests and decompose them into discrete subtasks for specialized agents.
+
+Available agents:
+- feature-dev: Application code generation and feature implementation
+- code-review: Quality assurance, static analysis, security scanning
+- infrastructure: Infrastructure-as-code generation (Docker, K8s, Terraform)
+- cicd: CI/CD pipeline generation (GitHub Actions, GitLab CI)
+- documentation: Documentation generation (README, API docs)
+
+Return JSON with this structure:
+{
+  "subtasks": [
+    {
+      "agent_type": "feature-dev",
+      "description": "Implement user authentication",
+      "dependencies": []
+    }
+  ]
+}"""
+    
+    user_prompt = f"""Task: {request.description}
+
+Project Context: {json.dumps(request.project_context) if request.project_context else "General project"}
+Priority: {request.priority}
+
+Break this down into subtasks. Consider dependencies and execution order."""
+    
+    try:
+        result = await gradient_client.complete_structured(
+            prompt=user_prompt,
+            system_prompt=system_prompt,
+            temperature=0.3,  # Lower temperature for more deterministic decomposition
+            max_tokens=1000,
+            metadata={
+                "task_id": task_id,
+                "task_description": request.description,
+                "priority": request.priority
+            }
+        )
+        
+        # Parse LLM response
+        llm_subtasks = result["content"].get("subtasks", [])
+        
+        # Create SubTask objects with proper IDs
+        subtasks = []
+        id_map = {}  # Map indices to UUIDs for dependencies
+        
+        for i, st in enumerate(llm_subtasks):
+            subtask_id = str(uuid.uuid4())
+            id_map[i] = subtask_id
+            
+            # Validate agent type
+            try:
+                agent_type = AgentType(st["agent_type"])
+            except ValueError:
+                print(f"[WARNING] Invalid agent type: {st['agent_type']}, defaulting to feature-dev")
+                agent_type = AgentType.FEATURE_DEV
+            
+            subtasks.append(SubTask(
+                id=subtask_id,
+                agent_type=agent_type,
+                description=st["description"],
+                dependencies=[]  # Will populate after all IDs are assigned
+            ))
+        
+        # Resolve dependencies (map from indices to UUIDs)
+        for i, st in enumerate(llm_subtasks):
+            dep_indices = st.get("dependencies", [])
+            if dep_indices and isinstance(dep_indices, list):
+                subtasks[i].dependencies = [id_map[dep_idx] for dep_idx in dep_indices if dep_idx in id_map]
+        
+        print(f"[LLM] Decomposed task into {len(subtasks)} subtasks using {result['tokens']} tokens")
+        return subtasks
+        
+    except Exception as e:
+        print(f"[ERROR] LLM decomposition failed: {e}, falling back to rule-based")
+        return decompose_request(request)
+
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "8001"))
