@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@langfuse/openai": "^4.4.2",
     "@linear/sdk": "^63.4.0"
   }
 }
