@@ -235,7 +235,25 @@ if ($Target -eq 'remote') {
             Select-Object -First 1
         if (-not [string]::IsNullOrWhiteSpace($localPat)) {
             Write-Info "Configuring GitHub PAT on droplet for git pull..."
-            ssh "$DROPLET_USER@$DROPLET_IP" "PAT=\$(grep -v '^#' $DEPLOY_PATH/config/env/secrets/github_pat.txt 2>/dev/null | head -n 1 | tr -d '\r'); if [ -z \"\$PAT\" ]; then echo 'GitHub PAT missing on droplet (config/env/secrets/github_pat.txt)'; exit 1; fi; git config --global credential.helper 'store --file ~/.git-credentials'; printf 'https://x-access-token:%s@github.com\n' \"\$PAT\" > ~/.git-credentials; chmod 600 ~/.git-credentials; cd $DEPLOY_PATH && git remote set-url origin https://github.com/Appsmithery/Dev-Tools.git"
+
+            $remoteGitConfigScript = @'
+set -e
+PAT=$(grep -v "^#" {DEPLOY_PATH}/config/env/secrets/github_pat.txt 2>/dev/null | head -n 1 | tr -d '\r')
+if [ -z "$PAT" ]; then echo "GitHub PAT missing on droplet (config/env/secrets/github_pat.txt)"; exit 1; fi
+git config --global credential.helper "store --file ~/.git-credentials"
+printf "https://x-access-token:%s@github.com\n" "$PAT" > ~/.git-credentials
+chmod 600 ~/.git-credentials
+cd {DEPLOY_PATH}
+git remote set-url origin https://github.com/Appsmithery/Dev-Tools.git
+'@
+            $remoteGitConfigScript = $remoteGitConfigScript.Replace('{DEPLOY_PATH}', $DEPLOY_PATH)
+            $remoteGitConfigScript = $remoteGitConfigScript.Replace("`r`n", "`n")
+
+            $remoteGitConfigScript | ssh "$DROPLET_USER@$DROPLET_IP" 'bash -s'
+            if ($LASTEXITCODE -ne 0) {
+                Write-Error-Custom "Failed to configure git credentials on droplet"
+                exit 1
+            }
             Write-Success "Git remote configured for PAT auth"
         } else {
             Write-Info "GitHub PAT secret file is empty; skipping git credential configuration."
