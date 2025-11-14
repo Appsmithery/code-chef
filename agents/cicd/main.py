@@ -15,6 +15,7 @@ from datetime import datetime
 import uuid
 import uvicorn
 import os
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 
@@ -23,6 +24,9 @@ app = FastAPI(
     description="Automation workflow generation and deployment orchestration",
     version="1.0.0"
 )
+
+# Enable Prometheus metrics collection
+Instrumentator().instrument(app).expose(app)
 
 # Shared MCP client for tool access and telemetry
 mcp_client = MCPClient(agent_name="cicd")

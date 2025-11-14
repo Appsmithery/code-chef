@@ -16,6 +16,7 @@ from datetime import datetime
 import uvicorn
 import os
 import httpx
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 
@@ -24,6 +25,9 @@ app = FastAPI(
     description="Task delegation, context routing, and workflow coordination",
     version="1.0.0"
 )
+
+# Enable Prometheus metrics collection
+Instrumentator().instrument(app).expose(app)
 
 # State Persistence Layer URL
 STATE_SERVICE_URL = os.getenv("STATE_SERVICE_URL", "http://state-persistence:8008")
