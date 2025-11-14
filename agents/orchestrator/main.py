@@ -18,7 +18,7 @@ import os
 import httpx
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from agents._shared.mcp_client import MCPClient
+from agents._shared.mcp_client import MCPClient, resolve_manifest_path
 from agents._shared.gradient_client import get_gradient_client
 
 app = FastAPI(
@@ -95,14 +95,12 @@ AGENT_ENDPOINTS = {
 def load_agent_manifest() -> Dict[str, Any]:
     """Load agent manifest with tool allocations"""
     import json
-    manifest_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "agents-manifest.json")
-    )
+    manifest_path = resolve_manifest_path()
     try:
-        with open(manifest_path, "r", encoding="utf-8") as f:
+        with open(manifest_path, "r", encoding="utf-8-sig") as f:
             return json.load(f)
     except Exception as e:
-        print(f"Failed to load agent manifest: {e}")
+        print(f"Failed to load agent manifest from {manifest_path}: {e}")
         return {"profiles": []}
 
 AGENT_MANIFEST = load_agent_manifest()
