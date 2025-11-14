@@ -17,6 +17,8 @@ import uvicorn
 import os
 import httpx
 
+from agents._shared.mcp_client import MCPClient
+
 app = FastAPI(
     title="DevOps Orchestrator Agent",
     description="Task delegation, context routing, and workflow coordination",
@@ -25,6 +27,9 @@ app = FastAPI(
 
 # State Persistence Layer URL
 STATE_SERVICE_URL = os.getenv("STATE_SERVICE_URL", "http://state-persistence:8008")
+
+# Shared MCP client for tool access and telemetry
+mcp_client = MCPClient(agent_name="orchestrator")
 
 # Agent types for task routing
 class AgentType(str, Enum):
@@ -81,11 +86,18 @@ AGENT_ENDPOINTS = {
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
         "service": "orchestrator",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "mcp": {
+            "gateway": gateway_health,
+            "recommended_tool_servers": [entry.get("server") for entry in mcp_client.recommended_tools],
+            "shared_tool_servers": mcp_client.shared_tools,
+            "capabilities": mcp_client.capabilities,
+        },
     }
 
 @app.post("/orchestrate", response_model=TaskResponse)
@@ -127,6 +139,16 @@ async def orchestrate_task(request: TaskRequest):
     
     # Persist to state database
     await persist_task_state(task_id, request, response)
+
+    await mcp_client.log_event(
+        "task_orchestrated",
+        metadata={
+            "task_id": task_id,
+            "subtask_count": len(subtasks),
+            "priority": request.priority,
+            "agent": "orchestrator",
+        },
+    )
     
     return response
 
@@ -184,8 +206,25 @@ async def persist_task_state(task_id: str, request: TaskRequest, response: TaskR
                 timeout=5.0
             )
             
+            await mcp_client.log_event(
+                "orchestrator_state_persisted",
+                metadata={
+                    "task_id": task_id,
+                    "workflow_steps": len(response.subtasks),
+                    "status": "pending",
+                },
+            )
+
     except Exception as e:
         print(f"State persistence failed (non-critical): {e}")
+        await mcp_client.log_event(
+            "orchestrator_state_persistence_failed",
+            metadata={
+                "task_id": task_id,
+                "error": str(e),
+            },
+            entity_type="orchestrator_error",
+        )
 
 @app.get("/tasks/{task_id}")
 async def get_task_status(task_id: str):

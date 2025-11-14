@@ -16,6 +16,8 @@ import uvicorn
 import os
 import httpx
 
+from agents._shared.mcp_client import MCPClient
+
 app = FastAPI(
     title="Feature Development Agent",
     description="Application code generation and feature implementation",
@@ -24,6 +26,9 @@ app = FastAPI(
 
 # RAG Context Manager URL
 RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://rag-context:8007")
+
+# Shared MCP client for tool access and telemetry
+mcp_client = MCPClient(agent_name="feature-dev")
 
 class FeatureRequest(BaseModel):
     """Feature implementation request"""
@@ -60,11 +65,18 @@ class FeatureResponse(BaseModel):
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
+    gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
         "service": "feature-dev",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "mcp": {
+            "gateway": gateway_health,
+            "recommended_tool_servers": [entry.get("server") for entry in mcp_client.recommended_tools],
+            "shared_tool_servers": mcp_client.shared_tools,
+            "capabilities": mcp_client.capabilities,
+        },
     }
 
 @app.post("/implement", response_model=FeatureResponse)
@@ -107,6 +119,16 @@ async def implement_feature(request: FeatureRequest):
         estimated_tokens=estimated_tokens,
         context_lines_used=context_lines
     )
+
+    await mcp_client.log_event(
+        "feature_implemented",
+        metadata={
+            "feature_id": feature_id,
+            "artifact_count": len(artifacts),
+            "test_pass_rate": sum(1 for t in test_results if t.status == "passed") / max(len(test_results), 1),
+            "status": response.status,
+        },
+    )
     
     return response
 
@@ -141,6 +163,14 @@ async def implement_and_review(request: FeatureRequest):
             
             if review_response.status_code == 200:
                 review_data = review_response.json()
+                await mcp_client.log_event(
+                    "feature_review_completed",
+                    metadata={
+                        "feature_id": feature_result.feature_id,
+                        "approval": review_data.get("approval", False),
+                        "findings": review_data.get("findings"),
+                    },
+                )
                 return {
                     "feature_implementation": feature_result.dict(),
                     "code_review": review_data,
@@ -148,6 +178,14 @@ async def implement_and_review(request: FeatureRequest):
                     "approval": review_data.get("approval", False)
                 }
             else:
+                await mcp_client.log_event(
+                    "feature_review_failed",
+                    metadata={
+                        "feature_id": feature_result.feature_id,
+                        "status_code": review_response.status_code,
+                    },
+                    entity_type="feature_dev_error",
+                )
                 return {
                     "feature_implementation": feature_result.dict(),
                     "code_review": {"error": f"Review failed with status {review_response.status_code}"},
@@ -155,6 +193,14 @@ async def implement_and_review(request: FeatureRequest):
                     "approval": False
                 }
     except Exception as e:
+        await mcp_client.log_event(
+            "feature_review_exception",
+            metadata={
+                "feature_id": feature_result.feature_id,
+                "error": str(e),
+            },
+            entity_type="feature_dev_error",
+        )
         return {
             "feature_implementation": feature_result.dict(),
             "code_review": {"error": str(e)},

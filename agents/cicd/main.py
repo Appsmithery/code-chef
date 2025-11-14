@@ -12,14 +12,20 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime
+import uuid
 import uvicorn
 import os
+
+from agents._shared.mcp_client import MCPClient
 
 app = FastAPI(
     title="CI/CD Pipeline Agent",
     description="Automation workflow generation and deployment orchestration",
     version="1.0.0"
 )
+
+# Shared MCP client for tool access and telemetry
+mcp_client = MCPClient(agent_name="cicd")
 
 class PipelineRequest(BaseModel):
     task_id: str
@@ -42,11 +48,18 @@ class PipelineResponse(BaseModel):
 
 @app.get("/health")
 async def health_check():
+    gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
         "service": "cicd",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": "1.0.0"
+        "version": "1.0.0",
+        "mcp": {
+            "gateway": gateway_health,
+            "recommended_tool_servers": [entry.get("server") for entry in mcp_client.recommended_tools],
+            "shared_tool_servers": mcp_client.shared_tools,
+            "capabilities": mcp_client.capabilities,
+        },
     }
 
 @app.post("/generate", response_model=PipelineResponse)
@@ -57,12 +70,10 @@ async def generate_pipeline(request: PipelineRequest):
     - Invokes LLM only for dynamic decision points
     - Reduces generation tokens by 75% via template customization
     """
-    import uuid
-    
     pipeline_id = str(uuid.uuid4())
     artifacts = generate_pipeline_config(request)
     
-    return PipelineResponse(
+    response = PipelineResponse(
         pipeline_id=pipeline_id,
         artifacts=artifacts,
         validation_status="passed",
@@ -70,9 +81,30 @@ async def generate_pipeline(request: PipelineRequest):
         template_reuse_pct=0.75
     )
 
+    await mcp_client.log_event(
+        "pipeline_generated",
+        metadata={
+            "pipeline_id": pipeline_id,
+            "task_id": request.task_id,
+            "stages": request.stages,
+            "deployment_strategy": request.deployment_strategy,
+            "artifact_count": len(artifacts),
+        },
+    )
+
+    return response
+
 @app.post("/deploy")
 async def execute_deployment(deployment: Dict[str, Any]):
-    return {"deployment_id": "dep-123", "status": "in_progress"}
+    deployment_id = f"dep-{uuid.uuid4().hex[:8]}"
+    await mcp_client.log_event(
+        "deployment_triggered",
+        metadata={
+            "deployment_id": deployment_id,
+            "deployment": deployment,
+        },
+    )
+    return {"deployment_id": deployment_id, "status": "in_progress"}
 
 def generate_pipeline_config(request: PipelineRequest) -> List[PipelineArtifact]:
     return [
