@@ -45,9 +45,9 @@ $ErrorActionPreference = "Stop"
 
 # Colors
 function Write-Step { param($msg) Write-Host "`n[STEP] $msg" -ForegroundColor Cyan }
-function Write-Success { param($msg) Write-Host "  ✓ $msg" -ForegroundColor Green }
-function Write-Error-Custom { param($msg) Write-Host "  ✗ $msg" -ForegroundColor Red }
-function Write-Info { param($msg) Write-Host "  → $msg" -ForegroundColor Gray }
+function Write-Success { param($msg) Write-Host "  [OK] $msg" -ForegroundColor Green }
+function Write-Error-Custom { param($msg) Write-Host "  [ERROR] $msg" -ForegroundColor Red }
+function Write-Info { param($msg) Write-Host "  -> $msg" -ForegroundColor Gray }
 
 # Header
 Write-Host "`n==========================================" -ForegroundColor Magenta
@@ -165,13 +165,13 @@ if ($Target -eq 'local') {
         try {
             $response = Invoke-RestMethod "http://localhost:$port/health" -TimeoutSec 5 -ErrorAction Stop
             if ($response.status -eq "healthy") {
-                Write-Success "Port $port: healthy"
+                Write-Success "Port $port - healthy"
             } else {
-                Write-Info "Port $port: $($response.status)"
+                Write-Info "Port $port - $($response.status)"
             }
         } catch {
             $failed += $port
-            Write-Error-Custom "Port $port: DOWN"
+            Write-Error-Custom "Port $port - DOWN"
         }
     }
     
@@ -197,7 +197,7 @@ if ($Target -eq 'remote') {
     $DROPLET_USER = "root"
     $DEPLOY_PATH = "/opt/Dev-Tools"
     
-    Write-Info "Target: $DROPLET_USER@$DROPLET_IP:$DEPLOY_PATH"
+    Write-Info "Target: $DROPLET_USER@$DROPLET_IP $DEPLOY_PATH"
     
     # Check SSH access
     Write-Info "Testing SSH connection..."
@@ -211,7 +211,7 @@ if ($Target -eq 'remote') {
     
     # Sync .env file
     Write-Info "Copying .env file to droplet..."
-    scp "config/env/.env" "$DROPLET_USER@$DROPLET_IP:$DEPLOY_PATH/config/env/.env"
+    scp "config/env/.env" "${DROPLET_USER}@${DROPLET_IP}:${DEPLOY_PATH}/config/env/.env"
     if ($LASTEXITCODE -ne 0) {
         Write-Error-Custom "Failed to copy .env file!"
         exit 1
@@ -222,7 +222,7 @@ if ($Target -eq 'remote') {
     if (Test-Path "config/env/secrets") {
         Write-Info "Copying secrets to droplet..."
         ssh "$DROPLET_USER@$DROPLET_IP" "mkdir -p $DEPLOY_PATH/config/env/secrets"
-        scp -r "config/env/secrets/*" "$DROPLET_USER@$DROPLET_IP:$DEPLOY_PATH/config/env/secrets/"
+        scp -r "config/env/secrets/*" "${DROPLET_USER}@${DROPLET_IP}:${DEPLOY_PATH}/config/env/secrets/"
         Write-Success "Secrets copied"
     }
     
@@ -248,7 +248,7 @@ docker-compose ps
         Write-Info "  - Prometheus: http://$DROPLET_IP:9090"
     } else {
         Write-Error-Custom "Remote deployment failed!"
-        Write-Info "Check droplet logs: ssh $DROPLET_USER@$DROPLET_IP 'cd $DEPLOY_PATH/compose && docker-compose logs'"
+        Write-Info "Check droplet logs: ssh $DROPLET_USER@$DROPLET_IP"
         exit 1
     }
 }
