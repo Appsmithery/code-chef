@@ -6,6 +6,7 @@ import json
 import os
 import uuid
 from datetime import datetime
+from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
@@ -18,6 +19,52 @@ class MCPClientError(Exception):
 
 class AgentProfileNotFound(MCPClientError):
     """Raised when an agent profile is missing from the manifest."""
+
+
+def resolve_manifest_path(preferred_path: Optional[str] = None) -> Path:
+    """Resolve the agent manifest path across local and container environments."""
+
+    candidates: List[Path] = []
+    seen: set[str] = set()
+
+    def add(path_like: Optional[str | os.PathLike[str]]) -> None:
+        if not path_like:
+            return
+        candidate = Path(path_like).expanduser()
+        normalized = candidate.resolve(strict=False)
+        key = str(normalized)
+        if key in seen:
+            return
+        seen.add(key)
+        candidates.append(normalized)
+
+    add(preferred_path)
+    add(os.getenv("AGENT_MANIFEST_PATH"))
+
+    base_dir = Path(__file__).resolve().parent
+    project_root = base_dir.parent
+
+    default_candidates = [
+        project_root / "agents-manifest.json",
+        base_dir / "agents-manifest.json",
+        project_root / "agents" / "agents-manifest.json",
+        Path.cwd() / "agents" / "agents-manifest.json",
+        Path.cwd() / "agents-manifest.json",
+        Path("/app/agents/agents-manifest.json"),
+        Path("/agents/agents-manifest.json"),
+    ]
+
+    for candidate in default_candidates:
+        add(candidate)
+
+    if not candidates:
+        add(project_root / "agents-manifest.json")
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    return candidates[0]
 
 
 class MCPClient:
@@ -36,10 +83,8 @@ class MCPClient:
         timeout: Optional[int] = None,
     ) -> None:
         self.agent_name = agent_name
-        default_manifest_path = os.getenv("AGENT_MANIFEST_PATH") or os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "agents-manifest.json")
-        )
-        self.manifest_path = os.path.abspath(manifest_path or default_manifest_path)
+        resolved_path = resolve_manifest_path(manifest_path)
+        self.manifest_path = str(resolved_path)
         self.gateway_url = gateway_url or os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
         self.timeout = timeout or int(os.getenv("MCP_TIMEOUT", "30"))
 
@@ -60,7 +105,7 @@ class MCPClient:
             ):
                 return cls._manifest_cache
 
-            with open(path, "r", encoding="utf-8") as manifest_file:
+            with open(path, "r", encoding="utf-8-sig") as manifest_file:
                 data = json.load(manifest_file)
 
             cls._manifest_cache = data
