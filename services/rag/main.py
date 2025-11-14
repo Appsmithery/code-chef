@@ -13,6 +13,7 @@ from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, Fi
 import os
 from datetime import datetime
 import uuid
+import httpx
 
 app = FastAPI(title="RAG Context Manager", version="1.0.0")
 
@@ -20,12 +21,121 @@ app = FastAPI(title="RAG Context Manager", version="1.0.0")
 QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 
+# MCP Gateway configuration
+MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
+MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
+
 try:
     qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
     print(f"Connected to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}")
 except Exception as e:
     print(f"Warning: Could not connect to Qdrant: {e}")
     qdrant_client = None
+
+
+# MCP Tool Invocation Helpers
+async def invoke_mcp_tool(server: str, tool: str, params: dict) -> dict:
+    """
+    Invoke MCP tool via gateway
+    
+    Args:
+        server: MCP server name (e.g., 'memory', 'time')
+        tool: Tool name (e.g., 'create_entities', 'get_current_time')
+        params: Tool parameters
+        
+    Returns:
+        Tool invocation result
+    """
+    try:
+        async with httpx.AsyncClient(timeout=MCP_TIMEOUT) as client:
+            response = await client.post(
+                f"{MCP_GATEWAY_URL}/tools/{server}/{tool}",
+                json={"params": params}
+            )
+            response.raise_for_status()
+            return response.json()
+    except httpx.HTTPError as e:
+        print(f"MCP tool invocation failed: {server}/{tool} - {e}")
+        return {"success": False, "error": str(e)}
+    except Exception as e:
+        print(f"Unexpected error invoking MCP tool: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def get_current_timestamp() -> str:
+    """Get current timestamp from MCP time server"""
+    result = await invoke_mcp_tool("time", "get_current_time", {})
+    if result.get("success"):
+        return result.get("result", datetime.utcnow().isoformat())
+    return datetime.utcnow().isoformat()
+
+
+async def log_query_to_memory(query: str, collection: str, results_count: int) -> bool:
+    """
+    Log query to MCP memory server for analytics and pattern tracking
+    
+    Args:
+        query: Search query text
+        collection: Collection name
+        results_count: Number of results returned
+        
+    Returns:
+        Success status
+    """
+    timestamp = await get_current_timestamp()
+    
+    result = await invoke_mcp_tool(
+        server="memory",
+        tool="create_entities",
+        params={
+            "entities": [{
+                "name": f"rag-query-{uuid.uuid4().hex[:8]}",
+                "type": "rag_query",
+                "metadata": {
+                    "query": query,
+                    "collection": collection,
+                    "results_count": results_count,
+                    "timestamp": timestamp,
+                    "service": "rag-context-manager"
+                }
+            }]
+        }
+    )
+    
+    return result.get("success", False)
+
+
+async def log_indexing_to_memory(collection: str, doc_count: int) -> bool:
+    """
+    Log indexing operation to MCP memory server
+    
+    Args:
+        collection: Collection name
+        doc_count: Number of documents indexed
+        
+    Returns:
+        Success status
+    """
+    timestamp = await get_current_timestamp()
+    
+    result = await invoke_mcp_tool(
+        server="memory",
+        tool="create_entities",
+        params={
+            "entities": [{
+                "name": f"rag-index-{uuid.uuid4().hex[:8]}",
+                "type": "rag_indexing",
+                "metadata": {
+                    "collection": collection,
+                    "document_count": doc_count,
+                    "timestamp": timestamp,
+                    "service": "rag-context-manager"
+                }
+            }]
+        }
+    )
+    
+    return result.get("success", False)
 
 
 # Request/Response Models
@@ -90,12 +200,25 @@ async def health_check():
         except:
             qdrant_status = "error"
     
+    # Check MCP gateway connectivity
+    mcp_status = "unknown"
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await client.get(f"{MCP_GATEWAY_URL}/health")
+            mcp_status = "connected" if response.status_code == 200 else "error"
+    except:
+        mcp_status = "disconnected"
+    
+    timestamp = await get_current_timestamp()
+    
     return {
         "status": "ok",
         "service": "rag-context-manager",
         "version": "1.0.0",
         "qdrant_status": qdrant_status,
-        "timestamp": datetime.utcnow().isoformat()
+        "mcp_gateway_status": mcp_status,
+        "mcp_gateway_url": MCP_GATEWAY_URL,
+        "timestamp": timestamp
     }
 
 
@@ -134,6 +257,12 @@ async def query_context(request: QueryRequest):
         
         end_time = datetime.utcnow()
         retrieval_time = (end_time - start_time).total_seconds() * 1000
+        
+        # Log query to memory server for analytics (non-blocking)
+        try:
+            await log_query_to_memory(request.query, request.collection, len(context_items))
+        except Exception as e:
+            print(f"Failed to log query to memory server: {e}")
         
         return QueryResponse(
             query=request.query,
@@ -177,6 +306,12 @@ async def index_documents(request: IndexRequest):
         
         # In production, this would use an embedding model
         # For now, just acknowledge receipt
+        
+        # Log indexing operation to memory server (non-blocking)
+        try:
+            await log_indexing_to_memory(request.collection, len(request.documents))
+        except Exception as e:
+            print(f"Failed to log indexing to memory server: {e}")
         
         return IndexResponse(
             success=True,
@@ -265,6 +400,12 @@ async def mock_query(request: QueryRequest):
             distance=0.30,
             relevance_score=0.77
         ))
+    
+    # Log mock query to memory server for analytics (non-blocking)
+    try:
+        await log_query_to_memory(request.query, request.collection, len(mock_results))
+    except Exception as e:
+        print(f"Failed to log mock query to memory server: {e}")
     
     return QueryResponse(
         query=request.query,
