@@ -15,6 +15,7 @@ from datetime import datetime
 import uvicorn
 import os
 import httpx
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 
@@ -23,6 +24,9 @@ app = FastAPI(
     description="Application code generation and feature implementation",
     version="1.0.0"
 )
+
+# Enable Prometheus metrics collection
+Instrumentator().instrument(app).expose(app)
 
 # RAG Context Manager URL
 RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://rag-context:8007")
