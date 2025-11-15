@@ -734,6 +734,7 @@ Break this down into subtasks. Consider dependencies and execution order."""
         
         # Parse LLM response
         llm_subtasks = result["content"].get("subtasks", [])
+        logger.debug(f"[Orchestrator] LLM returned {len(llm_subtasks)} subtasks: {llm_subtasks}")
         
         # Create SubTask objects with proper IDs
         subtasks = []
@@ -761,7 +762,15 @@ Break this down into subtasks. Consider dependencies and execution order."""
         for i, st in enumerate(llm_subtasks):
             dep_indices = st.get("dependencies", [])
             if dep_indices and isinstance(dep_indices, list):
-                subtasks[i].dependencies = [id_map[dep_idx] for dep_idx in dep_indices if dep_idx in id_map]
+                # Filter to only valid integer indices
+                valid_deps = []
+                for dep_idx in dep_indices:
+                    if isinstance(dep_idx, int) and dep_idx in id_map:
+                        valid_deps.append(id_map[dep_idx])
+                    else:
+                        logger.warning(f"[Orchestrator] Invalid dependency index: {dep_idx} (type: {type(dep_idx).__name__})")
+                
+                subtasks[i].dependencies = valid_deps
         
         print(f"[LLM] Decomposed task into {len(subtasks)} subtasks using {result['tokens']} tokens")
         return subtasks
