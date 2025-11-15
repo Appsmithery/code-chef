@@ -37,10 +37,14 @@ Net: yes, adopt DOCR now. It reduces the gap between local Compose and cloud dep
       ```
       The short-lived PAT is dropped into Docker’s credential store so every `docker compose push` reuses it.
    4. **Fallback when `doctl` is unavailable**: DigitalOcean still accepts a plain Docker login, provided you use a token with write scope.
+
       ```powershell
       docker login -u you@example.com -p <api-token> registry.digitalocean.com
       ```
+
       Avoid hard-coding this token in `.env`; run the command interactively on each builder instead.
+
+   5. Wrap everything in automation: `scripts/push-docr.ps1` now performs the `doctl account get` guard, mints a short-lived credential, and runs `docker compose build && docker compose push` with `IMAGE_TAG=<git sha>` for every service (or a targeted subset via `-Services`). Prefer that helper wherever PowerShell 7 is available so local pushes and CI follow the exact same flow.
 
 3. **Create Kubernetes pull secret once**
 

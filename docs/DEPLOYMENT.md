@@ -125,6 +125,18 @@ done
 ### Local developer steps
 
 ```powershell
+# 1) (Windows only) Install doctl once
+pwsh ./scripts/install-doctl.ps1
+
+# 2) Build + push every service with a git-based IMAGE_TAG
+pwsh ./scripts/push-docr.ps1
+```
+
+The helper script wraps everything we now require: it confirms `doctl account get` works with the scoped token, mints a short-lived Docker credential, runs `docker compose build`, and then pushes all services with `IMAGE_TAG=<current git sha>` and `DOCR_REGISTRY=registry.digitalocean.com/the-shop`. Pass `-Services orchestrator,gateway-mcp` to scope the push, or `-SkipBuild` if the images are already built locally.
+
+Manual fallback (useful on hosts without PowerShell 7):
+
+```powershell
 doctl registry login
 # or, when doctl token validation fails:
 docker login registry.digitalocean.com
@@ -151,7 +163,7 @@ doctl account get          # sanity check, fails fast if the token lacks write s
 doctl version              # verify we picked up the current (≥ v1.146.0) build
 ```
 
-Use a DigitalOcean API token with **read + write** access; never store this token in `config/env/.env`. 3. **Issue Docker credentials via `doctl`**
+Use a DigitalOcean API token with **read + write** access; never store this token in `config/env/.env`. The shared token captured in `config/env/.env` now carries the `account:read` scope, so `doctl account get` should succeed unless you rotate to a more restrictive PAT. 3. **Issue Docker credentials via `doctl`**
 
 ```powershell
 doctl registry login --expiry-seconds 1800
@@ -167,11 +179,10 @@ docker login -u you@example.com -p <read/write-api-token> registry.digitalocean.
 This mirrors [DigitalOcean’s documented alternative](https://docs.digitalocean.com/products/container-registry/how-to/use-registry-docker-kubernetes/#docker-integration). Tokens generated here must include **write** scope or pushes will fail with `401 Unauthorized`. 5. **Proceed with tagging + pushing**
 
 ```powershell
-IMAGE_TAG=$(git rev-parse --short HEAD)
-DOCR_REGISTRY=registry.digitalocean.com/the-shop docker compose push
+pwsh ./scripts/push-docr.ps1
 ```
 
-Because Compose already references `${DOCR_REGISTRY}/<service>:${IMAGE_TAG}`, every service now uploads with the registry-issued credentials from step 3.
+Because Compose already references `${DOCR_REGISTRY}/<service>:${IMAGE_TAG}`, the helper script automatically uploads each service using the credential minted in step 3. Prefer the script so we always reuse the canonical registry slug and git-based tag; fall back to the manual one-liners above only when PowerShell 7 is unavailable.
 
 ### Image verification checklist
 
@@ -179,7 +190,7 @@ Before promoting to production, confirm every agent/container image is tagged an
 
 1. `docker compose ls` — ensure the stack name matches your target registry namespace.
 2. `docker compose build --pull` — rebuild each service to capture the latest base image patches.
-3. `IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/the-shop docker compose push` — push the entire stack (omit `service` name to push all).
+3. `pwsh ./scripts/push-docr.ps1 -SkipBuild` — push the entire stack (omit `-SkipBuild` if you want to rebuild before publishing).
 4. `doctl registry repository list-tags <service>` — confirm the digest for the tag you just pushed.
 5. Document the `<registry>/<service>:<tag>` mapping in your release notes so deploy + rollback use the same artifacts.
 
