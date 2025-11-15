@@ -106,7 +106,8 @@ if (-not $SkipBuild) {
         }
     }
     Write-Host "✅ Images built successfully" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "`n⏭️  Step 3: Skipping image build (--SkipBuild flag set)" -ForegroundColor Yellow
 }
 
@@ -164,8 +165,8 @@ docker compose -f compose/docker-compose.yml up -d $servicesList
     } catch {
         Write-Warning "⚠️  Gateway health check failed: $_"
     }
-    
-} else {
+}
+else {
     # Local deployment
     Write-Host "`n💻 Step 4: Deploying locally..." -ForegroundColor Green
     $servicesList = $DOCKER_SERVICES -join " "
