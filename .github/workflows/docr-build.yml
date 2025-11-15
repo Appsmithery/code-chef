@@ -1,0 +1,65 @@
+name: Build and Push to DOCR
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "containers/**"
+            - "compose/docker-compose.yml"
+            - ".github/workflows/docr-build.yml"
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        env:
+            DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+            REGISTRY_NAME: ${{ secrets.REGISTRY_NAME }}
+        strategy:
+            matrix:
+                include:
+                    - service: orchestrator
+                      dockerfile: containers/orchestrator/Dockerfile
+                    - service: feature-dev
+                      dockerfile: containers/feature-dev/Dockerfile
+                    - service: code-review
+                      dockerfile: containers/code-review/Dockerfile
+                    - service: infrastructure
+                      dockerfile: containers/infrastructure/Dockerfile
+                    - service: cicd
+                      dockerfile: containers/cicd/Dockerfile
+                    - service: documentation
+                      dockerfile: containers/documentation/Dockerfile
+                    - service: gateway-mcp
+                      dockerfile: containers/gateway-mcp/Dockerfile
+                    - service: rag-context
+                      dockerfile: containers/rag/Dockerfile
+                    - service: state-persistence
+                      dockerfile: containers/state/Dockerfile
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Install doctl
+              uses: digitalocean/action-doctl@v2
+              with:
+                  token: ${{ env.DIGITALOCEAN_ACCESS_TOKEN }}
+
+            - name: Log in to DigitalOcean Container Registry
+              run: doctl registry login --expiry-seconds 1200
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Build and push ${{ matrix.service }}
+              uses: docker/build-push-action@v5
+              with:
+                  context: .
+                  file: ${{ matrix.dockerfile }}
+                  push: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
+                  tags: |
+                      registry.digitalocean.com/${{ env.REGISTRY_NAME }}/${{ matrix.service }}:${{ github.sha }}
+                      registry.digitalocean.com/${{ env.REGISTRY_NAME }}/${{ matrix.service }}:latest
+                  cache-from: type=gha,scope=${{ matrix.service }}
+                  cache-to: type=gha,scope=${{ matrix.service }},mode=max
