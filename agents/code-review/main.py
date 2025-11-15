@@ -14,11 +14,16 @@ from typing import Optional, Dict, List, Any
 from datetime import datetime
 import uvicorn
 import os
+import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 from agents._shared.gradient_client import get_gradient_client
 from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Code Review Agent",
