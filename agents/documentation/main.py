@@ -8,7 +8,7 @@ Primary Role: Documentation generation and maintenance
 - Maintains documentation templates and style guides
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime
@@ -18,6 +18,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 from agents._shared.gradient_client import get_gradient_client
+from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 
 app = FastAPI(
     title="Documentation Agent",
@@ -33,6 +34,9 @@ mcp_client = MCPClient(agent_name="documentation")
 
 # Gradient AI client for LLM inference (with Langfuse tracing)
 gradient_client = get_gradient_client("documentation")
+
+# Guardrail orchestrator for compliance checks
+guardrail_orchestrator = GuardrailOrchestrator()
 
 class DocRequest(BaseModel):
     task_id: str
@@ -50,6 +54,7 @@ class DocResponse(BaseModel):
     artifacts: List[DocArtifact]
     estimated_tokens: int
     template_used: Optional[str] = None
+    guardrail_report: GuardrailReport
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 @app.get("/health")
@@ -79,13 +84,32 @@ async def generate_documentation(request: DocRequest):
     import uuid
     
     doc_id = str(uuid.uuid4())
+
+    guardrail_report = await guardrail_orchestrator.run(
+        "documentation",
+        task_id=request.task_id,
+        context={
+            "endpoint": "generate",
+            "doc_type": request.doc_type,
+        },
+    )
+
+    if guardrail_orchestrator.should_block_failures and guardrail_report.status == GuardrailStatus.FAILED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "Guardrail checks failed",
+                "report": guardrail_report.model_dump(mode="json"),
+            },
+        )
     artifacts = generate_docs(request)
     
     response = DocResponse(
         doc_id=doc_id,
         artifacts=artifacts,
         estimated_tokens=len(request.doc_type) * 100,
-        template_used=f"{request.doc_type}-standard"
+        template_used=f"{request.doc_type}-standard",
+        guardrail_report=guardrail_report,
     )
 
     await mcp_client.log_event(
@@ -96,6 +120,8 @@ async def generate_documentation(request: DocRequest):
             "doc_type": request.doc_type,
             "artifact_count": len(artifacts),
             "target_audience": request.target_audience,
+            "guardrail_report_id": guardrail_report.report_id,
+            "guardrail_status": guardrail_report.status.value,
         },
     )
 
