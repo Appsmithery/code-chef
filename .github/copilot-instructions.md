@@ -89,7 +89,7 @@
 - **Observability**: All agents must initialize MCP client, Gradient client (if using LLM), Langfuse tracing, Prometheus metrics.
 - **Error Handling**: Graceful fallback when API keys missing (use `gradient_client.is_enabled()` check before LLM calls).
 - **Shell Scripts**: POSIX-compliant bash, executable permissions, consistent logging format (echo + status lines).
-- **Documentation**: Update relevant docs in `docs/` when changing architecture; maintain `docs/README.md` index.ps change.
+- **Documentation**: Update relevant docs in `docs/` when changing architecture; maintain `docs/README.md` index. Use `docs/_temp/` for working files, progress notes, and troubleshooting documents during active development.
 - Backups are volume-level tarballs written by `scripts/backup_volumes.sh`, storing `orchestrator-data` and `mcp-config` snapshots under `./backups/<timestamp>`.
 - Place local-only adjustments in `compose/docker-compose.override.yml`; the sample sets DEBUG/LOG_LEVEL for the orchestrator.
 
