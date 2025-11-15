@@ -23,6 +23,7 @@ from agents._shared.mcp_client import MCPClient, resolve_manifest_path
 from agents._shared.gradient_client import get_gradient_client
 from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 from agents._shared.mcp_discovery import get_mcp_discovery
+from agents._shared.linear_client import get_linear_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -51,6 +52,9 @@ guardrail_orchestrator = GuardrailOrchestrator()
 
 # MCP discovery for real-time server enumeration
 mcp_discovery = get_mcp_discovery()
+
+# Linear client for issue tracking and project management
+linear_client = get_linear_client()
 
 # Agent types for task routing
 class AgentType(str, Enum):
@@ -523,6 +527,65 @@ async def get_server_details(server_name: str):
     return {
         "success": True,
         "server": server
+    }
+
+@app.get("/linear/issues")
+async def get_linear_issues():
+    """Fetch issues from Linear roadmap."""
+    if not linear_client.is_enabled():
+        return {
+            "success": False,
+            "message": "Linear integration not configured"
+        }
+
+    issues = await linear_client.fetch_issues()
+    return {
+        "success": True,
+        "count": len(issues),
+        "issues": issues
+    }
+
+
+@app.post("/linear/issues")
+async def create_linear_issue(request: Dict[str, Any]):
+    """Create a new Linear issue."""
+    if not linear_client.is_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Linear integration not configured"
+        )
+
+    issue = await linear_client.create_issue(
+        title=request["title"],
+        description=request.get("description", ""),
+        priority=request.get("priority", 0)
+    )
+
+    if issue:
+        return {
+            "success": True,
+            "issue": issue
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create Linear issue"
+        )
+
+
+@app.get("/linear/project/{project_id}")
+async def get_linear_project(project_id: str):
+    """Fetch Linear project roadmap."""
+    if not linear_client.is_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Linear integration not configured"
+        )
+
+    roadmap = await linear_client.fetch_project_roadmap(project_id)
+    return {
+        "success": True,
+        "roadmap": roadmap
     }
 
 @app.post("/execute/{task_id}")

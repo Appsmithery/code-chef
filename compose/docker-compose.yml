@@ -21,6 +21,7 @@ services:
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-llama-3.1-70b-instruct}
+      - LINEAR_API_KEY=${LINEAR_API_KEY}
     networks:
       - devtools-network
     volumes:
