@@ -22,6 +22,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from agents._shared.mcp_client import MCPClient, resolve_manifest_path
 from agents._shared.gradient_client import get_gradient_client
 from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
+from agents._shared.mcp_discovery import get_mcp_discovery
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -47,6 +48,9 @@ gradient_client = get_gradient_client("orchestrator")
 
 # Guardrail orchestrator for compliance checks
 guardrail_orchestrator = GuardrailOrchestrator()
+
+# MCP discovery for real-time server enumeration
+mcp_discovery = get_mcp_discovery()
 
 # Agent types for task routing
 class AgentType(str, Enum):
@@ -461,6 +465,64 @@ async def validate_routing(request: Dict[str, Any]):
         "task_description": description,
         "required_tools": required_tools,
         "availability": availability
+    }
+
+@app.get("/mcp/discover")
+async def discover_mcp_servers():
+    """
+    Discover all MCP servers via Docker MCP Toolkit.
+
+    Returns real-time server and tool inventory.
+    """
+    try:
+        servers = mcp_discovery.discover_servers()
+        return {
+            "success": True,
+            "discovery": servers,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"[Orchestrator] MCP discovery failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"MCP discovery failed: {str(e)}"
+        )
+
+
+@app.get("/mcp/manifest")
+async def get_agent_manifest():
+    """
+    Generate agent-to-tool mapping manifest based on discovered MCP servers.
+
+    This replaces the static agents/agents-manifest.json with dynamic discovery.
+    """
+    try:
+        manifest = mcp_discovery.generate_agent_manifest()
+        return {
+            "success": True,
+            "manifest": manifest
+        }
+    except Exception as e:
+        logger.error(f"[Orchestrator] Manifest generation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Manifest generation failed: {str(e)}"
+        )
+
+
+@app.get("/mcp/server/{server_name}")
+async def get_server_details(server_name: str):
+    """Get details for a specific MCP server."""
+    server = mcp_discovery.get_server(server_name)
+    if not server:
+        raise HTTPException(
+            status_code=404,
+            detail=f"MCP server '{server_name}' not found"
+        )
+
+    return {
+        "success": True,
+        "server": server
     }
 
 @app.post("/execute/{task_id}")
