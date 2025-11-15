@@ -17,12 +17,17 @@ The secrets system provides:
 
 ```
 config/
-├── secrets.core.json          # Core secrets (GitHub, Node.js, Highlight.io)
-└── secrets.overlays/          # Service-specific overlays
-    ├── agent-ops.json         # Agent operation secrets
-    ├── supabase.json          # Supabase configuration
-    ├── supabase-advanced.json # Advanced Supabase features
-    └── vercel.json            # Vercel deployment secrets
+└── env/
+  ├── .env                   # Runtime credentials (gitignored)
+  ├── .env.template          # Tracked template for teammates
+  ├── secrets/               # Docker-mounted secret files (gitignored)
+  └── schema/                # Declarative schema + overlays
+    ├── secrets.core.json
+    └── overlays/
+      ├── agent-ops.json
+      ├── supabase.json
+      ├── supabase-advanced.json
+      └── vercel.json
 ```
 
 ### Core Schema (`secrets.core.json`)
@@ -101,7 +106,7 @@ Example output:
 === Secrets Validation (Merged Schema) ===
 
 Schema Sources:
-  Core: config/secrets.core.json
+  Core: config/env/schema/secrets.core.json
   Overlays: 4 discovered
     - agent-ops.json
     - supabase-advanced.json
@@ -179,8 +184,8 @@ The agent manifest (`agents/agents-manifest.json`) tracks which secrets each age
 
 ### 1. Determine Schema Location
 
-- **Core secrets**: Add to `config/secrets.core.json`
-- **Service-specific**: Create new overlay in `config/secrets.overlays/`
+- **Core secrets**: Add to `config/env/schema/secrets.core.json`
+- **Service-specific**: Create new overlay in `config/env/schema/overlays/`
 
 ### 2. Schema Format
 
@@ -248,7 +253,7 @@ echo "NODE_ENV=development" >> agents/.env.agent.local
 npm run secrets:validate:discover
 
 # Check overlay files exist
-ls -la config/secrets.overlays/
+ls -la config/env/schema/overlays/
 ```
 
 ### Environment Issues

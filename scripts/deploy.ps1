@@ -49,6 +49,35 @@ function Write-Success { param($msg) Write-Host "  [OK] $msg" -ForegroundColor G
 function Write-Error-Custom { param($msg) Write-Host "  [ERROR] $msg" -ForegroundColor Red }
 function Write-Info { param($msg) Write-Host "  -> $msg" -ForegroundColor Gray }
 
+function Sync-RuntimeConfig {
+    param(
+        [string]$DropletUser,
+        [string]$DropletIp,
+        [string]$DeployPath
+    )
+
+    Write-Info "Copying config/env/.env to droplet..."
+    scp "config/env/.env" "$DropletUser@$DropletIp:$DeployPath/config/env/.env"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error-Custom "Failed to copy config/env/.env"
+        exit 1
+    }
+    Write-Success "config/env/.env synced"
+
+    if (Test-Path "config/env/secrets") {
+        Write-Info "Copying config/env/secrets/* to droplet..."
+        ssh "$DropletUser@$DropletIp" "mkdir -p $DeployPath/config/env/secrets"
+        scp -r "config/env/secrets/*" "$DropletUser@$DropletIp:$DeployPath/config/env/secrets/"
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error-Custom "Failed to sync config/env/secrets"
+            exit 1
+        }
+        Write-Success "Secret files synced"
+    } else {
+        Write-Info "No local config/env/secrets directory found; skipping secret file sync"
+    }
+}
+
 # Header
 Write-Host "`n==========================================" -ForegroundColor Magenta
 Write-Host "  🚀 Dev-Tools Deployment Script" -ForegroundColor Magenta
@@ -65,7 +94,7 @@ if (-not $SkipValidation) {
     # Check .env file
     if (-not (Test-Path "config/env/.env")) {
         Write-Error-Custom ".env file not found!"
-        Write-Info "Run: cp config/env/.env.example config/env/.env"
+        Write-Info "Run: cp config/env/.env.template config/env/.env"
         exit 1
     }
     Write-Success ".env file exists"
@@ -209,22 +238,8 @@ if ($Target -eq 'remote') {
     }
     Write-Success "SSH connection OK"
     
-    # Sync .env file
-    Write-Info "Copying .env file to droplet..."
-    scp "config/env/.env" "${DROPLET_USER}@${DROPLET_IP}:${DEPLOY_PATH}/config/env/.env"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error-Custom "Failed to copy .env file!"
-        exit 1
-    }
-    Write-Success ".env file copied"
-    
-    # Sync secrets
-    if (Test-Path "config/env/secrets") {
-        Write-Info "Copying secrets to droplet..."
-        ssh "$DROPLET_USER@$DROPLET_IP" "mkdir -p $DEPLOY_PATH/config/env/secrets"
-        scp -r "config/env/secrets/*" "${DROPLET_USER}@${DROPLET_IP}:${DEPLOY_PATH}/config/env/secrets/"
-        Write-Success "Secrets copied"
-    }
+    Write-Step "Syncing runtime credentials to droplet..."
+    Sync-RuntimeConfig -DropletUser $DROPLET_USER -DropletIp $DROPLET_IP -DeployPath $DEPLOY_PATH
 
     # Configure git credentials with PAT if available
     $gitPatSecretPath = "config/env/secrets/github_pat.txt"

@@ -45,7 +45,7 @@ git pull origin main
 
 ```bash
 # Copy template
-cp config/env/.env.example config/env/.env
+cp config/env/.env.template config/env/.env
 
 # Edit with your keys
 nano config/env/.env
