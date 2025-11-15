@@ -166,7 +166,7 @@ async def implement_feature(request: FeatureRequest):
             "status": response.status,
             "llm_enabled": gradient_client.is_enabled(),
             "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status.value,
+            "guardrail_status": guardrail_report.status,
         },
     )
     

@@ -138,7 +138,7 @@ async def review_code(request: ReviewRequest):
             "critical_findings": len(critical_findings),
             "approved": approval,
             "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status.value,
+            "guardrail_status": guardrail_report.status,
         },
     )
 

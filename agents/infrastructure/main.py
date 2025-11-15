@@ -134,7 +134,7 @@ async def generate_infrastructure(request: InfraRequest):
             "infrastructure_type": request.infrastructure_type,
             "status": response.validation_status,
             "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status.value,
+            "guardrail_status": guardrail_report.status,
             "guardrail_summary": guardrail_report.summary,
         },
     )
