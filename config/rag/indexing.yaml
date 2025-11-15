@@ -1,10 +1,20 @@
 # RAG Indexing Configuration
 
 indexing:
-  strategy: "incremental"  # or "full"
-  schedule: "0 */6 * * *"  # Every 6 hours
-  
+  strategy: "digitalocean-kb-sync"
+  schedule: "0 */6 * * *" # Every 6 hours
+  entrypoint: "scripts/sync_kb_to_qdrant.py"
+  kb_ref: "the-shop"
+  collection: "the-shop"
+
 sources:
+  - type: "digitalocean-knowledge-base"
+    knowledge_base_uuid: "3120c1c2-c1c0-11f0-b074-4e013e2ddde4"
+    manifest: "config/env/workspaces/the-shop.json"
+    signed_url_endpoint: "/v2/gen-ai/indexing_jobs/{job_uuid}/details:signed_url"
+    export_format: "ndjson"
+    includes_embeddings: true
+
   - type: "git"
     repositories:
       - "https://github.com/Appsmithery/*"
@@ -16,11 +26,7 @@ sources:
     exclude:
       - "node_modules/**"
       - "*.lock"
-  
-  - type: "documentation"
-    paths:
-      - "/workspace/docs"
-    
+
 processing:
   chunk_size: 1000
   chunk_overlap: 200

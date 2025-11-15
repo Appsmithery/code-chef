@@ -342,6 +342,41 @@ doctl auth init
 4. Enable auto-indexing
 5. Wait for initial index (5-10 minutes)
 
+### Step 2b: Sync KB Exports into Qdrant Cloud
+
+Once Gradient finishes an indexing job, mirror the vectors into your managed Qdrant cluster so on-prem agents can query locally:
+
+1. Populate the new env variables in `config/env/.env`:
+
+```dotenv
+QDRANT_URL=https://<cluster-id>.gcp.cloud.qdrant.io
+QDRANT_API_KEY=<qdrant-api-key>
+QDRANT_COLLECTION=the-shop
+QDRANT_VECTOR_SIZE=1536
+
+DIGITALOCEAN_KB_UUID=3120c1c2-c1c0-11f0-b074-4e013e2ddde4
+DIGITALOCEAN_KB_REF=the-shop
+DIGITALOCEAN_KB_DOWNLOAD_DIR=./tmp/kb-sync
+```
+
+2. Run the sync tool from the repo root whenever you need a fresh export:
+
+```bash
+python3 scripts/sync_kb_to_qdrant.py --start-job --poll-interval 60 --batch-size 128
+```
+
+- Omit `--start-job` if you only want to ingest the latest completed job.
+- Add `--dry-run` to validate parsing without writing to Qdrant.
+- Raw exports land under `tmp/kb-sync/<job>.json` for auditing.
+
+3. Confirm vectors exist:
+
+```bash
+curl http://localhost:8007/collections | jq
+```
+
+The `the-shop` collection should show a non-zero `count` and the RAG service will automatically serve queries from Qdrant Cloud.
+
 ### Step 3: Configure Function Routes
 
 Create function route configuration:
