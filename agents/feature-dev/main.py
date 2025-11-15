@@ -19,6 +19,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 from agents._shared.gradient_client import get_gradient_client
+from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 
 app = FastAPI(
     title="Feature Development Agent",
@@ -37,6 +38,9 @@ mcp_client = MCPClient(agent_name="feature-dev")
 
 # Gradient AI client for LLM inference (with Langfuse tracing)
 gradient_client = get_gradient_client("feature-dev")
+
+# Guardrail orchestrator for compliance checks
+guardrail_orchestrator = GuardrailOrchestrator()
 
 class FeatureRequest(BaseModel):
     """Feature implementation request"""
@@ -68,6 +72,7 @@ class FeatureResponse(BaseModel):
     commit_message: str
     estimated_tokens: int
     context_lines_used: int
+    guardrail_report: GuardrailReport
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 @app.get("/health")
@@ -101,6 +106,24 @@ async def implement_feature(request: FeatureRequest):
     import uuid
     
     feature_id = str(uuid.uuid4())
+
+    guardrail_report = await guardrail_orchestrator.run(
+        "feature-dev",
+        task_id=request.task_id or feature_id,
+        context={
+            "endpoint": "implement",
+            "description": request.description,
+        },
+    )
+
+    if guardrail_orchestrator.should_block_failures and guardrail_report.status == GuardrailStatus.FAILED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "Guardrail checks failed",
+                "report": guardrail_report.model_dump(mode="json"),
+            },
+        )
     
     # Query RAG for context
     rag_context = await query_rag_context(request.description)
@@ -130,7 +153,8 @@ async def implement_feature(request: FeatureRequest):
         test_results=test_results,
         commit_message=commit_message,
         estimated_tokens=estimated_tokens,
-        context_lines_used=context_lines
+        context_lines_used=context_lines,
+        guardrail_report=guardrail_report,
     )
 
     await mcp_client.log_event(
@@ -141,6 +165,8 @@ async def implement_feature(request: FeatureRequest):
             "test_pass_rate": sum(1 for t in test_results if t.status == "passed") / max(len(test_results), 1),
             "status": response.status,
             "llm_enabled": gradient_client.is_enabled(),
+            "guardrail_report_id": guardrail_report.report_id,
+            "guardrail_status": guardrail_report.status.value,
         },
     )
     

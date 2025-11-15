@@ -20,6 +20,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient, resolve_manifest_path
 from agents._shared.gradient_client import get_gradient_client
+from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 
 app = FastAPI(
     title="DevOps Orchestrator Agent",
@@ -38,6 +39,9 @@ mcp_client = MCPClient(agent_name="orchestrator")
 
 # Gradient AI client for LLM inference (with Langfuse tracing)
 gradient_client = get_gradient_client("orchestrator")
+
+# Guardrail orchestrator for compliance checks
+guardrail_orchestrator = GuardrailOrchestrator()
 
 # Agent types for task routing
 class AgentType(str, Enum):
@@ -78,6 +82,7 @@ class TaskResponse(BaseModel):
     subtasks: List[SubTask]
     routing_plan: Dict[str, Any]
     estimated_tokens: int
+    guardrail_report: GuardrailReport
 
 # In-memory task registry (in production, this would use State Persistence Layer)
 task_registry: Dict[str, TaskResponse] = {}
@@ -223,6 +228,24 @@ async def orchestrate_task(request: TaskRequest):
     import uuid
     
     task_id = str(uuid.uuid4())
+
+    guardrail_report = await guardrail_orchestrator.run(
+        "orchestrator",
+        task_id=task_id,
+        context={
+            "endpoint": "orchestrate",
+            "priority": request.priority,
+        },
+    )
+
+    if guardrail_orchestrator.should_block_failures and guardrail_report.status == GuardrailStatus.FAILED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "Guardrail checks failed",
+                "report": guardrail_report.model_dump(mode="json"),
+            },
+        )
     
     # Analyze required tools for this task
     required_tools = get_required_tools_for_task(request.description)
@@ -271,7 +294,8 @@ async def orchestrate_task(request: TaskRequest):
         task_id=task_id,
         subtasks=subtasks,
         routing_plan=routing_plan,
-        estimated_tokens=estimated_tokens
+        estimated_tokens=estimated_tokens,
+        guardrail_report=guardrail_report,
     )
     
     # Store in registry (in-memory fallback)
@@ -288,6 +312,8 @@ async def orchestrate_task(request: TaskRequest):
             "priority": request.priority,
             "agent": "orchestrator",
             "tools_validated": all(v["available"] for v in validation_results.values()),
+            "guardrail_report_id": guardrail_report.report_id,
+            "guardrail_status": guardrail_report.status.value,
         },
     )
     

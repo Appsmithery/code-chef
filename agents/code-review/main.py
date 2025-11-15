@@ -8,7 +8,7 @@ Primary Role: Quality assurance, static analysis, and security scanning
 - Reviews test coverage and test quality metrics
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime
@@ -18,6 +18,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 from agents._shared.gradient_client import get_gradient_client
+from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 
 app = FastAPI(
     title="Code Review Agent",
@@ -33,6 +34,9 @@ mcp_client = MCPClient(agent_name="code-review")
 
 # Gradient AI client for LLM inference (with Langfuse tracing)
 gradient_client = get_gradient_client("code-review")
+
+# Guardrail orchestrator for compliance checks
+guardrail_orchestrator = GuardrailOrchestrator()
 
 class CodeDiff(BaseModel):
     file_path: str
@@ -58,6 +62,7 @@ class ReviewResponse(BaseModel):
     approval: bool
     summary: str
     estimated_tokens: int
+    guardrail_report: GuardrailReport
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 @app.get("/health")
@@ -87,6 +92,24 @@ async def review_code(request: ReviewRequest):
     import uuid
     
     review_id = str(uuid.uuid4())
+
+    guardrail_report = await guardrail_orchestrator.run(
+        "code-review",
+        task_id=request.task_id,
+        context={
+            "endpoint": "review",
+            "diff_count": len(request.diffs),
+        },
+    )
+
+    if guardrail_orchestrator.should_block_failures and guardrail_report.status == GuardrailStatus.FAILED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "Guardrail checks failed",
+                "report": guardrail_report.model_dump(mode="json"),
+            },
+        )
     findings = analyze_diffs(request.diffs)
     
     # Simple approval logic
@@ -102,7 +125,8 @@ async def review_code(request: ReviewRequest):
         findings=findings,
         approval=approval,
         summary=f"Found {len(findings)} issue(s), {len(critical_findings)} critical",
-        estimated_tokens=token_estimate
+        estimated_tokens=token_estimate,
+        guardrail_report=guardrail_report,
     )
 
     await mcp_client.log_event(
@@ -113,6 +137,8 @@ async def review_code(request: ReviewRequest):
             "finding_count": len(findings),
             "critical_findings": len(critical_findings),
             "approved": approval,
+            "guardrail_report_id": guardrail_report.report_id,
+            "guardrail_status": guardrail_report.status.value,
         },
     )
 
