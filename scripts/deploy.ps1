@@ -57,7 +57,8 @@ function Sync-RuntimeConfig {
     )
 
     Write-Info "Copying config/env/.env to droplet..."
-    scp "config/env/.env" "$DropletUser@$DropletIp:$DeployPath/config/env/.env"
+    $remoteEnvPath = "{0}@{1}:{2}/config/env/.env" -f $DropletUser, $DropletIp, $DeployPath
+    scp "config/env/.env" $remoteEnvPath
     if ($LASTEXITCODE -ne 0) {
         Write-Error-Custom "Failed to copy config/env/.env"
         exit 1
@@ -67,7 +68,8 @@ function Sync-RuntimeConfig {
     if (Test-Path "config/env/secrets") {
         Write-Info "Copying config/env/secrets/* to droplet..."
         ssh "$DropletUser@$DropletIp" "mkdir -p $DeployPath/config/env/secrets"
-        scp -r "config/env/secrets/*" "$DropletUser@$DropletIp:$DeployPath/config/env/secrets/"
+        $remoteSecretsPath = "{0}@{1}:{2}/config/env/secrets/" -f $DropletUser, $DropletIp, $DeployPath
+        scp -r "config/env/secrets/*" $remoteSecretsPath
         if ($LASTEXITCODE -ne 0) {
             Write-Error-Custom "Failed to sync config/env/secrets"
             exit 1

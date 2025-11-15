@@ -201,14 +201,13 @@ Before promoting to production, confirm every agent/container image is tagged an
 `.github/workflows/docr-build.yml` builds every service Dockerfile, tags it as:
 
 ```
-registry.digitalocean.com/<REGISTRY_NAME>/<service>:<git-sha>
-registry.digitalocean.com/<REGISTRY_NAME>/<service>:latest
+registry.digitalocean.com/the-shop-infra/<service>:<git-sha>
+registry.digitalocean.com/the-shop-infra/<service>:latest
 ```
 
-It expects two repository secrets:
+It expects a single repository secret:
 
 - `DIGITALOCEAN_ACCESS_TOKEN` – read/write DO API token.
-- `REGISTRY_NAME` – DOCR namespace (`the-shop`, etc.).
 
 Triggering a push to `main` (or running the workflow manually) will push fresh images; downstream deployment jobs can simply `docker compose pull && docker compose up -d` or roll out via Kubernetes.
 
