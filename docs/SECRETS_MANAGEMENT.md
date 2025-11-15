@@ -125,7 +125,7 @@ Missing Required Secrets:
 
 ### Development Environment
 
-1. **Create environment file**:
+1. **Create agent environment file**:
 
    ```bash
    cp .env.example agents/.env.agent.local
@@ -148,6 +148,16 @@ Missing Required Secrets:
    ```bash
    npm run secrets:hydrate
    ```
+
+### Runtime Stack Environment
+
+Copy the tracked template into the runtime location whenever the Docker stack needs new credentials:
+
+```bash
+cp config/env/.env.template config/env/.env
+```
+
+Update `config/env/.env` with values for Langfuse, Gradient (including `GRADIENT_MODEL_ACCESS_KEY`), Supabase, and any other stack-level integrations described in `config/env/README.md`.
 
 ### CI/CD Environment
 
@@ -200,7 +210,7 @@ The agent manifest (`agents/agents-manifest.json`) tracks which secrets each age
 
 ### 3. Update Environment Files
 
-Add the new secret to `.env.example` and document in setup guides.
+Add the new secret to the relevant template (agent-specific values in `.env.example`, runtime stack credentials in `config/env/.env.template`) and document it in setup guides.
 
 ### 4. Update Agent Manifests
 

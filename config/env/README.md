@@ -24,6 +24,12 @@ The `config/env` directory now holds both runtime credentials (ignored at commit
 | CI/CD secrets                                                        | GitHub Actions secrets / environment variables                             | Validated through `npm run secrets:validate[:json                      | :discover]`. |
 | Codespaces/devcontainer secrets                                      | GitHub Codespaces secrets                                                  | Provide same keys as `.env` for parity.                                |
 
+Key runtime values include:
+
+- Langfuse telemetry keys (`LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`)
+- Gradient credentials (`GRADIENT_API_KEY`, `GRADIENT_MODEL`, `GRADIENT_MODEL_ACCESS_KEY`)
+- Supabase configuration (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_TOKEN`)
+
 ## Syncing to the Droplet
 
 `scripts/deploy.ps1 -Target remote` now uploads `config/env/.env` and the entire `config/env/secrets/` directory automatically. To push changes manually:
