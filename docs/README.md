@@ -18,6 +18,7 @@
 
 - **[MCP Integration](MCP_INTEGRATION.md)** - Model Context Protocol (150+ tools)
 - **[Gradient Quick Start](GRADIENT_QUICK_START.md)** - DigitalOcean AI inference setup
+- **[Gradient Troubleshooting](GRADIENT_TROUBLESHOOTING.md)** - LLM integration debugging guide
 - **[Langfuse Tracing](LANGFUSE_TRACING.md)** - LLM observability setup
 - **[Langfuse Examples](LANGFUSE_EXAMPLES.md)** - Tracing patterns and queries
 - **[Prometheus Metrics](PROMETHEUS_METRICS.md)** - HTTP metrics and monitoring
@@ -40,6 +41,7 @@
 - **Call an agent API** → [Agent Endpoints](AGENT_ENDPOINTS.md)
 - **Configure secrets** → [Secrets Management](SECRETS_MANAGEMENT.md)
 - **Add LLM inference** → [Gradient Quick Start](GRADIENT_QUICK_START.md)
+- **Debug LLM issues** → [Gradient Troubleshooting](GRADIENT_TROUBLESHOOTING.md)
 - **Monitor LLM calls** → [Langfuse Tracing](LANGFUSE_TRACING.md)
 - **Track HTTP metrics** → [Prometheus Metrics](PROMETHEUS_METRICS.md)
 - **Access 150+ tools** → [MCP Integration](MCP_INTEGRATION.md)
@@ -54,7 +56,8 @@
 - ✅ 150+ MCP tools available (filesystem, memory, git, sequential-thinking, etc.)
 - ✅ Langfuse LLM tracing infrastructure configured
 - ✅ Prometheus HTTP metrics collection active
-- ✅ DigitalOcean Gradient AI integration ready (pending API key)
+- ✅ DigitalOcean Gradient AI integration complete (llama3-8b-instruct operational)
+- ✅ LLM-powered task decomposition in production (150x cheaper than GPT-4)
 - ✅ RAG service streaming DigitalOcean KB exports into Qdrant Cloud
 - ✅ State persistence with PostgreSQL
 - ✅ E2E workflows validated
