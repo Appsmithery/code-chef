@@ -1,7 +1,7 @@
 # Pre-Deployment Checklist
 
-**Version:** 1.0.0  
-**Last Updated:** November 13, 2025  
+**Version:** 1.1.0  
+**Last Updated:** November 14, 2025  
 **Target Environment:** DigitalOcean Droplet (45.55.173.72)
 
 ---
@@ -46,6 +46,23 @@ All required environment variables must be set in `config/env/.env`:
   - [ ] `GRADIENT_BASE_URL=https://api.digitalocean.com/v2/ai`
   - [ ] `GRADIENT_MODEL=llama-3.1-8b-instruct` (default, per-agent overrides in docker-compose.yml)
 
+- [ ] **Qdrant Cloud (Production RAG)**
+
+  - [ ] `QDRANT_URL=https://<cluster>.cloud.qdrant.io`
+  - [ ] `QDRANT_API_KEY=...` (cluster API key)
+  - [ ] `QDRANT_COLLECTION=the-shop` (or deployment-specific)
+  - [ ] `QDRANT_VECTOR_SIZE=1536` (matches Gradient embeddings)
+  - [ ] `QDRANT_DISTANCE=cosine`
+
+- [ ] **DigitalOcean Knowledge Base Sync**
+
+  - [ ] `DIGITALOCEAN_TOKEN=...` or `DIGITAL_OCEAN_PAT=...`
+  - [ ] `DIGITALOCEAN_KB_UUID=3120c1c2-c1c0-11f0-b074-4e013e2ddde4`
+  - [ ] `DIGITALOCEAN_KB_REF=the-shop`
+  - [ ] `DIGITALOCEAN_KB_MANIFEST=config/env/workspaces/the-shop.json`
+  - [ ] `DIGITALOCEAN_KB_DOWNLOAD_DIR=./tmp/kb-sync`
+  - [ ] `GRADIENT_GENAI_BASE_URL=https://api.digitalocean.com`
+
 - [ ] **Linear Integration** (Optional)
 
   - [ ] `LINEAR_OAUTH_CLIENT_ID=...` (if using Linear OAuth)
@@ -57,7 +74,7 @@ All required environment variables must be set in `config/env/.env`:
 
 - [ ] **DigitalOcean** (Optional)
 
-  - [ ] `DIGITAL_OCEAN_PAT=...` (if using DO API)
+  - [ ] `DIGITAL_OCEAN_PAT=...` (if using DO API / KB exports)
   - [ ] `DIGITAL_OCEAN_OAUTH_CLIENT_ID=...` (if using DO OAuth)
   - [ ] `DIGITAL_OCEAN_OAUTH_CLIENT_SECRET=...` (if using DO OAuth)
 
@@ -365,10 +382,24 @@ Run these tests before deploying:
   - [ ] Check token counts and costs
 
 - [ ] **Prometheus Metrics**
+
   ```bash
   curl http://localhost:9090/api/v1/query?query=up | jq .
   # Should show all services with value=1
   ```
+
+- [ ] **RAG Content Sync**
+
+  ```bash
+  # Trigger a fresh DigitalOcean KB export and mirror it into Qdrant Cloud
+  python3 scripts/sync_kb_to_qdrant.py --start-job --poll-interval 60 --batch-size 128
+
+  # Re-ingest the most recent completed job
+  python3 scripts/sync_kb_to_qdrant.py
+  ```
+
+  - [ ] Verify `tmp/kb-sync/` contains the latest job export
+  - [ ] Confirm `curl http://localhost:8007/collections | jq` reports non-zero `count` for `the-shop`
 
 ---
 

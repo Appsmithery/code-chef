@@ -74,6 +74,7 @@ backups/
 *.tmp
 temp/
 tmp/
+tmp/kb-sync/
 
 # OS files
 Thumbs.db
