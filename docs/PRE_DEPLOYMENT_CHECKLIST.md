@@ -58,11 +58,12 @@ All required environment variables must be set in `config/env/.env`:
   - [ ] `DIGITALOCEAN_KB_MANIFEST=config/env/workspaces/the-shop.json`
   - [ ] `DIGITALOCEAN_KB_DOWNLOAD_DIR=./tmp/kb-sync`
 
-- [ ] **Linear Integration** (Optional)
+- [ ] **Linear Integration** (Optional, but recommended)
 
-  - [ ] `LINEAR_OAUTH_CLIENT_ID=...` (if using Linear OAuth)
-  - [ ] `LINEAR_OAUTH_CLIENT_SECRET=...` (if using Linear OAuth)
-  - [ ] `LINEAR_OAUTH_DEV_TOKEN=...` (if using dev token auth)
+  - [ ] `LINEAR_API_KEY=lin_api_...` (from linear.app/settings/api - for direct SDK access)
+  - [ ] `LINEAR_OAUTH_CLIENT_ID=...` (if using Linear OAuth flow via gateway)
+  - [ ] `LINEAR_OAUTH_CLIENT_SECRET=...` (if using Linear OAuth flow)
+  - [ ] `LINEAR_OAUTH_DEV_TOKEN=...` (deprecated - use LINEAR_API_KEY instead)
   - [ ] `LINEAR_OAUTH_REDIRECT_URI=http://localhost:8000/oauth/linear/callback`
   - [ ] `LINEAR_OAUTH_SCOPES=read,write,app:mentionable,app:assignable`
   - [ ] `LINEAR_TOKEN_STORE_DIR=./config`
@@ -113,46 +114,68 @@ All agents should have proper initialization:
 
 - [ ] **Orchestrator** (`agents/orchestrator/main.py`)
 
-  - [ ] `mcp_client = MCPClient(agent_name="orchestrator")`
+  - [ ] `mcp_memory = MCPToolClient(server_name="memory")` (direct stdio access)
+  - [ ] `linear = LinearIntegration()` (direct SDK access)
   - [ ] `gradient_client = get_gradient_client("orchestrator")`
   - [ ] Prometheus instrumentation enabled
 
 - [ ] **Feature-Dev** (`agents/feature-dev/main.py`)
 
-  - [ ] `mcp_client = MCPClient(agent_name="feature-dev")`
+  - [ ] `mcp_client = MCPClient(agent_name="feature-dev")` (legacy, to be migrated)
   - [ ] `gradient_client = get_gradient_client("feature-dev")`
   - [ ] Prometheus instrumentation enabled
 
 - [ ] **Code-Review** (`agents/code-review/main.py`)
 
-  - [ ] `mcp_client = MCPClient(agent_name="code-review")`
+  - [ ] `mcp_client = MCPClient(agent_name="code-review")` (legacy, to be migrated)
   - [ ] `gradient_client = get_gradient_client("code-review")`
   - [ ] Prometheus instrumentation enabled
 
 - [ ] **Infrastructure** (`agents/infrastructure/main.py`)
 
-  - [ ] `mcp_client = MCPClient(agent_name="infrastructure")`
+  - [ ] `mcp_client = MCPClient(agent_name="infrastructure")` (legacy, to be migrated)
   - [ ] `gradient_client = get_gradient_client("infrastructure")`
   - [ ] Prometheus instrumentation enabled
 
 - [ ] **CI/CD** (`agents/cicd/main.py`)
 
-  - [ ] `mcp_client = MCPClient(agent_name="cicd")`
+  - [ ] `mcp_client = MCPClient(agent_name="cicd")` (legacy, to be migrated)
   - [ ] `gradient_client = get_gradient_client("cicd")`
   - [ ] Prometheus instrumentation enabled
 
 - [ ] **Documentation** (`agents/documentation/main.py`)
-  - [ ] `mcp_client = MCPClient(agent_name="documentation")`
+  - [ ] `mcp_client = MCPClient(agent_name="documentation")` (legacy, to be migrated)
   - [ ] `gradient_client = get_gradient_client("documentation")`
   - [ ] Prometheus instrumentation enabled
 
+**Note:** Orchestrator has been migrated to direct MCP access. Remaining agents will be migrated in future releases. See `docs/archive/IMPLEMENTATION_SUMMARY_MCP_LINEAR.md` for migration guide.
+
 ### 4. Shared Libraries
 
-- [ ] **MCP Client** (`agents/_shared/mcp_client.py`)
+- [ ] **MCP Tool Client** (`agents/_shared/mcp_tool_client.py`) - **NEW**
 
+  - [ ] Direct stdio transport via Docker MCP Toolkit
+  - [ ] JSON-RPC 2.0 protocol implementation
+  - [ ] Convenience wrappers for memory, filesystem, git operations
+  - [ ] Proper error handling and process cleanup
+
+- [ ] **MCP Discovery** (`agents/_shared/mcp_discovery.py`) - **NEW**
+
+  - [ ] Real-time server discovery via `docker mcp server list --json`
+  - [ ] Caching with 5-minute TTL
+  - [ ] Agent manifest generation
+
+- [ ] **Linear Client** (`agents/_shared/linear_client.py`) - **NEW**
+
+  - [ ] Direct Linear SDK access using `LINEAR_API_KEY`
+  - [ ] GraphQL queries for issues, projects, roadmaps
+  - [ ] Async/await patterns for non-blocking operations
+
+- [ ] **MCP Client (Legacy)** (`agents/_shared/mcp_client.py`) - **DEPRECATED**
+
+  - [ ] HTTP-based gateway client (still used by 5 agents pending migration)
   - [ ] Reads `MCP_GATEWAY_URL` from environment
-  - [ ] Tool discovery on initialization
-  - [ ] Proper error handling
+  - [ ] Will be removed after all agents migrate to direct access
 
 - [ ] **Gradient Client** (`agents/_shared/gradient_client.py`)
 
@@ -310,22 +333,34 @@ Gateway MCP requires Node.js packages:
 
 ### 14. MCP Gateway
 
+**Important:** Gateway is now Linear OAuth only. MCP tool invocation happens directly via Python SDK.
+
 - [ ] Gateway accessible at `http://gateway-mcp:8000`
-- [ ] 150+ tools discovered from 17 servers
+- [ ] Linear OAuth endpoints functional (`/oauth/linear/*`)
+- [ ] Linear API proxy endpoints functional (`/api/linear-*`)
+- [ ] Health check: `GET /health` returns `{"status": "healthy"}`
+- [ ] No MCP tool routing (deprecated - tools accessed via stdio)
+
+### 15. Docker MCP Toolkit
+
+**NEW:** Direct stdio access to MCP servers replaces HTTP gateway routing.
+
+- [ ] Docker MCP Toolkit installed (`docker mcp --version` shows v0.22.0)
+- [ ] 17 MCP servers available (`docker mcp server list`)
+- [ ] Agents use `MCPToolClient` for direct stdio communication
 - [ ] Tool mapping config: `config/mcp-agent-tool-mapping.yaml`
 - [ ] Agent manifest: `agents/agents-manifest.json`
-- [ ] Health check: `GET /health` returns `{"status": "healthy"}`
 
-### 15. MCP Servers
+**Available Servers:**
 
-All MCP servers configured in `mcp/servers/`:
-
-- [ ] `filesystem` - File operations
 - [ ] `memory` - Persistent state (KV store)
-- [ ] `time` - Temporal operations
+- [ ] `rust-filesystem` - File operations
 - [ ] `gitmcp` - Git operations
+- [ ] `playwright` - Browser automation
+- [ ] `notion` - Notion API
+- [ ] `time` - Temporal operations
 - [ ] `sequential-thinking` - Multi-step reasoning
-- [ ] And 12 more servers...
+- [ ] And 10 more servers (dockerhub, fetch, gmail, google-maps, hugging-face, next-devtools, perplexity, stripe, youtube_transcript, context7)
 
 ---
 
