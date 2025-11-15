@@ -1,0 +1,48 @@
+{
+  "workspace": {
+    "name": "the shop",
+    "slug": "the-shop",
+    "description": "DigitalOcean Gradient workspace for internal Dev-Tools automation agents",
+    "project_id": "<digitalocean-project-uuid>",
+    "region": "nyc3",
+    "uuid": null
+  },
+  "knowledge_bases": [
+    {
+      "ref": "devtools-docs",
+      "name": "Dev-Tools Docs Corpus",
+      "description": "Documentation bundle generated from the Dev-Tools repository",
+      "embedding_model_uuid": "<embedding-model-uuid>",
+      "datasource_notes": "Upload the docs zip or wire a Spaces bucket per Create and Manage Knowledge Bases guide.",
+      "tags": ["devtools", "docs"],
+      "uuid": null
+    }
+  ],
+  "agents": [
+    {
+      "ref": "orchestrator",
+      "name": "DevTools Orchestrator",
+      "description": "Routes incoming tasks to the feature, infra, CICD, and documentation agents",
+      "instruction": "You are the Dev-Tools orchestrator. Coordinate requests across downstream agents and surface Langfuse/Prometheus traces when asked.",
+      "project_id": "<digitalocean-project-uuid>",
+      "region": "nyc3",
+      "model_uuid": "<llama-3.1-70b-uuid>",
+      "model_provider_key_uuid": null,
+      "openai_key_uuid": null,
+      "anthropic_key_uuid": null,
+      "workspace_uuid": null,
+      "workspace_slug": "the-shop",
+      "knowledge_base_refs": ["devtools-docs"],
+      "endpoint_visibility": "private",
+      "tags": ["internal", "devtools"],
+      "api_keys": [
+        {
+          "name": "devtools-orchestrator-default",
+          "uuid": null,
+          "output_file": "config/env/secrets/agent-access/the-shop/orchestrator-default.txt"
+        }
+      ],
+      "uuid": null
+    }
+  ]
+}

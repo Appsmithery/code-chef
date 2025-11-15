@@ -242,6 +242,53 @@ Add the following fields to `.env` (or your preferred secret store) when wiring 
 
 These values flow into Docker Compose automatically and should be managed like any other sensitive credential.
 
+## DigitalOcean Gradient Storage Map
+
+Gradient introduces three distinct credential classes plus a bit of metadata. Keep them separated so rotations stay painless and you can regenerate assets programmatically.
+
+| Category                                     | Where it lives                                                                                                                           | Purpose                                                                                                                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Control-plane + model access**             | `config/env/.env` (`DIGITALOCEAN_TOKEN`, `DIGITAL_OCEAN_PAT`, `GRADIENT_API_KEY`, `GRADIENT_MODEL_ACCESS_KEY`, Langfuse, Supabase, etc.) | Lets the stack talk to Gradient + observability services. These settings deploy with `scripts/deploy.ps1`.                                                                                                  |
+| **Partner provider keys (OpenAI/Anthropic)** | `config/env/secrets/openai_api_key.txt`, `config/env/secrets/anthropic_api_key.txt` (or extend `secrets.template.json`)                  | Raw vendor keys you register in the Gradient UI/API. Keeping them as standalone files mirrors the Linear/GitHub secrets pattern and keeps `.env` slim.                                                      |
+| **Agent endpoint API keys**                  | `config/env/secrets/agent-access/<workspace>/<agent>.txt` (JSON blob)                                                                    | Each exposed agent endpoint issues one or more API keys via `/v2/gen-ai/agents/{agent_uuid}/api_keys`. Treat them like per-agent secrets so rotation is a file delete/regenerate instead of editing `.env`. |
+| **Workspace + knowledge base metadata**      | `config/env/workspaces/*.json`                                                                                                           | Tracked manifests that describe workspaces, knowledge bases, and the agents that should exist. These files are lintable alongside the main schema and make automation repeatable.                           |
+
+### Agent key file format
+
+Agent access files are simple JSON documents. Example (`config/env/secrets/agent-access/the-shop/orchestrator-default.txt`):
+
+```
+{
+  "workspace": "the shop",
+  "agent_name": "DevTools Orchestrator",
+  "agent_uuid": "uuid-from-gradient",
+  "api_key_uuid": "api-key-uuid",
+  "api_key_name": "devtools-orchestrator-default",
+  "secret": "sk-agent-secret",
+  "written_at": 1731544750
+}
+```
+
+These files stay gitignored yet deploy via the existing secrets sync. Delete + rerun the automation script when you need to rotate keys.
+
+### Workspace manifests + automation
+
+1. Describe the workspace in `config/env/workspaces/<name>.json`. The tracked `the-shop.json` file includes:
+
+- Workspace metadata (`name`, `uuid`, `project_id`, `region`)
+- Knowledge base refs + UUID placeholders
+- Agent definitions (model UUID, instructions, knowledge base refs, API key targets)
+
+2. Run `python scripts/gradient_workspace_sync.py` (or `python ... --dry-run`) after updating `.env` and the manifest. The script:
+
+- Reads `DIGITALOCEAN_TOKEN`/`DIGITAL_OCEAN_PAT` plus Gradient URLs from `.env`
+- Ensures the workspace exists (creating it if needed)
+- Resolves knowledge base UUIDs by name
+- Creates/syncs agents and attaches the requested knowledge bases
+- Generates agent API keys and writes them under `config/env/secrets/agent-access/...`
+
+> ℹ️ The script only mutates Gradient when **not** run with `--dry-run`, and it automatically writes new UUIDs back into the manifest so future runs stay idempotent.
+
 ## Troubleshooting
 
 ### Validation Fails
