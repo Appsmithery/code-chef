@@ -131,6 +131,23 @@ The system loads environment variables in this order (first found wins):
 3. `.env`
 4. System environment variables
 
+### DigitalOcean Gradient Onboarding
+
+1. **Fill control-plane credentials**
+   - Copy `config/env/.env.template` → `config/env/.env`.
+   - Populate `DIGITALOCEAN_TOKEN` (or `DIGITAL_OCEAN_PAT`), `GRADIENT_API_KEY`, `GRADIENT_MODEL_ACCESS_KEY`, Langfuse, and Supabase keys.
+   - Optional: override `GRADIENT_GENAI_BASE_URL` if you are targeting a non-default endpoint.
+2. **Store partner LLM keys**
+   - Populate `config/env/secrets/openai_api_key.txt` and/or `config/env/secrets/anthropic_api_key.txt` with the raw vendor keys referenced in the Gradient UI.
+   - Add any extra partner secrets to `secrets.template.json` so teammates know which files to create.
+3. **Track workspace metadata**
+   - Edit `config/env/workspaces/the-shop.json` (or add another manifest) with the actual DigitalOcean Project UUID, model UUIDs, knowledge base IDs, and agent API key targets.
+4. **Run the workspace sync script**
+   - `python scripts/gradient_workspace_sync.py --dry-run` to preview actions.
+   - `python scripts/gradient_workspace_sync.py` to create/update the workspace, attach knowledge bases, mint agent API keys, and write them to `config/env/secrets/agent-access/<workspace>/`.
+5. **Distribute agent keys**
+   - Share the generated JSON files with whichever service calls the Gradient agent endpoints (or re-run the script to rotate them later).
+
 ## Diagnostics Workflow
 
 ### Environment Baseline
