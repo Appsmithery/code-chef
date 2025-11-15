@@ -18,10 +18,8 @@ services:
       - MCP_TIMEOUT=30
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
-      - GRADIENT_API_KEY=${GRADIENT_API_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://api.digitalocean.com/v2/ai}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-llama-3.1-70b-instruct}
     networks:
       - devtools-network
@@ -46,10 +44,8 @@ services:
       - MCP_TIMEOUT=30
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
-      - GRADIENT_API_KEY=${GRADIENT_API_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://api.digitalocean.com/v2/ai}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-codellama-13b-instruct}
     networks:
       - devtools-network
@@ -70,10 +66,8 @@ services:
       - MCP_TIMEOUT=30
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
-      - GRADIENT_API_KEY=${GRADIENT_API_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://api.digitalocean.com/v2/ai}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-llama-3.1-70b-instruct}
     networks:
       - devtools-network
@@ -93,10 +87,8 @@ services:
       - MCP_TIMEOUT=30
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
-      - GRADIENT_API_KEY=${GRADIENT_API_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://api.digitalocean.com/v2/ai}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-llama-3.1-8b-instruct}
     networks:
       - devtools-network
@@ -116,10 +108,8 @@ services:
       - MCP_TIMEOUT=30
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
-      - GRADIENT_API_KEY=${GRADIENT_API_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://api.digitalocean.com/v2/ai}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-llama-3.1-8b-instruct}
     networks:
       - devtools-network
@@ -139,10 +129,8 @@ services:
       - MCP_TIMEOUT=30
       - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-      - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
-      - GRADIENT_API_KEY=${GRADIENT_API_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://api.digitalocean.com/v2/ai}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-mistral-7b-instruct}
     networks:
       - devtools-network

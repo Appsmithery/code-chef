@@ -1,75 +1,95 @@
 """
-DigitalOcean Gradient AI Platform Client
+DigitalOcean Gradient AI Serverless Inference Client
 
-Provides OpenAI-compatible interface to Gradient with automatic Langfuse tracing.
-Supports agent-specific model selection and fallback handling.
+Uses official Gradient SDK for serverless model inference with automatic Langfuse tracing.
+https://gradient-sdk.digitalocean.com/getting-started/serverless-inference
 """
 
 import os
+import json
+import logging
 from typing import Optional, Dict, Any, List
-from langfuse.openai import openai
 
-# Langfuse configuration (must be set before importing langfuse)
-os.environ.setdefault("LANGFUSE_HOST", os.getenv("LANGFUSE_HOST", "https://us.cloud.langfuse.com"))
-os.environ.setdefault("LANGFUSE_SECRET_KEY", os.getenv("LANGFUSE_SECRET_KEY", ""))
-os.environ.setdefault("LANGFUSE_PUBLIC_KEY", os.getenv("LANGFUSE_PUBLIC_KEY", ""))
+logger = logging.getLogger(__name__)
 
-# Gradient configuration
-GRADIENT_API_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY") or os.getenv("GRADIENT_API_KEY")  # Prefer MODEL_ACCESS_KEY for OpenAI compatibility
-GRADIENT_BASE_URL = os.getenv("GRADIENT_BASE_URL", "https://api.digitalocean.com/v2/ai/v1")  # OpenAI-compatible endpoint (SDK appends /chat/completions)
+# Gradient Serverless Inference Configuration
+GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY")
 GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama-3.1-8b-instruct")
 
+# Langfuse Configuration (SDK automatically enables tracing if these are set)
+LANGFUSE_ENABLED = all([
+    os.getenv("LANGFUSE_SECRET_KEY"),
+    os.getenv("LANGFUSE_PUBLIC_KEY"),
+    os.getenv("LANGFUSE_HOST")
+])
+
 # Validate configuration
-GRADIENT_ENABLED = bool(GRADIENT_API_KEY)
-LANGFUSE_ENABLED = bool(os.getenv("LANGFUSE_SECRET_KEY") and os.getenv("LANGFUSE_PUBLIC_KEY"))
+GRADIENT_ENABLED = bool(GRADIENT_MODEL_ACCESS_KEY)
 
 
 class GradientClient:
     """
-    Gradient AI Platform client with Langfuse tracing.
+    Gradient AI Serverless Inference client with automatic Langfuse tracing.
     
-    Automatically wraps OpenAI-compatible calls with Langfuse for observability.
-    Supports per-agent model selection and fallback to shared model.
+    Uses the official Gradient SDK (not OpenAI SDK) for serverless model inference.
+    Langfuse tracing is automatically enabled when environment variables are set.
+    
+    Authentication:
+        - GRADIENT_MODEL_ACCESS_KEY: For serverless inference (sk-do-* format)
+    
+    Langfuse Tracing (automatic when configured):
+        - LANGFUSE_SECRET_KEY
+        - LANGFUSE_PUBLIC_KEY
+        - LANGFUSE_HOST
     """
     
     def __init__(
         self,
         agent_name: str,
         model: Optional[str] = None,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None
+        model_access_key: Optional[str] = None
     ):
         """
-        Initialize Gradient client.
+        Initialize Gradient serverless inference client.
         
         Args:
-            agent_name: Name of the calling agent (for Langfuse metadata)
-            model: Specific model override (defaults to GRADIENT_MODEL env var)
-            api_key: API key override (defaults to GRADIENT_API_KEY env var)
-            base_url: Base URL override (defaults to GRADIENT_BASE_URL env var)
+            agent_name: Name of the calling agent (for logging/metadata)
+            model: Model override (defaults to GRADIENT_MODEL env var)
+            model_access_key: API key override (defaults to GRADIENT_MODEL_ACCESS_KEY)
         """
         self.agent_name = agent_name
         self.model = model or GRADIENT_MODEL
-        self.api_key = api_key or GRADIENT_API_KEY
-        self.base_url = base_url or GRADIENT_BASE_URL
+        self.model_access_key = model_access_key or GRADIENT_MODEL_ACCESS_KEY
         
-        if not self.api_key:
-            print(f"[WARNING] {agent_name}: GRADIENT_API_KEY not set, LLM calls will fail")
+        if not self.model_access_key:
+            logger.warning(f"[{agent_name}] GRADIENT_MODEL_ACCESS_KEY not set, LLM calls will fail")
             self.client = None
         else:
-            # Initialize OpenAI client with Gradient endpoint
-            # Langfuse wrapper automatically traces all calls
-            self.client = openai.OpenAI(
-                api_key=self.api_key,
-                base_url=self.base_url
-            )
-            print(f"[GRADIENT] {agent_name}: Initialized with model {self.model}")
-            print(f"[GRADIENT] {agent_name}: Base URL: {self.base_url}")
-            print(f"[GRADIENT] {agent_name}: API key: {self.api_key[:20]}...")
-            if LANGFUSE_ENABLED:
-                print(f"[LANGFUSE] {agent_name}: Tracing ENABLED (host: {os.getenv('LANGFUSE_HOST')})")
-            else:
-                print(f"[LANGFUSE] {agent_name}: Tracing DISABLED (missing keys)")
+            try:
+                # Import Gradient SDK
+                from gradient import Gradient
+                
+                # Initialize client for serverless inference
+                # The SDK automatically handles Langfuse tracing if env vars are set
+                self.client = Gradient(
+                    model_access_key=self.model_access_key
+                )
+                
+                logger.info(f"[{agent_name}] Gradient SDK initialized for serverless inference")
+                logger.info(f"[{agent_name}] Model: {self.model}")
+                logger.info(f"[{agent_name}] Model access key: {self.model_access_key[:20]}...")
+                
+                if LANGFUSE_ENABLED:
+                    logger.info(f"[{agent_name}] Langfuse tracing ENABLED (host: {os.getenv('LANGFUSE_HOST')})")
+                else:
+                    logger.info(f"[{agent_name}] Langfuse tracing DISABLED (env vars not set)")
+                    
+            except ImportError:
+                logger.error(f"[{agent_name}] Gradient SDK not installed. Run: pip install gradient")
+                self.client = None
+            except Exception as e:
+                logger.error(f"[{agent_name}] Failed to initialize Gradient client: {e}")
+                self.client = None
     
     async def complete(
         self,
@@ -80,14 +100,16 @@ class GradientClient:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Generate completion with automatic Langfuse tracing.
+        Generate completion using Gradient serverless inference.
+        
+        Langfuse tracing is automatic if environment variables are configured.
         
         Args:
             prompt: User prompt
             system_prompt: System prompt (optional)
             temperature: Sampling temperature (0-2)
             max_tokens: Maximum tokens to generate
-            metadata: Additional metadata for Langfuse trace
+            metadata: Additional metadata for logging (not passed to API)
             
         Returns:
             Dict with 'content', 'model', 'tokens', 'finish_reason'
@@ -101,35 +123,27 @@ class GradientClient:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
         
-        # Build Langfuse metadata
-        trace_metadata = {
-            "langfuse_session_id": metadata.get("task_id", "unknown") if metadata else "unknown",
-            "langfuse_user_id": self.agent_name,
-            "langfuse_tags": ["gradient", "production", self.agent_name],
-            **(metadata or {})
-        }
-        
         try:
-            # Call Gradient API with Langfuse tracing
+            # Call Gradient serverless inference
+            # SDK automatically traces with Langfuse if configured
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens,
-                metadata=trace_metadata
+                max_tokens=max_tokens
             )
             
             return {
                 "content": response.choices[0].message.content,
                 "model": self.model,
-                "tokens": response.usage.total_tokens,
-                "prompt_tokens": response.usage.prompt_tokens,
-                "completion_tokens": response.usage.completion_tokens,
-                "finish_reason": response.choices[0].finish_reason
+                "tokens": response.usage.total_tokens if hasattr(response, 'usage') else 0,
+                "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') else 0,
+                "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') else 0,
+                "finish_reason": response.choices[0].finish_reason if response.choices else "unknown"
             }
             
         except Exception as e:
-            print(f"[ERROR] {self.agent_name}: Gradient API error: {e}")
+            logger.error(f"[{self.agent_name}] Gradient API error: {e}")
             raise
     
     async def complete_structured(
@@ -142,15 +156,15 @@ class GradientClient:
         metadata: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """
-        Generate structured completion (JSON mode) with Langfuse tracing.
+        Generate structured JSON completion using Gradient serverless inference.
         
         Args:
             prompt: User prompt
             system_prompt: System prompt (optional)
-            response_format: JSON schema for structured output
+            response_format: JSON schema for structured output (defaults to json_object)
             temperature: Sampling temperature
             max_tokens: Maximum tokens
-            metadata: Langfuse metadata
+            metadata: Metadata for logging
             
         Returns:
             Dict with 'content' (parsed JSON), 'model', 'tokens'
@@ -163,24 +177,16 @@ class GradientClient:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
         
-        trace_metadata = {
-            "langfuse_session_id": metadata.get("task_id", "unknown") if metadata else "unknown",
-            "langfuse_user_id": self.agent_name,
-            "langfuse_tags": ["gradient", "structured", self.agent_name],
-            **(metadata or {})
-        }
-        
         try:
+            # Call with JSON response format
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                response_format=response_format or {"type": "json_object"},
-                metadata=trace_metadata
+                response_format=response_format or {"type": "json_object"}
             )
             
-            import json
             content = response.choices[0].message.content
             parsed = json.loads(content) if content else {}
             
@@ -188,11 +194,14 @@ class GradientClient:
                 "content": parsed,
                 "raw_content": content,
                 "model": self.model,
-                "tokens": response.usage.total_tokens
+                "tokens": response.usage.total_tokens if hasattr(response, 'usage') else 0
             }
             
+        except json.JSONDecodeError as e:
+            logger.error(f"[{self.agent_name}] Failed to parse JSON response: {e}")
+            raise
         except Exception as e:
-            print(f"[ERROR] {self.agent_name}: Gradient structured completion error: {e}")
+            logger.error(f"[{self.agent_name}] Gradient structured completion error: {e}")
             raise
     
     def is_enabled(self) -> bool:
