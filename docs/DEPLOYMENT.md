@@ -126,6 +126,8 @@ done
 
 ```powershell
 doctl registry login
+# or, when doctl token validation fails:
+docker login registry.digitalocean.com
 docker compose build orchestrator
 IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/the-shop docker compose push orchestrator
 ```
