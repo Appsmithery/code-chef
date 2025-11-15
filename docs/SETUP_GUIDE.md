@@ -23,6 +23,7 @@ Complete guide for setting up and using the Dev-Tools diagnostics and automation
 
 - **jq**: For JSON processing in shell scripts
 - **PowerShell**: >= 7.0 (for Windows users)
+- **DigitalOcean doctl**: Required for pushing images to DOCR (Windows shortcut: `pwsh ./scripts/install-doctl.ps1`; macOS: `brew install doctl`)
 
 ````bash
 
@@ -147,6 +148,20 @@ The system loads environment variables in this order (first found wins):
    - `python scripts/gradient_workspace_sync.py` to create/update the workspace, attach knowledge bases, mint agent API keys, and write them to `config/env/secrets/agent-access/<workspace>/`.
 5. **Distribute agent keys**
    - Share the generated JSON files with whichever service calls the Gradient agent endpoints (or re-run the script to rotate them later).
+
+### DigitalOcean Registry Workflow
+
+1. **Install `doctl`**
+   - Windows: `pwsh ./scripts/install-doctl.ps1`
+   - macOS: `brew install doctl`
+   - Linux: `sudo snap install doctl` or grab the GitHub release tarball.
+2. **Validate your token scopes**
+   - Run `doctl auth init --context devtools` followed by `doctl account get`. The repo’s shared token already includes the `account:read` scope, so this should succeed unless you deliberately supply a more restrictive PAT.
+3. **Build and push images**
+   - Execute `pwsh ./scripts/push-docr.ps1` to mint a short-lived Docker credential, build (unless `-SkipBuild`), and push every service with `IMAGE_TAG=<current git sha>`.
+   - Use `-Services orchestrator,gateway-mcp` to limit the push set or `-Registry registry.digitalocean.com/<yours>` when testing against another namespace.
+4. **Fallback**
+   - If PowerShell 7 isn’t available, run the manual commands in `docs/DEPLOYMENT.md` (doctl registry login → docker compose build → docker compose push) and remember to export `IMAGE_TAG`/`DOCR_REGISTRY` yourself.
 
 ## Diagnostics Workflow
 
