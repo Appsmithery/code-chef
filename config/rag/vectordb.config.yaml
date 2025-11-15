@@ -1,19 +1,23 @@
 # Vector Database Configuration
 
 vectordb:
-  type: "qdrant" # Using Qdrant for production deployment
-  host: "qdrant" # Docker service name for internal communication
-  port: 6333 # HTTP API port
-  grpc_port: 6334 # gRPC API port
+  type: "qdrant"
+  mode: "cloud" # cloud or docker
+  url_env: "QDRANT_URL" # pull from env so secrets stay out of git
+  api_key_env: "QDRANT_API_KEY"
+  fallback_host: "qdrant" # still allow local docker for dev
+  fallback_port: 6333
+  default_collection: "the-shop"
+  vector_size: 1536
+  distance: "cosine"
 
 embeddings:
-  model: "text-embedding-ada-002"
+  provider: "digitalocean-gradient"
+  model_env: "GRADIENT_EMBEDDING_MODEL"
   dimension: 1536
 
 collections:
-  - name: "code-knowledge"
-    description: "Code snippets and patterns"
+  - name: "the-shop"
+    description: "Primary production knowledge base"
   - name: "documentation"
     description: "Project documentation"
-  - name: "workflows"
-    description: "Agent workflow patterns"

@@ -5,6 +5,8 @@ Provides context retrieval from vector database for AI agents.
 Manages embeddings, chunking, and semantic search.
 """
 
+import asyncio
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -20,17 +22,45 @@ app = FastAPI(title="RAG Context Manager", version="1.0.0")
 # Qdrant client configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
+QDRANT_URL = os.getenv("QDRANT_URL")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
+QDRANT_COLLECTION_DEFAULT = os.getenv("QDRANT_COLLECTION", "code-knowledge")
+QDRANT_VECTOR_SIZE = int(os.getenv("QDRANT_VECTOR_SIZE", "1536"))
+QDRANT_DISTANCE = os.getenv("QDRANT_DISTANCE", "cosine")
 
 # MCP Gateway configuration
 MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
 
-try:
-    qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-    print(f"Connected to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}")
-except Exception as e:
-    print(f"Warning: Could not connect to Qdrant: {e}")
-    qdrant_client = None
+# Gradient / embeddings configuration
+GRADIENT_API_KEY = os.getenv("GRADIENT_API_KEY") or os.getenv("DIGITALOCEAN_TOKEN") or os.getenv("DIGITAL_OCEAN_PAT")
+GRADIENT_BASE_URL = os.getenv("GRADIENT_BASE_URL", "https://api.digitalocean.com/v2/ai")
+GRADIENT_EMBEDDING_MODEL = os.getenv("GRADIENT_EMBEDDING_MODEL", "text-embedding-3-large")
+EMBEDDING_TIMEOUT = int(os.getenv("EMBEDDING_TIMEOUT", "60"))
+
+def init_qdrant_client() -> Optional[QdrantClient]:
+    try:
+        if QDRANT_URL:
+            client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
+            print(f"Connected to Qdrant Cloud at {QDRANT_URL}")
+            return client
+        client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT, api_key=QDRANT_API_KEY)
+        print(f"Connected to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}")
+        return client
+    except Exception as exc:
+        print(f"Warning: Could not connect to Qdrant: {exc}")
+        return None
+
+
+qdrant_client = init_qdrant_client()
+COLLECTION_CACHE: set[str] = set()
+
+DISTANCE_MAP = {
+    "COSINE": Distance.COSINE,
+    "EUCLID": Distance.EUCLID,
+    "DOT": Distance.DOT,
+    "MANHATTAN": Distance.MANHATTAN,
+}
 
 
 # MCP Tool Invocation Helpers
@@ -138,11 +168,102 @@ async def log_indexing_to_memory(collection: str, doc_count: int) -> bool:
     return result.get("success", False)
 
 
+def get_distance_metric() -> Distance:
+    return DISTANCE_MAP.get(QDRANT_DISTANCE.upper(), Distance.COSINE)
+
+
+def ensure_collection(collection_name: str) -> None:
+    if not qdrant_client:
+        return
+    if collection_name in COLLECTION_CACHE:
+        return
+    try:
+        qdrant_client.get_collection(collection_name)
+    except Exception:
+        qdrant_client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=QDRANT_VECTOR_SIZE, distance=get_distance_metric())
+        )
+        print(f"Created Qdrant collection '{collection_name}' with size {QDRANT_VECTOR_SIZE}")
+    COLLECTION_CACHE.add(collection_name)
+
+
+def build_metadata_filter(metadata: Optional[Dict[str, Any]]) -> Optional[Filter]:
+    if not metadata:
+        return None
+    must_conditions = []
+    should_conditions = []
+    for key, value in metadata.items():
+        if value is None:
+            continue
+        if isinstance(value, (list, tuple, set)):
+            for item in value:
+                should_conditions.append(FieldCondition(key=key, match=MatchValue(value=item)))
+        else:
+            must_conditions.append(FieldCondition(key=key, match=MatchValue(value=value)))
+    if not must_conditions and not should_conditions:
+        return None
+    return Filter(
+        must=must_conditions or None,
+        should=should_conditions or None
+    )
+
+
+async def embed_texts(texts: List[str]) -> List[List[float]]:
+    if not texts:
+        return []
+    if not GRADIENT_API_KEY:
+        raise HTTPException(status_code=500, detail="Embedding provider not configured (missing Gradient API key)")
+
+    endpoint = f"{GRADIENT_BASE_URL.rstrip('/')}/v1/embeddings"
+    headers = {
+        "Authorization": f"Bearer {GRADIENT_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": GRADIENT_EMBEDDING_MODEL,
+        "input": texts
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=EMBEDDING_TIMEOUT) as client:
+            response = await client.post(endpoint, headers=headers, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            embeddings = [item.get("embedding") for item in data.get("data", [])]
+            if len(embeddings) != len(texts):
+                raise ValueError("Embedding response size mismatch")
+            return embeddings
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=502, detail=f"Embedding API error: {exc.response.text}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to generate embeddings: {exc}") from exc
+
+
+def extract_payload_content(payload: Dict[str, Any]) -> str:
+    preferred_keys = [
+        "content",
+        "text",
+        "chunk",
+        "body",
+        "excerpt"
+    ]
+    for key in preferred_keys:
+        value = payload.get(key)
+        if isinstance(value, str) and value.strip():
+            return value
+    # Fall back to joining values that look textual
+    for value in payload.values():
+        if isinstance(value, str) and value.strip():
+            return value
+    return ""
+
+
 # Request/Response Models
 class QueryRequest(BaseModel):
     """Query for context retrieval"""
     query: str = Field(..., description="Search query text")
-    collection: str = Field(default="code-knowledge", description="Collection to search")
+    collection: str = Field(default=QDRANT_COLLECTION_DEFAULT, description="Collection to search")
     n_results: int = Field(default=5, description="Number of results to return")
     metadata_filter: Optional[Dict[str, Any]] = Field(default=None, description="Metadata filters")
 
@@ -170,7 +291,7 @@ class IndexRequest(BaseModel):
     documents: List[str]
     metadatas: Optional[List[Dict[str, Any]]] = None
     ids: Optional[List[str]] = None
-    collection: str = Field(default="code-knowledge")
+    collection: str = Field(default=QDRANT_COLLECTION_DEFAULT)
 
 
 class IndexResponse(BaseModel):
@@ -235,43 +356,58 @@ async def query_context(request: QueryRequest):
             status_code=503,
             detail="Qdrant not available. Service running in mock mode."
         )
-    
+
     start_time = datetime.utcnow()
-    
+
     try:
-        # Ensure collection exists
-        collections = qdrant_client.get_collections()
-        collection_exists = any(c.name == request.collection for c in collections.collections)
-        
-        if not collection_exists:
-            # Create collection with default vector size (384 for sentence transformers)
-            qdrant_client.create_collection(
-                collection_name=request.collection,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE)
-            )
-            print(f"Created collection: {request.collection}")
-        
-        # For now, return mock results since we don't have embeddings yet
-        # In production, this would use an embedding model to encode the query
-        context_items = []
-        
+        ensure_collection(request.collection)
+        embeddings = await embed_texts([request.query])
+        if not embeddings:
+            raise HTTPException(status_code=500, detail="Embedding provider returned no vectors")
+
+        search_filter = build_metadata_filter(request.metadata_filter)
+        search_results = qdrant_client.search(
+            collection_name=request.collection,
+            query_vector=embeddings[0],
+            limit=request.n_results,
+            with_payload=True,
+            filter=search_filter
+        )
+
+        context_items: List[ContextItem] = []
+        for point in search_results:
+            payload = point.payload or {}
+            score = float(point.score or 0.0)
+            if QDRANT_DISTANCE.lower() == "cosine":
+                distance_value = max(0.0, 1 - score)
+            else:
+                distance_value = score
+            context_items.append(ContextItem(
+                id=str(point.id),
+                content=extract_payload_content(payload),
+                metadata=payload,
+                distance=round(distance_value, 6),
+                relevance_score=round(score, 6)
+            ))
+
         end_time = datetime.utcnow()
         retrieval_time = (end_time - start_time).total_seconds() * 1000
-        
-        # Log query to memory server for analytics (non-blocking)
+
         try:
             await log_query_to_memory(request.query, request.collection, len(context_items))
         except Exception as e:
             print(f"Failed to log query to memory server: {e}")
-        
+
         return QueryResponse(
             query=request.query,
             results=context_items,
             collection=request.collection,
-            total_found=0,
+            total_found=len(context_items),
             retrieval_time_ms=round(retrieval_time, 2)
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
@@ -285,41 +421,55 @@ async def index_documents(request: IndexRequest):
     Adds documents to specified collection for future retrieval.
     """
     if not qdrant_client:
-        # Mock mode - simulate success
         return IndexResponse(
             success=True,
             indexed_count=len(request.documents),
             collection=request.collection,
             message="Mock mode: Documents simulated as indexed"
         )
-    
+
     try:
-        # Ensure collection exists
-        collections = qdrant_client.get_collections()
-        collection_exists = any(c.name == request.collection for c in collections.collections)
-        
-        if not collection_exists:
-            qdrant_client.create_collection(
-                collection_name=request.collection,
-                vectors_config=VectorParams(size=384, distance=Distance.COSINE)
-            )
-        
-        # In production, this would use an embedding model
-        # For now, just acknowledge receipt
-        
-        # Log indexing operation to memory server (non-blocking)
+        ensure_collection(request.collection)
+
+        doc_count = len(request.documents)
+        if doc_count == 0:
+            return IndexResponse(success=True, indexed_count=0, collection=request.collection, message="No documents provided")
+
+        metadatas = request.metadatas or [{} for _ in range(doc_count)]
+        if len(metadatas) != doc_count:
+            raise HTTPException(status_code=400, detail="metadatas length must match documents length")
+
+        ids = request.ids or []
+        if ids and len(ids) != doc_count:
+            raise HTTPException(status_code=400, detail="ids length must match documents length")
+        if not ids:
+            ids = [str(uuid.uuid4()) for _ in range(doc_count)]
+
+        embeddings = await embed_texts(request.documents)
+        points = []
+        timestamp = datetime.utcnow().isoformat()
+        for idx, vector in enumerate(embeddings):
+            payload = dict(metadatas[idx] or {})
+            payload.setdefault("content", request.documents[idx])
+            payload.setdefault("indexed_at", timestamp)
+            points.append(PointStruct(id=ids[idx], vector=vector, payload=payload))
+
+        qdrant_client.upsert(collection_name=request.collection, points=points)
+
         try:
-            await log_indexing_to_memory(request.collection, len(request.documents))
+            await log_indexing_to_memory(request.collection, len(points))
         except Exception as e:
             print(f"Failed to log indexing to memory server: {e}")
-        
+
         return IndexResponse(
             success=True,
-            indexed_count=len(request.documents),
+            indexed_count=len(points),
             collection=request.collection,
-            message=f"Collection ready. Note: Embedding generation not yet implemented."
+            message=f"Indexed {len(points)} documents with embedding model {GRADIENT_EMBEDDING_MODEL}."
         )
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Indexing failed: {str(e)}")
 
