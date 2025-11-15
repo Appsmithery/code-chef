@@ -38,9 +38,10 @@ client = Gradient(agent_access_key="...", agent_endpoint="...")
 
 ## Solutions Implemented
 
-### 1. SDK Migration (agents/_shared/gradient_client.py)
+### 1. SDK Migration (agents/\_shared/gradient_client.py)
 
 **Before:**
+
 ```python
 from langfuse.openai import openai
 client = openai.OpenAI(
@@ -50,6 +51,7 @@ client = openai.OpenAI(
 ```
 
 **After:**
+
 ```python
 from gradient import Gradient
 client = Gradient(model_access_key=GRADIENT_MODEL_ACCESS_KEY)
@@ -61,6 +63,7 @@ client = Gradient(model_access_key=GRADIENT_MODEL_ACCESS_KEY)
 **Issue:** `response_format` parameter not supported by Gradient SDK
 
 **Solution:** Enhanced system prompt with JSON formatting instructions:
+
 ```python
 json_instruction = "\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."
 enhanced_system = (system_prompt or "") + json_instruction
@@ -71,6 +74,7 @@ enhanced_system = (system_prompt or "") + json_instruction
 Discovered via API: `GET https://api.digitalocean.com/v2/gen-ai/models`
 
 **Available Models:**
+
 - `llama3-8b-instruct` (Llama 3.1 8B) ✅
 - `llama3.3-70b-instruct` (Llama 3.3 70B)
 - `openai-gpt-4o`, `openai-gpt-5`
@@ -79,6 +83,7 @@ Discovered via API: `GET https://api.digitalocean.com/v2/gen-ai/models`
 - `deepseek-r1-distill-llama-70b`
 
 **Updated `.env`:**
+
 ```bash
 GRADIENT_MODEL=llama3-8b-instruct  # Was: llama-3.1-8b-instruct
 ```
@@ -86,6 +91,7 @@ GRADIENT_MODEL=llama3-8b-instruct  # Was: llama-3.1-8b-instruct
 ### 4. Dependencies Updated
 
 Added to all 6 agent `requirements.txt`:
+
 ```
 gradient>=1.0.0
 ```
@@ -93,11 +99,12 @@ gradient>=1.0.0
 ### 5. Environment Variables Corrected
 
 **docker-compose.yml** (all agent services):
+
 ```yaml
 environment:
-  - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}  # Not BASE_URL
-  - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}  # Inference auth
-  - GRADIENT_MODEL=${GRADIENT_MODEL:-llama3-8b-instruct}  # Model name
+  - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com} # Not BASE_URL
+  - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY} # Inference auth
+  - GRADIENT_MODEL=${GRADIENT_MODEL:-llama3-8b-instruct} # Model name
   # Removed: GRADIENT_API_KEY (management PAT, not needed)
   # Removed: GRADIENT_BASE_URL (SDK handles internally)
 ```
@@ -105,9 +112,10 @@ environment:
 ## Current Status
 
 ✅ **Working:**
+
 - Gradient SDK initializes correctly
 - Model name validated (`llama3-8b-instruct` exists in catalog)
-- Authentication successful (sk-do-* model access key)
+- Authentication successful (sk-do-\* model access key)
 - No 404 routing errors
 - Langfuse environment variables correct
 - Rule-based fallback working
@@ -119,6 +127,7 @@ environment:
 **Location:** `agents/orchestrator/main.py:714`
 
 **Context:**
+
 ```python
 result = await gradient_client.complete_structured(
     prompt=user_prompt,
@@ -139,6 +148,7 @@ The `metadata` parameter may be causing issues with Langfuse's automatic tracing
 ## Next Steps
 
 1. **Debug metadata parameter:**
+
    ```python
    # Option A: Remove metadata parameter entirely
    result = await gradient_client.complete_structured(
@@ -147,15 +157,16 @@ The `metadata` parameter may be causing issues with Langfuse's automatic tracing
        temperature=0.3,
        max_tokens=1000
    )
-   
+
    # Option B: Convert metadata to JSON string
    metadata=json.dumps({...})
-   
+
    # Option C: Add to Langfuse session manually
    langfuse.update_current_trace(metadata={...})
    ```
 
 2. **Add detailed error logging:**
+
    ```python
    try:
        result = await gradient_client.complete_structured(...)
@@ -210,7 +221,7 @@ ssh root@45.55.173.72 "docker logs compose-orchestrator-1 --tail 50"
 
 1. `c9b3dfa` - Initial Gradient SDK migration
 2. `40003f0` - Remove response_format parameter
-3. *(pending)* - Fix unhashable dict error
+3. _(pending)_ - Fix unhashable dict error
 
 ## Key Learnings
 
