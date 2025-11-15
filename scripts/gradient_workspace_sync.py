@@ -174,6 +174,20 @@ def fetch_agents(api: GradientAPI, workspace_uuid: str) -> List[Dict[str, Any]]:
     return response.get("agents") or []
 
 
+def attach_knowledge_bases(api: GradientAPI, agent_uuid: str, kb_ids: List[str], *, dry_run: bool) -> None:
+    if not kb_ids:
+        return
+    if dry_run:
+        print(f"🛈 Dry-run: would attach knowledge bases {kb_ids} to '{agent_uuid}'.")
+        return
+    print(f"📚 Attaching {len(kb_ids)} knowledge base(s) to agent '{agent_uuid}'.")
+    api.request(
+        "POST",
+        f"/v2/gen-ai/agents/{agent_uuid}/knowledge_bases",
+        payload={"agent_uuid": agent_uuid, "knowledge_base_uuids": kb_ids}
+    )
+
+
 def ensure_agent(api: GradientAPI, manifest_agent: Dict[str, Any], workspace: Dict[str, Any], kb_map: Dict[str, str], *, dry_run: bool) -> Tuple[Dict[str, Any], bool]:
     workspace_uuid = workspace.get("uuid")
     if not workspace_uuid:
@@ -200,15 +214,8 @@ def ensure_agent(api: GradientAPI, manifest_agent: Dict[str, Any], workspace: Di
         manifest_agent["workspace_uuid"] = workspace_uuid
         current_kb_ids = {kb.get("uuid") for kb in existing.get("knowledge_bases") or [] if kb.get("uuid")}
         missing = [kb_id for kb_id in kb_ids if kb_id not in current_kb_ids]
-        if missing and not dry_run:
-            print(f"📚 Attaching {len(missing)} knowledge base(s) to agent '{target_name}'.")
-            api.request(
-                "POST",
-                f"/v2/gen-ai/agents/{existing['uuid']}/knowledge_bases",
-                payload={"agent_uuid": existing["uuid"], "knowledge_base_uuids": missing}
-            )
-        elif missing:
-            print(f"🛈 Dry-run: would attach knowledge bases {missing} to '{target_name}'.")
+        if missing:
+            attach_knowledge_bases(api, existing["uuid"], missing, dry_run=dry_run)
         print(f"✅ Agent '{target_name}' already exists ({existing['uuid']}).")
         return manifest_agent, changed
 
@@ -225,7 +232,6 @@ def ensure_agent(api: GradientAPI, manifest_agent: Dict[str, Any], workspace: Di
         "region": manifest_agent.get("region"),
         "tags": manifest_agent.get("tags") or [],
         "workspace_uuid": workspace_uuid,
-        "knowledge_base_uuid": kb_ids,
         "model_provider_key_uuid": manifest_agent.get("model_provider_key_uuid"),
         "open_ai_key_uuid": manifest_agent.get("openai_key_uuid"),
         "anthropic_key_uuid": manifest_agent.get("anthropic_key_uuid")
@@ -240,6 +246,8 @@ def ensure_agent(api: GradientAPI, manifest_agent: Dict[str, Any], workspace: Di
     agent = response.get("agent") or {}
     manifest_agent["uuid"] = agent.get("uuid")
     manifest_agent["workspace_uuid"] = workspace_uuid
+    if kb_ids:
+        attach_knowledge_bases(api, manifest_agent["uuid"], kb_ids, dry_run=dry_run)
     changed = True
     print(f"✅ Agent '{target_name}' created ({manifest_agent['uuid']}).")
     return manifest_agent, changed
