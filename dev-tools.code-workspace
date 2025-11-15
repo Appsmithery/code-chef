@@ -28,7 +28,7 @@
     "github.copilot.chat.scopeSelection": true,
     "github.copilot.chat.tools.memory.enabled": true,
     "workbench.colorTheme": "Vira Ocean",
-    "workbench.iconTheme": "vs-seti-folder",
+    "workbench.iconTheme": "vs-seti",
     "workbench.preferredDarkColorTheme": "Vira Palenight High Contrast",
     "workbench.preferredHighContrastColorTheme": "Vira Palenight High Contrast",
     "workbench.preferredHighContrastLightColorTheme": "Vira Palenight High Contrast",
