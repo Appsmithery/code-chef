@@ -711,6 +711,8 @@ Priority: {request.priority}
 Break this down into subtasks. Consider dependencies and execution order."""
     
     try:
+        logger.info(f"[Orchestrator] Attempting LLM-powered decomposition for task {task_id}")
+        
         result = await gradient_client.complete_structured(
             prompt=user_prompt,
             system_prompt=system_prompt,
@@ -722,6 +724,8 @@ Break this down into subtasks. Consider dependencies and execution order."""
                 "priority": request.priority
             }
         )
+        
+        logger.info(f"[Orchestrator] LLM decomposition successful: {result.get('tokens', 0)} tokens used")
         
         # Parse LLM response
         llm_subtasks = result["content"].get("subtasks", [])
@@ -758,7 +762,8 @@ Break this down into subtasks. Consider dependencies and execution order."""
         return subtasks
         
     except Exception as e:
-        print(f"[ERROR] LLM decomposition failed: {e}, falling back to rule-based")
+        logger.error(f"[Orchestrator] LLM decomposition failed: {e}", exc_info=True)
+        print(f"[ERROR] LLM decomposition failed: {type(e).__name__}: {e}, falling back to rule-based")
         return decompose_request(request)
 
 
