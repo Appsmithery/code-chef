@@ -164,13 +164,17 @@ class GradientClient:
             response_format: JSON schema for structured output (defaults to json_object)
             temperature: Sampling temperature
             max_tokens: Maximum tokens
-            metadata: Metadata for logging
+            metadata: Metadata for logging (stored but not passed to API)
             
         Returns:
             Dict with 'content' (parsed JSON), 'model', 'tokens'
         """
         if not self.client:
             raise RuntimeError(f"{self.agent_name}: Gradient client not initialized")
+        
+        # Log metadata for debugging (don't pass to API)
+        if metadata:
+            logger.debug(f"[{self.agent_name}] Request metadata: {json.dumps(metadata)}")
         
         # Enhance system prompt to request JSON output (Gradient SDK doesn't support response_format)
         json_instruction = "\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."
@@ -184,6 +188,8 @@ class GradientClient:
             # Call Gradient inference without response_format parameter
             # Gradient SDK doesn't support OpenAI's response_format parameter
             # Instead, rely on prompt engineering to request JSON output
+            logger.debug(f"[{self.agent_name}] Calling Gradient API with model={self.model}")
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
@@ -192,20 +198,26 @@ class GradientClient:
             )
             
             content = response.choices[0].message.content
+            logger.debug(f"[{self.agent_name}] Received response, parsing JSON...")
+            
             parsed = json.loads(content) if content else {}
             
-            return {
+            result = {
                 "content": parsed,
                 "raw_content": content,
                 "model": self.model,
                 "tokens": response.usage.total_tokens if hasattr(response, 'usage') else 0
             }
             
+            logger.info(f"[{self.agent_name}] Structured completion successful ({result['tokens']} tokens)")
+            return result
+            
         except json.JSONDecodeError as e:
             logger.error(f"[{self.agent_name}] Failed to parse JSON response: {e}")
+            logger.error(f"[{self.agent_name}] Raw response content: {content}")
             raise
         except Exception as e:
-            logger.error(f"[{self.agent_name}] Gradient structured completion error: {e}")
+            logger.error(f"[{self.agent_name}] Gradient structured completion error: {e}", exc_info=True)
             raise
     
     def is_enabled(self) -> bool:
