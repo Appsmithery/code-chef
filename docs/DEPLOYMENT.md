@@ -108,6 +108,48 @@ done
 
 ---
 
+## DigitalOcean Container Registry (DOCR) Integration
+
+| Item              | Value                                |
+| ----------------- | ------------------------------------ |
+| Default registry  | `registry.digitalocean.com/the-shop` |
+| Compose variables | `DOCR_REGISTRY`, `IMAGE_TAG`         |
+| CI workflow       | `.github/workflows/docr-build.yml`   |
+
+### Why it matters
+
+- **Single source of truth** – `compose/docker-compose.yml` now tags every build as `${DOCR_REGISTRY}/<service>:${IMAGE_TAG}` so local, staging, and prod environments all pull the same artifact.
+- **Short‑lived auth** – `digitalocean/action-doctl@v2` plus `doctl registry login --expiry-seconds 1200` keeps CI pushes secure while matching [DigitalOcean’s documented flow](https://docs.digitalocean.com/products/container-registry/how-to/use-registry-docker-kubernetes/#docker-integration).
+- **Kubernetes ready** – After [adding the secret to your DOKS cluster](https://docs.digitalocean.com/products/container-registry/how-to/use-registry-docker-kubernetes/#add-secret-control-panel) (or piping `doctl registry kubernetes-manifest | kubectl apply -f -`), workloads can reference DOCR images with no extra YAML changes.
+
+### Local developer steps
+
+```powershell
+doctl registry login
+docker compose build orchestrator
+IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/the-shop docker compose push orchestrator
+```
+
+> Replace the last line with the services you need to publish. Compose uses the `image:` field you set earlier, so both `build` and `push` reuse the same tag.
+
+### GitHub Actions workflow
+
+`.github/workflows/docr-build.yml` builds every service Dockerfile, tags it as:
+
+```
+registry.digitalocean.com/<REGISTRY_NAME>/<service>:<git-sha>
+registry.digitalocean.com/<REGISTRY_NAME>/<service>:latest
+```
+
+It expects two repository secrets:
+
+- `DIGITALOCEAN_ACCESS_TOKEN` – read/write DO API token.
+- `REGISTRY_NAME` – DOCR namespace (`the-shop`, etc.).
+
+Triggering a push to `main` (or running the workflow manually) will push fresh images; downstream deployment jobs can simply `docker compose pull && docker compose up -d` or roll out via Kubernetes.
+
+---
+
 ## Service Architecture
 
 ### Ports & Services
