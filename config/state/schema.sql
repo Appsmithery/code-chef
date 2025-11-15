@@ -36,3 +36,21 @@ CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_created ON tasks(created_at);
 CREATE INDEX idx_agent_logs_task ON agent_logs(task_id);
 CREATE INDEX idx_workflows_status ON workflows(status);
+
+CREATE TABLE IF NOT EXISTS compliance_runs (
+    id SERIAL PRIMARY KEY,
+    run_id VARCHAR(255) UNIQUE NOT NULL,
+    agent VARCHAR(100) NOT NULL,
+    task_id VARCHAR(255),
+    status VARCHAR(50) NOT NULL,
+    summary JSONB NOT NULL,
+    checks JSONB NOT NULL,
+    metadata JSONB,
+    started_at TIMESTAMP NOT NULL,
+    completed_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_compliance_runs_agent ON compliance_runs(agent);
+CREATE INDEX idx_compliance_runs_status ON compliance_runs(status);
+CREATE INDEX idx_compliance_runs_task ON compliance_runs(task_id);

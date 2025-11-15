@@ -8,7 +8,7 @@ Primary Role: Automation workflow generation and deployment orchestration
 - Handles conditional deployments based on branch strategies
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from datetime import datetime
@@ -19,6 +19,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 from agents._shared.gradient_client import get_gradient_client
+from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 
 app = FastAPI(
     title="CI/CD Pipeline Agent",
@@ -35,16 +36,22 @@ mcp_client = MCPClient(agent_name="cicd")
 # Gradient AI client for LLM inference (with Langfuse tracing)
 gradient_client = get_gradient_client("cicd")
 
+# Guardrail orchestrator for compliance checks
+guardrail_orchestrator = GuardrailOrchestrator()
+
+
 class PipelineRequest(BaseModel):
     task_id: str
     pipeline_type: str = Field(..., description="github-actions, gitlab-ci, jenkins")
     stages: List[str] = Field(default=["build", "test", "deploy"])
     deployment_strategy: Optional[str] = None
 
+
 class PipelineArtifact(BaseModel):
     file_path: str
     content: str
     stage: str
+
 
 class PipelineResponse(BaseModel):
     pipeline_id: str
@@ -52,7 +59,9 @@ class PipelineResponse(BaseModel):
     validation_status: str
     estimated_tokens: int
     template_reuse_pct: float
+    guardrail_report: GuardrailReport
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
 
 @app.get("/health")
 async def health_check():
@@ -70,6 +79,7 @@ async def health_check():
         },
     }
 
+
 @app.post("/generate", response_model=PipelineResponse)
 async def generate_pipeline(request: PipelineRequest):
     """
@@ -79,14 +89,41 @@ async def generate_pipeline(request: PipelineRequest):
     - Reduces generation tokens by 75% via template customization
     """
     pipeline_id = str(uuid.uuid4())
+    guardrail_report = await guardrail_orchestrator.run(
+        "cicd",
+        task_id=request.task_id,
+        context={
+            "endpoint": "generate",
+            "pipeline_type": request.pipeline_type,
+            "stages": request.stages,
+        },
+    )
+
+    if guardrail_orchestrator.should_block_failures and guardrail_report.status == GuardrailStatus.FAILED:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "Guardrail checks failed",
+                "report": guardrail_report.model_dump(mode="json"),
+            },
+        )
+
     artifacts = generate_pipeline_config(request)
-    
+
+    if guardrail_report.status == GuardrailStatus.FAILED:
+        validation_status = "guardrail_failed"
+    elif guardrail_report.status == GuardrailStatus.WARNINGS:
+        validation_status = "guardrail_warnings"
+    else:
+        validation_status = "passed"
+
     response = PipelineResponse(
         pipeline_id=pipeline_id,
         artifacts=artifacts,
-        validation_status="passed",
+        validation_status=validation_status,
         estimated_tokens=len(request.stages) * 50,
-        template_reuse_pct=0.75
+        template_reuse_pct=0.75,
+        guardrail_report=guardrail_report,
     )
 
     await mcp_client.log_event(
@@ -97,10 +134,14 @@ async def generate_pipeline(request: PipelineRequest):
             "stages": request.stages,
             "deployment_strategy": request.deployment_strategy,
             "artifact_count": len(artifacts),
+            "guardrail_report_id": guardrail_report.report_id,
+            "guardrail_status": guardrail_report.status.value,
+            "guardrail_summary": guardrail_report.summary,
         },
     )
 
     return response
+
 
 @app.post("/deploy")
 async def execute_deployment(deployment: Dict[str, Any]):
@@ -114,6 +155,7 @@ async def execute_deployment(deployment: Dict[str, Any]):
     )
     return {"deployment_id": deployment_id, "status": "in_progress"}
 
+
 def generate_pipeline_config(request: PipelineRequest) -> List[PipelineArtifact]:
     return [
         PipelineArtifact(
@@ -122,6 +164,7 @@ def generate_pipeline_config(request: PipelineRequest) -> List[PipelineArtifact]
             stage="build"
         )
     ]
+
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "8005"))
