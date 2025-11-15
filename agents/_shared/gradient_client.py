@@ -172,19 +172,23 @@ class GradientClient:
         if not self.client:
             raise RuntimeError(f"{self.agent_name}: Gradient client not initialized")
         
+        # Enhance system prompt to request JSON output (Gradient SDK doesn't support response_format)
+        json_instruction = "\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."
+        enhanced_system = (system_prompt or "") + json_instruction
+        
         messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "system", "content": enhanced_system})
         messages.append({"role": "user", "content": prompt})
         
         try:
-            # Call with JSON response format
+            # Call Gradient inference without response_format parameter
+            # Gradient SDK doesn't support OpenAI's response_format parameter
+            # Instead, rely on prompt engineering to request JSON output
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens,
-                response_format=response_format or {"type": "json_object"}
+                max_tokens=max_tokens
             )
             
             content = response.choices[0].message.content
