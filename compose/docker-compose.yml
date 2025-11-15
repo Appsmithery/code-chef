@@ -1,6 +1,6 @@
 services:
   orchestrator:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/orchestrator:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/orchestrator:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/orchestrator/Dockerfile
@@ -31,7 +31,7 @@ services:
       - gateway-mcp
 
   feature-dev:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/feature-dev:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/feature-dev:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/feature-dev/Dockerfile
@@ -56,7 +56,7 @@ services:
       - gateway-mcp
 
   code-review:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/code-review:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/code-review:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/code-review/Dockerfile
@@ -78,7 +78,7 @@ services:
       - gateway-mcp
 
   infrastructure:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/infrastructure:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/infrastructure:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/infrastructure/Dockerfile
@@ -100,7 +100,7 @@ services:
       - gateway-mcp
 
   cicd:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/cicd:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/cicd:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/cicd/Dockerfile
@@ -122,7 +122,7 @@ services:
       - gateway-mcp
 
   documentation:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/documentation:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/documentation:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/documentation/Dockerfile
@@ -144,7 +144,7 @@ services:
       - gateway-mcp
 
   gateway-mcp:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/gateway-mcp:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/gateway-mcp:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/gateway-mcp/Dockerfile
@@ -167,7 +167,7 @@ services:
 
   # RAG Context Manager
   rag-context:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/rag-context:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/rag-context:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/rag/Dockerfile
@@ -196,7 +196,7 @@ services:
 
   # State Persistence Layer
   state-persistence:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop}/state-persistence:${IMAGE_TAG:-local}
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/state-persistence:${IMAGE_TAG:-local}
     build:
       context: ..
       dockerfile: containers/state/Dockerfile

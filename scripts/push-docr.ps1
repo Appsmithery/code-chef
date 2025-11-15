@@ -13,7 +13,7 @@
     Optional explicit tag. Defaults to the current git commit (short SHA).
 
 .PARAMETER Registry
-    DOCR registry slug (default: registry.digitalocean.com/the-shop).
+    DOCR registry slug (default: registry.digitalocean.com/the-shop-infra).
 
 .PARAMETER EnvFile
     Path to the compose env file (default: config/env/.env).
@@ -39,7 +39,7 @@
 
 param(
     [string]$ImageTag,
-    [string]$Registry = "registry.digitalocean.com/the-shop",
+    [string]$Registry,
     [string]$EnvFile = "config/env/.env",
     [string]$ComposeFile = "compose/docker-compose.yml",
     [string[]]$Services,
@@ -56,6 +56,40 @@ function Write-Step { param($Message) Write-Host "`n[STEP] $Message" -Foreground
 function Write-Info { param($Message) Write-Host "  -> $Message" -ForegroundColor Gray }
 function Write-Success { param($Message) Write-Host "  [OK] $Message" -ForegroundColor Green }
 function Write-Failure { param($Message) Write-Host "  [ERROR] $Message" -ForegroundColor Red }
+
+function Get-EnvValue {
+    param(
+        [string]$FilePath,
+        [string]$Key
+    )
+
+    if (-not (Test-Path $FilePath)) { return $null }
+
+    $line = Get-Content $FilePath | Where-Object { $_ -notmatch '^\s*#' } |
+        Where-Object { $_ -match "^\s*$Key\s*=" } |
+        Select-Object -First 1
+
+    if (-not $line) { return $null }
+
+    $parts = $line -split '=', 2
+    if ($parts.Count -lt 2) { return $null }
+    return $parts[1].Trim()
+}
+
+function Resolve-DocrRegistry {
+    param(
+        [string]$ExplicitRegistry,
+        [string]$EnvFile
+    )
+
+    if ($ExplicitRegistry) { return $ExplicitRegistry }
+    if ($env:DOCR_REGISTRY) { return $env:DOCR_REGISTRY }
+
+    $fromFile = Get-EnvValue -FilePath $EnvFile -Key "DOCR_REGISTRY"
+    if ($fromFile) { return $fromFile }
+
+    return "registry.digitalocean.com/the-shop-infra"
+}
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $originalLocation = Get-Location
@@ -83,6 +117,8 @@ try {
         }
         $ImageTag = $gitSha
     }
+
+    $Registry = Resolve-DocrRegistry -ExplicitRegistry $Registry -EnvFile $EnvFile
 
     Write-Info "Using IMAGE_TAG = $ImageTag"
     Write-Info "Using DOCR registry = $Registry"

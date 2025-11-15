@@ -18,7 +18,7 @@ Net: yes, adopt DOCR now. It reduces the gap between local Compose and cloud dep
 
 1. **Name images & tags**
 
-   - Pick a consistent naming scheme such as `registry.digitalocean.com/the-shop/<service>:<git-sha>` for every Dockerfile in `containers/*`.
+   - Pick a consistent naming scheme such as `registry.digitalocean.com/the-shop-infra/<service>:<git-sha>` for every Dockerfile in `containers/*`.
    - Update docker-compose.yml `build` blocks to include `image:` entries that follow this naming convention; Compose will tag them automatically when building.
 
 2. **Bootstrap registry auth for humans**

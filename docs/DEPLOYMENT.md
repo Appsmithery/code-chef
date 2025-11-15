@@ -110,11 +110,11 @@ done
 
 ## DigitalOcean Container Registry (DOCR) Integration
 
-| Item              | Value                                |
-| ----------------- | ------------------------------------ |
-| Default registry  | `registry.digitalocean.com/the-shop` |
-| Compose variables | `DOCR_REGISTRY`, `IMAGE_TAG`         |
-| CI workflow       | `.github/workflows/docr-build.yml`   |
+| Item              | Value                                      |
+| ----------------- | ------------------------------------------ |
+| Default registry  | `registry.digitalocean.com/the-shop-infra` |
+| Compose variables | `DOCR_REGISTRY`, `IMAGE_TAG`               |
+| CI workflow       | `.github/workflows/docr-build.yml`         |
 
 ### Why it matters
 
@@ -132,7 +132,7 @@ pwsh ./scripts/install-doctl.ps1
 pwsh ./scripts/push-docr.ps1
 ```
 
-The helper script wraps everything we now require: it confirms `doctl account get` works with the scoped token, mints a short-lived Docker credential, runs `docker compose build`, and then pushes all services with `IMAGE_TAG=<current git sha>` and `DOCR_REGISTRY=registry.digitalocean.com/the-shop`. Pass `-Services orchestrator,gateway-mcp` to scope the push, or `-SkipBuild` if the images are already built locally.
+The helper script wraps everything we now require: it confirms `doctl account get` works with the scoped token, mints a short-lived Docker credential, runs `docker compose build`, and then pushes all services with `IMAGE_TAG=<current git sha>` and `DOCR_REGISTRY=registry.digitalocean.com/the-shop-infra`. Pass `-Services orchestrator,gateway-mcp` to scope the push, or `-SkipBuild` if the images are already built locally.
 
 Manual fallback (useful on hosts without PowerShell 7):
 
@@ -141,7 +141,7 @@ doctl registry login
 # or, when doctl token validation fails:
 docker login registry.digitalocean.com
 docker compose build orchestrator
-IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/the-shop docker compose push orchestrator
+IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/the-shop-infra docker compose push orchestrator
 ```
 
 > Replace the last line with the services you need to publish. Compose uses the `image:` field you set earlier, so both `build` and `push` reuse the same tag.
