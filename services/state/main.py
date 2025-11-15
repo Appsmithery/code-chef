@@ -116,6 +116,27 @@ class Workflow(BaseModel):
     completed_at: Optional[datetime]
 
 
+class ComplianceRunCreate(BaseModel):
+    """Create compliance/guardrail run"""
+
+    run_id: str
+    agent: str
+    status: str
+    summary: Dict[str, int]
+    checks: List[Dict[str, Any]]
+    started_at: datetime
+    completed_at: datetime
+    task_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class ComplianceRun(ComplianceRunCreate):
+    """Stored compliance run representation"""
+
+    id: int
+    created_at: datetime
+
+
 # Health endpoint
 @app.get("/health")
 async def health_check():
@@ -409,6 +430,113 @@ async def get_workflow(workflow_id: str):
         if conn:
             conn.close()
         raise HTTPException(status_code=500, detail=f"Workflow retrieval failed: {str(e)}")
+
+
+@app.post("/compliance", response_model=ComplianceRun)
+async def create_compliance_run(run: ComplianceRunCreate):
+    """Create and persist a compliance guardrail run."""
+
+    conn = get_db_connection()
+    if not conn:
+        raise HTTPException(status_code=503, detail="Database connection failed")
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO compliance_runs (run_id, agent, task_id, status, summary, checks, metadata, started_at, completed_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING *
+            """,
+            (
+                run.run_id,
+                run.agent,
+                run.task_id,
+                run.status,
+                Json(run.summary),
+                Json(run.checks),
+                Json(run.metadata) if run.metadata is not None else None,
+                run.started_at,
+                run.completed_at,
+            ),
+        )
+        result = cursor.fetchone()
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return ComplianceRun(**result)
+    except Exception as e:
+        if conn:
+            conn.close()
+        raise HTTPException(status_code=500, detail=f"Compliance run creation failed: {str(e)}")
+
+
+@app.get("/compliance/{run_id}", response_model=ComplianceRun)
+async def get_compliance_run(run_id: str):
+    """Retrieve a compliance run by its identifier."""
+
+    conn = get_db_connection()
+    if not conn:
+        raise HTTPException(status_code=503, detail="Database connection failed")
+
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM compliance_runs WHERE run_id = %s", (run_id,))
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not result:
+            raise HTTPException(status_code=404, detail="Compliance run not found")
+
+        return ComplianceRun(**result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.close()
+        raise HTTPException(status_code=500, detail=f"Compliance run retrieval failed: {str(e)}")
+
+
+@app.get("/compliance", response_model=List[ComplianceRun])
+async def list_compliance_runs(agent: Optional[str] = None, status: Optional[str] = None, limit: int = 100):
+    """List compliance runs with optional agent and status filters."""
+
+    conn = get_db_connection()
+    if not conn:
+        raise HTTPException(status_code=503, detail="Database connection failed")
+
+    try:
+        cursor = conn.cursor()
+
+        query = "SELECT * FROM compliance_runs"
+        clauses = []
+        values: List[Any] = []
+
+        if agent:
+            clauses.append("agent = %s")
+            values.append(agent)
+        if status:
+            clauses.append("status = %s")
+            values.append(status)
+
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+
+        query += " ORDER BY created_at DESC LIMIT %s"
+        values.append(limit)
+
+        cursor.execute(query, values)
+        results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        return [ComplianceRun(**row) for row in results]
+    except Exception as e:
+        if conn:
+            conn.close()
+        raise HTTPException(status_code=500, detail=f"Compliance run listing failed: {str(e)}")
 
 
 if __name__ == "__main__":
