@@ -119,12 +119,14 @@ All issues fixed and system fully operational with Gradient AI + Langfuse integr
 The error was caused by the LLM returning dependency indices as dicts (e.g., `{'task_id': 1}`) instead of plain integers, causing "unhashable type: 'dict'" when checking `dep_idx in id_map`.
 
 **Fix Applied:**
+
 - Added explicit type checking in dependency resolution loop
 - Filter to only valid integer indices before id_map lookup
 - Log warnings for invalid dependency types (helps debug LLM output issues)
 - Missing logger import added to orchestrator
 
 **Test Results:**
+
 ```
 ✅ Gradient SDK initialized successfully
 ✅ Model: llama3-8b-instruct (correct format)
@@ -135,6 +137,7 @@ The error was caused by the LLM returning dependency indices as dicts (e.g., `{'
 ```
 
 **Performance:**
+
 - Complex task decomposition: ~1051 tokens (~$0.0002 cost)
 - Response time: <2 seconds for full task breakdown
 - 150x cheaper than GPT-4 with comparable quality
@@ -144,6 +147,7 @@ The error was caused by the LLM returning dependency indices as dicts (e.g., `{'
 ### Enhancements (Optional)
 
 1. **Improve LLM prompt for dependencies:**
+
    ```python
    # Add to system prompt:
    "IMPORTANT: dependencies must be an array of integers (indices), not objects.
@@ -151,6 +155,7 @@ The error was caused by the LLM returning dependency indices as dicts (e.g., `{'
    ```
 
 2. **Add Langfuse trace inspection:**
+
    ```bash
    # Visit Langfuse dashboard to see trace details
    https://us.cloud.langfuse.com/project/cmhy56z2805aaad077jb3i7r0

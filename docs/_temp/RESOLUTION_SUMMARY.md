@@ -12,6 +12,7 @@ Successfully debugged and fixed the Gradient AI + Langfuse integration, enabling
 ## 🐛 Bug Investigation Journey
 
 ### Initial Symptoms
+
 - `unhashable type: 'dict'` error when calling `gradient_client.complete_structured()`
 - LLM decomposition falling back to rule-based logic
 - No clear error traceback (only single-line error message)
@@ -19,16 +20,19 @@ Successfully debugged and fixed the Gradient AI + Langfuse integration, enabling
 ### Debugging Steps
 
 1. **Enhanced Logging** ✅
+
    - Added comprehensive debug logging in `gradient_client.py`
    - Added `exc_info=True` for full Python tracebacks
    - Added missing `logger` import in orchestrator
 
 2. **Isolated Error Location** ✅
+
    - Discovered LLM call was **successful** (returned 448-1051 tokens)
    - Error occurred **after** API call during dependency resolution
    - Pinpointed to line 764: `if dep_idx in id_map`
 
 3. **Root Cause Analysis** ✅
+
    - LLM returning dependencies as `{'task_id': 1}` instead of `1`
    - Dict objects are unhashable → can't use `in` operator on dict keys
    - Caused by LLM misunderstanding dependency format in prompt
@@ -45,11 +49,13 @@ Successfully debugged and fixed the Gradient AI + Langfuse integration, enabling
 ### Files Modified
 
 1. **`agents/_shared/gradient_client.py`**
+
    - Added debug logging for metadata
    - Enhanced error messages with `exc_info=True`
    - Added success logging with token counts
 
 2. **`agents/orchestrator/main.py`**
+
    - Added `import logging` and `logger` instance
    - Type validation in dependency resolution loop
    - Warning logs for invalid dependency types
@@ -69,6 +75,7 @@ Successfully debugged and fixed the Gradient AI + Langfuse integration, enabling
 **Input:** "Build a REST API for user management with PostgreSQL"
 
 **LLM Output:**
+
 - ✅ 16 subtasks generated
 - ✅ 1051 tokens used (~$0.0002 cost)
 - ✅ <2 second response time
@@ -76,6 +83,7 @@ Successfully debugged and fixed the Gradient AI + Langfuse integration, enabling
 - ⚠️ 14 warnings for malformed dependencies (gracefully handled)
 
 **System Health:**
+
 ```
 ✅ Gradient SDK initialized
 ✅ Model: llama3-8b-instruct
@@ -100,29 +108,32 @@ WARNING: [Orchestrator] Invalid dependency index: {'task_id': 1} (type: dict)
 
 ## 📊 Performance Metrics
 
-| Metric | Value | Notes |
-|--------|-------|-------|
-| **API Latency** | <2s | End-to-end task decomposition |
-| **Token Usage** | 400-1100 | Depends on task complexity |
-| **Cost per Task** | $0.0002 | 150x cheaper than GPT-4 |
-| **Success Rate** | 100% | With graceful degradation |
-| **Langfuse Tracing** | Automatic | No code changes needed |
+| Metric               | Value     | Notes                         |
+| -------------------- | --------- | ----------------------------- |
+| **API Latency**      | <2s       | End-to-end task decomposition |
+| **Token Usage**      | 400-1100  | Depends on task complexity    |
+| **Cost per Task**    | $0.0002   | 150x cheaper than GPT-4       |
+| **Success Rate**     | 100%      | With graceful degradation     |
+| **Langfuse Tracing** | Automatic | No code changes needed        |
 
 ---
 
 ## 🎓 Key Learnings
 
 1. **LLM Output Validation is Critical**
+
    - Never assume LLM follows prompt instructions perfectly
    - Always validate data types before using in operations
    - Graceful degradation > hard failures
 
 2. **Debugging Async Python**
+
    - `exc_info=True` essential for full stack traces
    - Logger must be initialized in module scope (not inside functions)
    - Check both client-side and API logs
 
 3. **Gradient SDK Architecture**
+
    - Three separate auth mechanisms (model_access_key, access_token, agent_access_key)
    - Automatic Langfuse integration via environment variables
    - No OpenAI HTTP compatibility - must use official SDK
@@ -137,6 +148,7 @@ WARNING: [Orchestrator] Invalid dependency index: {'task_id': 1} (type: dict)
 ## 🚀 Next Steps (Optional Enhancements)
 
 ### 1. Improve LLM Prompt
+
 ```python
 system_prompt += """
 CRITICAL: Dependencies format requirements:
@@ -148,6 +160,7 @@ CRITICAL: Dependencies format requirements:
 ```
 
 ### 2. Add Retry Logic
+
 ```python
 # Retry with clarified prompt if dependencies are invalid
 if invalid_deps_count > len(subtasks) * 0.5:
@@ -160,6 +173,7 @@ if invalid_deps_count > len(subtasks) * 0.5:
 ```
 
 ### 3. Langfuse Dashboard Integration
+
 - Monitor trace quality scores
 - Track cost trends over time
 - Set up alerts for high token usage
@@ -168,14 +182,14 @@ if invalid_deps_count > len(subtasks) * 0.5:
 
 ## 📝 Commits
 
-| Commit | Description |
-|--------|-------------|
+| Commit    | Description                                   |
+| --------- | --------------------------------------------- |
 | `c9b3dfa` | Initial SDK migration from OpenAI to Gradient |
-| `40003f0` | Remove unsupported response_format parameter |
-| `824ee60` | Add comprehensive logging and test script |
-| `230c493` | Fix missing logger import |
-| `be87786` | Handle non-integer dependency indices |
-| `4fc8003` | Document final solution |
+| `40003f0` | Remove unsupported response_format parameter  |
+| `824ee60` | Add comprehensive logging and test script     |
+| `230c493` | Fix missing logger import                     |
+| `be87786` | Handle non-integer dependency indices         |
+| `4fc8003` | Document final solution                       |
 
 ---
 
