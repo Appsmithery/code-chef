@@ -97,13 +97,25 @@ try {
         throw "docker compose plugin is unavailable. Upgrade Docker to v2.20+ or install compose plugin."
     }
 
-    if (-not (Get-Command doctl -ErrorAction SilentlyContinue)) {
+    $doctlCmd = Get-Command doctl -ErrorAction SilentlyContinue
+    if (-not $doctlCmd) {
+        $localDoctl = Join-Path $repoRoot ".bin/doctl/doctl.exe"
+        if (Test-Path $localDoctl) {
+            Set-Alias -Name doctl -Value $localDoctl -Scope Script
+            $doctlCmd = Get-Command doctl -ErrorAction SilentlyContinue
+        }
+    }
+
+    if (-not $doctlCmd) {
         throw "doctl CLI not found. Run scripts/install-doctl.ps1 or install it manually."
     }
 
     if (-not $SkipDoctlAccountCheck) {
         Write-Step "Validating DigitalOcean token scopes (doctl account get)..."
         doctl account get | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "doctl account get failed. Ensure the token has account:read scope."
+        }
         Write-Success "DigitalOcean token accepted"
     } else {
         Write-Info "Skipping doctl account scope check"
@@ -112,31 +124,34 @@ try {
     if (-not $SkipRegistryLogin) {
         Write-Step "Minting short-lived Docker credential via doctl registry login"
         doctl registry login --expiry-seconds $RegistryLoginTtlSeconds | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            throw "doctl registry login failed. Verify the token has registry write scope."
+        }
         Write-Success "Docker credential stored (expires in $RegistryLoginTtlSeconds seconds)"
     } else {
         Write-Info "Skipping doctl registry login"
     }
 
-    if (-not $SkipBuild) {
-        Write-Step "Building images with docker compose"
-        $buildArgs = @("compose", "--env-file", $EnvFile, "-f", $ComposeFile, "build")
-        if ($Services) { $buildArgs += $Services }
-        & docker @buildArgs
-        if ($LASTEXITCODE -ne 0) {
-            throw "docker compose build failed"
-        }
-        Write-Success "Build completed"
-    } else {
-        Write-Info "Skipping build phase"
-    }
-
-    Write-Step "Pushing images to $Registry with tag $ImageTag"
     $previousImageTag = $env:IMAGE_TAG
     $previousRegistry = $env:DOCR_REGISTRY
     $env:IMAGE_TAG = $ImageTag
     $env:DOCR_REGISTRY = $Registry
 
     try {
+        if (-not $SkipBuild) {
+            Write-Step "Building images with docker compose"
+            $buildArgs = @("compose", "--env-file", $EnvFile, "-f", $ComposeFile, "build")
+            if ($Services) { $buildArgs += $Services }
+            & docker @buildArgs
+            if ($LASTEXITCODE -ne 0) {
+                throw "docker compose build failed"
+            }
+            Write-Success "Build completed"
+        } else {
+            Write-Info "Skipping build phase"
+        }
+
+        Write-Step "Pushing images to $Registry with tag $ImageTag"
         $pushArgs = @("compose", "--env-file", $EnvFile, "-f", $ComposeFile, "push")
         if ($Services) { $pushArgs += $Services }
         & docker @pushArgs
