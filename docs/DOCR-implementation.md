@@ -56,7 +56,7 @@ Net: yes, adopt DOCR now. It reduces the gap between local Compose and cloud dep
 
 4. **Store credentials for automation**
 
-   - Add `DIGITALOCEAN_ACCESS_TOKEN`, `REGISTRY_NAME`, `CLUSTER_NAME`, and the Base64 content of `docker-config.json` as GitHub Actions secrets.
+   - Add `DIGITALOCEAN_ACCESS_TOKEN`, `CLUSTER_NAME`, and the Base64 content of `docker-config.json` as GitHub Actions secrets. The registry namespace is now hard-coded as `the-shop-infra`, so no additional secret is needed for it.
    - Optionally keep the full `docker-config.json` in the-shop for local scripts but never commit it.
 
 5. **Author CI workflow to build & push**
@@ -65,9 +65,10 @@ Net: yes, adopt DOCR now. It reduces the gap between local Compose and cloud dep
      1. Checks out the repo.
      2. Uses `digitalocean/action-doctl@v2` with `${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}`.
      3. Runs `docker build` for each agent (use a build matrix to parallelize).
-     4. Tags as `registry.digitalocean.com/${{ secrets.REGISTRY_NAME }}/<service>:${GITHUB_SHA}`.
-     5. Calls `doctl registry login --expiry-seconds 1200`.
-     6. Pushes each tag.
+
+   4. Tags as `registry.digitalocean.com/the-shop-infra/<service>:${GITHUB_SHA}`.
+   5. Calls `doctl registry login --expiry-seconds 1200`.
+   6. Pushes each tag.
 
 6. **Gate deployments on pushed images**
 
