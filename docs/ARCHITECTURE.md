@@ -85,6 +85,15 @@ agents/
 - **CI/CD Agent:** Pipeline synthesis, workflow execution, policy enforcement
 - **Documentation Agent:** Technical documentation generation and maintenance
 
+**Shared Modules (`agents/_shared/`):**
+
+- `mcp_client.py` - Legacy MCP HTTP gateway client (deprecated)
+- `mcp_discovery.py` - Real-time MCP server discovery via Docker MCP Toolkit
+- `mcp_tool_client.py` - Direct MCP tool invocation via stdio transport (replaces HTTP calls)
+- `linear_client.py` - Direct Linear API access using Linear SDK
+- `gradient_client.py` - DigitalOcean Gradient AI LLM integration
+- `guardrail.py` - Shared validation and safety checks
+
 **Configuration:**
 
 - `agents-manifest.json` - Agent profiles with MCP tool allocations
@@ -93,29 +102,39 @@ agents/
 
 **Integration Points:**
 
-- MCP Gateway (`gateway-mcp:8000`) for tool invocation
-- RAG Context Manager (`rag-context:8007`) for semantic search
-- State Persistence (`state-persistence:8008`) for workflow state
+- **MCP Tools:** Direct stdio invocation via `mcp_tool_client.py` and Docker MCP Toolkit
+- **Linear API:** Direct SDK access via `linear_client.py` (OAuth tokens from gateway)
+- **RAG Context:** Semantic search via `rag-context:8007`
+- **State Persistence:** Workflow state via `state-persistence:8008`
+- **LLM Inference:** DigitalOcean Gradient AI via `gradient_client.py`
 
 ---
 
-### 2. MCP Gateway (`/mcp/gateway/`)
+### 2. MCP Integration (`/mcp/`)
 
-**Purpose:** Central Model Context Protocol gateway exposing 150+ tools from 17 MCP servers.
+**Purpose:** Model Context Protocol integration providing 150+ tools from 17 MCP servers via direct stdio transport and Linear OAuth gateway.
 
-**Available Servers (17):**
+#### MCP Servers (17 available via Docker MCP Toolkit)
 
 - context7 (2 tools), dockerhub (13), fetch (1), gitmcp (5), gmail-mcp (3)
 - google-maps (8), hugging-face (9), memory (9), next-devtools (5)
 - notion (19), perplexity-ask (3), playwright (21), rust-filesystem (24)
 - sequentialthinking (1), stripe (22), time (2), youtube_transcript (3)
 
+#### Gateway (`/mcp/gateway/`) - Linear OAuth Only
+
+**Purpose:** Node.js Express service providing Linear OAuth integration and API access.
+
 **Endpoints:**
 
-- `GET /tools` - List all available tools
-- `POST /tools/{server}/{tool}` - Invoke specific tool
-- `GET /servers` - List server status
+- `GET /oauth/linear/install` - Initiate Linear OAuth flow
+- `GET /oauth/linear/callback` - Handle OAuth callback
+- `GET /oauth/linear/status` - Check token status
+- `POST /api/linear-issues` - Fetch Linear issues
+- `GET /api/linear-project/:projectId` - Get project roadmap
 - `GET /health` - Gateway health check
+
+**Note:** MCP tool invocation now happens directly via Python SDK (`agents/_shared/mcp_tool_client.py`) using stdio transport, not through HTTP gateway.
 
 ---
 
@@ -177,18 +196,87 @@ agents/
 
 ## Integration Points
 
-### Agent MCP Gateway
+### MCP Tool Access Architecture
+
+**New Pattern (Direct Stdio):**
 
 ```
-Agent (FastAPI)  HTTP  MCP Gateway  stdio  MCP Server  Tool Execution
+Python Agent  mcp_tool_client.py  Docker MCP Toolkit  stdio  MCP Server Container  Tool Execution
+```
+
+**Legacy Pattern (Deprecated):**
+
+```
+Agent (FastAPI)  HTTP  MCP Gateway  [NOT IMPLEMENTED]
+```
+
+**Implementation:**
+
+Agents now use `agents/_shared/mcp_tool_client.py` for direct MCP tool invocation:
+
+```python
+from agents._shared.mcp_tool_client import MCPToolClient
+
+# Initialize with server name (e.g., "memory", "rust-filesystem")
+mcp_client = MCPToolClient(server_name="memory")
+
+# Invoke tool directly via stdio
+result = await mcp_client.invoke_tool_simple(
+    tool_name="create_entities",
+    arguments={"entities": [{"name": "user123", "entityType": "person"}]}
+)
+```
+
+**Server Discovery:**
+
+Agents can discover available MCP servers dynamically:
+
+```python
+from agents._shared.mcp_discovery import MCPToolkitDiscovery
+
+discovery = MCPToolkitDiscovery()
+servers = await discovery.discover_servers()
+# Returns: [{"name": "memory", "tools": [...]}, {"name": "rust-filesystem", ...}, ...]
+```
+
+### Linear Integration
+
+**OAuth Flow (Node.js Gateway):**
+
+```
+User  Browser  gateway-mcp:8000/oauth/linear/install  Linear OAuth  Token Storage
+```
+
+**Direct API Access (Python SDK):**
+
+```
+Python Agent  linear_client.py  Linear SDK  Linear GraphQL API
+```
+
+**Implementation:**
+
+```python
+from agents._shared.linear_client import LinearIntegration
+
+linear = LinearIntegration()  # Uses LINEAR_API_KEY from environment
+
+# Fetch issues
+issues = await linear.fetch_issues(team_id="TEAM123", limit=50)
+
+# Create issue
+issue = await linear.create_issue(
+    team_id="TEAM123",
+    title="Feature Request",
+    description="Add support for..."
+)
 ```
 
 **Tool Allocation:**
 
-- **Orchestrator:** memory, notion, time, sequentialthinking, prometheus
+- **Orchestrator:** memory, notion, time, sequentialthinking, linear
 - **Feature-Dev:** rust-filesystem, gitmcp, playwright, hugging-face, next-devtools
 - **Code-Review:** gitmcp, rust-filesystem, hugging-face, playwright
-- **Infrastructure:** dockerhub, rust-filesystem, gitmcp, notion, prometheus
+- **Infrastructure:** dockerhub, rust-filesystem, gitmcp, notion
 - **CI/CD:** gitmcp, rust-filesystem, dockerhub, playwright, notion
 - **Documentation:** rust-filesystem, gitmcp, notion, hugging-face, playwright
 
@@ -216,13 +304,14 @@ Agent (FastAPI)  HTTP  MCP Gateway  stdio  MCP Server  Tool Execution
 
 ```
 Internet  Caddy (443)  Docker Compose Stack
-   gateway-mcp (8000)
-   orchestrator (8001)
-   6 specialized agents (8002-8006)
+   gateway-mcp (8000) - Linear OAuth only
+   orchestrator (8001) - Direct MCP + Linear SDK
+   6 specialized agents (8002-8006) - Direct MCP + Linear SDK
    rag-context (8007)
    state-persistence (8008)
    qdrant (6333, 6334)
    postgres (5432)
+   Docker MCP Toolkit (stdio communication with agents)
 ```
 
 ### Local Development
@@ -247,7 +336,7 @@ http://localhost:8007/query
 
 ## Data Flow
 
-### Task Execution Flow
+### Task Execution Flow (Updated)
 
 ```
 User Request  Orchestrator (/orchestrate)
@@ -256,11 +345,27 @@ User Request  Orchestrator (/orchestrate)
    State Persistence (create task)
    Agent Selection
    Agent Invocation (HTTP POST)
-   MCP Tool Invocation
+   MCP Tool Invocation (direct stdio via mcp_tool_client.py)
+   Linear API Access (direct SDK via linear_client.py)
    RAG Context Query
    Result Generation
    State Update
    User Response
+```
+
+### MCP Tool Invocation Flow
+
+```
+Agent Code
+   MCPToolClient.invoke_tool_simple()
+      subprocess.Popen(['docker', 'mcp', 'run', 'server_name'])
+         Docker MCP Toolkit
+            MCP Server Container (stdio)
+               Tool Execution
+            JSON-RPC Response
+         Parse Response
+      Return Result
+   Agent Process Result
 ```
 
 ---
