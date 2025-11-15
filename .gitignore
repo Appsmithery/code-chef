@@ -6,6 +6,9 @@ secrets.json
 *.pem
 config/env/secrets/*.txt
 config/env/secrets/*.env
+config/env/.env
+config/env/.env.*
+!config/env/.env.template
 
 # Python
 __pycache__/
@@ -36,6 +39,7 @@ PIPFILE.lock
 venv/
 ENV/
 env/
+!config/env/
 .venv
 
 # IDEs

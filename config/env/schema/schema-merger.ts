@@ -27,8 +27,8 @@ export function discoverSchemas(options: {
   submoduleParent?: string;
 }): { core: SecretsSchema | null; overlays: Map<string, SecretsSchema> } {
   const {
-    coreSchemaPath = 'config/secrets.core.json',
-    overlaysDir = 'config/secrets.overlays',
+    coreSchemaPath = 'config/env/schema/secrets.core.json',
+    overlaysDir = 'config/env/schema/overlays',
     submoduleParent = '..',
   } = options;
 

@@ -64,8 +64,8 @@ async function validateSecrets(): Promise<void> {
 
   // Discover schemas
   const { core, overlays } = discoverSchemas({
-    coreSchemaPath: 'config/secrets.core.json',
-    overlaysDir: 'config/secrets.overlays',
+    coreSchemaPath: 'config/env/schema/secrets.core.json',
+    overlaysDir: 'config/env/schema/overlays',
   });
 
   // Add CLI-specified overlays
@@ -121,7 +121,7 @@ async function validateSecrets(): Promise<void> {
     console.log('=== Secrets Validation (Merged Schema) ===\n');
 
     console.log('Schema Sources:');
-    console.log(`  Core: config/secrets.core.json`);
+    console.log(`  Core: config/env/schema/secrets.core.json`);
     console.log(`  Overlays: ${overlays.size} discovered`);
     for (const name of overlays.keys()) {
       console.log(`    - ${name}`);

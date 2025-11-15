@@ -48,7 +48,7 @@ git clone https://github.com/Appsmithery/Dev-Tools.git
 cd Dev-Tools
 
 # Configure environment
-cp config/env/.env.example config/env/.env
+cp config/env/.env.template config/env/.env
 # Edit .env with your settings
 
 # Make scripts executable (Linux/Mac)

@@ -228,8 +228,8 @@ function sortUnique(values: Iterable<string>): string[] {
 function main(): void {
   // Replace the old schema loading with merged schema
   const { core, overlays } = discoverSchemas({
-    coreSchemaPath: 'config/secrets.core.json',
-    overlaysDir: 'config/secrets.overlays',
+    coreSchemaPath: 'config/env/schema/secrets.core.json',
+    overlaysDir: 'config/env/schema/overlays',
   });
 
   const mergedSchema = mergeSchemas(core, overlays);
