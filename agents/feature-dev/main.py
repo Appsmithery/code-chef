@@ -231,7 +231,7 @@ async def query_rag_context(description: str) -> List[Dict[str, Any]]:
                 f"{RAG_SERVICE_URL}/query",
                 json={
                     "query": description,
-                    "collection": "code-knowledge",
+                    "collection": "the-shop",
                     "n_results": 5
                 },
                 timeout=10.0
@@ -264,7 +264,7 @@ async def query_mock_rag(description: str) -> List[Dict[str, Any]]:
                 f"{RAG_SERVICE_URL}/query/mock",
                 json={
                     "query": description,
-                    "collection": "code-knowledge",
+                    "collection": "the-shop",
                     "n_results": 5
                 },
                 timeout=5.0

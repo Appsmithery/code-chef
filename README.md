@@ -326,9 +326,14 @@ Edit `config/rag/vectordb.config.yaml`:
 ```yaml
 vectordb:
   type: "qdrant"
-  host: "localhost"
-  port: 6333 # HTTP API
-  grpc_port: 6334 # gRPC API
+  mode: "cloud"
+  url_env: "QDRANT_URL"
+  api_key_env: "QDRANT_API_KEY"
+  default_collection: "the-shop"
+
+embeddings:
+  provider: "digitalocean-gradient"
+  model_env: "GRADIENT_EMBEDDING_MODEL"
 ```
 
 ## Documentation

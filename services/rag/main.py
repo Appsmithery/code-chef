@@ -24,7 +24,7 @@ QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
 QDRANT_PORT = int(os.getenv("QDRANT_PORT", "6333"))
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-QDRANT_COLLECTION_DEFAULT = os.getenv("QDRANT_COLLECTION", "code-knowledge")
+QDRANT_COLLECTION_DEFAULT = os.getenv("QDRANT_COLLECTION", "the-shop")
 QDRANT_VECTOR_SIZE = int(os.getenv("QDRANT_VECTOR_SIZE", "1536"))
 QDRANT_DISTANCE = os.getenv("QDRANT_DISTANCE", "cosine")
 

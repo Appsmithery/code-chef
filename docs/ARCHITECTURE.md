@@ -123,8 +123,8 @@ agents/
 
 #### RAG Context Manager (`/services/rag/main.py` - port 8007)
 
-- **Vector Search:** Qdrant integration for semantic code search
-- **Collections:** `code-knowledge`, `documentation`, `workflows`
+- **Vector Search:** Qdrant Cloud integration for semantic code search
+- **Collections:** `the-shop` (primary production KB), `documentation`
 - **Endpoints:** `/query`, `/index`, `/collections`
 
 #### State Persistence (`/services/state/main.py` - port 8008)
