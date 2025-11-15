@@ -313,7 +313,7 @@ async def orchestrate_task(request: TaskRequest):
             "agent": "orchestrator",
             "tools_validated": all(v["available"] for v in validation_results.values()),
             "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status.value,
+            "guardrail_status": guardrail_report.status,
         },
     )
     

@@ -121,7 +121,7 @@ async def generate_documentation(request: DocRequest):
             "artifact_count": len(artifacts),
             "target_audience": request.target_audience,
             "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status.value,
+            "guardrail_status": guardrail_report.status,
         },
     )
 

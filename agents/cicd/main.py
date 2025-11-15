@@ -135,7 +135,7 @@ async def generate_pipeline(request: PipelineRequest):
             "deployment_strategy": request.deployment_strategy,
             "artifact_count": len(artifacts),
             "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status.value,
+            "guardrail_status": guardrail_report.status,
             "guardrail_summary": guardrail_report.summary,
         },
     )
