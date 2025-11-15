@@ -15,11 +15,16 @@ from datetime import datetime
 import uvicorn
 import os
 import httpx
+import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from agents._shared.mcp_client import MCPClient
 from agents._shared.gradient_client import get_gradient_client
 from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Feature Development Agent",
@@ -386,6 +391,8 @@ Project Context: {request.project_context or "General Python project"}
 Generate implementation files with proper error handling, type hints, and docstrings."""
     
     try:
+        logger.info(f"[Feature-Dev] Attempting LLM-powered code generation for feature {feature_id}")
+        
         # Call Gradient AI with Langfuse tracing
         result = await gradient_client.complete_structured(
             prompt=user_prompt,
@@ -398,6 +405,8 @@ Generate implementation files with proper error handling, type hints, and docstr
                 "rag_contexts": len(rag_context)
             }
         )
+        
+        logger.info(f"[Feature-Dev] LLM generation successful: {result.get('tokens', 0)} tokens used")
         
         # Parse LLM response into CodeArtifact objects
         llm_files = result["content"].get("files", [])
@@ -416,7 +425,8 @@ Generate implementation files with proper error handling, type hints, and docstr
         return artifacts
         
     except Exception as e:
-        print(f"[ERROR] LLM generation failed: {e}, falling back to mock")
+        logger.error(f"[Feature-Dev] LLM generation failed: {e}", exc_info=True)
+        print(f"[ERROR] LLM generation failed: {type(e).__name__}: {e}, falling back to mock")
         return generate_code_artifacts(request, rag_context)
 
 
