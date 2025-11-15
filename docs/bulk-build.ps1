@@ -43,7 +43,10 @@ if ($Push) {
     $pushArgs = @("--env-file", $EnvFile, "-f", $ComposeFile, "push")
     Write-Info "Running: docker compose $($pushArgs -join ' ')"
     docker compose @pushArgs
-    if ($LASTEXITCODE -ne 0) { Write-Err "Push failed."; exit $LASTEXITCODE }
+    if ($LASTEXITCODE -ne 0) {
+        Write-Err "Push failed. If you encountered a 401/authorization error, run 'docker login registry.digitalocean.com' (use your DO email + PAT) and rerun this script."
+        exit $LASTEXITCODE
+    }
 }
 
 Write-Info "Done."

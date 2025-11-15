@@ -28,6 +28,11 @@ Net: yes, adopt DOCR now. It reduces the gap between local Compose and cloud dep
      doctl registry login
      ```
      This writes the same credentials found in `docker-config.json` and keeps local Docker ready for pushes/pulls (per DO doc).
+   - **Fallback when `doctl` fails**: DigitalOcean also supports the plain Docker login flow. Run:
+     ```powershell
+     docker login registry.digitalocean.com
+     ```
+     Supply the DO account username (e.g., `alex@appsmithery.co`) and a DO API token/PAT when prompted. Docker caches these credentials in the current user’s credential store, so subsequent `docker compose push` executions succeed even if `doctl` cannot validate the token.
 
 3. **Create Kubernetes pull secret once**
 
