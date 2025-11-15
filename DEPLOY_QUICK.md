@@ -1,5 +1,48 @@
 # Hybrid Architecture Deployment Guide
 
+## Emergency: If Everything is Hanging
+
+Run these from **local PowerShell** (doesn't require SSH to work):
+
+### 1. Reboot Droplet via DigitalOcean API
+
+```powershell
+$env:DIGITALOCEAN_TOKEN = "dop_v1_386655ab63501ca37c093c03e768c4c67fcc49bac5facd3505b316e91f924857"
+
+# Get droplet ID
+$droplets = Invoke-RestMethod -Uri "https://api.digitalocean.com/v2/droplets" -Headers @{Authorization="Bearer $env:DIGITALOCEAN_TOKEN"}
+$droplet = $droplets.droplets | Where-Object { $_.networks.v4.ip_address -contains "45.55.173.72" }
+
+# Power cycle (soft reboot)
+Invoke-RestMethod -Uri "https://api.digitalocean.com/v2/droplets/$($droplet.id)/actions" `
+  -Method Post `
+  -Headers @{Authorization="Bearer $env:DIGITALOCEAN_TOKEN"; "Content-Type"="application/json"} `
+  -Body '{"type":"reboot"}'
+
+Write-Host "Droplet rebooting... wait 2-3 minutes then test: curl http://45.55.173.72:8000/health"
+```
+
+### 2. Check Droplet Status
+
+```powershell
+$env:DIGITALOCEAN_TOKEN = "dop_v1_386655ab63501ca37c093c03e768c4c67fcc49bac5facd3505b316e91f924857"
+$droplets = Invoke-RestMethod -Uri "https://api.digitalocean.com/v2/droplets" -Headers @{Authorization="Bearer $env:DIGITALOCEAN_TOKEN"}
+$droplet = $droplets.droplets | Where-Object { $_.networks.v4.ip_address -contains "45.55.173.72" }
+Write-Host "Status: $($droplet.status)" -ForegroundColor Cyan
+Write-Host "Memory: $($droplet.memory)MB" -ForegroundColor Gray
+Write-Host "Disk: $($droplet.disk)GB" -ForegroundColor Gray
+```
+
+### 3. Use DigitalOcean Web Console (Most Reliable)
+
+1. Go to: https://cloud.digitalocean.com/droplets
+2. Click on droplet with IP `45.55.173.72`
+3. Click "Access" tab → "Launch Droplet Console"
+4. Login with root credentials
+5. Run deployment commands directly in browser terminal
+
+---
+
 ## Quick Deploy via VS Code Remote SSH
 
 Since SSH commands from PowerShell are freezing, use VS Code's built-in Remote SSH feature:
@@ -76,6 +119,96 @@ Invoke-RestMethod https://zqavbvjov22wijsmbqtkqy4r.agents.do-ai.run/health
 - Prometheus: Port 9090
 
 ## Troubleshooting
+
+### VS Code Remote SSH Connection Hanging
+
+If VS Code Remote SSH is hanging on "Initializing VS Code Server":
+
+**Option 1: Restart SSH Service on Droplet (from local PowerShell)**
+
+```powershell
+# Force close SSH connection
+ssh root@45.55.173.72 "systemctl restart sshd" &
+Start-Sleep 2
+# Kill local SSH processes
+Get-Process ssh -ErrorAction SilentlyContinue | Stop-Process -Force
+```
+
+**Option 2: Restart Droplet (DigitalOcean Dashboard)**
+
+1. Go to https://cloud.digitalocean.com/droplets
+2. Click on `mcp-gateway` droplet
+3. Click "Power" → "Power Cycle" (NOT destroy!)
+4. Wait 2-3 minutes for restart
+5. Retry SSH connection
+
+**Option 3: Restart Docker Desktop on Droplet (via DigitalOcean Console)**
+
+1. Go to droplet in DigitalOcean dashboard
+2. Click "Access" → "Launch Droplet Console"
+3. Login as root
+4. Run:
+
+```bash
+systemctl --user restart docker-desktop
+systemctl --user status docker-desktop
+docker ps
+```
+
+**Option 4: Clean Docker State**
+
+```bash
+# Via DigitalOcean Console
+systemctl --user stop docker-desktop
+rm -rf ~/.docker/desktop
+systemctl --user start docker-desktop
+
+# Wait for Docker to start (30-60 seconds)
+docker version
+```
+
+**Option 5: Nuclear - Clean Start**
+
+```bash
+# Via DigitalOcean Console
+cd /opt/Dev-Tools
+
+# Stop all containers
+docker compose -f compose/docker-compose.yml down -v
+
+# Remove Docker Desktop (if corrupted)
+apt-get remove --purge docker-desktop -y
+
+# Reinstall Docker Compose standalone (lightweight)
+curl -SL https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+chmod +x /usr/local/bin/docker-compose
+docker-compose version
+
+# Restart services
+docker-compose -f compose/docker-compose.yml up -d gateway-mcp rag-context state-persistence qdrant postgres
+```
+
+### Check Droplet Resource Usage
+
+SSH hanging often means resource exhaustion:
+
+```bash
+# Via DigitalOcean Console
+# Check memory
+free -h
+
+# Check disk space
+df -h
+
+# Check running processes
+top -bn1 | head -20
+
+# Check Docker resource usage
+docker stats --no-stream
+
+# If memory is full, restart hungry containers
+docker restart $(docker ps -q)
+```
 
 ### If containers won't start:
 
