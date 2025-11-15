@@ -32,6 +32,7 @@
       "anthropic_key_uuid": null,
       "workspace_uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4",
       "workspace_slug": "the-shop",
+      "workspace_name": "the shop",
       "knowledge_base_refs": ["devtools-docs"],
       "endpoint_visibility": "private",
       "tags": ["internal", "devtools"],
@@ -42,8 +43,137 @@
           "output_file": "config/env/secrets/agent-access/the-shop/orchestrator-default.txt"
         }
       ],
-      "uuid": "f0945a20-c1c4-11f0-b074-4e013e2ddde4",
-      "workspace_name": "the shop"
+      "uuid": "f0945a20-c1c4-11f0-b074-4e013e2ddde4"
+    },
+    {
+      "ref": "feature-dev",
+      "name": "Feature Development Agent",
+      "description": "LLM implementer that turns product requirements into code, tests, and docs",
+      "instruction": "You are the Feature Development agent. Normalize feature briefs into acceptance criteria, propose a plan, then generate production-ready code, tests, and documentation updates using repository conventions.",
+      "project_id": "9d19f206-9353-4be4-9781-9c5ffbc5755a",
+      "region": "tor1",
+      "model_uuid": "d754f2d7-d1f0-11ef-bf8f-4e013e2ddde4",
+      "model_provider_key_uuid": null,
+      "openai_key_uuid": null,
+      "anthropic_key_uuid": null,
+      "workspace_uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4",
+      "workspace_slug": "the-shop",
+      "workspace_name": "the shop",
+      "knowledge_base_refs": ["devtools-docs"],
+      "endpoint_visibility": "private",
+      "tags": ["internal", "feature-dev"],
+      "api_keys": [
+        {
+          "name": "feature-dev-default",
+          "uuid": "11f0c1c7-1fd7-32a5-b074-4e013e2ddde4",
+          "output_file": "config/env/secrets/agent-access/the-shop/feature-dev-default.txt"
+        }
+      ],
+      "uuid": "1d398afb-c1c7-11f0-b074-4e013e2ddde4"
+    },
+    {
+      "ref": "code-review",
+      "name": "Code Review Agent",
+      "description": "Autonomous reviewer that inspects diffs for quality, security, and compliance",
+      "instruction": "You are the Code Review agent. Analyze diffs and repositories for style, security, and testing gaps, then emit prioritized findings with remediation guidance and severity.",
+      "project_id": "9d19f206-9353-4be4-9781-9c5ffbc5755a",
+      "region": "tor1",
+      "model_uuid": "d754f2d7-d1f0-11ef-bf8f-4e013e2ddde4",
+      "model_provider_key_uuid": null,
+      "openai_key_uuid": null,
+      "anthropic_key_uuid": null,
+      "workspace_uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4",
+      "workspace_slug": "the-shop",
+      "workspace_name": "the shop",
+      "knowledge_base_refs": ["devtools-docs"],
+      "endpoint_visibility": "private",
+      "tags": ["internal", "code-review"],
+      "api_keys": [
+        {
+          "name": "code-review-default",
+          "uuid": "11f0c1c7-21c6-0118-b074-4e013e2ddde4",
+          "output_file": "config/env/secrets/agent-access/the-shop/code-review-default.txt"
+        }
+      ],
+      "uuid": "2040b738-c1c7-11f0-b074-4e013e2ddde4"
+    },
+    {
+      "ref": "infrastructure",
+      "name": "Infrastructure Agent",
+      "description": "Self-service infrastructure engineer turning requirements into IaC and health checks",
+      "instruction": "You are the Infrastructure agent. Convert platform requirements into Terraform/Helm/etc., enforce policy guardrails, run plans/applies, and report drift + health findings.",
+      "project_id": "9d19f206-9353-4be4-9781-9c5ffbc5755a",
+      "region": "tor1",
+      "model_uuid": "d754f2d7-d1f0-11ef-bf8f-4e013e2ddde4",
+      "model_provider_key_uuid": null,
+      "openai_key_uuid": null,
+      "anthropic_key_uuid": null,
+      "workspace_uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4",
+      "workspace_slug": "the-shop",
+      "workspace_name": "the shop",
+      "knowledge_base_refs": ["devtools-docs"],
+      "endpoint_visibility": "private",
+      "tags": ["internal", "infrastructure"],
+      "api_keys": [
+        {
+          "name": "infrastructure-default",
+          "uuid": "11f0c1c7-2498-b700-b074-4e013e2ddde4",
+          "output_file": "config/env/secrets/agent-access/the-shop/infrastructure-default.txt"
+        }
+      ],
+      "uuid": "22402b4a-c1c7-11f0-b074-4e013e2ddde4"
+    },
+    {
+      "ref": "cicd",
+      "name": "CI/CD Agent",
+      "description": "Automation specialist for pipeline design, execution, and promotion",
+      "instruction": "You are the CI/CD agent. Synthesize pipeline definitions, trigger runs, enforce quality gates, and coordinate artifact promotions with clear remediation guidance when failures occur.",
+      "project_id": "9d19f206-9353-4be4-9781-9c5ffbc5755a",
+      "region": "tor1",
+      "model_uuid": "d754f2d7-d1f0-11ef-bf8f-4e013e2ddde4",
+      "model_provider_key_uuid": null,
+      "openai_key_uuid": null,
+      "anthropic_key_uuid": null,
+      "workspace_uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4",
+      "workspace_slug": "the-shop",
+      "workspace_name": "the shop",
+      "knowledge_base_refs": ["devtools-docs"],
+      "endpoint_visibility": "private",
+      "tags": ["internal", "cicd"],
+      "api_keys": [
+        {
+          "name": "cicd-default",
+          "uuid": "11f0c1c7-2798-1a10-b074-4e013e2ddde4",
+          "output_file": "config/env/secrets/agent-access/the-shop/cicd-default.txt"
+        }
+      ],
+      "uuid": "2504e759-c1c7-11f0-b074-4e013e2ddde4"
+    },
+    {
+      "ref": "documentation",
+      "name": "Documentation Agent",
+      "description": "Autonomous technical writer that curates and maintains product documentation",
+      "instruction": "You are the Documentation agent. Discover authoritative sources, generate or update docs/diagrams per audience, keep knowledge bases fresh, and flag gaps or stale references.",
+      "project_id": "9d19f206-9353-4be4-9781-9c5ffbc5755a",
+      "region": "tor1",
+      "model_uuid": "d754f2d7-d1f0-11ef-bf8f-4e013e2ddde4",
+      "model_provider_key_uuid": null,
+      "openai_key_uuid": null,
+      "anthropic_key_uuid": null,
+      "workspace_uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4",
+      "workspace_slug": "the-shop",
+      "workspace_name": "the shop",
+      "knowledge_base_refs": ["devtools-docs"],
+      "endpoint_visibility": "private",
+      "tags": ["internal", "documentation"],
+      "api_keys": [
+        {
+          "name": "documentation-default",
+          "uuid": "11f0c1c7-28c9-853c-b074-4e013e2ddde4",
+          "output_file": "config/env/secrets/agent-access/the-shop/documentation-default.txt"
+        }
+      ],
+      "uuid": "28019bbd-c1c7-11f0-b074-4e013e2ddde4"
     }
   ]
 }
