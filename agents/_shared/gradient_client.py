@@ -64,6 +64,8 @@ class GradientClient:
                 base_url=self.base_url
             )
             print(f"[GRADIENT] {agent_name}: Initialized with model {self.model}")
+            print(f"[GRADIENT] {agent_name}: Base URL: {self.base_url}")
+            print(f"[GRADIENT] {agent_name}: API key: {self.api_key[:20]}...")
             if LANGFUSE_ENABLED:
                 print(f"[LANGFUSE] {agent_name}: Tracing ENABLED (host: {os.getenv('LANGFUSE_HOST')})")
             else:
