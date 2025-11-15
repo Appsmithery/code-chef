@@ -24,6 +24,7 @@ from agents._shared.gradient_client import get_gradient_client
 from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 from agents._shared.mcp_discovery import get_mcp_discovery
 from agents._shared.linear_client import get_linear_client
+from agents._shared.mcp_tool_client import get_mcp_tool_client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +56,9 @@ mcp_discovery = get_mcp_discovery()
 
 # Linear client for issue tracking and project management
 linear_client = get_linear_client()
+
+# MCP tool client for direct tool invocation (replaces HTTP gateway calls)
+mcp_tool_client = get_mcp_tool_client("orchestrator")
 
 # Agent types for task routing
 class AgentType(str, Enum):
@@ -213,18 +217,30 @@ async def check_agent_tool_availability(agent_type: AgentType, required_tools: L
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
-    gateway_health = await mcp_client.get_gateway_health()
+    # Check if MCP toolkit is available
+    mcp_available = mcp_tool_client._check_mcp_available()
+    
+    # Get list of available MCP servers
+    available_servers = await mcp_tool_client.list_servers()
+    
     return {
         "status": "ok",
         "service": "orchestrator",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
         "mcp": {
-            "gateway": gateway_health,
+            "toolkit_available": mcp_available,
+            "available_servers": available_servers,
+            "server_count": len(available_servers),
+            "access_method": "direct_stdio",
             "recommended_tool_servers": [entry.get("server") for entry in mcp_client.recommended_tools],
             "shared_tool_servers": mcp_client.shared_tools,
             "capabilities": mcp_client.capabilities,
         },
+        "integrations": {
+            "linear": linear_client.is_enabled(),
+            "gradient_ai": gradient_client.is_enabled()
+        }
     }
 
 @app.post("/orchestrate", response_model=TaskResponse)
@@ -280,15 +296,15 @@ async def orchestrate_task(request: TaskRequest):
         # Log warning if tools are missing (but don't block - fallback available)
         if not availability["available"]:
             print(f"Warning: Agent {subtask.agent_type} missing tools for subtask {subtask.id}: {availability['missing_tools']}")
-            await mcp_client.log_event(
-                "tool_availability_warning",
-                metadata={
-                    "task_id": task_id,
-                    "subtask_id": subtask.id,
-                    "agent": subtask.agent_type.value,
-                    "missing_tools": availability["missing_tools"],
-                },
+            await mcp_tool_client.create_memory_entity(
+                name=f"tool_availability_warning_{task_id}_{subtask.id}",
                 entity_type="orchestrator_warning",
+                observations=[
+                    f"Task: {task_id}",
+                    f"Subtask: {subtask.id}",
+                    f"Agent: {subtask.agent_type.value}",
+                    f"Missing tools: {availability['missing_tools']}"
+                ]
             )
     
     # Create routing plan with tool availability info
@@ -317,17 +333,17 @@ async def orchestrate_task(request: TaskRequest):
     # Persist to state database
     await persist_task_state(task_id, request, response)
 
-    await mcp_client.log_event(
-        "task_orchestrated",
-        metadata={
-            "task_id": task_id,
-            "subtask_count": len(subtasks),
-            "priority": request.priority,
-            "agent": "orchestrator",
-            "tools_validated": all(v["available"] for v in validation_results.values()),
-            "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status,
-        },
+    await mcp_tool_client.create_memory_entity(
+        name=f"task_orchestrated_{task_id}",
+        entity_type="orchestrator_event",
+        observations=[
+            f"Task ID: {task_id}",
+            f"Subtasks: {len(subtasks)}",
+            f"Priority: {request.priority}",
+            f"Agent: orchestrator",
+            f"Tools validated: {all(v['available'] for v in validation_results.values())}",
+            f"Guardrail status: {guardrail_report.status}"
+        ]
     )
     
     return response
@@ -386,24 +402,25 @@ async def persist_task_state(task_id: str, request: TaskRequest, response: TaskR
                 timeout=5.0
             )
             
-            await mcp_client.log_event(
-                "orchestrator_state_persisted",
-                metadata={
-                    "task_id": task_id,
-                    "workflow_steps": len(response.subtasks),
-                    "status": "pending",
-                },
+            await mcp_tool_client.create_memory_entity(
+                name=f"orchestrator_state_persisted_{task_id}",
+                entity_type="orchestrator_event",
+                observations=[
+                    f"Task ID: {task_id}",
+                    f"Workflow steps: {len(response.subtasks)}",
+                    f"Status: pending"
+                ]
             )
 
     except Exception as e:
         print(f"State persistence failed (non-critical): {e}")
-        await mcp_client.log_event(
-            "orchestrator_state_persistence_failed",
-            metadata={
-                "task_id": task_id,
-                "error": str(e),
-            },
+        await mcp_tool_client.create_memory_entity(
+            name=f"orchestrator_state_persistence_failed_{task_id}",
             entity_type="orchestrator_error",
+            observations=[
+                f"Task ID: {task_id}",
+                f"Error: {str(e)}"
+            ]
         )
 
 @app.get("/tasks/{task_id}")
