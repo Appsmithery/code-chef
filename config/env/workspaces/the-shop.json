@@ -3,19 +3,19 @@
     "name": "the shop",
     "slug": "the-shop",
     "description": "DigitalOcean Gradient workspace for internal Dev-Tools automation agents",
-    "project_id": "<digitalocean-project-uuid>",
-    "region": "nyc3",
-    "uuid": null
+    "project_id": "9d19f206-9353-4be4-9781-9c5ffbc5755a",
+    "region": "tor1",
+    "uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4"
   },
   "knowledge_bases": [
     {
       "ref": "devtools-docs",
-      "name": "Dev-Tools Docs Corpus",
+      "name": "digitalocean-api-docs",
       "description": "Documentation bundle generated from the Dev-Tools repository",
-      "embedding_model_uuid": "<embedding-model-uuid>",
+      "embedding_model_uuid": "22652c2a-79ed-11ef-bf8f-4e013e2ddde4",
       "datasource_notes": "Upload the docs zip or wire a Spaces bucket per Create and Manage Knowledge Bases guide.",
       "tags": ["devtools", "docs"],
-      "uuid": null
+      "uuid": "3120c1c2-c1c0-11f0-b074-4e013e2ddde4"
     }
   ],
   "agents": [
@@ -24,13 +24,13 @@
       "name": "DevTools Orchestrator",
       "description": "Routes incoming tasks to the feature, infra, CICD, and documentation agents",
       "instruction": "You are the Dev-Tools orchestrator. Coordinate requests across downstream agents and surface Langfuse/Prometheus traces when asked.",
-      "project_id": "<digitalocean-project-uuid>",
-      "region": "nyc3",
-      "model_uuid": "<llama-3.1-70b-uuid>",
+      "project_id": "9d19f206-9353-4be4-9781-9c5ffbc5755a",
+      "region": "tor1",
+      "model_uuid": "d754f2d7-d1f0-11ef-bf8f-4e013e2ddde4",
       "model_provider_key_uuid": null,
       "openai_key_uuid": null,
       "anthropic_key_uuid": null,
-      "workspace_uuid": null,
+      "workspace_uuid": "11f0c051-f43a-a769-b074-4e013e2ddde4",
       "workspace_slug": "the-shop",
       "knowledge_base_refs": ["devtools-docs"],
       "endpoint_visibility": "private",
@@ -38,11 +38,12 @@
       "api_keys": [
         {
           "name": "devtools-orchestrator-default",
-          "uuid": null,
+          "uuid": "11f0c1c4-f2b3-4d23-b074-4e013e2ddde4",
           "output_file": "config/env/secrets/agent-access/the-shop/orchestrator-default.txt"
         }
       ],
-      "uuid": null
+      "uuid": "f0945a20-c1c4-11f0-b074-4e013e2ddde4",
+      "workspace_name": "the shop"
     }
   ]
 }
