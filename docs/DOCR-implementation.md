@@ -23,16 +23,24 @@ Net: yes, adopt DOCR now. It reduces the gap between local Compose and cloud dep
 
 2. **Bootstrap registry auth for humans**
 
-   - Install `doctl` (if not already) and run:
-     ```powershell
-     doctl registry login
-     ```
-     This writes the same credentials found in `docker-config.json` and keeps local Docker ready for pushes/pulls (per DO doc).
-   - **Fallback when `doctl` fails**: DigitalOcean also supports the plain Docker login flow. Run:
-     ```powershell
-     docker login registry.digitalocean.com
-     ```
-     Supply the DO account username (e.g., `alex@appsmithery.co`) and a DO API token/PAT when prompted. Docker caches these credentials in the current user’s credential store, so subsequent `docker compose push` executions succeed even if `doctl` cannot validate the token.
+   1. Install `doctl` using the OS-specific method (Homebrew, snap, GitHub release, or the new `scripts/install-doctl.ps1` helper for Windows) and confirm the binary is at least v1.146.0 (`doctl version`).
+   2. Authenticate once per workstation with a **read/write** API token:
+      ```powershell
+      doctl auth init --context devtools
+      doctl account get
+      ```
+      This step fails fast if the token lacks registry scope, preventing confusing Docker errors later.
+   3. Let `doctl` mint Docker credentials exactly as [DigitalOcean documents](https://docs.digitalocean.com/products/container-registry/how-to/use-registry-docker-kubernetes/#docker-integration):
+      ```powershell
+      doctl registry login --expiry-seconds 1800
+      docker info | Select-String registry.digitalocean.com
+      ```
+      The short-lived PAT is dropped into Docker’s credential store so every `docker compose push` reuses it.
+   4. **Fallback when `doctl` is unavailable**: DigitalOcean still accepts a plain Docker login, provided you use a token with write scope.
+      ```powershell
+      docker login -u you@example.com -p <api-token> registry.digitalocean.com
+      ```
+      Avoid hard-coding this token in `.env`; run the command interactively on each builder instead.
 
 3. **Create Kubernetes pull secret once**
 

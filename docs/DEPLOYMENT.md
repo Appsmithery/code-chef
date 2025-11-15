@@ -134,6 +134,45 @@ IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/
 
 > Replace the last line with the services you need to publish. Compose uses the `image:` field you set earlier, so both `build` and `push` reuse the same tag.
 
+#### Registry authentication workflow (required)
+
+1. **Install `doctl` for your OS**
+
+- **Windows:** `scripts/install-doctl.ps1` (downloads the latest GitHub release to `.bin/doctl` and adds it to the current PATH).
+- **macOS (Homebrew):** `brew install doctl`
+- **Ubuntu (snap):** `sudo snap install doctl` _(create `~/.config` first if snap complains)_
+- **Other Linux/macOS:** download the release tarball from [GitHub](https://github.com/digitalocean/doctl/releases) and place `doctl` in `/usr/local/bin`.
+
+2. **Authenticate the CLI once per machine**
+
+```powershell
+doctl auth init --context devtools
+doctl account get          # sanity check, fails fast if the token lacks write scope
+doctl version              # verify we picked up the current (≥ v1.146.0) build
+```
+
+Use a DigitalOcean API token with **read + write** access; never store this token in `config/env/.env`. 3. **Issue Docker credentials via `doctl`**
+
+```powershell
+doctl registry login --expiry-seconds 1800
+docker info | Select-String registry.digitalocean.com
+```
+
+`doctl` mints a short-lived registry PAT and writes it into your Docker credential helper so `docker compose push` works without extra secrets. Only use `--never-expire` if your security policy explicitly allows it. 4. **Fallback when `doctl` is unavailable**
+
+```powershell
+docker login -u you@example.com -p <read/write-api-token> registry.digitalocean.com
+```
+
+This mirrors [DigitalOcean’s documented alternative](https://docs.digitalocean.com/products/container-registry/how-to/use-registry-docker-kubernetes/#docker-integration). Tokens generated here must include **write** scope or pushes will fail with `401 Unauthorized`. 5. **Proceed with tagging + pushing**
+
+```powershell
+IMAGE_TAG=$(git rev-parse --short HEAD)
+DOCR_REGISTRY=registry.digitalocean.com/the-shop docker compose push
+```
+
+Because Compose already references `${DOCR_REGISTRY}/<service>:${IMAGE_TAG}`, every service now uploads with the registry-issued credentials from step 3.
+
 ### Image verification checklist
 
 Before promoting to production, confirm every agent/container image is tagged and pushed:
