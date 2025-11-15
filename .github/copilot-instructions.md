@@ -10,7 +10,7 @@
 
 ## Configuration sources
 
-- **Environment**: `config/env/.env` contains all production credentials (Langfuse keys, Gradient API key, Linear OAuth, DO PAT, database creds). Copy from `.env.example` and populate secrets.
+- **Environment**: `config/env/.env` contains all production credentials (Langfuse keys, Gradient API key, Linear OAuth, DO PAT, database creds). Copy from `config/env/.env.template` and populate secrets.
 - **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `./scripts/setup_secrets.sh` to create.
 - **Agent Models**: Per-agent Gradient model configured in `compose/docker-compose.yml` via `GRADIENT_MODEL` env var; models optimized for task complexity and cost.
 - **Task Routing**: Rules in `config/routing/task-router.rules.yaml` (if used); orchestrator uses LLM-powered decomposition when `gradient_client.is_enabled()`.

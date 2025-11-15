@@ -97,6 +97,12 @@ Or for agent-specific configuration:
 cp .env.example agents/.env.agent.local
 ```
 
+For the Dockerized agent stack, also copy the runtime template:
+
+```bash
+cp config/env/.env.template config/env/.env
+```
+
 ### 2. Configure Required Variables
 
 Edit `.env` or `agents/.env.agent.local`:

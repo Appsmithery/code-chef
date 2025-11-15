@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { resolve } from 'path';
-import { discoverSchemas, mergeSchemas } from './schema-merger.js';
+import { discoverSchemas, mergeSchemas } from './schema-merger.ts';
 
 interface ValidationOptions {
   schemas?: string[];
@@ -13,7 +13,7 @@ function parseArgs(): ValidationOptions {
   const args = process.argv.slice(2);
   const options: ValidationOptions = {
     schemas: [],
-    envFiles: ['.env', 'agents/.env.agent.local'],
+    envFiles: ['config/env/.env', '.env', 'agents/.env.agent.local'],
     format: 'human',
     discoverOverlays: false,
   };
@@ -42,7 +42,8 @@ function loadEnvVars(files: string[]): Map<string, string> {
 
     const content = readFileSync(filePath, 'utf-8');
     for (const line of content.split('\n')) {
-      const match = line.match(/^([^#=]+)=(.*)$/);
+      const sanitized = line.replace(/\r$/, '');
+      const match = sanitized.match(/^([^#=]+)=(.*)$/);
       if (match) {
         vars.set(match[1].trim(), match[2].trim());
       }

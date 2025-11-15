@@ -107,7 +107,7 @@ docker image prune -a
 ### Secrets Management
 
 - Never commit `secrets.json` or `.env` with real values
-- Use template files: `.env.example`, `secrets.template.json`
+- Use template files: `.env.example`, `config/env/.env.template`, and `config/env/secrets.template.json`
 - Store production secrets in secure vault
 - Rotate API keys regularly
 
