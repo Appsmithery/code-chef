@@ -200,6 +200,36 @@ Receives documentation request → Queries RAG for context → Generates docs �
 
 ---
 
+## RAG Context Manager
+
+**Base URL:** `http://rag-context:8007`  
+**Port:** 8007  
+**Status:** ✅ Backed by Qdrant Cloud + Gradient embeddings
+
+**Primary Role:** Semantic search over mirrored DigitalOcean KB exports and repository docs
+
+### Endpoints
+
+- `GET /health` — Service heartbeat, Qdrant + MCP connectivity status
+
+  - Returns: `{"status":"ok","qdrant_status":"connected","mcp_gateway_status":"connected" ...}`
+
+- `POST /query` — Retrieve relevant context chunks from Qdrant Cloud
+
+  - Body: `{"query": "string", "collection": "the-shop", "n_results": 5, "metadata_filter": {}}`
+  - Returns: semantic matches with payload metadata, distance, and relevance score
+
+- `POST /index` — Push new documents/vectors into the target collection
+
+  - Body: `{"documents": ["..."], "metadatas": [{...}], "collection": "the-shop"}`
+  - Uses Gradient `all-MiniLM-L6-v2` embeddings + upsert into Qdrant
+
+- `POST /query/mock` — Deterministic mock responses for local testing with no credentials
+
+**Support Script:** `scripts/sync_kb_to_qdrant.py` automates DigitalOcean KB exports → Qdrant upserts.
+
+---
+
 ## Service Discovery
 
 All agents expose consistent health check endpoints at `GET /health` with the following response format:
@@ -221,6 +251,7 @@ All agents expose consistent health check endpoints at `GET /health` with the fo
 - **Infrastructure:** Template-first customization (70-85% reduction)
 - **CI/CD:** Template library (75% reduction)
 - **Documentation:** Template-based with targeted RAG queries
+- **RAG:** Offloads similarity search to Qdrant Cloud so agents fetch only K relevant chunks (<1 KB each)
 
 ## Architecture Notes
 
@@ -228,4 +259,4 @@ All agents expose consistent health check endpoints at `GET /health` with the fo
 - MECE responsibility boundaries enforced
 - Hand-off protocol uses minimal context pointers
 - State persistence via shared layer (future integration)
-- RAG Context Manager provides targeted code retrieval (future integration)
+- RAG Context Manager streams Gradient embeddings into Qdrant Cloud and serves all semantic lookups
