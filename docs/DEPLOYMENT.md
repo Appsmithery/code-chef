@@ -132,6 +132,18 @@ IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/
 
 > Replace the last line with the services you need to publish. Compose uses the `image:` field you set earlier, so both `build` and `push` reuse the same tag.
 
+### Image verification checklist
+
+Before promoting to production, confirm every agent/container image is tagged and pushed:
+
+1. `docker compose ls` — ensure the stack name matches your target registry namespace.
+2. `docker compose build --pull` — rebuild each service to capture the latest base image patches.
+3. `IMAGE_TAG=$(git rev-parse --short HEAD) DOCR_REGISTRY=registry.digitalocean.com/the-shop docker compose push` — push the entire stack (omit `service` name to push all).
+4. `doctl registry repository list-tags <service>` — confirm the digest for the tag you just pushed.
+5. Document the `<registry>/<service>:<tag>` mapping in your release notes so deploy + rollback use the same artifacts.
+
+> TIP: When using GitHub Actions, mirror these steps by ensuring `.github/workflows/docr-build.yml` completes before deploying.
+
 ### GitHub Actions workflow
 
 `.github/workflows/docr-build.yml` builds every service Dockerfile, tags it as:

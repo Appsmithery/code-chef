@@ -410,8 +410,8 @@ task_graph = await invoke_mcp_tool("memory", "read_graph", {...})
 
 # Get semantic code patterns from RAG
 code_patterns = await httpx.post(
-    "http://rag-context:8007/query",
-    json={"query": "authentication patterns", "collection": "code-knowledge"}
+  "http://rag-context:8007/query",
+  json={"query": "authentication patterns", "collection": "the-shop"}
 )
 
 # Combine contexts

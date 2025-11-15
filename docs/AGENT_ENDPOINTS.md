@@ -206,27 +206,16 @@ Receives documentation request → Queries RAG for context → Generates docs �
 **Port:** 8007  
 **Status:** ✅ Backed by Qdrant Cloud + Gradient embeddings
 
-**Primary Role:** Semantic search over mirrored DigitalOcean KB exports and repository docs
+**Primary Role:** Semantic code/document retrieval sourced from DigitalOcean KB exports and repository docs.
 
 ### Endpoints
 
-- `GET /health` — Service heartbeat, Qdrant + MCP connectivity status
+- `GET /health` — Service heartbeat plus Qdrant + MCP connectivity status.
+- `POST /query` — Retrieve top-N chunks from `the-shop` (or any configured collection). Body: `{"query": "string", "collection": "the-shop", "n_results": 5}`.
+- `POST /index` — Upsert documents with automatic Gradient embeddings. Body mirrors the FastAPI `IndexRequest` schema.
+- `POST /query/mock` — Deterministic fixtures when Gradient/Qdrant credentials are absent (local testing).
 
-  - Returns: `{"status":"ok","qdrant_status":"connected","mcp_gateway_status":"connected" ...}`
-
-- `POST /query` — Retrieve relevant context chunks from Qdrant Cloud
-
-  - Body: `{"query": "string", "collection": "the-shop", "n_results": 5, "metadata_filter": {}}`
-  - Returns: semantic matches with payload metadata, distance, and relevance score
-
-- `POST /index` — Push new documents/vectors into the target collection
-
-  - Body: `{"documents": ["..."], "metadatas": [{...}], "collection": "the-shop"}`
-  - Uses Gradient `all-MiniLM-L6-v2` embeddings + upsert into Qdrant
-
-- `POST /query/mock` — Deterministic mock responses for local testing with no credentials
-
-**Support Script:** `scripts/sync_kb_to_qdrant.py` automates DigitalOcean KB exports → Qdrant upserts.
+**Support Script:** `scripts/sync_kb_to_qdrant.py` triggers Gradient indexing jobs, downloads signed exports, and mirrors embeddings into Qdrant Cloud.
 
 ---
 
@@ -251,7 +240,7 @@ All agents expose consistent health check endpoints at `GET /health` with the fo
 - **Infrastructure:** Template-first customization (70-85% reduction)
 - **CI/CD:** Template library (75% reduction)
 - **Documentation:** Template-based with targeted RAG queries
-- **RAG:** Offloads similarity search to Qdrant Cloud so agents fetch only K relevant chunks (<1 KB each)
+- **RAG:** Offloads similarity search to Qdrant Cloud so agents fetch <1 KB payloads per query
 
 ## Architecture Notes
 

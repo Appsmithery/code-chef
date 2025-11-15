@@ -55,7 +55,7 @@
 - ✅ Langfuse LLM tracing infrastructure configured
 - ✅ Prometheus HTTP metrics collection active
 - ✅ DigitalOcean Gradient AI integration ready (pending API key)
-- ✅ RAG service streaming Qdrant Cloud vectors synced from DigitalOcean knowledge bases
+- ✅ RAG service streaming DigitalOcean KB exports into Qdrant Cloud
 - ✅ State persistence with PostgreSQL
 - ✅ E2E workflows validated
 

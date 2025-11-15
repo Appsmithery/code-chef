@@ -74,6 +74,8 @@ backups/
 *.tmp
 temp/
 tmp/
+
+# Gradient knowledge base exports (explicit for clarity)
 tmp/kb-sync/
 
 # OS files
