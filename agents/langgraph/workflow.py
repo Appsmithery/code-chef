@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Mapping
+import logging
+from typing import TYPE_CHECKING, Any, AsyncIterator, Mapping
 
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
@@ -17,9 +18,12 @@ from agents.langgraph.nodes import (
     infrastructure_node,
     route_task,
 )
+from agents.langgraph.checkpointer import get_postgres_checkpointer
 
 if TYPE_CHECKING:  # pragma: no cover - used only for typing
     from langgraph.graph import CompiledGraph
+
+logger = logging.getLogger(__name__)
 
 NODE_REGISTRY = {
     "feature-dev": feature_dev_node,
@@ -83,9 +87,16 @@ def router_node(state: AgentState) -> AgentState:
     return normalized
 
 
-def build_workflow() -> "CompiledGraph":
-    """Create and compile the LangGraph workflow for Dev-Tools agents."""
-
+def build_workflow(*, enable_checkpointing: bool = True) -> "CompiledGraph":
+    """
+    Create and compile the LangGraph workflow for Dev-Tools agents.
+    
+    Args:
+        enable_checkpointing: If True, uses PostgreSQL checkpointer for state persistence
+        
+    Returns:
+        CompiledGraph ready for invocation or streaming
+    """
     workflow = StateGraph(AgentState)
 
     workflow.add_node(ENTRY_NODE, router_node)
@@ -112,7 +123,16 @@ def build_workflow() -> "CompiledGraph":
     for label in NODE_REGISTRY:
         workflow.add_edge(label, END)
 
-    return workflow.compile()
+    # Configure checkpointer for state persistence
+    checkpointer = None
+    if enable_checkpointing:
+        checkpointer = get_postgres_checkpointer()
+        if checkpointer:
+            logger.info("LangGraph workflow compiled with PostgreSQL checkpointer")
+        else:
+            logger.warning("LangGraph workflow compiled WITHOUT checkpointer (state will not persist)")
+    
+    return workflow.compile(checkpointer=checkpointer)
 
 
 def invoke_workflow(
@@ -121,11 +141,25 @@ def invoke_workflow(
     task_description: str | None = None,
     initial_state: AgentState | None = None,
     request_payloads: Mapping[str, object] | None = None,
+    thread_id: str | None = None,
+    enable_checkpointing: bool = True,
 ) -> AgentState:
-    """Helper to run the workflow end-to-end for the provided state."""
-
+    """
+    Helper to run the workflow end-to-end for the provided state.
+    
+    Args:
+        graph: Pre-compiled graph (builds new one if None)
+        task_description: Description for new workflow (required if initial_state is None)
+        initial_state: Starting state (creates empty state if None)
+        request_payloads: Agent-specific requests to inject into state
+        thread_id: Checkpoint thread ID for resuming workflows
+        enable_checkpointing: Whether to persist state in PostgreSQL
+        
+    Returns:
+        Final AgentState after workflow completion
+    """
     if not graph:
-        graph = build_workflow()
+        graph = build_workflow(enable_checkpointing=enable_checkpointing)
 
     if initial_state is None:
         if not task_description:
@@ -137,4 +171,116 @@ def invoke_workflow(
     if request_payloads:
         state = _apply_request_payloads(state, request_payloads)
 
-    return graph.invoke(state)
+    # Build invocation config
+    config = {}
+    if thread_id:
+        config["configurable"] = {"thread_id": thread_id}
+    
+    return graph.invoke(state, config=config if config else None)
+
+
+async def stream_workflow(
+    *,
+    graph: "CompiledGraph" | None = None,
+    task_description: str | None = None,
+    initial_state: AgentState | None = None,
+    request_payloads: Mapping[str, object] | None = None,
+    thread_id: str | None = None,
+    enable_checkpointing: bool = True,
+    stream_mode: str = "values",
+) -> AsyncIterator[dict[str, Any]]:
+    """
+    Stream workflow execution events in real-time.
+    
+    Args:
+        graph: Pre-compiled graph (builds new one if None)
+        task_description: Description for new workflow (required if initial_state is None)
+        initial_state: Starting state (creates empty state if None)
+        request_payloads: Agent-specific requests to inject into state
+        thread_id: Checkpoint thread ID for resuming workflows
+        enable_checkpointing: Whether to persist state in PostgreSQL
+        stream_mode: LangGraph streaming mode:
+            - "values": Stream full state after each node
+            - "updates": Stream only state updates from each node
+            - "debug": Stream detailed execution events
+        
+    Yields:
+        Dict events containing state snapshots or updates
+    """
+    if not graph:
+        graph = build_workflow(enable_checkpointing=enable_checkpointing)
+
+    if initial_state is None:
+        if not task_description:
+            raise ValueError("task_description is required when initial_state is not provided")
+        state = empty_agent_state(task_description)
+    else:
+        state = ensure_agent_state(initial_state)
+
+    if request_payloads:
+        state = _apply_request_payloads(state, request_payloads)
+
+    # Build invocation config
+    config = {}
+    if thread_id:
+        config["configurable"] = {"thread_id": thread_id}
+    
+    # Stream events using LangGraph's async streaming
+    async for event in graph.astream(state, config=config if config else None, stream_mode=stream_mode):
+        yield event
+
+
+async def stream_workflow_events(
+    *,
+    graph: "CompiledGraph" | None = None,
+    task_description: str | None = None,
+    initial_state: AgentState | None = None,
+    request_payloads: Mapping[str, object] | None = None,
+    thread_id: str | None = None,
+    enable_checkpointing: bool = True,
+) -> AsyncIterator[dict[str, Any]]:
+    """
+    Stream detailed workflow events including node execution and LLM calls.
+    
+    Uses LangGraph's astream_events for fine-grained event streaming,
+    useful for progress tracking, debugging, and real-time UI updates.
+    
+    Args:
+        graph: Pre-compiled graph (builds new one if None)
+        task_description: Description for new workflow
+        initial_state: Starting state
+        request_payloads: Agent-specific requests to inject
+        thread_id: Checkpoint thread ID for resuming workflows
+        enable_checkpointing: Whether to persist state in PostgreSQL
+        
+    Yields:
+        Dict events with structure:
+            {
+                "event": "on_chain_start" | "on_chain_end" | "on_llm_start" | "on_llm_end" | ...,
+                "name": "<node_name>" or "<llm_name>",
+                "data": {...},
+                "metadata": {...}
+            }
+    """
+    if not graph:
+        graph = build_workflow(enable_checkpointing=enable_checkpointing)
+
+    if initial_state is None:
+        if not task_description:
+            raise ValueError("task_description is required when initial_state is not provided")
+        state = empty_agent_state(task_description)
+    else:
+        state = ensure_agent_state(initial_state)
+
+    if request_payloads:
+        state = _apply_request_payloads(state, request_payloads)
+
+    # Build invocation config
+    config = {}
+    if thread_id:
+        config["configurable"] = {"thread_id": thread_id}
+    
+    # Stream detailed events using astream_events
+    async for event in graph.astream_events(state, config=config if config else None, version="v1"):
+        yield event
+
