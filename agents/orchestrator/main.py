@@ -25,6 +25,13 @@ from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, Gua
 from agents._shared.mcp_discovery import get_mcp_discovery
 from agents._shared.linear_client import get_linear_client
 from agents._shared.mcp_tool_client import get_mcp_tool_client
+from agents._shared.langgraph_base import (
+    BaseAgentState,
+    get_postgres_checkpointer,
+    create_workflow_config
+)
+from agents._shared.qdrant_client import get_qdrant_client
+from agents._shared.langchain_memory import HybridMemory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -59,6 +66,29 @@ linear_client = get_linear_client()
 
 # MCP tool client for direct tool invocation (replaces HTTP gateway calls)
 mcp_tool_client = get_mcp_tool_client("orchestrator")
+
+# LangGraph infrastructure
+try:
+    checkpointer = get_postgres_checkpointer()
+    logger.info("LangGraph PostgreSQL checkpointer initialized")
+except Exception as e:
+    logger.warning(f"LangGraph checkpointer not available: {e}")
+    checkpointer = None
+
+# Qdrant Cloud client for vector operations
+qdrant_client = get_qdrant_client()
+if qdrant_client.is_enabled():
+    logger.info("Qdrant Cloud client initialized")
+else:
+    logger.warning("Qdrant Cloud not configured")
+
+# Hybrid memory for conversation context
+try:
+    hybrid_memory = HybridMemory()
+    logger.info("Hybrid memory (buffer + vector) initialized")
+except Exception as e:
+    logger.warning(f"Hybrid memory not available: {e}")
+    hybrid_memory = None
 
 # Agent types for task routing
 class AgentType(str, Enum):
