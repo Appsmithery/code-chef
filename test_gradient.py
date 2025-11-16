@@ -5,6 +5,9 @@ Test script to isolate Gradient API unhashable dict error.
 import asyncio
 import sys
 import os
+from functools import lru_cache
+
+import pytest
 
 # Add agents to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'agents'))
@@ -12,7 +15,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'agents'))
 from agents._shared.gradient_client import get_gradient_client
 
 
-async def test_basic_completion():
+@lru_cache(maxsize=1)
+def _gradient_enabled() -> bool:
+    """Return whether the Gradient client is configured for integration tests."""
+
+    client = get_gradient_client("test-agent", "llama3-8b-instruct")
+    return client.is_enabled()
+
+
+async def _run_basic_completion():
     """Test basic completion without metadata."""
     print("=" * 60)
     print("TEST 1: Basic completion (no metadata)")
@@ -45,7 +56,7 @@ async def test_basic_completion():
         return False
 
 
-async def test_completion_with_metadata():
+async def _run_completion_with_metadata():
     """Test completion with metadata dict."""
     print("\n" + "=" * 60)
     print("TEST 2: Completion with metadata")
@@ -81,7 +92,7 @@ async def test_completion_with_metadata():
         return False
 
 
-async def test_structured_completion():
+async def _run_structured_completion():
     """Test structured JSON completion without metadata."""
     print("\n" + "=" * 60)
     print("TEST 3: Structured completion (no metadata)")
@@ -112,7 +123,7 @@ async def test_structured_completion():
         return False
 
 
-async def test_structured_with_metadata():
+async def _run_structured_with_metadata():
     """Test structured completion with metadata (reproduces orchestrator call)."""
     print("\n" + "=" * 60)
     print("TEST 4: Structured completion WITH metadata (reproduces error)")
@@ -158,10 +169,10 @@ async def main():
     results = []
     
     # Run tests sequentially
-    results.append(("Basic completion", await test_basic_completion()))
-    results.append(("Completion with metadata", await test_completion_with_metadata()))
-    results.append(("Structured completion", await test_structured_completion()))
-    results.append(("Structured with metadata", await test_structured_with_metadata()))
+    results.append(("Basic completion", await _run_basic_completion()))
+    results.append(("Completion with metadata", await _run_completion_with_metadata()))
+    results.append(("Structured completion", await _run_structured_completion()))
+    results.append(("Structured with metadata", await _run_structured_with_metadata()))
     
     # Summary
     print("\n" + "=" * 60)
@@ -181,3 +192,27 @@ async def main():
 if __name__ == "__main__":
     success = asyncio.run(main())
     sys.exit(0 if success else 1)
+
+
+def test_basic_completion():
+    if not _gradient_enabled():
+        pytest.skip("Gradient client not enabled; set GRADIENT_MODEL_ACCESS_KEY to run integration tests")
+    assert asyncio.run(_run_basic_completion())
+
+
+def test_completion_with_metadata():
+    if not _gradient_enabled():
+        pytest.skip("Gradient client not enabled; set GRADIENT_MODEL_ACCESS_KEY to run integration tests")
+    assert asyncio.run(_run_completion_with_metadata())
+
+
+def test_structured_completion():
+    if not _gradient_enabled():
+        pytest.skip("Gradient client not enabled; set GRADIENT_MODEL_ACCESS_KEY to run integration tests")
+    assert asyncio.run(_run_structured_completion())
+
+
+def test_structured_with_metadata():
+    if not _gradient_enabled():
+        pytest.skip("Gradient client not enabled; set GRADIENT_MODEL_ACCESS_KEY to run integration tests")
+    assert asyncio.run(_run_structured_with_metadata())

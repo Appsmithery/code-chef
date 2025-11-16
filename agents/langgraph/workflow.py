@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Mapping
 
 from langgraph.graph import END, StateGraph
+from pydantic import BaseModel
 
 from agents.langgraph.state import AgentState, empty_agent_state, ensure_agent_state
 from agents.langgraph.nodes import (
@@ -29,6 +30,50 @@ NODE_REGISTRY = {
 }
 
 ENTRY_NODE = "router"
+
+REQUEST_STATE_KEYS = {
+    "feature_request",
+    "code_review_request",
+    "infrastructure_request",
+    "cicd_request",
+    "documentation_request",
+}
+
+
+def _serialize_request_payload(payload: object) -> Mapping[str, Any]:
+    """Convert request payloads into JSON-serializable dictionaries."""
+
+    if isinstance(payload, BaseModel):
+        return payload.model_dump(mode="json")
+    if isinstance(payload, Mapping):
+        return dict(payload)
+    raise TypeError(
+        "Request payloads must be Pydantic models or mapping types; "
+        f"received {type(payload)!r}",
+    )
+
+
+def _apply_request_payloads(state: AgentState, payloads: Mapping[str, object]) -> AgentState:
+    """Merge *_request payloads into the shared state with validation."""
+
+    if not payloads:
+        return state
+
+    mutable_state: dict[str, Any] = dict(state)
+    for key, payload in payloads.items():
+        if payload is None:
+            continue
+
+        normalized_key = key if key.endswith("_request") else f"{key}_request"
+        if normalized_key not in REQUEST_STATE_KEYS:
+            raise ValueError(
+                "Unsupported request payload key '"
+                f"{key}'. Expected one of: {sorted(REQUEST_STATE_KEYS)}"
+            )
+
+        mutable_state[normalized_key] = _serialize_request_payload(payload)
+
+    return ensure_agent_state(mutable_state)
 
 
 def router_node(state: AgentState) -> AgentState:
@@ -75,6 +120,7 @@ def invoke_workflow(
     graph: "CompiledGraph" | None = None,
     task_description: str | None = None,
     initial_state: AgentState | None = None,
+    request_payloads: Mapping[str, object] | None = None,
 ) -> AgentState:
     """Helper to run the workflow end-to-end for the provided state."""
 
@@ -87,5 +133,8 @@ def invoke_workflow(
         state = empty_agent_state(task_description)
     else:
         state = ensure_agent_state(initial_state)
+
+    if request_payloads:
+        state = _apply_request_payloads(state, request_payloads)
 
     return graph.invoke(state)
