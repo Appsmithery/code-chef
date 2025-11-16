@@ -26,8 +26,7 @@
     "github.copilot.chat.notebook.followCellExecution.enabled": true,
     "github.copilot.chat.responsesApiReasoningEffort": "high",
     "github.copilot.chat.scopeSelection": true,
-    "github.copilot.chat.tools.memory.enabled": true,
-    "window.autoDetectColorScheme": true
+    "github.copilot.chat.tools.memory.enabled": true
   },
   "extensions": {
     "recommendations": [
