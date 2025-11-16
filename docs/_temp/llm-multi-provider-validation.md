@@ -11,18 +11,19 @@ python scripts/test_llm_provider.py --all
 
 ### Results by Provider
 
-| Provider | LLM Status | Embeddings Status | Notes |
-|----------|------------|-------------------|-------|
-| **OpenAI** | ✅ PASS | ✅ PASS | Full validation successful |
-| **Claude** | ✅ PASS | N/A | No embeddings API (expected) |
-| **Mistral** | ⚠️ RATE LIMITED | N/A | API tier capacity exceeded |
-| **Gradient** | ❌ 404 ERROR | ❌ 404 ERROR | DO API endpoint routing issue |
+| Provider     | LLM Status      | Embeddings Status | Notes                         |
+| ------------ | --------------- | ----------------- | ----------------------------- |
+| **OpenAI**   | ✅ PASS         | ✅ PASS           | Full validation successful    |
+| **Claude**   | ✅ PASS         | N/A               | No embeddings API (expected)  |
+| **Mistral**  | ⚠️ RATE LIMITED | N/A               | API tier capacity exceeded    |
+| **Gradient** | ❌ 404 ERROR    | ❌ 404 ERROR      | DO API endpoint routing issue |
 
 ## Detailed Results
 
 ### ✅ OpenAI (Full Success)
 
 **LLM Test:**
+
 ```
 ✓ LLM initialized: ChatOpenAI
 Prompt: What is 2+2? Answer briefly.
@@ -31,6 +32,7 @@ Response: 2 + 2 = 4.
 ```
 
 **Embeddings Test:**
+
 ```
 ✓ Embeddings initialized: OpenAIEmbeddings
 Text: This is a test sentence for embeddings.
@@ -42,6 +44,7 @@ First 5 values: [0.034299496561288834, -0.002096268581226468, ...]
 ### ✅ Claude (LLM Success)
 
 **LLM Test:**
+
 ```
 ✓ LLM initialized: ChatAnthropic
 Prompt: What is 2+2? Answer briefly.
@@ -50,12 +53,14 @@ Response: 4
 ```
 
 **Model Update:**
+
 - Original default: `claude-3-5-sonnet-20241022` (404 error)
 - Updated default: `claude-3-5-haiku-20241022` (✅ works)
 
 ### ⚠️ Mistral (Rate Limited)
 
 **Error:**
+
 ```
 Error response 429: Service tier capacity exceeded for this model
 ```
@@ -67,17 +72,20 @@ Error response 429: Service tier capacity exceeded for this model
 ### ❌ DigitalOcean Gradient (Needs Investigation)
 
 **Error:**
+
 ```
 Error code: 404 - {'id': 'not_found', 'message': 'Your request could not be routed.'}
 ```
 
 **Possible Causes:**
+
 1. ✅ Base URL in code: `https://api.digitalocean.com/v2/ai/v1` (correct)
 2. ❌ Base URL in .env: `https://api.digitalocean.com/v2/ai` (missing `/v1`)
 3. API key may be invalid or expired
 4. DO Gradient AI endpoint may have changed
 
 **Next Steps:**
+
 1. Update `.env` GRADIENT_BASE_URL to include `/v1`
 2. Verify API key is still valid
 3. Check DO Gradient AI documentation for endpoint changes
@@ -85,6 +93,7 @@ Error code: 404 - {'id': 'not_found', 'message': 'Your request could not be rout
 ## Code Changes Made
 
 ### 1. Multi-Provider Support (`agents/_shared/langchain_gradient.py`)
+
 ```python
 def get_llm(
     agent_name: str,
@@ -95,6 +104,7 @@ def get_llm(
 ```
 
 **Features:**
+
 - ✅ Provider selection via `LLM_PROVIDER` env var
 - ✅ Per-agent provider override
 - ✅ Automatic Langfuse tracing (when installed)
@@ -104,6 +114,7 @@ def get_llm(
 ### 2. Dependencies Updated
 
 All agent `requirements.txt` files now include:
+
 ```txt
 langchain-openai>=0.1.0
 langchain-anthropic>=0.3.0  # NEW
@@ -113,6 +124,7 @@ langchain-mistralai>=0.2.0  # NEW
 ### 3. Environment Configuration
 
 Added to `config/env/.env`:
+
 ```bash
 # Provider selection
 LLM_PROVIDER=gradient
@@ -127,6 +139,7 @@ OPEN_AI_DEVTOOLS_KEY=sk-proj-...
 ### 4. Test Script (`scripts/test_llm_provider.py`)
 
 **Features:**
+
 - ✅ Loads `.env` automatically via python-dotenv
 - ✅ Tests all providers with `--all` flag
 - ✅ Individual provider testing
@@ -134,6 +147,7 @@ OPEN_AI_DEVTOOLS_KEY=sk-proj-...
 - ✅ Comprehensive error reporting
 
 **Usage:**
+
 ```bash
 # Test all providers
 python scripts/test_llm_provider.py --all
@@ -148,11 +162,13 @@ python scripts/test_llm_provider.py --llm-only
 ## Local Environment Setup
 
 **Packages Installed:**
+
 ```bash
 pip install langchain-anthropic langchain-mistralai
 ```
 
 **Confirmed Working:**
+
 - ✅ python-dotenv (environment loading)
 - ✅ langchain-openai (OpenAI LLM + embeddings)
 - ✅ langchain-anthropic (Claude LLM)
@@ -174,6 +190,7 @@ docker-compose exec orchestrator pip list | grep langchain
 ```
 
 Expected packages in containers:
+
 ```
 langchain>=0.1.0
 langchain-core>=0.1.0
@@ -185,6 +202,7 @@ langchain-mistralai>=0.2.0
 ### Environment Variables
 
 Ensure `.env` is updated on deployment:
+
 ```bash
 # On droplet
 ssh do-mcp-gateway
@@ -208,13 +226,13 @@ docker-compose restart
 
 ## Cost Analysis (Validated Providers)
 
-| Provider | Model | Input Cost | Output Cost | Validated |
-|----------|-------|-----------|-------------|-----------|
-| OpenAI | gpt-4o-mini | $0.15/1M | $0.60/1M | ✅ |
-| OpenAI | text-embedding-3-small | $0.02/1M | - | ✅ |
-| Claude | claude-3-5-haiku | $0.80/1M | $4.00/1M | ✅ |
-| Mistral | mistral-small | $0.25/1M | - | ⚠️ |
-| Gradient | llama-3.1-8b | $0.20/1M | - | ❌ |
+| Provider | Model                  | Input Cost | Output Cost | Validated |
+| -------- | ---------------------- | ---------- | ----------- | --------- |
+| OpenAI   | gpt-4o-mini            | $0.15/1M   | $0.60/1M    | ✅        |
+| OpenAI   | text-embedding-3-small | $0.02/1M   | -           | ✅        |
+| Claude   | claude-3-5-haiku       | $0.80/1M   | $4.00/1M    | ✅        |
+| Mistral  | mistral-small          | $0.25/1M   | -           | ⚠️        |
+| Gradient | llama-3.1-8b           | $0.20/1M   | -           | ❌        |
 
 **Current Recommendation:** Use OpenAI as default until Gradient endpoint is fixed.
 
@@ -223,15 +241,17 @@ docker-compose restart
 ### Immediate (Before Deployment)
 
 1. **Fix Gradient 404 Error**
+
    ```bash
    # Update .env
    GRADIENT_BASE_URL=https://api.digitalocean.com/v2/ai/v1
-   
+
    # Test locally
    LLM_PROVIDER=gradient python scripts/test_llm_provider.py
    ```
 
 2. **Verify Mistral with Different Model**
+
    ```bash
    # Try open-mistral-7b (free tier)
    LLM_PROVIDER=mistral python scripts/test_llm_provider.py
@@ -246,12 +266,14 @@ docker-compose restart
 ### Deployment
 
 1. **Rebuild Containers**
+
    ```bash
    docker-compose build
    docker-compose up -d
    ```
 
 2. **Test in Containers**
+
    ```bash
    docker-compose exec orchestrator python -c "from _shared.langchain_gradient import get_llm; print(get_llm('test', provider='openai'))"
    ```
