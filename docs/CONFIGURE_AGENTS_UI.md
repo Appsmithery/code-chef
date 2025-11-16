@@ -10,7 +10,6 @@
 | Infrastructure        | ❌ Offline | https://r2eqzfrjao62mdzdbtolmq3sa.agents.do-ai.run |
 | CI/CD                 | ✅ Running | https://dxoc7qrjjgbvj7ybct7nogbp.agents.do-ai.run  |
 | Documentation         | ❌ Offline | https://tzyvehgqf3pgl4z46rrzbbs.agents.do-ai.run   |
-| Kubernetes Genius     | ✅ Running | https://uwu4yx7stpwcahkg56m4zn7k.agents.do-ai.run  |
 
 ## Step-by-Step: Add Environment Variables to Each Agent
 
