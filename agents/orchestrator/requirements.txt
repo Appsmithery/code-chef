@@ -9,6 +9,7 @@ pyyaml>=6.0
 requests>=2.31.0
 gql[requests]>=3.5.0
 langgraph>=0.1.7
+langgraph-checkpoint-postgres>=2.0.0
 langchain>=0.1.0
 langchain-core>=0.1.0
 qdrant-client>=1.7.0
