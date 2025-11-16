@@ -12,7 +12,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from agents.feature_dev.service import (
+from service import (
     FeatureRequest,
     FeatureResponse,
     GuardrailViolation,
@@ -22,6 +22,8 @@ from agents.feature_dev.service import (
 
 # LangGraph Infrastructure
 try:
+    import sys
+    sys.path.insert(0, '/app')
     from agents._shared.langgraph_base import get_postgres_checkpointer, create_workflow_config
     from agents._shared.qdrant_client import get_qdrant_client
     from agents._shared.langchain_memory import create_hybrid_memory

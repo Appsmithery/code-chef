@@ -15,7 +15,7 @@ import os
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from agents.code_review.service import (
+from service import (
     GuardrailViolation,
     ReviewRequest,
     ReviewResponse,
@@ -25,6 +25,8 @@ from agents.code_review.service import (
 
 # LangGraph Infrastructure
 try:
+    import sys
+    sys.path.insert(0, '/app')
     from agents._shared.langgraph_base import get_postgres_checkpointer, create_workflow_config
     from agents._shared.qdrant_client import get_qdrant_client
     from agents._shared.langchain_memory import create_hybrid_memory
