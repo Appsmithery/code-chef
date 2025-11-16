@@ -29,6 +29,7 @@ QDRANT_DISTANCE=cosine
 ## Collection Schema
 
 All collections use:
+
 - **Vector dimensions**: 1536 (OpenAI text-embedding-3-large compatible)
 - **Distance metric**: Cosine similarity
 - **Embeddings**: DigitalOcean Gradient AI (`GRADIENT_EMBEDDING_MODEL=text-embedding-3-large`)
@@ -38,6 +39,7 @@ All collections use:
 **Purpose**: Main production knowledge base containing workspace documentation, code context, and architectural patterns.
 
 **Content**:
+
 - Repository documentation (README, ARCHITECTURE, etc.)
 - Code snippets and examples
 - Configuration patterns
@@ -45,6 +47,7 @@ All collections use:
 - Best practices and conventions
 
 **Used by**:
+
 - RAG Context Manager (`services/rag/main.py`)
 - All agents for context retrieval
 - KB sync script (`scripts/sync_kb_to_qdrant.py`)
@@ -58,17 +61,20 @@ All collections use:
 **Purpose**: Stores agent conversation history and episodic memory for context continuity across sessions.
 
 **Content**:
+
 - User-agent conversation turns
 - Session context and state
 - Interaction patterns
 - Feedback and corrections
 
 **Used by**:
+
 - LangChain memory wrapper (`agents/_shared/langchain_memory.py`)
 - LangGraph checkpointing system
 - All agents for maintaining conversation context
 
 **Payload schema**:
+
 ```json
 {
   "content": "conversation message or summary",
@@ -88,6 +94,7 @@ All collections use:
 **Purpose**: Task-specific context including requirements, execution history, and intermediate results.
 
 **Content**:
+
 - Task decomposition trees
 - Subtask specifications
 - Execution logs and outcomes
@@ -95,11 +102,13 @@ All collections use:
 - Review feedback
 
 **Used by**:
+
 - Orchestrator agent (task planning)
 - Feature-dev agent (implementation context)
 - Code-review agent (review criteria)
 
 **Payload schema**:
+
 ```json
 {
   "content": "task description or outcome",
@@ -121,6 +130,7 @@ All collections use:
 **Purpose**: Reusable code snippets, architectural patterns, and implementation templates.
 
 **Content**:
+
 - Code examples and boilerplate
 - Design patterns (Singleton, Factory, etc.)
 - Framework-specific patterns (FastAPI, LangGraph, etc.)
@@ -128,11 +138,13 @@ All collections use:
 - Performance optimizations
 
 **Used by**:
+
 - Feature-dev agent (code generation)
 - Code-review agent (pattern validation)
 - Documentation agent (example generation)
 
 **Payload schema**:
+
 ```json
 {
   "content": "code snippet or pattern description",
@@ -153,6 +165,7 @@ All collections use:
 **Purpose**: Feature specifications, PRDs (Product Requirements Documents), and detailed requirements.
 
 **Content**:
+
 - Feature descriptions and acceptance criteria
 - User stories and use cases
 - Technical specifications
@@ -160,11 +173,13 @@ All collections use:
 - UI/UX requirements
 
 **Used by**:
+
 - Orchestrator agent (task decomposition)
 - Feature-dev agent (implementation guidance)
 - Documentation agent (spec documentation)
 
 **Payload schema**:
+
 ```json
 {
   "content": "feature specification text",
@@ -186,6 +201,7 @@ All collections use:
 **Purpose**: Linear issues, bugs, and project management context synced from Linear workspace.
 
 **Content**:
+
 - Issue descriptions and comments
 - Bug reports and reproduction steps
 - Project milestones and cycles
@@ -193,12 +209,14 @@ All collections use:
 - Status updates
 
 **Used by**:
+
 - CICD agent (deployment validation)
 - Code-review agent (issue context)
 - Documentation agent (changelog generation)
 - Orchestrator (issue-to-task mapping)
 
 **Payload schema**:
+
 ```json
 {
   "content": "issue description and comments",
@@ -399,7 +417,8 @@ python scripts/init_qdrant_collections.py
 
 **Cause**: Collection exists but has no indexed data
 
-**Fix**: 
+**Fix**:
+
 1. For `the-shop`: Run KB sync script
 2. For agent collections: Agents will populate automatically during use
 3. Check embedding model compatibility (must be 1536 dimensions)
