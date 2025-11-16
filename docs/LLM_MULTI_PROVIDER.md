@@ -354,11 +354,13 @@ docker-compose up -d
 ### Provider Not Working
 
 1. Check API key is set in `.env`:
+
    ```bash
    grep -E "CLAUDE_API_KEY|MISTRAL_API_KEY|OPEN_AI_DEVTOOLS_KEY" config/env/.env
    ```
 
 2. Test provider connectivity:
+
    ```bash
    LLM_PROVIDER=claude python scripts/test_llm_provider.py
    ```
@@ -371,11 +373,13 @@ docker-compose up -d
 ### Langfuse Tracing Not Working
 
 1. Verify Langfuse keys in `.env`:
+
    ```bash
    grep LANGFUSE config/env/.env
    ```
 
 2. Check callback handler initialization:
+
    ```bash
    docker-compose logs orchestrator | grep -i langfuse
    ```
@@ -387,6 +391,7 @@ docker-compose up -d
 If you see `ModuleNotFoundError: No module named 'langchain_anthropic'`:
 
 1. Ensure dependencies are in `requirements.txt`:
+
    ```bash
    cat agents/orchestrator/requirements.txt | grep -E "anthropic|mistral"
    ```
