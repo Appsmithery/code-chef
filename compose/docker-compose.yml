@@ -1,8 +1,149 @@
 services:
-  # NOTE: Agent services (orchestrator, feature-dev, code-review, infrastructure, cicd, documentation)
-  # are deployed as Gradient AI managed agents. See DigitalOcean dashboard for endpoints.
-  # Only gateway-mcp, rag-context, state-persistence, and databases run in Docker.
+  # ============================================================================
+  # AGENT SERVICES (FastAPI containers)
+  # ============================================================================
 
+  # Orchestrator Agent - Task routing and workflow coordination
+  orchestrator:
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/orchestrator:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: containers/orchestrator/Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - AGENT_NAME=orchestrator
+      - GRADIENT_MODEL=llama-3.1-70b-instruct
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - RAG_SERVICE_URL=http://rag-context:8007
+      - STATE_SERVICE_URL=http://state-persistence:8008
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - gateway-mcp
+      - rag-context
+      - state-persistence
+    volumes:
+      - orchestrator-data:/app/data
+    restart: unless-stopped
+
+  # Feature Development Agent - Code generation
+  feature-dev:
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/feature-dev:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: containers/feature-dev/Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - AGENT_NAME=feature-dev
+      - GRADIENT_MODEL=codellama-13b-instruct
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - RAG_SERVICE_URL=http://rag-context:8007
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - gateway-mcp
+      - rag-context
+    restart: unless-stopped
+
+  # Code Review Agent - PR analysis and security review
+  code-review:
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/code-review:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: containers/code-review/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - AGENT_NAME=code-review
+      - GRADIENT_MODEL=llama-3.1-70b-instruct
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - RAG_SERVICE_URL=http://rag-context:8007
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - gateway-mcp
+      - rag-context
+    restart: unless-stopped
+
+  # Infrastructure Agent - Docker, Kubernetes, Terraform
+  infrastructure:
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/infrastructure:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: containers/infrastructure/Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - AGENT_NAME=infrastructure
+      - GRADIENT_MODEL=llama-3.1-8b-instruct
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - RAG_SERVICE_URL=http://rag-context:8007
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - gateway-mcp
+      - rag-context
+    restart: unless-stopped
+
+  # CI/CD Agent - Pipeline configuration
+  cicd:
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/cicd:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: containers/cicd/Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - AGENT_NAME=cicd
+      - GRADIENT_MODEL=llama-3.1-8b-instruct
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - RAG_SERVICE_URL=http://rag-context:8007
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - gateway-mcp
+      - rag-context
+    restart: unless-stopped
+
+  # Documentation Agent - Docs generation and updates
+  documentation:
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/documentation:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: containers/documentation/Dockerfile
+    ports:
+      - "8006:8006"
+    environment:
+      - AGENT_NAME=documentation
+      - GRADIENT_MODEL=mistral-7b-instruct
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - RAG_SERVICE_URL=http://rag-context:8007
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - gateway-mcp
+      - rag-context
+    restart: unless-stopped
+
+  # ============================================================================
+  # INFRASTRUCTURE SERVICES
+  # ============================================================================
+
+  # MCP Gateway - Tool routing and Linear integration
   gateway-mcp:
     image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/gateway-mcp:${IMAGE_TAG:-local}
     build:

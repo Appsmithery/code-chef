@@ -1,15 +1,46 @@
-# Configuring Gradient AI Agents - UI Guide
+# ⚠️ DEPRECATED - This Guide is Incorrect
 
-## Current Agent Status
+## Update: November 15, 2025
 
-| Agent                 | Status     | URL                                                |
-| --------------------- | ---------- | -------------------------------------------------- |
-| DevTools Orchestrator | ✅ Running | https://zqavbvjov22wijsmbqtkqy4r.agents.do-ai.run  |
-| Feature Development   | ✅ Running | https://mdu2tzvveslhs6spm36znwul.agents.do-ai.run  |
-| Code Review           | ✅ Running | https://miml4tgrdvjufzudn5udh2sp.agents.do-ai.run  |
-| Infrastructure        | ❌ Offline | https://r2eqzfrjao62mdzdbtolmq3sa.agents.do-ai.run |
-| CI/CD                 | ✅ Running | https://dxoc7qrjjgbvj7ybct7nogbp.agents.do-ai.run  |
-| Documentation         | ❌ Offline | https://tzyvehgqf3pgl4z46rrzbbs.agents.do-ai.run   |
+**This document was created based on a misunderstanding of the architecture.**
+
+The agents are **NOT** DigitalOcean Gradient AI managed agents with UI configuration. They are **FastAPI services deployed as Docker containers** on the droplet.
+
+## Correct Architecture
+
+See **[DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md)** for the correct architecture.
+
+**Agents run as Docker containers on droplet 45.55.173.72:**
+
+- Orchestrator (port 8001)
+- Feature Development (port 8002)
+- Code Review (port 8003)
+- Infrastructure (port 8004)
+- CI/CD (port 8005)
+- Documentation (port 8006)
+
+## Configuration Method
+
+**Environment variables are set via `config/env/.env` file, NOT through DigitalOcean UI.**
+
+The `.env` file is mounted into all agent containers via Docker Compose.
+
+## Previous Content (Incorrect)
+
+---
+
+## ~~Current Agent Status~~
+
+~~The agents listed below were test agents in DigitalOcean Gradient AI Platform, not the production agents.~~
+
+| ~~Agent~~                 | ~~Status~~     | ~~URL~~                                                |
+| ------------------------- | -------------- | ------------------------------------------------------ |
+| ~~DevTools Orchestrator~~ | ~~✅ Running~~ | ~~https://zqavbvjov22wijsmbqtkqy4r.agents.do-ai.run~~  |
+| ~~Feature Development~~   | ~~✅ Running~~ | ~~https://mdu2tzvveslhs6spm36znwul.agents.do-ai.run~~  |
+| ~~Code Review~~           | ~~✅ Running~~ | ~~https://miml4tgrdvjufzudn5udh2sp.agents.do-ai.run~~  |
+| ~~Infrastructure~~        | ~~❌ Offline~~ | ~~https://r2eqzfrjao62mdzdbtolmq3sa.agents.do-ai.run~~ |
+| ~~CI/CD~~                 | ~~✅ Running~~ | ~~https://dxoc7qrjjgbvj7ybct7nogbp.agents.do-ai.run~~  |
+| ~~Documentation~~         | ~~❌ Offline~~ | ~~https://tzyvehgqf3pgl4z46rrzbbs.agents.do-ai.run~~   |
 
 ## Step-by-Step: Add Environment Variables to Each Agent
 
