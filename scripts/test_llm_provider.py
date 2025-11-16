@@ -20,8 +20,18 @@ import os
 import asyncio
 from pathlib import Path
 
+# Load environment variables from .env file
+from dotenv import load_dotenv
+repo_root = Path(__file__).parent.parent
+env_file = repo_root / "config" / "env" / ".env"
+if env_file.exists():
+    load_dotenv(env_file)
+    print(f"✓ Loaded environment from {env_file}\n")
+else:
+    print(f"⚠ Warning: {env_file} not found, using system environment\n")
+
 # Add agents directory to path
-agents_path = Path(__file__).parent.parent / "agents"
+agents_path = repo_root / "agents"
 sys.path.insert(0, str(agents_path))
 
 from _shared.langchain_gradient import get_llm, get_embeddings, LLM_PROVIDER, EMBEDDING_PROVIDER
@@ -105,7 +115,7 @@ async def test_all_providers():
     """Test all available providers"""
     providers = {
         "gradient": {"llm": "llama-3.1-8b-instruct", "embeddings": "text-embedding-3-small"},
-        "claude": {"llm": "claude-3-5-haiku-20241022", "embeddings": None},
+        "claude": {"llm": "claude-3-5-haiku-20241022", "embeddings": None},  # Use cheaper Haiku model
         "mistral": {"llm": "mistral-small-latest", "embeddings": None},
         "openai": {"llm": "gpt-4o-mini", "embeddings": "text-embedding-3-small"}
     }
