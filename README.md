@@ -11,6 +11,7 @@ Dev-Tools consolidates AI agents, MCP gateway, Docker orchestration, and develop
 - **Linear Integration**: Direct SDK access for issue management with OAuth support
 - **LLM Inference**: DigitalOcean Gradient AI with per-agent model optimization
 - **Observability**: Langfuse LLM tracing + Prometheus HTTP metrics
+- **LangGraph Workflows**: Multi-agent orchestration with PostgreSQL state persistence and streaming
 - **Inter-Agent Communication**: HTTP-based workflow orchestration with automated task routing
 - **Docker Compose Stack**: Complete containerized development environment
 - **Docker MCP Toolkit**: Direct stdio communication with MCP servers (no HTTP gateway)
@@ -20,6 +21,16 @@ Dev-Tools consolidates AI agents, MCP gateway, Docker orchestration, and develop
 - **Backup & Restore**: Volume management scripts for data persistence
 
 ## Deployment Status
+
+**LangGraph Integration Complete** ✅ - Multi-agent workflow orchestration ready
+
+- ✅ LangGraph workflow service on port 8009
+- ✅ PostgreSQL checkpointer for state persistence
+- ✅ Streaming support via SSE (Server-Sent Events)
+- ✅ LangChain-compatible Gradient AI wrapper
+- ✅ FastAPI server with /invoke, /stream, /stream-events endpoints
+- ✅ Docker container with full agent service dependencies
+- ✅ All integration tests passing (5/5)
 
 **MCP Toolkit Integration Complete** ✅ - Production-ready with direct stdio transport
 

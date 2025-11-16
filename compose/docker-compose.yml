@@ -235,17 +235,48 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_DB=devtools
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_USER=devtools
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
     networks:
       - devtools-network
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d devtools"]
+      test: ["CMD-SHELL", "pg_isready -U devtools -d devtools"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # LangGraph Workflow Service
+  langgraph:
+    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/langgraph:${IMAGE_TAG:-local}
+    build:
+      context: ..
+      dockerfile: containers/langgraph/Dockerfile
+    ports:
+      - "8009:8009"
+    environment:
+      - PORT=8009
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=devtools
+      - DB_USER=devtools
+      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - MCP_GATEWAY_URL=http://gateway-mcp:8000
+      - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
+      - GRADIENT_MODEL=${GRADIENT_MODEL:-llama-3.1-8b-instruct}
+      - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
+      - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
+      - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - postgres
+      - gateway-mcp
+    restart: unless-stopped
 
   prometheus:
     image: prom/prometheus:latest
