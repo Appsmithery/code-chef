@@ -26,7 +26,8 @@
     "github.copilot.chat.notebook.followCellExecution.enabled": true,
     "github.copilot.chat.responsesApiReasoningEffort": "high",
     "github.copilot.chat.scopeSelection": true,
-    "github.copilot.chat.tools.memory.enabled": true
+    "github.copilot.chat.tools.memory.enabled": true,
+    "workbench.iconTheme": "vs-seti-folder"
   },
   "extensions": {
     "recommendations": [
