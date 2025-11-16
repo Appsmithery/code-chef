@@ -195,6 +195,8 @@ This eliminates 6 separate Docker containers and consolidates to a single LangGr
 3. Register the nodes inside `agents/langgraph/workflow.py`, mirroring the `workflow.add_node` and `add_conditional_edges` calls above. Keep the routing logic simple (keyword or tag based) until the new LangGraph orchestrator can be driven by LLM-based decompositions.^2
 4. Capture trace metadata (task_id, agent_name) in the returned state so the Langfuse hooks already wired into `gradient_client` continue emitting per-step spans once the graph is running.^6
 
+✅ **Scaffolding status:** `agents/langgraph/state.py`, node stubs under `agents/langgraph/nodes/`, and the initial router defined in `agents/langgraph/workflow.py` now exist inside the repo. Use `invoke_workflow()` to smoke-test the routing heuristics while richer node logic is being ported.
+
 ### Phase 2: Implement A2A Protocol for Agent Communication
 
 **A2A enables standardized agent-to-agent communication**. Instead of HTTP endpoints between agents, implement A2A message passing:[^3][^4][^7]
