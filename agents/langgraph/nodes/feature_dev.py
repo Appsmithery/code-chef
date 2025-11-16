@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from langchain_core.messages import HumanMessage
+from pydantic import ValidationError
 
 from agents.feature_dev.service import FeatureRequest, GuardrailViolation, process_feature_request
 from agents.langgraph.state import AgentState, ensure_agent_state
@@ -22,10 +23,23 @@ async def feature_dev_node(state: AgentState) -> AgentState:
     )
     request_summary = latest_human.content if latest_human else description
 
-    feature_request = FeatureRequest(
-        description=description,
-        task_id=normalized.get("linear_issue_id") or normalized.get("task_id"),
-    )
+    feature_request: FeatureRequest
+    request_payload = normalized.get("feature_request")
+    if request_payload:
+        try:
+            feature_request = FeatureRequest.model_validate(request_payload)
+        except ValidationError:
+            feature_request = FeatureRequest(
+                description=request_payload.get("description", description),
+                context_refs=request_payload.get("context_refs"),
+                project_context=request_payload.get("project_context"),
+                task_id=request_payload.get("task_id") or normalized.get("linear_issue_id"),
+            )
+    else:
+        feature_request = FeatureRequest(
+            description=description,
+            task_id=normalized.get("linear_issue_id"),
+        )
 
     try:
         response = await process_feature_request(feature_request)
@@ -38,6 +52,7 @@ async def feature_dev_node(state: AgentState) -> AgentState:
         )
 
         update = agent_response(normalized, agent_name="feature-dev", content=content)
+        update["feature_request"] = feature_request.model_dump(mode="json")
         update["feature_response"] = response.model_dump(mode="json")
         return update
     except GuardrailViolation as exc:
