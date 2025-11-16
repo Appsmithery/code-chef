@@ -40,7 +40,8 @@
       "ms-vscode-remote.remote-containers",
       "linear.linear-connect",
       "chrisdias.promptboost",
-      "task.vscode-task"
+      "task.vscode-task",
+      "hfloveyy.langgraphv"
     ]
   }
 }
