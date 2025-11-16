@@ -3,7 +3,7 @@ LangGraph Base Infrastructure
 Provides shared components for LangGraph workflow integration
 """
 
-from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph_checkpoint_postgres import PostgresSaver
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, Annotated, Sequence, Any
 from langchain_core.messages import BaseMessage
