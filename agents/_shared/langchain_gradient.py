@@ -112,7 +112,7 @@ def get_llm(
         from langchain_anthropic import ChatAnthropic
         return ChatAnthropic(
             api_key=CLAUDE_API_KEY,
-            model=model or "claude-3-5-sonnet-20241022",
+            model=model or "claude-3-5-haiku-20241022",
             temperature=temperature,
             max_tokens=max_tokens,
             callbacks=callbacks,
