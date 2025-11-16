@@ -1,27 +1,112 @@
-# **Migration Strategy: Transitioning Dev-Tools to LangGraph with A2A/AG-UI Protocols**
+# **Dev-Tools LangGraph Migration Plan**
 
-Based on your [current architecture](https://github.com/Appsmithery/Dev-Tools), you have a well-structured multi-agent system with FastAPI services, MCP tool integration, and Docker orchestration on Digital Ocean. Here's a comprehensive migration plan to modernize it with LangGraph while maintaining your existing infrastructure and adding A2A/AG-UI protocol support.[^1][^2][^3][^4]
+**Version:** 2.0  
+**Date:** 2025-11-16  
+**Status:** Draft - Ready for Review
 
-### Current Architecture Assessment
+## Executive Summary
 
-Your system currently implements:
+**Problem:** Current Docker/FastAPI architecture creates excessive operational overhead with 11 containers (6 agents + 5 infrastructure services), custom HTTP coordination, and brittle service mesh causing deployment failures and maintenance complexity.
 
-- **6 specialized FastAPI agents** (Orchestrator, Feature-Dev, Code-Review, Infrastructure, CI/CD, Documentation) running as independent Docker services
-- **Direct MCP stdio transport** for tool invocation via `mcp_tool_client.py`
-- **Qdrant vector store** for RAG capabilities
-- **HTTP-based inter-agent communication** with manual task routing
-- **Digital Ocean deployment** with Docker Compose orchestration
+**Solution:** Migrate to LangGraph-based architecture with unified state management, native LangChain tool integration, and simplified deployment model.
 
-The complexity stems from manual HTTP coordination between agents, custom routing logic, and maintaining state across services.[^5]
+**Impact:**
 
-### Recommended Migration Architecture
+- **Reduce containers:** 11 → 4 (LangGraph API + Qdrant + PostgreSQL + Redis)
+- **Eliminate complexity:** Remove custom HTTP routing, manual state persistence, 6 separate agent codebases
+- **Preserve capabilities:** Maintain all 150+ MCP tools, Gradient AI integration, Linear SDK, Qdrant RAG
+- **Enable future growth:** A2A/AG-UI protocols for IDE integration, standardized agent communication
 
-**Use LangGraph Python SDK** for the following reasons:
+---
 
-- Your existing codebase is Python-based with FastAPI
-- LangGraph's state management integrates seamlessly with your PostgreSQL and Qdrant setup
-- Python MCP adapters (`langchain-mcp-adapters`) maintain compatibility with your existing MCP toolkit
-- Better ecosystem support for DigitalOcean Gradient AI client integration[^2][^1]
+## Current Architecture Assessment
+
+### Existing Stack (Phase 7 Complete)
+
+**Containers (11 total):**
+
+1. `gateway-mcp:8000` - Linear OAuth gateway (Node.js)
+2. `orchestrator:8001` - Task routing (FastAPI)
+3. `feature-dev:8002` - Code generation (FastAPI)
+4. `code-review:8003` - Quality checks (FastAPI)
+5. `infrastructure:8004` - IaC generation (FastAPI)
+6. `cicd:8005` - Pipeline automation (FastAPI)
+7. `documentation:8006` - Doc generation (FastAPI)
+8. `rag-context:8007` - Qdrant interface (FastAPI)
+9. `state-persistence:8008` - PostgreSQL interface (FastAPI)
+10. `qdrant:6333,6334` - Vector database
+11. `postgres:5432` - Relational database
+
+**Key Components:**
+
+- **Agent Framework:** FastAPI with custom HTTP routing via `AGENT_ENDPOINTS` dict
+- **MCP Integration:** Direct stdio transport via `agents/_shared/mcp_tool_client.py` (subprocess-based Docker MCP Toolkit invocation)
+- **LLM Inference:** DigitalOcean Gradient AI via custom `gradient_client.py` (Gradient SDK wrapper)
+- **Observability:** Langfuse tracing (automatic via Gradient SDK) + Prometheus metrics
+- **State Management:** Manual task registry + PostgreSQL persistence via HTTP POST to state-persistence service
+- **Tool Access:** 150+ tools across 17 MCP servers (memory, rust-filesystem, gitmcp, playwright, notion, dockerhub, etc.)
+
+**Pain Points:**
+
+- **Service Mesh Fragility:** HTTP coordination between 9 services causes cascading failures
+- **State Synchronization:** Manual task_registry dict + async POST to state-persistence service creates consistency issues
+- **Deployment Complexity:** 11 container builds, 6 separate Dockerfiles, volume mounts, network configuration
+- **Tool Invocation Overhead:** subprocess Docker calls per tool invocation (50-100ms latency)
+- **Manual Routing:** Rule-based `decompose_request()` fallback when LLM unavailable
+
+---
+
+## Target Architecture
+
+### Design Principles
+
+1. **Unified Graph Execution:** Replace 6 FastAPI agents with single LangGraph application
+2. **Native Tool Integration:** Use `langchain-mcp-adapters` to maintain MCP tool compatibility
+3. **Preserve Infrastructure:** Keep Qdrant, PostgreSQL, Redis for state/vector storage
+4. **Gradient AI Compatibility:** Wrap existing `gradient_client.py` as LangChain LLM provider
+5. **Incremental Migration:** Agents convert to graph nodes with minimal code changes
+
+### New Stack (Post-Migration)
+
+**Containers (4 total):**
+
+1. `langgraph-api:8123` - Unified agent graph (Python/LangGraph)
+2. `qdrant:6333` - Vector database (unchanged)
+3. `postgres:5432` - State persistence (unchanged)
+4. `redis:6379` - LangGraph checkpoint storage (new)
+
+**Eliminated Services:**
+
+- ❌ gateway-mcp (Linear OAuth handled by Python SDK)
+- ❌ orchestrator (becomes graph router node)
+- ❌ 5 specialized agents (become graph nodes)
+- ❌ rag-context wrapper (direct Qdrant via LangChain)
+- ❌ state-persistence wrapper (LangGraph native checkpointing)
+
+**Key Changes:**
+
+- **Agent Coordination:** HTTP POST → LangGraph StateGraph edges
+- **State Management:** Manual registry + HTTP → LangGraph PostgresSaver
+- **MCP Tools:** subprocess Docker → langchain-mcp-adapters (persistent connections)
+- **LLM Integration:** Custom Gradient wrapper → LangChain ChatOpenAI (compatible with DO Gradient)
+- **Routing:** Rule-based + optional LLM → LangGraph conditional edges
+
+### Service Migration Matrix
+
+| Legacy Component                                                        | Graph-Era Replacement                                        | Migration Notes                                                                                                                                                                    |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `orchestrator` FastAPI app                                              | `StateGraph` entry point + `route_task` node                 | Collapse `agents/orchestrator/main.py` into a LangGraph builder that emits deterministic routes per DigitalOcean’s LangGraph playbooks, then delete the HTTP hop entirely.^2       |
+| `feature-dev`, `code-review`, `infrastructure`, `cicd`, `documentation` | LangGraph node functions                                     | Lift existing business logic into node modules (e.g., `nodes/feature_dev.py`) that accept `AgentState`, reuse the same Gradient model IDs, and return structured message deltas.^1 |
+| `rag-context` wrapper                                                   | `rag_retrieval` node                                         | Replace the REST shim with direct `QdrantVectorStore` calls tied to the shared state payload; continue using DigitalOcean-friendly embeddings + search patterns.^1                 |
+| `state-persistence` FastAPI layer                                       | `langgraph.checkpoint.postgres.PostgresSaver` + Redis broker | Wire LangGraph’s checkpoint + replay subsystem into the existing Postgres + Redis pair recommended by LangSmith’s standalone server guide so threads survive restarts.^5           |
+| `gateway-mcp` service                                                   | `langchain-mcp` toolkit bindings                             | Load the 17 MCP servers with `langchain_mcp` toolkits so each node can call tools without spawning Docker sidecars.[^22]                                                           |
+
+### State & Persistence Contracts
+
+- **Primary store:** Point `langgraph.checkpoint.postgres.PostgresSaver` at the existing `postgres:5432` DSN so every graph run records checkpoints, artifacts, and resumable threads.^5 Because the LangSmith deployment docs require `DATABASE_URI` + `LANGSMITH_API_KEY`, mirror that `.env` layout for parity between local and droplet targets.
+- **Streaming broker:** Reuse the stack’s Redis instance (or add the lightweight `redis:6` service already shown in the compose file) so `langgraph`’s streaming + background runs behave exactly like the LangSmith reference implementation.^5
+- **State schema:** Promote the TypedDict shown below into `agents/langgraph/state.py`, keeping `messages` append-only, `rag_context` as a reducer-friendly list, and `mcp_tools_used` as a deduplicated array. This mirrors the DigitalOcean tutorials’ emphasis on explicit state objects for each node transition.^2
+- **Step tracking:** Adopt the step-id execution contract from Balaji Kithiganahalli’s LangGraph CoT article so retries, forks, and human-in-the-loop overrides remain traceable across Redis/Postgres checkpoints.^20
 
 ### Phase 1: Convert Agents to LangGraph Nodes
 
@@ -103,6 +188,13 @@ app = workflow.compile()
 
 This eliminates 6 separate Docker containers and consolidates to a single LangGraph application.[^6][^5]
 
+**Action steps (Week 1):**
+
+1. Create `agents/langgraph/state.py` with the TypedDict above and reducers for `messages`, `rag_context`, and `mcp_tools_used`, then add pydantic validators so every node receives consistent payloads.^2
+2. Carve each FastAPI agent into `agents/langgraph/nodes/<agent>.py` functions that import the existing `gradient_client` + `mcp_tool_client` helpers; ensure every node returns `{"messages": [...], "current_agent": "feature-dev"}` so downstream routing conditions have deterministic keys.^1
+3. Register the nodes inside `agents/langgraph/workflow.py`, mirroring the `workflow.add_node` and `add_conditional_edges` calls above. Keep the routing logic simple (keyword or tag based) until the new LangGraph orchestrator can be driven by LLM-based decompositions.^2
+4. Capture trace metadata (task_id, agent_name) in the returned state so the Langfuse hooks already wired into `gradient_client` continue emitting per-step spans once the graph is running.^6
+
 ### Phase 2: Implement A2A Protocol for Agent Communication
 
 **A2A enables standardized agent-to-agent communication**. Instead of HTTP endpoints between agents, implement A2A message passing:[^3][^4][^7]
@@ -175,6 +267,13 @@ async def orchestrator_node(state: AgentState):
     return {"messages": [response]}
 ```
 
+**Action steps (Week 2-3):**
+
+1. Generate an A2A agent card per service using the schema from the Currency Agent tutorial so capabilities, tags, and auth expectations are explicit for IDE clients.^4
+2. Wrap the LangGraph workflow with `A2AServer` instances that forward `message/send` and `message/stream` events to `graph.ainvoke` so streaming updates bubble back to the caller; reuse the tutorial’s `TaskStore` helpers until the Redis/Postgres-backed store is ready.^4
+3. Teach the orchestrator node to call `A2AClient` for any tasks it decides to delegate externally (e.g., calling an infra agent that still runs as a separate process) so hybrid deployments remain possible during the migration.^7
+4. Use the built-in streaming hooks (`process_streaming_agent_response`) from the tutorial to map LangGraph streamed events onto the existing VS Code UX, which keeps feature-dev feedback loops sub-2s even when long-running MCP tools execute.^4
+
 ### Phase 3: Integrate AG-UI Protocol for IDE Orchestration
 
 **AG-UI enables real-time interaction between your IDE agent (Cline/Copilot) and backend LangGraph agents**.[^9][^10][^11]
@@ -236,6 +335,13 @@ Create `.vscode/settings.json`:
 
 Now Cline can coordinate your 5 specialized agents through the AG-UI → A2A → LangGraph pipeline.[^9][^11]
 
+**Action steps (Week 3-4):**
+
+1. Scaffold `services/ag-ui-bridge/` using the CopilotKit runtime snippet shown above so the VS Code extension only needs a single `/api/copilotkit` endpoint to reach every LangGraph node.^11
+2. Add the AG-UI FastAPI middleware (`add_adk_fastapi_endpoint`) to the LangGraph container so you can expose both A2A and AG-UI transports without duplicating business logic.^11
+3. Wire `useCoAgent` shared state hooks into the existing frontend preview (docs portal) to prove that agent state (e.g., generated docs, Terraform) can stream into arbitrary UIs before the final IDE rollout.^11
+4. Document the expected `agent` identifiers (`feature-dev`, `code-review`, etc.) in `docs/AGENT_ENDPOINTS.md` so IDE clients know how to pick the right backend when multiple graphs are running.^9
+
 ### Phase 4: Maintain Qdrant RAG Integration
 
 **LangGraph integrates seamlessly with your existing Qdrant setup**:[^2]
@@ -269,6 +375,13 @@ def rag_retrieval_node(state: AgentState):
 
 workflow.add_node("rag_retrieval", rag_retrieval_node)
 ```
+
+**Action steps (Week 4):**
+
+1. Move the existing Qdrant credentials from `rag-context` into LangGraph settings (`QDRANT_URL`, `QDRANT_API_KEY`) and confirm similarity search latency stays under 150 ms on the DigitalOcean Droplet described in the local-agent tutorial.^1
+2. Introduce a `vectorstore` dependency in each node that needs retrieval so future sub-graphs (e.g., doc generation) can opt-in without duplicating connectors.^2
+3. Backfill RAG telemetry by logging `docs_retrieved`, `collection_name`, and `query_tokens` into Prometheus before the FastAPI wrappers are retired; this maintains the observability dashboards during the cutover.^6
+4. Add regression tests exercising the top 5 MCP tools that depend on retrieved context (git, filesystem, memory) to ensure the new node surfaces data identically to the old microservice.^1
 
 ### Phase 5: Docker \& Digital Ocean Deployment
 
@@ -348,6 +461,13 @@ EXPOSE 8000
 CMD ["langgraph", "serve", "--port", "8000"]
 ```
 
+**Action steps (Week 5):**
+
+1. Mirror the LangSmith standalone server `.env` contract (`REDIS_URI`, `DATABASE_URI`, `LANGSMITH_API_KEY`, `LANGGRAPH_CLOUD_LICENSE_KEY`) so the same container image can run locally, in CI, or on the production Droplet.^5
+2. Add a `scripts/deploy_langgraph.ps1` wrapper that builds the LangGraph image with `langgraph build`, pushes to DOCR, and updates the compose stack—matching the workflow from `scripts/deploy.ps1` to minimize operator retraining.^18
+3. Validate that `curl :8123/ok` responds with `{ "ok": true }` inside CI (following the LangSmith doc) before tagging a release; this collapses the former nine-container health checks into a single probe.^5
+4. Update `compose/docker-compose.yml` to remove the retired FastAPI services once the LangGraph container is healthy for 72h, then archive their Dockerfiles for reference.
+
 ### Phase 6: MCP Integration Strategy
 
 **Maintain your existing MCP toolkit** using LangChain adapters:[^8]
@@ -371,6 +491,13 @@ def agent_node(state: AgentState):
     return {"messages": [response]}
 ```
 
+**Action steps (Week 6):**
+
+1. Replace the Docker-in-Docker invocation path inside `mcp_tool_client.py` with `langchain_mcp.MCPToolkit` sessions that stay warm across graph runs, as recommended by the PyPI package docs.^22
+2. Store MCP connection metadata (server path, allowed directories, auth) in `config/mcp-agent-tool-mapping.yaml` so nodes can lazily load only the tools they need rather than binding all 150+ servers at startup.^8
+3. Add smoke tests that stream from the LangGraph API while invoking high-latency MCP tools (e.g., Playwright) to confirm the new streaming stack (Redis + AG-UI) surfaces intermediate ToolMessages, matching the GoPenAI reference pattern.^20
+4. Update the AG-UI bridge to surface MCP tool availability in its `agent_card` payload so IDE clients can prompt users before invoking privileged tools (filesystem, git, etc.).^11
+
 ### Migration Benefits
 
 **Architectural simplification**:
@@ -392,6 +519,25 @@ def agent_node(state: AgentState):
 - **Docker/Digital Ocean**: Same deployment model, simpler compose file
 - **MCP tools**: Maintained via `langchain-mcp-adapters`
 - **PostgreSQL**: Used by LangGraph for state persistence
+
+### Validation & Rollout Checklist
+
+- **Graph unit tests:** Exercise every node with fixtures that include MCP tool responses, RAG payloads, and Linear issue metadata so state transitions stay deterministic as advised in the DigitalOcean LangGraph tutorials.^2
+- **Streaming smoke tests:** Replay the A2A Currency Agent streaming scenario against the new orchestrator to confirm SSE chunks arrive in order and the IDE never blocks while MCP tools run.^4
+- **AG-UI UX tests:** Use CopilotKit’s `useCoAgent` hook to verify that shared state mirrors the LangGraph checkpoints, ensuring proverbs/docs/theme data flows bi-directionally before exposing the bridge to all developers.^11
+- **Observability probes:** Keep the LangSmith-style `/ok` and Langfuse traces enabled; validate that each MCP run emits task_id + step_id metadata so regressions surface quickly.^5
+- **Deployment drills:** Recreate the Droplet from scratch using the new compose file, then restore checkpoints from Postgres snapshots to prove disaster recovery no longer depends on the retired FastAPI services.^18
+
+### Actionable Backlog
+
+| Week | Focus                   | Deliverables                                                                  | Exit Criteria                                                                                 |
+| ---- | ----------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1    | Core LangGraph scaffold | Shared `AgentState`, node modules for feature-dev + code-review, router logic | `app.invoke` reproduces a happy-path feature task locally with MCP mocks.[^1][^2]             |
+| 2    | A2A transport           | Agent cards, `A2AServer` wrappers, streaming event handlers                   | `message/send` + `message/stream` requests succeed with LangGraph results in Postman.[^4][^7] |
+| 3    | AG-UI bridge            | CopilotKit runtime, FastAPI middleware, shared-state demo                     | VS Code + docs UI both stream intermediate outputs from LangGraph.[^9][^11]                   |
+| 4    | RAG + telemetry         | `rag_retrieval` node, Prometheus counters, regression tests                   | Legacy RAG endpoints disabled; LangGraph node surfaces identical context snippets.[^1][^6]    |
+| 5    | Containerization        | LangGraph Docker image, compose updates, DOCR push                            | `curl 0.0.0.0:8123/ok` passes in CI and on staging Droplet.[^5][^18]                          |
+| 6    | MCP hardening           | `langchain-mcp` integration, tool smoke tests, AG-UI metadata updates         | Streaming MCP runs stay under SLA and IDE displays tool consent prompts.[^11][^20][^22]       |
 
 ### Recommended Implementation Order
 
@@ -428,3 +574,4 @@ This migration maintains your cloud infrastructure while modernizing agent coord
 [^19]: https://docs.ag-ui.com/sdk/js/client/overview
 [^20]: https://blog.gopenai.com/from-text-to-action-implementing-computer-control-with-langgraph-and-chain-of-thought-ec368dcb03e5
 [^21]: https://docs.langchain.com/langsmith/server-a2a
+[^22]: https://pypi.org/project/langchain-mcp/
