@@ -11,14 +11,14 @@
 ## Current vs Proposed Architecture
 
 ### Current State (Fragmented)
-```
+
 LLM Inference: DO Gradient AI (gradient_client.py wrapper)
 Embeddings: Mock/Unimplemented (langchain_memory.py placeholder)
 Config: Split between .env files, Docker compose, agent code
 Management: Manual coordination across 3 systems
-```
 
 ### Proposed State (Unified via LangChain)
+
 ```python
 # agents/langgraph/config.py - Single source of truth
 from langchain_community.embeddings import OpenAIEmbeddings
@@ -97,10 +97,10 @@ async def feature_dev_node(state: AgentState):
     response = await feature_dev_llm.ainvoke([
         HumanMessage(content=state["task_description"])
     ])
-    
+
     # Embedding (for RAG)
     query_embedding = embeddings.embed_query(state["task_description"])
-    
+
     return {"messages": [response]}
 ```
 
@@ -109,6 +109,7 @@ async def feature_dev_node(state: AgentState):
 ## Why This is Optimal
 
 ### 1. Single Platform (DigitalOcean)
+
 - **LLM Inference:** DO Gradient AI
 - **Embeddings:** DO Gradient AI (same endpoint)
 - **Vector Storage:** Qdrant Cloud (DO-compatible)
@@ -117,6 +118,7 @@ async def feature_dev_node(state: AgentState):
 **Network topology:** Everything stays within DigitalOcean infrastructure = <10ms latency.
 
 ### 2. Single Management Interface (LangChain)
+
 - **Configuration:** One Python module (langchain_gradient.py)
 - **Abstraction:** LangChain's standard interfaces
 - **Switching:** Change `base_url` in one place to try different providers
@@ -125,6 +127,7 @@ async def feature_dev_node(state: AgentState):
 ### 3. No Platform Jumping
 
 **Before (fragmented):**
+
 ```
 1. Configure DO Gradient in .env
 2. Write custom gradient_client.py wrapper
@@ -134,6 +137,7 @@ async def feature_dev_node(state: AgentState):
 ```
 
 **After (unified):**
+
 ```python
 # 1. Configure once
 from agents._shared.langchain_gradient import orchestrator_llm, embeddings
@@ -150,6 +154,7 @@ vectors = embeddings.embed_documents(docs)
 ### Phase 1: Replace Custom Gradient Client with LangChain (Week 1)
 
 **Current bottleneck:**
+
 ```python
 # agents/_shared/gradient_client.py (custom wrapper)
 class GradientClient:
@@ -158,6 +163,7 @@ class GradientClient:
 ```
 
 **Replace with:**
+
 ```python
 # agents/_shared/langchain_gradient.py
 from langchain_openai import ChatOpenAI
@@ -174,7 +180,8 @@ def get_gradient_llm(agent_name: str, model: str):
 **Migration steps:**
 
 1. **Update langchain_gradient.py:**
-````python
+
+```python
 """
 Unified LangChain configuration for DigitalOcean Gradient AI
 Manages both LLM inference and embeddings
@@ -190,7 +197,7 @@ logger = logging.getLogger(__name__)
 
 # DO Gradient AI configuration
 GRADIENT_BASE_URL = os.getenv(
-    "GRADIENT_BASE_URL", 
+    "GRADIENT_BASE_URL",
     "https://api.digitalocean.com/v2/ai/v1"
 )
 GRADIENT_API_KEY = os.getenv("GRADIENT_API_KEY")
@@ -227,21 +234,21 @@ def get_gradient_llm(
 ) -> ChatOpenAI:
     """
     Get LangChain LLM configured for DO Gradient AI
-    
+
     Args:
         agent_name: Agent identifier for tracing
         model: Gradient model name
         temperature: Sampling temperature
         max_tokens: Max tokens to generate
         **kwargs: Additional ChatOpenAI parameters
-        
+
     Returns:
         Configured ChatOpenAI instance
     """
     callbacks = []
     if langfuse_handler:
         callbacks.append(langfuse_handler)
-    
+
     return ChatOpenAI(
         base_url=GRADIENT_BASE_URL,
         api_key=GRADIENT_API_KEY,
@@ -260,11 +267,11 @@ def get_gradient_embeddings(
 ) -> OpenAIEmbeddings:
     """
     Get LangChain embeddings configured for DO Gradient AI
-    
+
     Args:
         model: Embedding model name
         chunk_size: Max tokens per embedding request
-        
+
     Returns:
         Configured OpenAIEmbeddings instance
     """
@@ -309,10 +316,11 @@ documentation_llm = get_gradient_llm(
 
 # Shared embeddings instance
 gradient_embeddings = get_gradient_embeddings("text-embedding-3-small")
-````
+```
 
 2. **Update langchain_memory.py:**
-````python
+
+```python
 """
 LangChain Memory Patterns - REVISED
 Uses DO Gradient AI for embeddings via unified config
@@ -345,21 +353,21 @@ def create_vector_memory(
     Create vector store memory using Qdrant Cloud + DO Gradient embeddings
     """
     qdrant_client = get_qdrant_client()
-    
+
     if not qdrant_client.is_enabled():
         logger.warning("Qdrant Cloud not available, vector memory disabled")
         return None
-    
+
     # Use unified embeddings from langchain_gradient
     vectorstore = QdrantVectorStore(
         client=qdrant_client.client,
         collection_name=collection_name,
         embeddings=gradient_embeddings  # DO Gradient AI embeddings
     )
-    
+
     if search_kwargs is None:
         search_kwargs = {"k": 5}
-    
+
     return VectorStoreRetrieverMemory(
         retriever=vectorstore.as_retriever(search_kwargs=search_kwargs)
     )
@@ -367,59 +375,60 @@ def create_vector_memory(
 
 class HybridMemory:
     """Combines conversation buffer and vector store memory"""
-    
+
     def __init__(self):
         self.buffer_memory = create_conversation_memory()
         self.vector_memory = create_vector_memory()
-    
+
     def save_context(self, inputs: dict, outputs: dict):
         """Save context to both memory types"""
         self.buffer_memory.save_context(inputs, outputs)
         if self.vector_memory:
             self.vector_memory.save_context(inputs, outputs)
-    
+
     def load_memory_variables(self, inputs: dict) -> dict:
         """Load memory variables from both sources"""
         buffer_vars = self.buffer_memory.load_memory_variables(inputs)
-        
+
         if self.vector_memory:
             vector_vars = self.vector_memory.load_memory_variables(inputs)
             return {**buffer_vars, **vector_vars}
-        
+
         return buffer_vars
-````
+```
 
 3. **Update indexing script:**
-````python
+
+```python
 # scripts/index_local_docs.py (REVISED - use real embeddings)
 from agents._shared.langchain_gradient import gradient_embeddings
 
 def index_documents(client: QdrantClient, documents: List[Dict[str, Any]], collection: str = "the-shop"):
     """Index documents to Qdrant using DO Gradient embeddings"""
     print(f"\nIndexing {len(documents)} documents to '{collection}' collection...")
-    
+
     # Create chunks from documents
     all_chunks = []
     for doc in documents:
         content = doc.pop("content")
         chunks = chunk_document(content, doc)
         all_chunks.extend(chunks)
-    
+
     print(f"Created {len(all_chunks)} chunks")
-    
+
     # Extract text for embedding
     texts = [chunk["content"] for chunk in all_chunks]
-    
+
     # Generate REAL embeddings via DO Gradient AI
     print("Generating embeddings via DigitalOcean Gradient AI...")
     embeddings = gradient_embeddings.embed_documents(texts)
     print(f"✅ Generated {len(embeddings)} embeddings")
-    
+
     # Convert to Qdrant points
     points = []
     for i, (chunk, embedding) in enumerate(zip(all_chunks, embeddings)):
         content = chunk.pop("content")
-        
+
         point = PointStruct(
             id=str(uuid.uuid4()),
             vector=embedding,
@@ -432,22 +441,23 @@ def index_documents(client: QdrantClient, documents: List[Dict[str, Any]], colle
             }
         )
         points.append(point)
-        
+
         if (i + 1) % 10 == 0:
             print(f"  Processed {i + 1}/{len(all_chunks)} chunks...")
-    
+
     # Upsert in batches
     batch_size = 64
     for i in range(0, len(points), batch_size):
         batch = points[i:i + batch_size]
         client.upsert(collection_name=collection, points=batch)
         print(f"  Upserted batch {i // batch_size + 1}/{(len(points) + batch_size - 1) // batch_size}")
-    
+
     print(f"✅ Successfully indexed {len(points)} chunks to '{collection}'")
-````
+```
 
 4. **Update LangGraph nodes:**
-````python
+
+```python
 # agents/langgraph/nodes/feature_dev.py (EXAMPLE)
 from agents._shared.langchain_gradient import feature_dev_llm, gradient_embeddings
 from langchain_core.messages import HumanMessage, AIMessage
@@ -458,23 +468,23 @@ async def feature_dev_node(state: AgentState):
     """
     # Get task description
     task = state["task_description"]
-    
+
     # Optional: RAG context retrieval
     if state.get("use_rag"):
         query_embedding = gradient_embeddings.embed_query(task)
         # ... search Qdrant with query_embedding
-    
+
     # Generate code using configured LLM
     response = await feature_dev_llm.ainvoke([
         HumanMessage(content=f"Implement: {task}")
     ])
-    
+
     return {
         "messages": [response],
         "current_agent": "feature-dev",
         "artifacts": {"code": response.content}
     }
-````
+```
 
 ---
 
@@ -482,7 +492,7 @@ async def feature_dev_node(state: AgentState):
 
 **Create single config module:**
 
-````python
+```python
 # agents/langgraph/config.py (NEW)
 """
 Unified LangGraph Configuration
@@ -539,10 +549,11 @@ def get_agent_llm(agent_name: str):
 def get_embeddings():
     """Get shared embeddings instance"""
     return EMBEDDINGS
-````
+```
 
 **Now update workflow:**
-````python
+
+```python
 # agents/langgraph/workflow.py (SIMPLIFIED)
 from langgraph.graph import StateGraph, END
 from agents.langgraph.config import AGENT_LLMS, EMBEDDINGS, CHECKPOINTER
@@ -562,13 +573,14 @@ workflow.add_node("code-review", code_review_node)
 graph = workflow.compile(checkpointer=CHECKPOINTER)
 
 # All LLMs and embeddings managed in one place!
-````
+```
 
 ---
 
 ## Benefits of Unified Approach
 
 ### 1. Single Configuration Point
+
 ```python
 # Change embedding model for ENTIRE system:
 # agents/_shared/langchain_gradient.py
@@ -576,6 +588,7 @@ gradient_embeddings = get_gradient_embeddings("text-embedding-3-large")  # Chang
 ```
 
 No need to update:
+
 - ❌ RAG service config
 - ❌ Memory module config
 - ❌ Indexing script config
@@ -584,17 +597,19 @@ No need to update:
 ### 2. Easy Provider Switching
 
 **Switch to OpenAI (for testing):**
-````python
+
+```python
 # agents/_shared/langchain_gradient.py
 # Just change base_url and api_key
 GRADIENT_BASE_URL = "https://api.openai.com/v1"  # Changed
 GRADIENT_API_KEY = os.getenv("OPENAI_API_KEY")   # Changed
 
 # Everything else works identically
-````
+```
 
 **Switch to local Ollama (for development):**
-````python
+
+```python
 from langchain_community.llms import Ollama
 from langchain_community.embeddings import OllamaEmbeddings
 
@@ -603,12 +618,13 @@ def get_gradient_llm(agent_name: str, model: str):
 
 def get_gradient_embeddings(model: str):
     return OllamaEmbeddings(model="nomic-embed-text")
-````
+```
 
 ### 3. Testability
 
 **Mock LangChain components (standard practice):**
-````python
+
+```python
 # tests/test_feature_dev_node.py
 from unittest.mock import Mock
 from agents.langgraph.nodes import feature_dev_node
@@ -617,28 +633,29 @@ def test_feature_dev_node():
     # Mock LangChain LLM
     mock_llm = Mock()
     mock_llm.ainvoke.return_value = AIMessage(content="generated code")
-    
+
     # Inject mock
     with patch('agents._shared.langchain_gradient.feature_dev_llm', mock_llm):
         result = await feature_dev_node(test_state)
-    
+
     assert result["artifacts"]["code"] == "generated code"
-````
+```
 
 ---
 
 ## Cost Comparison (Updated)
 
-| Component | Current (Mock) | Proposed (DO Unified) | Alternative (Separate) |
-|-----------|----------------|----------------------|------------------------|
-| **LLM Inference** | $0 (Gradient SDK) | $0.20/1M tokens | $0.20/1M tokens |
-| **Embeddings** | $0 (mock) | **$0.02/1M tokens** | $0.02/1M (OpenAI) |
-| **Management** | 3 configs | **1 config** | 3 configs |
-| **Latency (LLM)** | 50ms | 50ms | 50ms |
-| **Latency (Embed)** | N/A | **10ms** (DO network) | 50-100ms (internet) |
-| **Memory Overhead** | 0MB | 0MB | 512MB (local model) |
+| Component           | Current (Mock)    | Proposed (DO Unified) | Alternative (Separate) |
+| ------------------- | ----------------- | --------------------- | ---------------------- |
+| **LLM Inference**   | $0 (Gradient SDK) | $0.20/1M tokens       | $0.20/1M tokens        |
+| **Embeddings**      | $0 (mock)         | **$0.02/1M tokens**   | $0.02/1M (OpenAI)      |
+| **Management**      | 3 configs         | **1 config**          | 3 configs              |
+| **Latency (LLM)**   | 50ms              | 50ms                  | 50ms                   |
+| **Latency (Embed)** | N/A               | **10ms** (DO network) | 50-100ms (internet)    |
+| **Memory Overhead** | 0MB               | 0MB                   | 512MB (local model)    |
 
 **Monthly cost example (10M tokens LLM + 1M tokens embeddings):**
+
 - LLM: 10M × $0.20/1M = **$2.00**
 - Embeddings: 1M × $0.02/1M = **$0.02**
 - **Total: $2.02/month** (vs $6/month for self-hosted embeddings container)
@@ -650,6 +667,7 @@ def test_feature_dev_node():
 ### ✅ DO THIS: Unified DO Gradient + LangChain Management
 
 **Reasoning:**
+
 1. **No platform jumping** - Everything configured in Python code via LangChain
 2. **Optimal performance** - Both LLM + embeddings on DO network (<10ms)
 3. **Cost effective** - $2.02/month vs $6/month self-hosted + $2/month LLM
@@ -657,6 +675,7 @@ def test_feature_dev_node():
 5. **Future proof** - Switch providers by changing 2 lines of code
 
 **Implementation priority:**
+
 1. **Week 1:** Replace custom gradient_client.py with langchain_gradient.py (unified config)
 2. **Week 2:** Update indexing script to use real embeddings
 3. **Week 3:** Migrate all nodes to use unified config
@@ -665,6 +684,7 @@ def test_feature_dev_node():
 ### ❌ DON'T DO: Self-hosted embeddings in Docker
 
 **Why not:**
+
 - 512MB memory overhead (26% of 2GB droplet)
 - 10x slower inference (100ms vs 10ms)
 - Operational burden (model updates, monitoring)
