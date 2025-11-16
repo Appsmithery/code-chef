@@ -23,6 +23,22 @@ from agents.code_review.service import (
     process_review_request,
 )
 
+# LangGraph Infrastructure
+try:
+    from agents._shared.langgraph_base import get_postgres_checkpointer, create_workflow_config
+    from agents._shared.qdrant_client import get_qdrant_client
+    from agents._shared.langchain_memory import create_hybrid_memory
+    
+    checkpointer = get_postgres_checkpointer()
+    qdrant_client = get_qdrant_client()
+    hybrid_memory = create_hybrid_memory()
+    logger.info("✓ LangGraph infrastructure initialized (PostgreSQL checkpointer + Qdrant Cloud + Hybrid memory)")
+except Exception as e:
+    logger.warning(f"LangGraph infrastructure unavailable: {e}")
+    checkpointer = None
+    qdrant_client = None
+    hybrid_memory = None
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
