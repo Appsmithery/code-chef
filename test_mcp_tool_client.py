@@ -1,11 +1,12 @@
 """Test MCP Tool Client Direct Invocation"""
 import sys
 import asyncio
+
 sys.path.insert(0, 'agents')
 
 from _shared.mcp_tool_client import get_mcp_tool_client
 
-async def test_mcp_tools():
+async def _run_mcp_tools():
     """Test direct MCP tool invocation"""
     print("[TEST] Initializing MCP Tool Client...")
     
@@ -75,4 +76,8 @@ async def test_mcp_tools():
     print(f"  - No HTTP gateway needed: ✓")
 
 if __name__ == "__main__":
-    asyncio.run(test_mcp_tools())
+    asyncio.run(_run_mcp_tools())
+
+
+def test_mcp_tools():
+    asyncio.run(_run_mcp_tools())
