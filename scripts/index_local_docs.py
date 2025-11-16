@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """
 Index Local Documentation to Qdrant
-Reads workspace documentation and indexes it directly to the-shop collection
+Reads workspace documentation and indexes it with DO Gradient AI embeddings to the-shop collection
 """
 
 import os
 import sys
 from pathlib import Path
 from typing import List, Dict, Any
+from datetime import datetime
 import glob
 
 # Add parent to path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct
@@ -59,6 +60,17 @@ def init_qdrant_client() -> QdrantClient:
     
     print(f"Connecting to Qdrant Cloud: {url}")
     return QdrantClient(url=url, api_key=api_key)
+
+
+def init_gradient_embeddings():
+    """Initialize DO Gradient AI embeddings via unified LangChain config"""
+    from agents._shared.langchain_gradient import gradient_embeddings
+    
+    if not gradient_embeddings:
+        raise ValueError("Gradient embeddings not configured. Set GRADIENT_API_KEY in .env")
+    
+    print(f"✓ Loaded Gradient AI embeddings (text-embedding-3-small)")
+    return gradient_embeddings
 
 
 def read_markdown_files(base_path: Path) -> List[Dict[str, Any]]:
@@ -171,30 +183,8 @@ def chunk_document(content: str, metadata: Dict[str, Any], chunk_size: int = 100
     return chunks
 
 
-def create_mock_embeddings(text: str, dimension: int = 1536) -> List[float]:
-    """Create deterministic mock embeddings from text hash"""
-    import hashlib
-    
-    # Create hash from text
-    text_hash = hashlib.sha256(text.encode()).digest()
-    
-    # Convert to floats in range [-1, 1]
-    embeddings = []
-    for i in range(0, dimension * 2, 2):
-        byte_idx = i % len(text_hash)
-        value = (text_hash[byte_idx] / 127.5) - 1.0
-        embeddings.append(value)
-    
-    # Normalize to unit vector for cosine similarity
-    magnitude = sum(x**2 for x in embeddings) ** 0.5
-    if magnitude > 0:
-        embeddings = [x / magnitude for x in embeddings]
-    
-    return embeddings[:dimension]
-
-
-def index_documents(client: QdrantClient, documents: List[Dict[str, Any]], collection: str = "the-shop"):
-    """Index documents to Qdrant collection"""
+def index_documents(client: QdrantClient, embeddings, documents: List[Dict[str, Any]], collection: str = "the-shop"):
+    """Index documents to Qdrant collection using real DO Gradient AI embeddings"""
     print(f"\nIndexing {len(documents)} documents to '{collection}' collection...")
     
     # Create chunks from documents
@@ -206,22 +196,31 @@ def index_documents(client: QdrantClient, documents: List[Dict[str, Any]], colle
     
     print(f"Created {len(all_chunks)} chunks")
     
-    # Convert to Qdrant points with mock embeddings
-    # NOTE: In production, use real embeddings from Gradient AI
+    # Extract text for embedding
+    texts = [chunk["content"] for chunk in all_chunks]
+    
+    # Generate REAL embeddings via DO Gradient AI
+    print(f"Generating embeddings via DigitalOcean Gradient AI...")
+    try:
+        vectors = embeddings.embed_documents(texts)
+        print(f"✅ Generated {len(vectors)} embeddings")
+    except Exception as e:
+        print(f"❌ Failed to generate embeddings: {e}")
+        raise
+    
+    # Convert to Qdrant points
     points = []
-    for i, chunk in enumerate(all_chunks):
+    for i, (chunk, vector) in enumerate(zip(all_chunks, vectors)):
         content = chunk.pop("content")
-        
-        # Create mock embedding (replace with real embedding API call)
-        embedding = create_mock_embeddings(content)
         
         point = PointStruct(
             id=str(uuid.uuid4()),
-            vector=embedding,
+            vector=vector,
             payload={
                 "content": content,
-                "indexed_at": "2025-11-16T00:00:00Z",
-                "embedding_model": "mock-deterministic-hash",
+                "indexed_at": datetime.utcnow().isoformat(),
+                "embedding_model": "text-embedding-3-small",
+                "embedding_provider": "digitalocean-gradient",
                 **chunk
             }
         )
@@ -242,12 +241,15 @@ def index_documents(client: QdrantClient, documents: List[Dict[str, Any]], colle
 
 def main():
     """Main indexing workflow"""
-    print("Local Documentation Indexer")
+    print("Local Documentation Indexer (DO Gradient AI)")
     print("=" * 60)
     
     try:
         # Initialize Qdrant
         client = init_qdrant_client()
+        
+        # Initialize Gradient embeddings
+        embeddings = init_gradient_embeddings()
         
         # Load documents
         repo_root = Path(__file__).parent.parent
@@ -260,16 +262,12 @@ def main():
         
         print(f"\n📚 Found {len(documents)} documents")
         
-        # Index to Qdrant
-        index_documents(client, documents)
+        # Index to Qdrant with real embeddings
+        index_documents(client, embeddings, documents)
         
         # Verify
         collection_info = client.get_collection("the-shop")
         print(f"\n✅ Collection 'the-shop' now has {collection_info.points_count} points")
-        
-        print("\n⚠ NOTE: Using mock embeddings for testing!")
-        print("   For production, integrate Gradient AI embedding API:")
-        print("   POST https://api.digitalocean.com/v2/ai/v1/embeddings")
         
         return 0
         

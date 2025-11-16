@@ -1,38 +1,16 @@
 """
 LangChain Memory Patterns
-Provides memory management utilities for agent workflows
+Provides memory management utilities for agent workflows using DO Gradient AI embeddings
 """
 
 from langchain.memory import ConversationBufferMemory, VectorStoreRetrieverMemory
-from langchain.vectorstores import Qdrant as LangChainQdrant
-from langchain.embeddings.base import Embeddings
+from langchain_qdrant import QdrantVectorStore
 from agents._shared.qdrant_client import get_qdrant_client
-import os
-from typing import Optional, List
+from agents._shared.langchain_gradient import gradient_embeddings
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
-
-
-class GradientEmbeddings(Embeddings):
-    """Gradient AI embeddings for LangChain"""
-    
-    def __init__(self):
-        from agents._shared.gradient_client import get_gradient_client
-        self.gradient = get_gradient_client("embeddings")
-        self.model = os.getenv("GRADIENT_EMBEDDING_MODEL", "text-embedding-3-large")
-    
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        """Embed a list of documents"""
-        # TODO: Implement batch embedding with Gradient AI
-        return [self.embed_query(text) for text in texts]
-    
-    def embed_query(self, text: str) -> List[float]:
-        """Embed a single query"""
-        # TODO: Implement with Gradient AI embedding endpoint
-        # For now, return placeholder
-        logger.warning("Gradient embeddings not yet implemented")
-        return [0.0] * 1536  # Placeholder 1536-dim vector
 
 
 def create_conversation_memory(
@@ -50,19 +28,24 @@ def create_vector_memory(
     collection_name: str = "agent_memory",
     search_kwargs: Optional[dict] = None
 ) -> Optional[VectorStoreRetrieverMemory]:
-    """Create vector store memory using Qdrant Cloud"""
+    """
+    Create vector store memory using Qdrant Cloud + DO Gradient AI embeddings
+    """
     qdrant_client = get_qdrant_client()
     
     if not qdrant_client.is_enabled():
         logger.warning("Qdrant Cloud not available, vector memory disabled")
         return None
     
-    embeddings = GradientEmbeddings()
+    if not gradient_embeddings:
+        logger.warning("Gradient embeddings not available, vector memory disabled")
+        return None
     
-    vectorstore = LangChainQdrant(
+    # Use unified embeddings from langchain_gradient (DO Gradient AI)
+    vectorstore = QdrantVectorStore(
         client=qdrant_client.client,
         collection_name=collection_name,
-        embeddings=embeddings
+        embedding=gradient_embeddings
     )
     
     if search_kwargs is None:
