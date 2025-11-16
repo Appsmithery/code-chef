@@ -284,3 +284,73 @@ docker-compose restart gateway-mcp
 4. **Use Gradient Platform**
    - Offload LLM inference
    - Reduce agent memory footprint
+
+---
+
+## 🏗️ Long-Term Consolidation Plan (Phase 2)
+
+**Goal:** Reduce from 11 containers to 3 containers (65% RAM reduction)
+
+### Architecture Redesign Options
+
+**Option A: Single Synchronous Workflow**
+
+- All agents as nodes in one LangGraph workflow
+- Sequential execution with conditional routing
+- Simplest implementation, lowest memory
+
+**Option B: Async Multi-Agent System**
+
+- Multiple LangGraph workflows that can run concurrently
+- Message-based coordination between agents
+- More flexibility, slightly higher memory
+
+**Decision:** TBD - Will iterate on architecture after recovery
+
+### Infrastructure Components (Implementation-Agnostic)
+
+**1. LangGraph/LangChain Integration**
+
+- Replace custom orchestrator with LangGraph workflow engine
+- PostgreSQL checkpointer for state management
+- Automatic trace generation
+
+**2. Qdrant Cloud Integration**
+
+- Remove local Qdrant container (~256MB savings)
+- Use existing cloud cluster (already configured)
+- Vector storage for context retrieval
+
+**3. Memory Management**
+
+- LangChain ConversationBufferMemory for chat history
+- VectorStoreRetrieverMemory for semantic context
+- Replace custom RAG service with built-in patterns
+
+**4. Consolidation Targets**
+
+- Remove: rag-context, state-persistence (replaced by LangGraph)
+- Remove: Local Qdrant (use cloud)
+- Keep: postgres (for checkpointing), gateway-mcp (Linear OAuth)
+- Transform: 6 agents → TBD architecture
+
+### Migration Prep (Can Start Now)
+
+1. **Wire orchestrator into LangChain** ✓
+2. **Integrate Qdrant Cloud SDK** ✓
+3. **Setup PostgreSQL checkpointer** ✓
+4. **Add LangChain memory patterns** ✓
+5. **Decide on sub-agent architecture** ⏳
+
+### Expected Savings
+
+- **Current:** 11 containers, ~2.5GB RAM
+- **Target:** 3-5 containers, ~850MB-1.2GB RAM
+- **Reduction:** 50-65% memory savings
+
+**Next Steps:**
+
+1. Stabilize current droplet (add swap, reboot)
+2. Scaffold LangChain/LangGraph infrastructure
+3. Integrate Qdrant Cloud
+4. Test locally before deploying

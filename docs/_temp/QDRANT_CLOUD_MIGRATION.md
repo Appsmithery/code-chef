@@ -8,19 +8,20 @@
 ### 1. Remove Qdrant Service from docker-compose.yml
 
 **Current (lines 219-230)**:
+
 ```yaml
-  # Qdrant Vector Database
-  qdrant:
-    image: qdrant/qdrant:latest
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    environment:
-      - QDRANT__SERVICE__GRPC_PORT=6334
-    networks:
-      - devtools-network
-    volumes:
-      - qdrant-data:/qdrant/storage
+# Qdrant Vector Database
+qdrant:
+  image: qdrant/qdrant:latest
+  ports:
+    - "6333:6333"
+    - "6334:6334"
+  environment:
+    - QDRANT__SERVICE__GRPC_PORT=6334
+  networks:
+    - devtools-network
+  volumes:
+    - qdrant-data:/qdrant/storage
 ```
 
 **Action**: Comment out or delete this entire service block
@@ -28,11 +29,12 @@
 ### 2. Remove Qdrant Volume
 
 **Current (volumes section at bottom)**:
+
 ```yaml
 volumes:
   orchestrator-data:
   mcp-config:
-  qdrant-data:  # <-- Remove this line
+  qdrant-data: # <-- Remove this line
   postgres-data:
 ```
 
@@ -41,12 +43,13 @@ volumes:
 ### 3. Update RAG Service Dependencies
 
 **Current rag-context service**:
+
 ```yaml
-  rag-context:
-    # ... build config ...
-    depends_on:
-      - qdrant  # <-- Remove this dependency
-      - postgres
+rag-context:
+  # ... build config ...
+  depends_on:
+    - qdrant # <-- Remove this dependency
+    - postgres
 ```
 
 **Action**: Remove `- qdrant` from depends_on list
@@ -54,20 +57,22 @@ volumes:
 ### 4. Update RAG Environment Variables
 
 **Current**:
+
 ```yaml
-  rag-context:
-    environment:
-      - QDRANT_HOST=qdrant  # <-- Change to cloud URL
-      - QDRANT_PORT=6333    # <-- Remove (cloud uses HTTPS)
+rag-context:
+  environment:
+    - QDRANT_HOST=qdrant # <-- Change to cloud URL
+    - QDRANT_PORT=6333 # <-- Remove (cloud uses HTTPS)
 ```
 
 **New**:
+
 ```yaml
-  rag-context:
-    environment:
-      - QDRANT_URL=${QDRANT_URL}
-      - QDRANT_API_KEY=${QDRANT_API_KEY}
-      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-the-shop}
+rag-context:
+  environment:
+    - QDRANT_URL=${QDRANT_URL}
+    - QDRANT_API_KEY=${QDRANT_API_KEY}
+    - QDRANT_COLLECTION=${QDRANT_COLLECTION:-the-shop}
 ```
 
 ## Implementation Steps
@@ -75,15 +80,17 @@ volumes:
 ### Local Testing First
 
 1. **Verify Qdrant Cloud credentials in .env**:
+
    ```bash
    grep QDRANT config/env/.env
    # Should see: QDRANT_URL, QDRANT_API_KEY, QDRANT_COLLECTION
    ```
 
 2. **Test Qdrant Cloud connection**:
+
    ```python
    from agents._shared.qdrant_client import get_qdrant_client
-   
+
    client = get_qdrant_client()
    if client.is_enabled():
        info = await client.get_collection_info()
@@ -91,25 +98,28 @@ volumes:
    ```
 
 3. **Update local docker-compose.yml**:
+
    - Comment out qdrant service (use `# ` prefix)
    - Keep volume for now (for rollback)
    - Update rag-context environment
 
 4. **Rebuild affected services**:
+
    ```powershell
    cd compose
    docker-compose build rag-context orchestrator
    ```
 
 5. **Test locally**:
+
    ```powershell
    docker-compose down
    docker-compose up -d postgres gateway-mcp orchestrator rag-context
-   
+
    # Check health
    curl http://localhost:8001/health
    curl http://localhost:8007/health
-   
+
    # Check Qdrant Cloud connection in logs
    docker-compose logs rag-context | grep -i qdrant
    ```
@@ -117,6 +127,7 @@ volumes:
 ### Droplet Deployment
 
 6. **Commit changes locally**:
+
    ```powershell
    git add compose/docker-compose.yml agents/orchestrator/requirements.txt
    git commit -m "feat: migrate to Qdrant Cloud, add LangGraph infrastructure"
@@ -124,17 +135,18 @@ volumes:
    ```
 
 7. **Deploy to droplet** (after reboot):
+
    ```bash
    ssh alex@45.55.173.72
    cd /opt/Dev-Tools
-   
+
    # Pull latest changes
    git pull origin main
-   
+
    # Rebuild services
    cd compose
    docker-compose build rag-context orchestrator
-   
+
    # Selective startup (see DROPLET_REBOOT_PROCEDURE.md)
    docker-compose up -d postgres gateway-mcp
    docker-compose up -d orchestrator
@@ -142,13 +154,14 @@ volumes:
    ```
 
 8. **Verify cloud connection**:
+
    ```bash
    # Check orchestrator health
    curl http://localhost:8001/health
-   
+
    # Check RAG health
    curl http://localhost:8007/health
-   
+
    # Check logs for Qdrant Cloud connection
    docker-compose logs orchestrator | grep -i qdrant
    docker-compose logs rag-context | grep -i qdrant
@@ -159,6 +172,7 @@ volumes:
 If Qdrant Cloud connection fails:
 
 1. **Restore local Qdrant**:
+
    - Uncomment qdrant service in docker-compose.yml
    - Add back qdrant-data volume
    - Revert rag-context environment variables
@@ -173,10 +187,12 @@ If Qdrant Cloud connection fails:
 ## Memory Savings
 
 **Before**:
+
 - qdrant container: ~350MB RAM
 - Total with local Qdrant: ~2.5GB
 
 **After**:
+
 - qdrant container: REMOVED
 - Total without local Qdrant: ~2.15GB
 - **Savings: 350MB (14% reduction)**
@@ -184,6 +200,7 @@ If Qdrant Cloud connection fails:
 ## Next Migration Phase
 
 After Qdrant Cloud is stable:
+
 - Implement unified workflow consolidation
 - Target 3 containers: unified-workflow, postgres, gateway
 - Expected total: ~850MB RAM
