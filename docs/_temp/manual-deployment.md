@@ -1,7 +1,9 @@
 # Manual Deployment Guide - Dev-Tools
 
 ## Current Issue
+
 SSH commands are hanging when trying to run Docker build/compose commands. This typically indicates:
+
 - Docker daemon is busy with a running build
 - Droplet is under heavy load
 - Network/SSH connection instability
@@ -11,17 +13,20 @@ SSH commands are hanging when trying to run Docker build/compose commands. This 
 ### Option 1: Via DigitalOcean Console
 
 1. **Access Droplet Console**
+
    - Go to: https://cloud.digitalocean.com/droplets
    - Click on droplet `mcp-gateway` (45.55.173.72)
    - Click **"Access"** → **"Launch Droplet Console"**
 
 2. **Check Docker Status**
+
    ```bash
    docker ps
    docker compose -f /opt/Dev-Tools/compose/docker-compose.yml ps
    ```
 
 3. **Stop Any Running Builds**
+
    ```bash
    cd /opt/Dev-Tools/compose
    docker compose down
@@ -29,14 +34,15 @@ SSH commands are hanging when trying to run Docker build/compose commands. This 
    ```
 
 4. **Build Images (One at a Time)**
+
    ```bash
    cd /opt/Dev-Tools/compose
-   
+
    # Build infrastructure first
    docker compose build gateway-mcp
    docker compose build rag-context
    docker compose build state-persistence
-   
+
    # Then build agents
    docker compose build orchestrator
    docker compose build feature-dev
@@ -47,6 +53,7 @@ SSH commands are hanging when trying to run Docker build/compose commands. This 
    ```
 
 5. **Start Services**
+
    ```bash
    cd /opt/Dev-Tools/compose
    docker compose up -d
@@ -116,12 +123,14 @@ foreach ($ep in $endpoints) {
 If SSH commands continue to hang:
 
 1. **Check droplet load via API:**
+
    ```powershell
    $headers = @{"Authorization" = "Bearer dop_v1_21565d5f63b515138cae71c2815df3ca6dd95cec7587dca513fab11c7e5589ee"}
    Invoke-RestMethod -Uri "https://api.digitalocean.com/v2/droplets/529438997" -Headers $headers | Select-Object -ExpandProperty droplet | Select-Object name, status, memory, vcpus
    ```
 
 2. **Reboot droplet if needed:**
+
    ```powershell
    $headers = @{
        "Authorization" = "Bearer dop_v1_21565d5f63b515138cae71c2815df3ca6dd95cec7587dca513fab11c7e5589ee"
@@ -147,15 +156,18 @@ docker compose up -d  # Start with existing images
 Once services are confirmed running:
 
 1. **Test Orchestrator:**
+
    ```powershell
    $task = @{description="List available MCP tools"} | ConvertTo-Json
    Invoke-RestMethod http://45.55.173.72:8001/tasks -Method POST -Body $task -ContentType "application/json"
    ```
 
 2. **Check Langfuse Traces:**
+
    - https://us.cloud.langfuse.com
 
 3. **Verify Linear Integration:**
+
    ```powershell
    Invoke-RestMethod http://45.55.173.72:8000/api/linear-issues
    ```

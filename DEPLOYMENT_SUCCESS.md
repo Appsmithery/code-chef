@@ -10,27 +10,30 @@
 All **9 services** are deployed and **fully operational**:
 
 ### Agent Services (6)
-| Service | Port | Status | Model |
-|---------|------|--------|-------|
-| Orchestrator | 8001 | ✅ Running | llama-3.1-70b-instruct |
-| Feature Dev | 8002 | ✅ Running | codellama-13b-instruct |
-| Code Review | 8003 | ✅ Running | llama-3.1-70b-instruct |
-| Infrastructure | 8004 | ✅ Running | llama-3.1-8b-instruct |
-| CI/CD | 8005 | ✅ Running | llama-3.1-8b-instruct |
-| Documentation | 8006 | ✅ Running | mistral-7b-instruct |
+
+| Service        | Port | Status     | Model                  |
+| -------------- | ---- | ---------- | ---------------------- |
+| Orchestrator   | 8001 | ✅ Running | llama-3.1-70b-instruct |
+| Feature Dev    | 8002 | ✅ Running | codellama-13b-instruct |
+| Code Review    | 8003 | ✅ Running | llama-3.1-70b-instruct |
+| Infrastructure | 8004 | ✅ Running | llama-3.1-8b-instruct  |
+| CI/CD          | 8005 | ✅ Running | llama-3.1-8b-instruct  |
+| Documentation  | 8006 | ✅ Running | mistral-7b-instruct    |
 
 ### Infrastructure Services (3)
-| Service | Port | Status | Purpose |
-|---------|------|--------|---------|
-| MCP Gateway | 8000 | ✅ Running | 150+ tools via MCP |
-| RAG Context | 8007 | ✅ Running | Vector search |
-| State Persistence | 8008 | ✅ Running | Workflow state |
+
+| Service           | Port | Status     | Purpose            |
+| ----------------- | ---- | ---------- | ------------------ |
+| MCP Gateway       | 8000 | ✅ Running | 150+ tools via MCP |
+| RAG Context       | 8007 | ✅ Running | Vector search      |
+| State Persistence | 8008 | ✅ Running | Workflow state     |
 
 ---
 
 ## ✅ Verified Integration
 
 **Orchestrator Test:**
+
 ```json
 Task: "List the Docker containers running on the system"
 Result: Successfully decomposed into 3 subtasks
@@ -40,6 +43,7 @@ Result: Successfully decomposed into 3 subtasks
 ```
 
 **Key Indicators:**
+
 - ✅ All health endpoints responding
 - ✅ Task orchestration working
 - ✅ Task decomposition functional
@@ -78,6 +82,7 @@ All agents use:
 ## 🔗 Access URLs
 
 ### Agents
+
 - **Orchestrator:** http://45.55.173.72:8001
   - Docs: http://45.55.173.72:8001/docs
   - Health: http://45.55.173.72:8001/health
@@ -88,10 +93,12 @@ All agents use:
 - **Documentation:** http://45.55.173.72:8006/docs
 
 ### Infrastructure
+
 - **MCP Gateway:** http://45.55.173.72:8000
 - **Prometheus:** http://45.55.173.72:9090
 
 ### External Services
+
 - **Langfuse (Tracing):** https://us.cloud.langfuse.com
 - **Linear (Issues):** https://linear.app
 - **Qdrant Cloud:** https://cloud.qdrant.io
@@ -250,6 +257,7 @@ documentation:
 ## 📝 Next Steps
 
 ### Immediate (Ready Now)
+
 1. ✅ All services deployed and healthy
 2. ✅ Task orchestration functional
 3. ⏳ Test Linear integration (create/update issues)
@@ -257,6 +265,7 @@ documentation:
 5. ⏳ Verify Langfuse traces in dashboard
 
 ### Short-term (This Week)
+
 1. Build frontend UI for task submission
 2. Implement agent-to-agent handoffs
 3. Add workflow persistence (save/resume tasks)
@@ -264,6 +273,7 @@ documentation:
 5. Create task templates for common operations
 
 ### Long-term (This Month)
+
 1. Multi-agent collaboration workflows
 2. Knowledge base expansion (RAG improvements)
 3. Cost optimization (model selection per task)
@@ -313,7 +323,7 @@ docker compose up -d
 - **Agent Endpoints:** [AGENT_ENDPOINTS.md](./AGENT_ENDPOINTS.md)
 - **MCP Integration:** [MCP_INTEGRATION.md](./MCP_INTEGRATION.md)
 - **Langfuse Tracing:** [LANGFUSE_TRACING.md](./LANGFUSE_TRACING.md)
-- **Manual Deployment:** [_temp/manual-deployment.md](./_temp/manual-deployment.md)
+- **Manual Deployment:** [\_temp/manual-deployment.md](./_temp/manual-deployment.md)
 
 ---
 
