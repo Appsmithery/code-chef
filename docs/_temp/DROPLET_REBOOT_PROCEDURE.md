@@ -7,12 +7,14 @@
 ## Pre-Reboot Status
 
 **Current State**:
+
 - 11 Docker containers consuming ~2.5GB RAM on 2GB droplet
 - Multiple OOM kills (Node processes at 4493MB VM)
 - SSH timeout, console UI hanging
 - Services down: orchestrator, feature-dev, code-review, infrastructure, cicd, documentation, rag, state, gateway, postgres, qdrant
 
 **Migration Plan**:
+
 - Target: 3 containers (~850MB total)
 - Architecture decision deferred (sync vs async sub-agents)
 - Infrastructure scaffolding complete (LangGraph, Qdrant Cloud, PostgreSQL checkpointing)
@@ -22,12 +24,14 @@
 ### 1. Power Cycle Droplet
 
 **Via DigitalOcean Console**:
+
 1. Navigate to: https://cloud.digitalocean.com/droplets
 2. Select droplet: `do-mcp-gateway` (45.55.173.72)
 3. Click "Power" → "Power Cycle"
 4. Wait for droplet to restart (~2-3 minutes)
 
 **Verify Reboot**:
+
 ```powershell
 # Test SSH connection
 ssh alex@45.55.173.72
@@ -42,6 +46,7 @@ free -h
 ### 2. Post-Reboot Health Check
 
 **System Resources**:
+
 ```bash
 # Memory usage
 free -h
@@ -57,6 +62,7 @@ sudo systemctl status docker
 ```
 
 **Container Status**:
+
 ```bash
 cd /opt/Dev-Tools
 
@@ -72,6 +78,7 @@ docker volume ls
 ### 3. Apply Infrastructure Changes
 
 **Update Docker Compose (Qdrant Cloud Migration)**:
+
 ```bash
 cd /opt/Dev-Tools/compose
 
@@ -83,6 +90,7 @@ cp docker-compose.yml docker-compose.yml.backup
 ```
 
 **Apply PostgreSQL Checkpointing Schema**:
+
 ```bash
 # Start postgres only
 docker-compose up -d postgres
@@ -99,6 +107,7 @@ docker exec -i postgres psql -U devtools -d devtools -c "\dt checkpoints.*"
 ```
 
 **Update Environment Variables**:
+
 ```bash
 cd /opt/Dev-Tools/config/env
 
@@ -118,6 +127,7 @@ grep LANGFUSE .env
 ### 4. Selective Service Startup
 
 **Phase 1: Core Infrastructure Only**
+
 ```bash
 cd /opt/Dev-Tools/compose
 
@@ -137,6 +147,7 @@ docker stats --no-stream
 ```
 
 **Phase 2: Add Orchestrator**
+
 ```bash
 # Start orchestrator only
 docker-compose up -d orchestrator
@@ -154,6 +165,7 @@ docker stats --no-stream
 ```
 
 **Phase 3: Monitor Before Adding More**
+
 ```bash
 # Watch memory for 5 minutes
 watch -n 30 'docker stats --no-stream'
@@ -169,6 +181,7 @@ dmesg | grep -i "out of memory"
 ### 5. Full Stack Startup (If Memory Allows)
 
 **Only if Phase 1-3 are stable**:
+
 ```bash
 # Start remaining agents one at a time
 docker-compose up -d feature-dev
@@ -184,12 +197,14 @@ docker stats --no-stream
 ```
 
 **Add RAG (Optional - high memory usage)**:
+
 ```bash
 # Only if memory allows (not recommended on 2GB droplet)
 docker-compose up -d rag-context
 ```
 
 **Add State Persistence (Optional - will be replaced by LangGraph)**:
+
 ```bash
 # Skip this if using LangGraph checkpointing
 # docker-compose up -d state-persistence
@@ -198,6 +213,7 @@ docker-compose up -d rag-context
 ### 6. Validate Deployment
 
 **Health Checks**:
+
 ```bash
 # Gateway
 curl http://localhost:8000/health
@@ -222,6 +238,7 @@ curl http://localhost:8006/health
 ```
 
 **Frontend Access**:
+
 ```bash
 # Test production landing page
 curl http://45.55.173.72/production-landing.html
@@ -234,6 +251,7 @@ curl http://45.55.173.72/servers.html
 ```
 
 **Langfuse Traces**:
+
 ```bash
 # Send test task to orchestrator
 curl -X POST http://localhost:8001/api/tasks \
@@ -250,6 +268,7 @@ curl -X POST http://localhost:8001/api/tasks \
 ```
 
 **Prometheus Metrics**:
+
 ```bash
 # Check Prometheus
 curl http://localhost:9090/-/healthy
@@ -263,18 +282,21 @@ curl http://localhost:8001/metrics
 ## Monitoring Strategy
 
 **Continuous Memory Watch**:
+
 ```bash
 # Run in separate terminal
 watch -n 10 'free -h && echo "---" && docker stats --no-stream'
 ```
 
 **OOM Detection**:
+
 ```bash
 # Watch for new OOM kills
 dmesg -w | grep -i "out of memory"
 ```
 
 **Service Logs**:
+
 ```bash
 # Orchestrator logs
 docker-compose logs -f orchestrator
@@ -289,12 +311,14 @@ docker-compose logs -f
 ## Rollback Plan
 
 **If OOM Persists**:
+
 1. Stop all containers: `docker-compose down`
 2. Start only gateway + postgres: `docker-compose up -d postgres gateway-mcp`
 3. Do NOT start agent services
 4. Proceed with consolidation migration (unified workflow)
 
 **If Services Fail**:
+
 1. Check logs: `docker-compose logs <service>`
 2. Verify environment variables: `docker exec <service> env | grep GRADIENT`
 3. Test service health endpoints
@@ -303,6 +327,7 @@ docker-compose logs -f
 ## Success Criteria
 
 **Minimum Viable State**:
+
 - ✅ Droplet responds to SSH
 - ✅ Docker daemon running
 - ✅ Gateway + Postgres healthy
@@ -311,6 +336,7 @@ docker-compose logs -f
 - ✅ Memory usage < 1.5GB total
 
 **Optimal State**:
+
 - ✅ All 6 agents running
 - ✅ All health checks passing
 - ✅ Frontend pages accessible
@@ -319,6 +345,7 @@ docker-compose logs -f
 - ✅ Memory usage stable < 2GB
 
 **Migration Ready State**:
+
 - ✅ PostgreSQL checkpointing schema applied
 - ✅ Qdrant Cloud client configured
 - ✅ LangGraph base infrastructure available
