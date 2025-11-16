@@ -9,17 +9,20 @@ Primary Role: Infrastructure-as-code generation and deployment configuration
 """
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, List, Any
 from datetime import datetime
 import uvicorn
 import os
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from agents._shared.mcp_client import MCPClient
-from agents._shared.gradient_client import get_gradient_client
-from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
+from agents.infrastructure.service import (
+    GuardrailViolation,
+    InfraRequest,
+    InfraResponse,
+    list_templates,
+    mcp_client,
+    process_infra_request,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,38 +36,6 @@ app = FastAPI(
 
 # Enable Prometheus metrics collection
 Instrumentator().instrument(app).expose(app)
-
-# Shared MCP client for tool access and telemetry
-mcp_client = MCPClient(agent_name="infrastructure")
-
-# Gradient AI client for LLM inference (with Langfuse tracing)
-gradient_client = get_gradient_client("infrastructure")
-
-# Guardrail orchestrator for compliance checks
-guardrail_orchestrator = GuardrailOrchestrator()
-
-
-class InfraRequest(BaseModel):
-    task_id: str
-    infrastructure_type: str = Field(..., description="docker, kubernetes, terraform, cloudformation")
-    requirements: Dict[str, Any]
-
-
-class InfraArtifact(BaseModel):
-    file_path: str
-    content: str
-    template_used: Optional[str] = None
-
-
-class InfraResponse(BaseModel):
-    infra_id: str
-    artifacts: List[InfraArtifact]
-    validation_status: str
-    estimated_tokens: int
-    template_reuse_pct: float
-    guardrail_report: GuardrailReport
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
-
 
 @app.get("/health")
 async def health_check():
@@ -91,81 +62,22 @@ async def generate_infrastructure(request: InfraRequest):
     - Loads only infrastructure specifications
     - Generates configurations incrementally with validation checkpoints
     """
-    import uuid
-
-    infra_id = str(uuid.uuid4())
-    guardrail_report = await guardrail_orchestrator.run(
-        "infrastructure",
-        task_id=request.task_id,
-        context={
-            "endpoint": "generate",
-            "infrastructure_type": request.infrastructure_type,
-        },
-    )
-
-    if guardrail_orchestrator.should_block_failures and guardrail_report.status == GuardrailStatus.FAILED:
+    try:
+        return await process_infra_request(request)
+    except GuardrailViolation as exc:
         raise HTTPException(
             status_code=409,
             detail={
                 "error": "Guardrail checks failed",
-                "report": guardrail_report.model_dump(mode="json"),
+                "report": exc.report.model_dump(mode="json"),
             },
         )
 
-    artifacts = generate_from_template(request)
-
-    if guardrail_report.status == GuardrailStatus.FAILED:
-        validation_status = "guardrail_failed"
-    elif guardrail_report.status == GuardrailStatus.WARNINGS:
-        validation_status = "guardrail_warnings"
-    else:
-        validation_status = "passed"
-
-    response = InfraResponse(
-        infra_id=infra_id,
-        artifacts=artifacts,
-        validation_status=validation_status,
-        estimated_tokens=len(str(request.requirements)) * 3,
-        template_reuse_pct=0.80,
-        guardrail_report=guardrail_report,
-    )
-
-    await mcp_client.log_event(
-        "infrastructure_generated",
-        metadata={
-            "infra_id": infra_id,
-            "task_id": request.task_id,
-            "artifacts": [artifact.file_path for artifact in artifacts],
-            "infrastructure_type": request.infrastructure_type,
-            "status": response.validation_status,
-            "guardrail_report_id": guardrail_report.report_id,
-            "guardrail_status": guardrail_report.status,
-            "guardrail_summary": guardrail_report.summary,
-        },
-    )
-
-    return response
-
-
 @app.get("/templates")
-async def list_templates():
-    return {
-        "templates": [
-            {"name": "docker-compose-standard", "usage_count": 145},
-            {"name": "k8s-deployment-basic", "usage_count": 89},
-            {"name": "terraform-aws-vpc", "usage_count": 67}
-        ]
-    }
+async def list_infra_templates():
+    """Expose available infrastructure templates."""
 
-
-def generate_from_template(request: InfraRequest) -> List[InfraArtifact]:
-    return [
-        InfraArtifact(
-            file_path="docker-compose.yml",
-            content="# Generated infrastructure config",
-            template_used="docker-compose-standard"
-        )
-    ]
+    return list_templates()
 
 
 if __name__ == '__main__':
