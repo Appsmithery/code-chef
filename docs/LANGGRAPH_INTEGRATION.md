@@ -46,7 +46,28 @@ langchain-openai>=0.1.0
 fastapi>=0.104.0
 uvicorn>=0.24.0
 pydantic>=2.0.0
+langfuse>=2.0.0
 ```
+
+### Observability
+
+**Automatic Langfuse Tracing:**
+
+- All LLM calls traced with prompts, completions, and token counts
+- Workflow executions tracked end-to-end
+- Node transitions and state changes captured
+- Metadata includes agent_name, task_id, thread_id, model
+- Traces viewable at https://us.cloud.langfuse.com
+
+**Configuration:**
+
+```env
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_HOST=https://us.cloud.langfuse.com
+```
+
+Tracing activates automatically when these variables are set. No code changes required.
 
 ## Usage
 
