@@ -31,7 +31,8 @@
         "dbaeumer.vscode-eslint",
         "denoland.vscode-deno",
         "vscjava.vscode-java-debug",
-        "task.vscode-task"
+        "task.vscode-task",
+        "hfloveyy.langgraphv"
       ]
     }
   }
