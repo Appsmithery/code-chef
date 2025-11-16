@@ -23,6 +23,28 @@ from agents.langgraph.workflow import (
 )
 from agents.langgraph.state import AgentState
 
+# Initialize Langfuse callback handler for FastAPI server
+_langfuse_handler = None
+try:
+    if all([
+        os.getenv("LANGFUSE_SECRET_KEY"),
+        os.getenv("LANGFUSE_PUBLIC_KEY"),
+        os.getenv("LANGFUSE_HOST")
+    ]):
+        from langfuse.callback import CallbackHandler
+        _langfuse_handler = CallbackHandler(
+            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+            host=os.getenv("LANGFUSE_HOST")
+        )
+        logger = logging.getLogger(__name__)
+        logger.info("Langfuse callback handler initialized for FastAPI server")
+except ImportError:
+    pass  # Langfuse not installed
+except Exception as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Failed to initialize Langfuse handler for FastAPI: {e}")
+
 # Configure logging
 logging.basicConfig(
     level=os.getenv("LOG_LEVEL", "INFO").upper(),

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, AsyncIterator, Mapping
+import os
+from typing import TYPE_CHECKING, Any, AsyncIterator, Mapping, Optional
 
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
@@ -22,6 +23,28 @@ from agents.langgraph.checkpointer import get_postgres_checkpointer
 
 if TYPE_CHECKING:  # pragma: no cover - used only for typing
     from langgraph.graph import CompiledGraph
+
+# Initialize Langfuse callback handler for LangGraph workflows
+_langgraph_langfuse_handler = None
+try:
+    if all([
+        os.getenv("LANGFUSE_SECRET_KEY"),
+        os.getenv("LANGFUSE_PUBLIC_KEY"),
+        os.getenv("LANGFUSE_HOST")
+    ]):
+        from langfuse.callback import CallbackHandler
+        _langgraph_langfuse_handler = CallbackHandler(
+            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+            host=os.getenv("LANGFUSE_HOST")
+        )
+        logger = logging.getLogger(__name__)
+        logger.info("Langfuse callback handler initialized for LangGraph workflows")
+except ImportError:
+    pass  # Langfuse not installed
+except Exception as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Failed to initialize Langfuse handler for LangGraph: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +198,11 @@ def invoke_workflow(
     config = {}
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
-    
+
+    # Add Langfuse callbacks if available
+    if _langgraph_langfuse_handler:
+        config["callbacks"] = [_langgraph_langfuse_handler]
+
     return graph.invoke(state, config=config if config else None)
 
 
@@ -224,7 +251,11 @@ async def stream_workflow(
     config = {}
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
-    
+
+    # Add Langfuse callbacks if available
+    if _langgraph_langfuse_handler:
+        config["callbacks"] = [_langgraph_langfuse_handler]
+
     # Stream events using LangGraph's async streaming
     async for event in graph.astream(state, config=config if config else None, stream_mode=stream_mode):
         yield event
@@ -279,8 +310,11 @@ async def stream_workflow_events(
     config = {}
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
-    
+
+    # Add Langfuse callbacks if available
+    if _langgraph_langfuse_handler:
+        config["callbacks"] = [_langgraph_langfuse_handler]
+
     # Stream detailed events using astream_events
     async for event in graph.astream_events(state, config=config if config else None, version="v1"):
         yield event
-

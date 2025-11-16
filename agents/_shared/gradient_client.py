@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY")
 GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama-3.1-8b-instruct")
 
-# Langfuse Configuration (SDK automatically enables tracing if these are set)
+# Langfuse Configuration
 LANGFUSE_ENABLED = all([
     os.getenv("LANGFUSE_SECRET_KEY"),
     os.getenv("LANGFUSE_PUBLIC_KEY"),
@@ -61,6 +61,22 @@ class GradientClient:
         self.model = model or GRADIENT_MODEL
         self.model_access_key = model_access_key or GRADIENT_MODEL_ACCESS_KEY
         
+        # Initialize Langfuse callback handler if configured
+        self.langfuse_handler = None
+        if LANGFUSE_ENABLED:
+            try:
+                from langfuse.callback import CallbackHandler
+                self.langfuse_handler = CallbackHandler(
+                    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+                    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+                    host=os.getenv("LANGFUSE_HOST")
+                )
+                logger.info(f"[{agent_name}] Langfuse callback handler initialized")
+            except ImportError:
+                logger.warning(f"[{agent_name}] Langfuse package not installed, tracing disabled")
+            except Exception as e:
+                logger.error(f"[{agent_name}] Failed to initialize Langfuse handler: {e}")
+
         if not self.model_access_key:
             logger.warning(f"[{agent_name}] GRADIENT_MODEL_ACCESS_KEY not set, LLM calls will fail")
             self.client = None
@@ -68,22 +84,21 @@ class GradientClient:
             try:
                 # Import Gradient SDK
                 from gradient import Gradient
-                
+
                 # Initialize client for serverless inference
-                # The SDK automatically handles Langfuse tracing if env vars are set
                 self.client = Gradient(
                     model_access_key=self.model_access_key
                 )
-                
+
                 logger.info(f"[{agent_name}] Gradient SDK initialized for serverless inference")
                 logger.info(f"[{agent_name}] Model: {self.model}")
                 logger.info(f"[{agent_name}] Model access key: {self.model_access_key[:20]}...")
-                
-                if LANGFUSE_ENABLED:
+
+                if self.langfuse_handler:
                     logger.info(f"[{agent_name}] Langfuse tracing ENABLED (host: {os.getenv('LANGFUSE_HOST')})")
                 else:
                     logger.info(f"[{agent_name}] Langfuse tracing DISABLED (env vars not set)")
-                    
+
             except ImportError:
                 logger.error(f"[{agent_name}] Gradient SDK not installed. Run: pip install gradient")
                 self.client = None

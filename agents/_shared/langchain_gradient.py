@@ -12,6 +12,29 @@ from langchain_core.callbacks.manager import CallbackManagerForLLMRun
 
 from agents._shared.gradient_client import get_gradient_client
 
+# Initialize Langfuse callback handler if configured
+_langfuse_handler = None
+try:
+    import os
+    if all([
+        os.getenv("LANGFUSE_SECRET_KEY"),
+        os.getenv("LANGFUSE_PUBLIC_KEY"),
+        os.getenv("LANGFUSE_HOST")
+    ]):
+        from langfuse.callback import CallbackHandler
+        _langfuse_handler = CallbackHandler(
+            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+            host=os.getenv("LANGFUSE_HOST")
+        )
+        logger = logging.getLogger(__name__)
+        logger.info("Langfuse callback handler initialized for LangChain wrapper")
+except ImportError:
+    pass  # Langfuse not installed
+except Exception as e:
+    logger = logging.getLogger(__name__)
+    logger.warning(f"Failed to initialize Langfuse handler: {e}")
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,13 +81,13 @@ class GradientLLM(LLM):
     ) -> str:
         """
         Async call to Gradient AI via gradient_client.
-        
+
         Args:
             prompt: Input prompt
             stop: Stop sequences (currently ignored)
             run_manager: LangChain callback manager
             **kwargs: Additional parameters (temperature, max_tokens, system_prompt)
-            
+
         Returns:
             Generated text
         """
@@ -72,15 +95,15 @@ class GradientLLM(LLM):
             agent_name=self.agent_name,
             model=self.model
         )
-        
+
         if not client.is_enabled():
             raise RuntimeError(f"{self.agent_name}: Gradient client not enabled (missing API key)")
-        
+
         # Extract parameters
         temperature = kwargs.get("temperature", self.temperature)
         max_tokens = kwargs.get("max_tokens", self.max_tokens)
         system_prompt = kwargs.get("system_prompt")
-        
+
         # Invoke gradient_client
         try:
             result = await client.complete(
@@ -93,16 +116,16 @@ class GradientLLM(LLM):
                     "model": self.model or client.model
                 }
             )
-            
+
             # Report token usage via callback manager
             if run_manager:
                 await run_manager.on_llm_new_token(
                     result["content"],
                     verbose=True
                 )
-            
+
             return result["content"]
-            
+
         except Exception as e:
             logger.error(f"[{self.agent_name}] Gradient LLM error: {e}")
             raise
