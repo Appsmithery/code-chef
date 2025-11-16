@@ -81,12 +81,14 @@ curl -X POST http://localhost:8001/orchestrate \
 Visit: https://us.cloud.langfuse.com
 
 **What to Look For:**
+
 - New traces appearing with `agent_name` metadata
 - Task decomposition showing routing decisions
 - Token usage per agent/model
 - Execution timing and performance data
 
 **Filter by Agent:**
+
 ```
 metadata.agent_name = "orchestrator"
 metadata.agent_name = "feature-dev"
@@ -138,11 +140,13 @@ docker-compose -f compose/docker-compose.yml exec orchestrator env | grep LANGFU
 Once deployed:
 
 1. **Frontend Pages Accessible:**
+
    - http://45.55.173.72/agents.html - Agent cards with metadata
    - http://45.55.173.72/production-landing.html - Updated landing page
    - http://45.55.173.72/servers.html - MCP servers page
 
 2. **All Agents Online:**
+
    - Orchestrator (8001): ✓ Online
    - Feature-Dev (8002): ✓ Online
    - Code-Review (8003): ✓ Online
