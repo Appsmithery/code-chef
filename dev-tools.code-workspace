@@ -27,7 +27,7 @@
     "github.copilot.chat.responsesApiReasoningEffort": "high",
     "github.copilot.chat.scopeSelection": true,
     "github.copilot.chat.tools.memory.enabled": true,
-    "workbench.iconTheme": "vs-seti-folder"
+    "workbench.iconTheme": "vs-seti"
   },
   "extensions": {
     "recommendations": [
