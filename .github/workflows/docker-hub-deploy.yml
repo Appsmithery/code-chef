@@ -81,6 +81,9 @@ jobs:
                   ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
                     set -e
                     
+                    # Force use of standard Docker socket
+                    export DOCKER_HOST=unix:///var/run/docker.sock
+                    
                     # Ensure Docker is running
                     if ! systemctl is-active --quiet docker; then
                       echo "Starting Docker daemon..."
@@ -93,6 +96,7 @@ jobs:
                       echo "Docker daemon not accessible, restarting..."
                       systemctl restart docker
                       sleep 5
+                      docker ps > /dev/null
                     }
                     
                     cd /opt/Dev-Tools
@@ -118,6 +122,7 @@ jobs:
             - name: Validate deployment
               run: |
                   ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
+                    export DOCKER_HOST=unix:///var/run/docker.sock
                     cd /opt/Dev-Tools
                     
                     # Run validation script if it exists
@@ -139,6 +144,7 @@ jobs:
               if: failure()
               run: |
                   ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
+                    export DOCKER_HOST=unix:///var/run/docker.sock
                     cd /opt/Dev-Tools/compose
                     docker compose down --remove-orphans
                     docker system prune -f
