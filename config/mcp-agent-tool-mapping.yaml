@@ -120,7 +120,9 @@ agent_tool_mappings:
 
       - server: "prometheus"
         tools: ["query_metrics", "list_metrics", "get_alerts"]
-        rationale: "Monitor agent health, track orchestration latency, and aggregate system-wide observability (when available)"
+        rationale: >-
+          Monitor agent health, track orchestration latency,
+          and aggregate system-wide observability (when available)
         priority: "medium"
         notes: "Server currently unavailable - consider fallback telemetry"
 
