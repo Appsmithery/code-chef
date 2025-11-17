@@ -171,7 +171,7 @@ services:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:rag-${IMAGE_TAG:-latest}
     build:
       context: ../..
-      dockerfile: agents/rag/Dockerfile
+      dockerfile: services/rag/Dockerfile
     ports:
       - "8007:8007"
     environment:
@@ -199,7 +199,7 @@ services:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:state-${IMAGE_TAG:-latest}
     build:
       context: ../..
-      dockerfile: agents/state/Dockerfile
+      dockerfile: services/state/Dockerfile
     ports:
       - "8008:8008"
     environment:
@@ -238,7 +238,7 @@ services:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:langgraph-${IMAGE_TAG:-latest}
     build:
       context: ../..
-      dockerfile: agents/langgraph/Dockerfile
+      dockerfile: services/langgraph/Dockerfile
     ports:
       - "8009:8009"
     environment:
