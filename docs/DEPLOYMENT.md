@@ -211,6 +211,20 @@ It expects a single repository secret:
 
 Triggering a push to `main` (or running the workflow manually) will push fresh images; downstream deployment jobs can simply `docker compose pull && docker compose up -d` or roll out via Kubernetes.
 
+### Guardrails & Cleanup
+
+1. **Build-side pruning (default on):** `scripts/push-docr.ps1` accepts `-CleanupOnFailure:$true` (CI default) which wraps the compose build/push in `try { } finally { docker builder prune -f; docker image prune -f; }` so orphaned layers never accumulate.
+2. **Pull-only deployments:** `scripts/deploy-to-droplet.ps1` now:
+
+- Derives `IMAGE_TAG` from `git rev-parse --short HEAD` unless overridden.
+- Runs `docker compose down --remove-orphans` before any pull, keeping stale containers from restarting.
+- Calls `docker compose pull && docker compose up -d` instead of rebuilding on the droplet.
+- Executes `docker system prune --volumes --force` plus targeted log streaming if compose exits non-zero.
+
+3. **Health gates:** After the compose rollout, the script executes `scripts/validate-tracing.sh` and surfaces failing service logs so HITL operators can intervene without hunting SSH sessions.
+4. **Dev/prod isolation:** Keep hot-reload mounts inside `compose/docker-compose.override.yml` and only enable them via `COMPOSE_FILE="compose/docker-compose.yml:compose/docker-compose.override.yml"` during local development.
+5. **Plan for blue/green:** Once DOCR-driven deploys stay green for a week, snapshot the droplet, bring up a `-blue` twin, and flip DNS only after Prometheus + Langfuse checks succeed.
+
 ---
 
 ## Service Architecture

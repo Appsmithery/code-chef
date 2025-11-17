@@ -52,6 +52,13 @@
 - Per-agent models: orchestrator/code-review (70b), feature-dev (codellama-13b), infrastructure/cicd (8b), documentation (mistral-7b).
 - Cost: $0.20-0.60/1M tokens (150x cheaper than GPT-4); <50ms latency within DO network.
 
+### Container Hygiene & Cleanup (Required)
+
+- **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
+- **Prune on errors.** If a compose build/push/deploy fails, follow up with `docker builder prune -f`, `docker image prune -f`, and (when on the droplet) `docker system prune --volumes --force` unless the user explicitly says otherwise.
+- **Verify health after cleanup.** Re-run `scripts/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
+- **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
+
 ### Langfuse (LLM Tracing)
 
 - Automatic tracing via `langfuse.openai` wrapper in gradient_client; no explicit tracing code needed in agents.
@@ -89,6 +96,7 @@
 - **Observability**: All agents must initialize MCP client, Gradient client (if using LLM), Langfuse tracing, Prometheus metrics.
 - **Error Handling**: Graceful fallback when API keys missing (use `gradient_client.is_enabled()` check before LLM calls).
 - **Shell Scripts**: POSIX-compliant bash, executable permissions, consistent logging format (echo + status lines).
+- **Container Hygiene**: Treat Docker resources as disposable—tear down stray containers, prune layers after failures, and leave compose stacks either fully running or fully stopped.
 - **Documentation**: Update relevant docs in `docs/` when changing architecture; maintain `docs/README.md` index. Use `docs/_temp/` for working files, progress notes, and troubleshooting documents during active development.
 - Backups are volume-level tarballs written by `scripts/backup_volumes.sh`, storing `orchestrator-data` and `mcp-config` snapshots under `./backups/<timestamp>`.
 - Place local-only adjustments in `compose/docker-compose.override.yml`; the sample sets DEBUG/LOG_LEVEL for the orchestrator.
