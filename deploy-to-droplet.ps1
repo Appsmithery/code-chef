@@ -1,8 +1,10 @@
 #!/usr/bin/env pwsh
-# Clean Rebuild & Deployment Script for DigitalOcean Droplet
-# Scrubs old containers and rebuilds from scratch to avoid configuration drift
+# Deploy DOCR Images to DigitalOcean Droplet
+# Pulls pre-built images from registry and deploys with health validation
 
 param(
+    [string]$ImageTag,
+    [string]$Registry = "registry.digitalocean.com/the-shop-infra",
     [switch]$SkipClean,
     [switch]$SkipTests
 )
@@ -11,97 +13,125 @@ $ErrorActionPreference = "Stop"
 $DROPLET = "do-mcp-gateway"
 $DEPLOY_PATH = "/opt/Dev-Tools"
 
+function Write-Step { param($Message) Write-Host "`n[STEP] $Message" -ForegroundColor Cyan }
+function Write-Info { param($Message) Write-Host "  -> $Message" -ForegroundColor Gray }
+function Write-Success { param($Message) Write-Host "  [OK] $Message" -ForegroundColor Green }
+function Write-Failure { param($Message) Write-Host "  [ERROR] $Message" -ForegroundColor Red }
+
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "Clean Rebuild & Deploy to Droplet" -ForegroundColor Cyan
+Write-Host "Deploy to Droplet (Image Pull Mode)" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Test SSH connection
-Write-Host "Testing SSH connection..." -ForegroundColor Yellow
-ssh -o ConnectTimeout=5 $DROPLET "echo 'Connected successfully'" | Out-Null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "SSH connection failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "SSH connection working" -ForegroundColor Green
-
-# Pull latest code
-Write-Host ""
-Write-Host "Pulling latest code..." -ForegroundColor Yellow
-ssh $DROPLET "cd $DEPLOY_PATH ; git pull origin main"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Git pull failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "Code updated" -ForegroundColor Green
-
-if (-not $SkipClean) {
-    # Stop all containers
-    Write-Host ""
-    Write-Host "Stopping all containers..." -ForegroundColor Yellow
-    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose down"
-    Write-Host "Containers stopped" -ForegroundColor Green
-
-    # Clean up old containers and images
-    Write-Host ""
-    Write-Host "Cleaning up old containers and images..." -ForegroundColor Yellow
-    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; docker container prune -f"
-    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; docker image prune -f"
-    Write-Host "Cleanup complete" -ForegroundColor Green
-
-    # Rebuild all containers
-    Write-Host ""
-    Write-Host "Rebuilding all containers from scratch..." -ForegroundColor Yellow
-    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose build --no-cache"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Build failed" -ForegroundColor Red
+# Derive IMAGE_TAG from git if not provided
+if (-not $ImageTag) {
+    Write-Info "Deriving IMAGE_TAG from current git commit..."
+    $gitSha = (git rev-parse --short HEAD).Trim()
+    if (-not $gitSha) {
+        Write-Failure "Unable to determine git SHA; pass -ImageTag explicitly."
         exit 1
     }
-    Write-Host "Containers rebuilt" -ForegroundColor Green
+    $ImageTag = $gitSha
 }
 
-# Start all services
-Write-Host ""
-Write-Host "Starting all services..." -ForegroundColor Yellow
-ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose up -d"
+Write-Info "Using IMAGE_TAG = $ImageTag"
+Write-Info "Using Registry = $Registry"
+
+# Test SSH connection
+Write-Step "Testing SSH connection"
+ssh -o ConnectTimeout=5 $DROPLET "echo 'Connected successfully'" | Out-Null
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Service start failed" -ForegroundColor Red
+    Write-Failure "SSH connection failed"
     exit 1
 }
-Write-Host "Services started" -ForegroundColor Green
+Write-Success "SSH connection working"
 
-# Wait for services to be ready
-Write-Host ""
-Write-Host "Waiting 15 seconds for services to initialize..." -ForegroundColor Yellow
-Start-Sleep -Seconds 15
-
-# Health checks
-Write-Host ""
-Write-Host "Running health checks..." -ForegroundColor Yellow
-$services = @(
-    @{Name="Gateway"; Port=8000},
-    @{Name="Orchestrator"; Port=8001},
-    @{Name="Feature-Dev"; Port=8002},
-    @{Name="Code-Review"; Port=8003},
-    @{Name="Infrastructure"; Port=8004},
-    @{Name="CI/CD"; Port=8005},
-    @{Name="Documentation"; Port=8006}
-)
-
-$healthyCount = 0
-foreach ($service in $services) {
-    $result = ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; curl -s -o /dev/null -w '%{http_code}' http://localhost:$($service.Port)/health" 2>$null
-    if ($result -eq "200") {
-        Write-Host "  $($service.Name) (port $($service.Port))" -ForegroundColor Green
-        $healthyCount++
-    } else {
-        Write-Host "  $($service.Name) (port $($service.Port)) - HTTP $result" -ForegroundColor Red
-    }
+# Pull latest code
+Write-Step "Pulling latest code on droplet"
+ssh $DROPLET "cd $DEPLOY_PATH && git pull origin main"
+if ($LASTEXITCODE -ne 0) {
+    Write-Failure "Git pull failed"
+    exit 1
 }
+Write-Success "Code updated"
 
-Write-Host ""
-Write-Host "$healthyCount/$($services.Count) services healthy" -ForegroundColor $(if ($healthyCount -eq $services.Count) { "Green" } else { "Yellow" })
+try {
+    # Stop and remove old containers
+    Write-Step "Stopping containers and removing orphans"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose down --remove-orphans"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Failure "docker compose down failed"
+        throw "Compose down failed"
+    }
+    Write-Success "Containers stopped"
+
+    if (-not $SkipClean) {
+        Write-Step "Pruning old images and containers"
+        ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; docker container prune -f ; docker image prune -f"
+        Write-Success "Cleanup complete"
+    }
+
+    # Pull images from registry
+    Write-Step "Pulling images from $Registry (tag: $ImageTag)"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; export IMAGE_TAG=$ImageTag ; export DOCR_REGISTRY=$Registry ; cd $DEPLOY_PATH/compose ; docker compose pull"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Failure "docker compose pull failed"
+        throw "Image pull failed"
+    }
+    Write-Success "Images pulled"
+
+    # Start all services
+    Write-Step "Starting all services"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; export IMAGE_TAG=$ImageTag ; export DOCR_REGISTRY=$Registry ; cd $DEPLOY_PATH/compose ; docker compose up -d"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Failure "Service start failed"
+        throw "Compose up failed"
+    }
+    Write-Success "Services started"
+
+    # Wait for services to be ready
+    Write-Step "Waiting 15 seconds for services to initialize"
+    Start-Sleep -Seconds 15
+
+    # Health checks
+    Write-Step "Running health checks"
+    $services = @(
+        @{Name="Gateway"; Port=8000},
+        @{Name="Orchestrator"; Port=8001},
+        @{Name="Feature-Dev"; Port=8002},
+        @{Name="Code-Review"; Port=8003},
+        @{Name="Infrastructure"; Port=8004},
+        @{Name="CI/CD"; Port=8005},
+        @{Name="Documentation"; Port=8006}
+    )
+
+    $healthyCount = 0
+    foreach ($service in $services) {
+        $result = ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; curl -s -o /dev/null -w '%{http_code}' http://localhost:$($service.Port)/health" 2>$null
+        if ($result -eq "200") {
+            Write-Host "  $($service.Name) (port $($service.Port))" -ForegroundColor Green
+            $healthyCount++
+        } else {
+            Write-Host "  $($service.Name) (port $($service.Port)) - HTTP $result" -ForegroundColor Red
+        }
+    }
+
+    Write-Host ""
+    Write-Host "$healthyCount/$($services.Count) services healthy" -ForegroundColor $(if ($healthyCount -eq $services.Count) { "Green" } else { "Yellow" })
+
+    if ($healthyCount -lt $services.Count) {
+        Write-Failure "Some services are unhealthy; streaming logs..."
+        ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose logs --tail=50"
+        throw "Health check failed for $($services.Count - $healthyCount) service(s)"
+    }
+
+} catch {
+    Write-Failure $_
+    Write-Step "Running emergency cleanup"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; docker system prune --volumes --force"
+    exit 1
+}
 
 if (-not $SkipTests) {
     Write-Host ""
@@ -110,43 +140,14 @@ if (-not $SkipTests) {
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
 
-    # Test 1: Orchestrator with Langfuse tracing
-    Write-Host "Test 1: Orchestrator Task Decomposition (creates Langfuse trace)..." -ForegroundColor Yellow
-    $orchCmd = "curl -X POST http://localhost:8001/orchestrate -H 'Content-Type: application/json' -d '{`"description`":`"Build a REST API with authentication`",`"priority`":`"high`"}' -s -o /dev/null -w '%{http_code}'"
-    $statusCode = ssh $DROPLET $orchCmd
-    if ($statusCode -eq "200") {
-        Write-Host "  Orchestrator responding (HTTP $statusCode)" -ForegroundColor Green
-    } else {
-        Write-Host "  Orchestrator failed (HTTP $statusCode)" -ForegroundColor Red
-    }
-
-    # Test 2: Feature-Dev agent
-    Write-Host ""
-    Write-Host "Test 2: Feature-Dev Code Generation..." -ForegroundColor Yellow
-    $featureCmd = "curl -X POST http://localhost:8002/generate -H 'Content-Type: application/json' -d '{`"feature`":`"user authentication`",`"framework`":`"FastAPI`"}' -s -o /dev/null -w '%{http_code}'"
-    $statusCode = ssh $DROPLET $featureCmd
-    if ($statusCode -eq "200") {
-        Write-Host "  Feature-Dev responding (HTTP $statusCode)" -ForegroundColor Green
-    } else {
-        Write-Host "  Feature-Dev failed (HTTP $statusCode)" -ForegroundColor Red
-    }
-
-    # Test 3: MCP Gateway
-    Write-Host ""
-    Write-Host "Test 3: MCP Gateway Tool Discovery..." -ForegroundColor Yellow
-    $mcpCmd = "curl -s http://localhost:8000/api/tools -o /dev/null -w '%{http_code}'"
-    $statusCode = ssh $DROPLET $mcpCmd
-    if ($statusCode -eq "200") {
-        Write-Host "  MCP Gateway responding (HTTP $statusCode)" -ForegroundColor Green
-    } else {
-        Write-Host "  MCP Gateway failed (HTTP $statusCode)" -ForegroundColor Red
-    }
-
-    # Copy and run validation script
-    Write-Host ""
-    Write-Host "Running comprehensive validation script on droplet..." -ForegroundColor Yellow
+    # Run comprehensive validation script
+    Write-Step "Running validate-tracing.sh on droplet"
     scp -q scripts/validate-tracing.sh ${DROPLET}:/tmp/validate-tracing.sh
     ssh $DROPLET "chmod +x /tmp/validate-tracing.sh ; /tmp/validate-tracing.sh"
+    if ($LASTEXITCODE -ne 0) {
+        Write-Failure "Validation script failed"
+        exit 1
+    }
 }
 
 Write-Host ""

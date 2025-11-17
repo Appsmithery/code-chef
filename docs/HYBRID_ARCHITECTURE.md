@@ -106,17 +106,46 @@ This architecture provides:
 
 ## Deployment
 
-### Quick Deploy
+### Quick Deploy (DOCR Pull Mode - Recommended)
 
 ```powershell
-# 1) Publish images (local or CI)
+# 1) Build and publish images from your workstation or CI
 pwsh ./scripts/push-docr.ps1
 
-# 2) Deploy to droplet by pulling the tag (no on-box build)
-pwsh ./scripts/deploy-to-droplet.ps1 -ImageTag (git rev-parse --short HEAD)
+# 2) Deploy to droplet by pulling the tagged image (no on-box build)
+pwsh ./scripts/deploy-to-droplet.ps1
 ```
 
-### Manual Steps
+The deploy script now defaults `IMAGE_TAG` to the current git commit SHA and runs `docker compose pull` instead of rebuilding on the droplet. This ensures every deployment uses the exact artifact that passed CI checks and matches the developer's local environment.
+
+**Guardrails in effect:**
+
+- **Build-time cleanup:** `push-docr.ps1` prunes partial layers on failure (`-CleanupOnFailure:$true` by default in CI).
+- **Deploy-time safety:** `deploy-to-droplet.ps1` tears down stale containers with `docker compose down --remove-orphans`, runs `docker compose pull`, and if compose exits non-zero, executes `docker system prune --volumes --force` plus targeted log streaming.
+- **Health verification:** After the rollout, `scripts/validate-tracing.sh` runs automatically and surfaces failing service logs so HITL operators can intervene without hunting SSH sessions.
+
+### Dev/Prod Isolation
+
+**Development (hot-reload):**
+
+```powershell
+# Enable override with volume mounts for local iteration
+$env:COMPOSE_FILE = "compose/docker-compose.yml;compose/docker-compose.override.yml"
+docker compose up -d
+```
+
+The override file (`compose/docker-compose.override.yml`) contains local-only settings like `DEBUG=true` and source code mounts. It is gitignored to prevent dev flags from leaking into production.
+
+**Production (immutable images):**
+
+```powershell
+# Pull and run pre-built DOCR images
+export IMAGE_TAG=$(git rev-parse --short HEAD)
+docker compose pull
+docker compose up -d
+```
+
+Production deployments never use the override file and never rebuild on the droplet.
 
 1. **Deploy Docker Infrastructure (pull-only):**
 
@@ -223,11 +252,38 @@ curl http://45.55.173.72:9090/-/healthy
 
 ## Troubleshooting
 
-### Deployment Guardrails
+### Deployment Guardrails & Debugging
 
-- **Verify tags:** Confirm the droplet runs the expected `IMAGE_TAG` (`docker inspect compose-orchestrator-1 | grep IMAGE_TAG`).
-- **Cleanup on failure:** Rerun `scripts/deploy-to-droplet.ps1 -ForceCleanup` to trigger `docker system prune --volumes --force` if compose enters a restart loop.
-- **Remote debugging:** (Planned) `scripts/debug-agent.ps1 -Agent <name>` wraps status, logs, and `/health` output so failures surface quickly; until then, run the equivalent SSH commands listed in `docs/DEPLOYMENT.md`.
+**Quick diagnostics for any agent:**
+
+```powershell
+pwsh ./scripts/debug-agent.ps1 -Agent orchestrator
+pwsh ./scripts/debug-agent.ps1 -Agent code-review -Remote
+```
+
+This gathers container status, last 100 log lines, Python packages, `/health` response, and sanitized environment variables in one command. Pass `-Remote` to run the same checks on the droplet via SSH.
+
+**Verify image tags:** Confirm the droplet runs the expected `IMAGE_TAG`:
+
+```bash
+ssh root@45.55.173.72 "docker inspect compose-orchestrator-1 | grep IMAGE_TAG"
+```
+
+**Cleanup on failure:** If compose enters a restart loop:
+
+```powershell
+pwsh ./scripts/deploy-to-droplet.ps1 -SkipTests
+```
+
+This reruns the deploy sequence including `docker system prune --volumes --force` on errors.
+
+**Health validation:** Run the comprehensive validation suite manually:
+
+```bash
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && bash scripts/validate-tracing.sh"
+```
+
+The script now includes health checks for all agents, MCP tool discovery, and end-to-end workflow tests with color-coded output.
 
 ### Agent Can't Connect to Gateway
 

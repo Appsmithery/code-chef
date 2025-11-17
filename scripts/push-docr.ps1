@@ -46,7 +46,8 @@ param(
     [int]$RegistryLoginTtlSeconds = 1800,
     [switch]$SkipBuild,
     [switch]$SkipRegistryLogin,
-    [switch]$SkipDoctlAccountCheck
+    [switch]$SkipDoctlAccountCheck,
+    [switch]$CleanupOnFailure = $true
 )
 
 $ErrorActionPreference = "Stop"
@@ -173,6 +174,9 @@ try {
     $env:IMAGE_TAG = $ImageTag
     $env:DOCR_REGISTRY = $Registry
 
+    $buildSuccess = $false
+    $pushSuccess = $false
+
     try {
         if (-not $SkipBuild) {
             Write-Step "Building images with docker compose"
@@ -182,9 +186,11 @@ try {
             if ($LASTEXITCODE -ne 0) {
                 throw "docker compose build failed"
             }
+            $buildSuccess = $true
             Write-Success "Build completed"
         } else {
             Write-Info "Skipping build phase"
+            $buildSuccess = $true
         }
 
         Write-Step "Pushing images to $Registry with tag $ImageTag"
@@ -194,7 +200,42 @@ try {
         if ($LASTEXITCODE -ne 0) {
             throw "docker compose push failed"
         }
+        $pushSuccess = $true
         Write-Success "Push succeeded"
+
+        # Emit build metadata on success
+        Write-Step "Recording build metadata"
+        $reportsDir = Join-Path $repoRoot "reports"
+        if (-not (Test-Path $reportsDir)) {
+            New-Item -ItemType Directory -Path $reportsDir | Out-Null
+        }
+
+        $metadata = @{
+            image_tag = $ImageTag
+            registry = $Registry
+            services = if ($Services) { $Services } else { @("all") }
+            build_time = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            git_commit = (git rev-parse HEAD).Trim()
+            build_status = "success"
+        } | ConvertTo-Json -Depth 5
+
+        $metadataPath = Join-Path $reportsDir "push-docr-metadata.json"
+        $metadata | Out-File -FilePath $metadataPath -Encoding UTF8
+        Write-Success "Metadata saved to $metadataPath"
+
+    } catch {
+        Write-Failure $_
+
+        if ($CleanupOnFailure) {
+            Write-Step "Running cleanup after failure"
+            Write-Info "Pruning Docker builder cache..."
+            docker builder prune -f 2>&1 | Out-Null
+            Write-Info "Pruning dangling images..."
+            docker image prune -f 2>&1 | Out-Null
+            Write-Success "Cleanup completed"
+        }
+
+        throw
     } finally {
         if ($null -ne $previousImageTag) {
             $env:IMAGE_TAG = $previousImageTag
