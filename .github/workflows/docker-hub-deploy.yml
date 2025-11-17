@@ -28,19 +28,18 @@ jobs:
 
             - name: Prepare .env file
               run: |
-                  cat > compose/.env << EOF
-                  IMAGE_TAG=${{ env.IMAGE_TAG }}
-                  DOCKER_USERNAME=${{ env.DOCKER_USERNAME }}
-                  LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
-                  LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
-                  LANGFUSE_HOST=https://us.cloud.langfuse.com
-                  GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}
-                  GRADIENT_BASE_URL=https://api.digitalocean.com/v2/ai
-                  LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}
-                  QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
-                  QDRANT_URL=${{ secrets.QDRANT_URL }}
-                  DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-                  EOF
+                  mkdir -p config/env
+                  cp config/env/.env.template config/env/.env
+                  
+                  # Update with GitHub secrets and runtime values
+                  sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${{ env.IMAGE_TAG }}|" config/env/.env
+                  sed -i "s|^DOCKER_USERNAME=.*|DOCKER_USERNAME=${{ env.DOCKER_USERNAME }}|" config/env/.env
+                  sed -i "s|^LANGFUSE_SECRET_KEY=.*|LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}|" config/env/.env
+                  sed -i "s|^LANGFUSE_PUBLIC_KEY=.*|LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}|" config/env/.env
+                  sed -i "s|^GRADIENT_API_KEY=.*|GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}|" config/env/.env
+                  sed -i "s|^LINEAR_OAUTH_DEV_TOKEN=.*|LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}|" config/env/.env
+                  sed -i "s|^QDRANT_API_KEY=.*|QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}|" config/env/.env
+                  sed -i "s|^QDRANT_URL=.*|QDRANT_URL=${{ secrets.QDRANT_URL }}|" config/env/.env
 
             - name: Build and push all services
               run: |
