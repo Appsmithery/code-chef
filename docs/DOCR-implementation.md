@@ -1,4 +1,61 @@
-# **DOCR Implementation Plan**
+# **DOCR Implementation Summary (November 2025)**
+
+## Status: COMPLETED ✅
+
+The hybrid DOCR + GitHub Actions rollout is now live. All agents deploy by pulling pre-built images from `registry.digitalocean.com/the-shop-infra`, and droplets never rebuild source.
+
+## What Changed
+
+1. **CI Workflow** – `.github/workflows/docr-build.yml` now runs a single `docker compose build`/`push` job using `IMAGE_TAG=${{ github.sha }}` and the same `.env` file as local builds. After push, an SSH-based deploy job pulls the tag and runs `docker compose up -d` on the droplet.
+
+2. **Build Script** – `scripts/push-docr.ps1` wraps build/push in `try/finally` cleanup (`docker builder prune -f`, `docker image prune -f`) when `-CleanupOnFailure:$true` (default in CI). It emits build metadata to `reports/push-docr-metadata.json` for traceability.
+
+3. **Deploy Script** – `scripts/deploy-to-droplet.ps1` now:
+
+   - Defaults `IMAGE_TAG` to `git rev-parse --short HEAD` (overridable).
+   - Runs `docker compose down --remove-orphans` → `docker compose pull` → `docker compose up -d`.
+   - Executes `docker system prune --volumes --force` on failures and streams logs for unhealthy services.
+   - Always calls `scripts/validate-tracing.sh` post-deploy to verify agent health and Langfuse traces.
+
+4. **Debug Toolkit** – `scripts/debug-agent.ps1` gathers container status, last 100 log lines, pip packages, `/health` output, and sanitized environment variables for any agent. Pass `-Remote` to run diagnostics on the droplet via SSH.
+
+5. **Health Validation** – `scripts/validate-tracing.sh` extended with:
+
+   - Phase 1: Health checks for all 9 services (gateway, 6 agents, RAG, state).
+   - Phase 2: MCP tool discovery with sample tool listing.
+   - Phase 3: End-to-end workflow tests (orchestrator, feature-dev, code-review, infrastructure, cicd, documentation).
+   - Color-coded output with pass/fail summary.
+
+6. **Dev/Prod Isolation** – `compose/docker-compose.override.yml` contains local-only hot-reload mounts and `DEBUG=true` flags. It is only activated via `COMPOSE_FILE="compose/docker-compose.yml:compose/docker-compose.override.yml"` for local development.
+
+## Rollout Checklist ✅
+
+- [x] Update CI workflow to compose-based build/push/deploy.
+- [x] Ship guardrail-aware versions of `push-docr.ps1` and `deploy-to-droplet.ps1`.
+- [x] Publish troubleshooting script (`debug-agent.ps1`) + validate-tracing automation.
+- [x] Document dev override usage + prod guardrails (HYBRID_ARCHITECTURE.md, DEPLOYMENT.md, this doc).
+- [ ] Schedule DO snapshot & blue/green rehearsal once DOCR flow proves stable for 1 week.
+
+## Next Steps
+
+1. **Blue/Green Strategy** – Snapshot the primary droplet once DOCR deployments stay green for a week. Bring up `do-mcp-gateway-blue`, point Caddy/load balancer at the active node, and only flip traffic after Langfuse + Prometheus checks pass.
+
+2. **Automated Rollback** – Extend CI workflow to store the previous `IMAGE_TAG` in a metadata file and add a rollback job that redeploys the last-known-good tag on failure.
+
+3. **Image Signing** – Enable DOCR content trust to ensure only signed images can be deployed to production.
+
+4. **Cost Tracking** – Instrument Langfuse to report per-agent token consumption and correlate with DOCR pull metrics to optimize registry usage.
+
+## Reference Documents
+
+- [Hybrid Architecture Overview](./HYBRID_ARCHITECTURE.md)
+- [Deployment Guide](./DEPLOYMENT.md)
+- [Docker Cleanup Procedures](./DOCKER_CLEANUP.md)
+- [Pre-Deployment Checklist](./PRE_DEPLOYMENT_CHECKLIST.md)
+
+---
+
+# **Original DOCR Implementation Plan (Archive)**
 
 **High-level approach**
 

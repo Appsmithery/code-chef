@@ -110,11 +110,29 @@ done
 
 ## DigitalOcean Container Registry (DOCR) Integration
 
-| Item              | Value                                      |
-| ----------------- | ------------------------------------------ |
-| Default registry  | `registry.digitalocean.com/the-shop-infra` |
-| Compose variables | `DOCR_REGISTRY`, `IMAGE_TAG`               |
-| CI workflow       | `.github/workflows/docr-build.yml`         |
+| Item              | Value                                                 |
+| ----------------- | ----------------------------------------------------- |
+| Default registry  | `registry.digitalocean.com/the-shop-infra`            |
+| Compose variables | `DOCR_REGISTRY`, `IMAGE_TAG`                          |
+| CI workflow       | `.github/workflows/docr-build.yml`                    |
+| Build script      | `scripts/push-docr.ps1`                               |
+| Deploy script     | `scripts/deploy-to-droplet.ps1` (now IMAGE_TAG-aware) |
+| Debug script      | `scripts/debug-agent.ps1` (diagnostics per agent)     |
+
+### Operating Model: Build Once, Deploy Everywhere
+
+**The hybrid DOCR flow eliminates droplet-side rebuilds:**
+
+1. **Build:** Run `docker compose build` once (locally or in CI) with the canonical `.env` so all services capture identical configuration.
+2. **Publish:** Tag every image as `${DOCR_REGISTRY}/<service>:${IMAGE_TAG}` and push to DOCR. CI uses `github.sha`; local builds default to `git rev-parse --short HEAD`.
+3. **Deploy:** The droplet runs `docker compose pull` followed by `docker compose up -d`, never rebuilding source. If a layer is missing or corrupt, the deploy script prunes and exits non-zero.
+4. **Verify:** `scripts/validate-tracing.sh` runs post-deploy to confirm agent health, MCP tools, and Langfuse traces.
+
+**Guardrails:**
+
+- `push-docr.ps1` wraps build/push in `try/finally` cleanup (`docker builder prune -f`, `docker image prune -f`) when `-CleanupOnFailure:$true` (default in CI).
+- `deploy-to-droplet.ps1` issues `docker compose down --remove-orphans` before pulling, runs `docker system prune --volumes --force` on compose failures, and streams logs for unhealthy services.
+- Health checks gate the deploy: if any agent returns non-200, the script surfaces logs and exits 1.
 
 ### Why it matters
 
