@@ -10,6 +10,7 @@
 
 ### Deployment
 
+- **[Docker Hub Deployment](DOCKER_HUB_DEPLOYMENT.md)** - v2.0 architecture with Docker Hub registry
 - **[DigitalOcean Quick Deploy](DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
 - **[Deployment Overview](DEPLOYMENT.md)** - General deployment concepts
 - **[Secrets Management](SECRETS_MANAGEMENT.md)** - Security and configuration
@@ -35,7 +36,7 @@
 
 ### I want to...
 
-- **Deploy to production** → [DigitalOcean Quick Deploy](DIGITALOCEAN_QUICK_DEPLOY.md)
+- **Deploy to production** → [Docker Hub Deployment](DOCKER_HUB_DEPLOYMENT.md) (v2.0 recommended)
 - **Set up locally** → [Setup Guide](SETUP_GUIDE.md)
 - **Understand the system** → [Architecture Overview](ARCHITECTURE.md)
 - **Call an agent API** → [Agent Endpoints](AGENT_ENDPOINTS.md)

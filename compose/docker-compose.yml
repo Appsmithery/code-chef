@@ -5,7 +5,7 @@ services:
 
   # Orchestrator Agent - Task routing and workflow coordination
   orchestrator:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/orchestrator:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-orchestrator:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/orchestrator/Dockerfile
@@ -31,7 +31,7 @@ services:
 
   # Feature Development Agent - Code generation
   feature-dev:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/feature-dev:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-feature-dev:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/feature-dev/Dockerfile
@@ -53,7 +53,7 @@ services:
 
   # Code Review Agent - PR analysis and security review
   code-review:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/code-review:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-code-review:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/code-review/Dockerfile
@@ -75,7 +75,7 @@ services:
 
   # Infrastructure Agent - Docker, Kubernetes, Terraform
   infrastructure:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/infrastructure:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-infrastructure:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/infrastructure/Dockerfile
@@ -97,7 +97,7 @@ services:
 
   # CI/CD Agent - Pipeline configuration
   cicd:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/cicd:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-cicd:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/cicd/Dockerfile
@@ -119,7 +119,7 @@ services:
 
   # Documentation Agent - Docs generation and updates
   documentation:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/documentation:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-documentation:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/documentation/Dockerfile
@@ -145,7 +145,7 @@ services:
 
   # MCP Gateway - Tool routing and Linear integration
   gateway-mcp:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/gateway-mcp:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-gateway:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/gateway-mcp/Dockerfile
@@ -168,7 +168,7 @@ services:
 
   # RAG Context Manager
   rag-context:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/rag-context:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-rag:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/rag/Dockerfile
@@ -196,7 +196,7 @@ services:
 
   # State Persistence Layer
   state-persistence:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/state-persistence:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-state:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/state/Dockerfile
@@ -235,7 +235,7 @@ services:
 
   # LangGraph Workflow Service
   langgraph:
-    image: ${DOCR_REGISTRY:-registry.digitalocean.com/the-shop-infra}/langgraph:${IMAGE_TAG:-local}
+    image: ${DOCKER_USERNAME:-appsmithery}/dev-tools-langgraph:${IMAGE_TAG:-latest}
     build:
       context: ..
       dockerfile: containers/langgraph/Dockerfile
