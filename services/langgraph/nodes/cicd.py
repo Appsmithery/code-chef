@@ -9,7 +9,7 @@ from agents.cicd.service import (
     PipelineRequest,
     process_pipeline_request,
 )
-from agents.langgraph.state import AgentState, ensure_agent_state
+from services.langgraph.state import AgentState, ensure_agent_state
 
 from .base import agent_response
 

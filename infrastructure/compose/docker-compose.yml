@@ -18,7 +18,7 @@ services:
       - RAG_SERVICE_URL=http://rag-context:8007
       - STATE_SERVICE_URL=http://state-persistence:8008
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -43,7 +43,7 @@ services:
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -65,7 +65,7 @@ services:
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -87,7 +87,7 @@ services:
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -109,7 +109,7 @@ services:
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -131,7 +131,7 @@ services:
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -157,7 +157,7 @@ services:
       - LINEAR_OAUTH_DEV_TOKEN_FILE=/run/secrets/linear_oauth_token
       - LINEAR_WEBHOOK_SIGNING_SECRET_FILE=/run/secrets/linear_webhook_secret
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     volumes:
@@ -256,7 +256,7 @@ services:
       - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
       - LANGFUSE_HOST=${LANGFUSE_HOST:-https://us.cloud.langfuse.com}
     env_file:
-      - ../infrastructure/config/env/.env
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -270,7 +270,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ../infrastructure/config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -311,7 +311,7 @@ services:
       - CADDY_DOMAIN=${CADDY_DOMAIN:-:80}
       - CADDY_ACME_EMAIL=${CADDY_ACME_EMAIL:-}
     volumes:
-      - ../infrastructure/config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:
@@ -330,9 +330,9 @@ volumes:
 
 secrets:
   linear_oauth_token:
-    file: ../infrastructure/config/env/secrets/linear_oauth_token.txt
+    file: ../config/env/secrets/linear_oauth_token.txt
   linear_webhook_secret:
-    file: ../infrastructure/config/env/secrets/linear_webhook_secret.txt
+    file: ../config/env/secrets/linear_webhook_secret.txt
 
 networks:
   devtools-network:

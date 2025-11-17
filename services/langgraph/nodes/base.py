@@ -6,7 +6,7 @@ from typing import Iterable, Optional
 
 from langchain_core.messages import AIMessage
 
-from agents.langgraph.state import AgentState, ensure_agent_state
+from services.langgraph.state import AgentState, ensure_agent_state
 
 
 def agent_response(

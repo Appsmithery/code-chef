@@ -9,7 +9,7 @@ from agents.infrastructure.service import (
     InfraRequest,
     process_infra_request,
 )
-from agents.langgraph.state import AgentState, ensure_agent_state
+from services.langgraph.state import AgentState, ensure_agent_state
 
 from .base import agent_response
 
