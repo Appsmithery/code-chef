@@ -15,6 +15,7 @@ DigitalOcean offers **two separate Gradient AI products**:
 **Get API Key:** https://cloud.digitalocean.com/gradient-ai/model-provider-keys
 
 **Available Models:**
+
 - `llama3-8b-instruct` (fast, cheap)
 - `llama3.3-70b-instruct` (best reasoning, latest)
 - `mistral-nemo-instruct-2407`
@@ -77,13 +78,13 @@ python scripts/test_llm_provider.py
 
 ## Available Models (Serverless Inference)
 
-| Model | Context | Cost (1M tokens) | Use Case |
-|-------|---------|------------------|----------|
-| `llama3-8b-instruct` | 8K | $0.20 | Fast, cheap tasks |
-| `llama3.3-70b-instruct` | 128K | $0.60 | Best quality, long context |
-| `mistral-nemo-instruct-2407` | 128K | $0.40 | Balanced performance |
-| `anthropic-claude-*` | Varies | Via DO | Claude via DO proxy |
-| `openai-gpt-*` | Varies | Via DO | GPT via DO proxy |
+| Model                        | Context | Cost (1M tokens) | Use Case                   |
+| ---------------------------- | ------- | ---------------- | -------------------------- |
+| `llama3-8b-instruct`         | 8K      | $0.20            | Fast, cheap tasks          |
+| `llama3.3-70b-instruct`      | 128K    | $0.60            | Best quality, long context |
+| `mistral-nemo-instruct-2407` | 128K    | $0.40            | Balanced performance       |
+| `anthropic-claude-*`         | Varies  | Via DO           | Claude via DO proxy        |
+| `openai-gpt-*`               | Varies  | Via DO           | GPT via DO proxy           |
 
 **Note:** Model IDs are exact (e.g., use `llama3.3-70b-instruct` not `llama3-70b-instruct`)
 
@@ -108,14 +109,14 @@ response = client.chat.completions.create(
 
 ## Cost Comparison
 
-| Provider | Model | Input Cost | Output Cost |
-|----------|-------|------------|-------------|
-| **DO Gradient** | llama3-8b | $0.20/1M | $0.20/1M |
-| **DO Gradient** | llama3-70b | $0.60/1M | $0.60/1M |
-| OpenAI | gpt-4o-mini | $0.15/1M | $0.60/1M |
-| OpenAI | gpt-4o | $2.50/1M | $10/1M |
-| Claude | haiku | $0.80/1M | $4.00/1M |
-| Claude | sonnet | $3.00/1M | $15/1M |
+| Provider        | Model       | Input Cost | Output Cost |
+| --------------- | ----------- | ---------- | ----------- |
+| **DO Gradient** | llama3-8b   | $0.20/1M   | $0.20/1M    |
+| **DO Gradient** | llama3-70b  | $0.60/1M   | $0.60/1M    |
+| OpenAI          | gpt-4o-mini | $0.15/1M   | $0.60/1M    |
+| OpenAI          | gpt-4o      | $2.50/1M   | $10/1M      |
+| Claude          | haiku       | $0.80/1M   | $4.00/1M    |
+| Claude          | sonnet      | $3.00/1M   | $15/1M      |
 
 **Winner:** DO Gradient llama3-8b at $0.20/1M (3-150x cheaper!)
 
@@ -149,6 +150,7 @@ llm = get_llm("my-agent", model="llama3-8b-instruct")
 **Cause:** Wrong base URL or API key format
 
 **Fix:**
+
 1. Ensure `GRADIENT_BASE_URL=https://inference.do-ai.run/v1`
 2. Use Model Provider Key (starts with `sk-do-...`) not PAT
 3. Create key at: https://cloud.digitalocean.com/gradient-ai/model-provider-keys
@@ -158,6 +160,7 @@ llm = get_llm("my-agent", model="llama3-8b-instruct")
 **Cause:** Typo in model name
 
 **Fix:** Use exact names:
+
 - ✅ `llama3-8b-instruct`
 - ✅ `llama3.3-70b-instruct`
 - ✅ `mistral-nemo-instruct-2407`
