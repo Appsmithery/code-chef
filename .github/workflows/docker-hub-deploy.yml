@@ -109,7 +109,7 @@ jobs:
                     git pull origin main
                     
                     # Update .env with image tag
-                    sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/" compose/.env
+                    sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/" config/env/.env
                     
                     # Pull latest images from Docker Hub
                     cd compose
