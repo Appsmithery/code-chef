@@ -40,7 +40,7 @@ if (-not $SkipClean) {
     # Stop all containers
     Write-Host ""
     Write-Host "Stopping all containers..." -ForegroundColor Yellow
-    ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker-compose down"
+    ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker compose down"
     Write-Host "Containers stopped" -ForegroundColor Green
 
     # Clean up old containers and images
@@ -53,7 +53,7 @@ if (-not $SkipClean) {
     # Rebuild all containers
     Write-Host ""
     Write-Host "Rebuilding all containers from scratch..." -ForegroundColor Yellow
-    ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker-compose build --no-cache"
+    ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker compose build --no-cache"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed" -ForegroundColor Red
         exit 1
@@ -64,7 +64,7 @@ if (-not $SkipClean) {
 # Start all services
 Write-Host ""
 Write-Host "Starting all services..." -ForegroundColor Yellow
-ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker-compose up -d"
+ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker compose up -d"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Service start failed" -ForegroundColor Red
     exit 1
@@ -170,5 +170,5 @@ Write-Host "3. Manual curl tests:" -ForegroundColor White
 Write-Host "   ssh $DROPLET 'curl -X POST http://localhost:8001/orchestrate -H Content-Type:application/json -d {description:test,priority:high}'" -ForegroundColor Gray
 Write-Host ""
 Write-Host "4. Check logs:" -ForegroundColor White
-Write-Host "   ssh $DROPLET 'cd $DEPLOY_PATH/compose ; docker-compose logs -f orchestrator'" -ForegroundColor Gray
+Write-Host "   ssh $DROPLET 'cd $DEPLOY_PATH/compose ; docker compose logs -f orchestrator'" -ForegroundColor Gray
 Write-Host ""
