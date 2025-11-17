@@ -5,7 +5,8 @@
 Dev-Tools uses a **hybrid deployment architecture** that combines:
 
 1. **Gradient AI Managed Agents** - AI agents run as managed services in DigitalOcean's Gradient AI platform
-2. **Docker Infrastructure** - Supporting services (gateway, databases, RAG) run in Docker containers on a droplet
+2. **Docker Infrastructure** - Supporting services (gateway, databases, RAG) run in Docker containers on a droplet that always pulls signed images from DigitalOcean Container Registry (DOCR)
+3. **GitHub Actions + DOCR Supply Chain** - Compose-level builds publish versioned images, and droplets only "pull & run" tagged artifacts (no in-place builds)
 
 This architecture provides:
 
@@ -13,6 +14,8 @@ This architecture provides:
 - ✅ Cost optimization (pay-per-use for agents, fixed cost for infrastructure)
 - ✅ Simplified operations (no need to manage agent containers/scaling)
 - ✅ Full observability (Langfuse tracing + Prometheus metrics)
+- ✅ Reproducible deployments (compose builds → DOCR → droplet pulls)
+- ✅ Safer rollouts (guardrails prune failed layers and enforce health checks)
 
 ## Architecture Diagram
 
@@ -86,35 +89,44 @@ This architecture provides:
 | PostgreSQL        | Relational database                           | 5432 | PostgreSQL 16          |
 | Prometheus        | Metrics collection                            | 9090 | Prometheus             |
 
+### Image Supply Chain & CI/CD
+
+| Stage   | Responsibility                                                                 | Tooling                                                                      |
+| ------- | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| Build   | `docker compose build` using repo `.env` for parity                            | GitHub Actions (`.github/workflows/docr-build.yml`), `scripts/push-docr.ps1` |
+| Publish | Tag as `registry.digitalocean.com/the-shop-infra/<service>:<git-sha>` and push | DOCR + `doctl registry login`                                                |
+| Deploy  | Pull pre-built images, never rebuild on droplet                                | `scripts/deploy-to-droplet.ps1`, `docker compose pull && up -d`              |
+| Verify  | Run Langfuse tracing validation + per-agent health probes                      | `scripts/validate-tracing.sh`, Prometheus                                    |
+
+**Guardrails**
+
+- `scripts/push-docr.ps1` cleans partial layers with `docker builder prune`/`docker image prune` when a build fails (opt-out via `-SkipCleanup`).
+- `scripts/deploy-to-droplet.ps1` defaults `IMAGE_TAG` to the current git SHA, issues `docker compose down --remove-orphans`, pulls fresh images, and prunes (`docker system prune --volumes --force`) if a rollout errors.
+- Health automation runs after every deploy and tails failing service logs automatically to keep the HITL operator unblocked.
+
 ## Deployment
 
 ### Quick Deploy
 
 ```powershell
-# Deploy infrastructure to droplet
-.\scripts\deploy-hybrid.ps1
+# 1) Publish images (local or CI)
+pwsh ./scripts/push-docr.ps1
 
-# Or skip building images (faster)
-.\scripts\deploy-hybrid.ps1 -SkipBuild
+# 2) Deploy to droplet by pulling the tag (no on-box build)
+pwsh ./scripts/deploy-to-droplet.ps1 -ImageTag (git rev-parse --short HEAD)
 ```
 
 ### Manual Steps
 
-1. **Deploy Docker Infrastructure:**
+1. **Deploy Docker Infrastructure (pull-only):**
 
    ```bash
    ssh root@45.55.173.72
    cd /opt/Dev-Tools
    git pull origin main
 
-   # Start only infrastructure services
-   docker compose -f compose/docker-compose.yml up -d \
-     gateway-mcp \
-     rag-context \
-     state-persistence \
-     qdrant \
-     postgres \
-     prometheus
+   export IMAGE_TAG=$(git rev-parse --short HEAD)
+   docker compose --env-file config/env/.env up -d --remove-orphans
    ```
 
 2. **Verify Gateway:**
@@ -210,6 +222,12 @@ curl http://45.55.173.72:9090/-/healthy
 - Hybrid approach: **90% cost reduction** for typical usage
 
 ## Troubleshooting
+
+### Deployment Guardrails
+
+- **Verify tags:** Confirm the droplet runs the expected `IMAGE_TAG` (`docker inspect compose-orchestrator-1 | grep IMAGE_TAG`).
+- **Cleanup on failure:** Rerun `scripts/deploy-to-droplet.ps1 -ForceCleanup` to trigger `docker system prune --volumes --force` if compose enters a restart loop.
+- **Remote debugging:** (Planned) `scripts/debug-agent.ps1 -Agent <name>` wraps status, logs, and `/health` output so failures surface quickly; until then, run the equivalent SSH commands listed in `docs/DEPLOYMENT.md`.
 
 ### Agent Can't Connect to Gateway
 
@@ -310,9 +328,16 @@ If you're currently running all services in Docker:
    - Use git tags for deployments
 
 4. **Security:**
+
    - Rotate `GRADIENT_API_KEY` quarterly
    - Use Docker secrets for sensitive configs
    - Enable firewall rules (only ports 8000, 8007, 8008 exposed)
+   - Prune registry/droplet images weekly to avoid stale containers
+
+5. **Blue/Green Strategy:**
+   - Snapshot the primary droplet once DOCR deployments stay green for a week.
+   - Bring up `do-mcp-gateway-blue`, point Caddy/load balancer at the active node, and only flip traffic after Langfuse + Prometheus checks pass.
+   - Keep both droplets on the same `IMAGE_TAG` to simplify rollbacks.
 
 ## Related Documentation
 
