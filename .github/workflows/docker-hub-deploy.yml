@@ -80,6 +80,21 @@ jobs:
               run: |
                   ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
                     set -e
+                    
+                    # Ensure Docker is running
+                    if ! systemctl is-active --quiet docker; then
+                      echo "Starting Docker daemon..."
+                      systemctl start docker
+                      sleep 3
+                    fi
+                    
+                    # Verify Docker is accessible
+                    docker ps > /dev/null || {
+                      echo "Docker daemon not accessible, restarting..."
+                      systemctl restart docker
+                      sleep 5
+                    }
+                    
                     cd /opt/Dev-Tools
                     git pull origin main
                     
