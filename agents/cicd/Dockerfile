@@ -6,16 +6,16 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y curl && \
     sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
-COPY requirements.txt ./
+COPY agents/cicd/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared modules
-COPY ../_shared/ ./agents/_shared/
+COPY agents/_shared/ ./agents/_shared/
 
 # Copy agent manifest
-COPY ../agents-manifest.json ./agents/agents-manifest.json
+COPY agents/agents-manifest.json ./agents/agents-manifest.json
 
-COPY src/ ./
+COPY agents/cicd/src/ ./
 
 EXPOSE 8005
 

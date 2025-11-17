@@ -148,7 +148,7 @@ services:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:gateway-${IMAGE_TAG:-latest}
     build:
       context: ../..
-      dockerfile: agents/gateway-mcp/Dockerfile
+      dockerfile: gateway/Dockerfile
     ports:
       - "8000:8000"
     environment:
