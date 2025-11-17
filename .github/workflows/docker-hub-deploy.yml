@@ -29,10 +29,10 @@ jobs:
             - name: Prepare .env file
               run: |
                   cp config/env/.env.template config/env/.env
-                  
+
                   # Append secrets to .env file (overrides template defaults)
                   cat >> config/env/.env << 'EOF'
-                  
+
                   # Runtime overrides from GitHub Secrets
                   IMAGE_TAG=${{ env.IMAGE_TAG }}
                   DOCKER_USERNAME=${{ env.DOCKER_USERNAME }}
@@ -69,6 +69,11 @@ jobs:
                   mkdir -p ~/.ssh
                   echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/deploy_key
                   chmod 600 ~/.ssh/deploy_key
+                  # Verify key format
+                  head -n 1 ~/.ssh/deploy_key | grep -q "BEGIN.*PRIVATE KEY" || {
+                    echo "Error: SSH key does not appear to be valid"
+                    exit 1
+                  }
                   ssh-keyscan -H 45.55.173.72 >> ~/.ssh/known_hosts
 
             - name: Deploy to droplet
