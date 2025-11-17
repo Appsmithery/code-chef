@@ -296,9 +296,10 @@ git remote set-url origin https://github.com/Appsmithery/Dev-Tools.git
     
     # Execute commands directly via SSH (avoiding multiline script issues)
     ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH && git pull origin main"
-    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose build"
-    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose up -d"
-    ssh "$DROPLET_USER@$DROPLET_IP" "sleep 10 && cd $DEPLOY_PATH/compose && docker compose ps"
+    Write-Info "Pulling latest images from Docker Hub..."
+    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose pull"
+    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose up -d --remove-orphans"
+    ssh "$DROPLET_USER@$DROPLET_IP" "sleep 15 && cd $DEPLOY_PATH/compose && docker compose ps"
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Remote deployment completed"
