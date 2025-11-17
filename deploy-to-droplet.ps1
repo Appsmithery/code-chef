@@ -40,20 +40,20 @@ if (-not $SkipClean) {
     # Stop all containers
     Write-Host ""
     Write-Host "Stopping all containers..." -ForegroundColor Yellow
-    ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker compose down"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose down"
     Write-Host "Containers stopped" -ForegroundColor Green
 
     # Clean up old containers and images
     Write-Host ""
     Write-Host "Cleaning up old containers and images..." -ForegroundColor Yellow
-    ssh $DROPLET "docker container prune -f"
-    ssh $DROPLET "docker image prune -f"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; docker container prune -f"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; docker image prune -f"
     Write-Host "Cleanup complete" -ForegroundColor Green
 
     # Rebuild all containers
     Write-Host ""
     Write-Host "Rebuilding all containers from scratch..." -ForegroundColor Yellow
-    ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker compose build --no-cache"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose build --no-cache"
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Build failed" -ForegroundColor Red
         exit 1
@@ -64,7 +64,7 @@ if (-not $SkipClean) {
 # Start all services
 Write-Host ""
 Write-Host "Starting all services..." -ForegroundColor Yellow
-ssh $DROPLET "cd $DEPLOY_PATH/compose ; docker compose up -d"
+ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose up -d"
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Service start failed" -ForegroundColor Red
     exit 1
@@ -91,7 +91,7 @@ $services = @(
 
 $healthyCount = 0
 foreach ($service in $services) {
-    $result = ssh $DROPLET "curl -s -o /dev/null -w '%{http_code}' http://localhost:$($service.Port)/health" 2>$null
+    $result = ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; curl -s -o /dev/null -w '%{http_code}' http://localhost:$($service.Port)/health" 2>$null
     if ($result -eq "200") {
         Write-Host "  $($service.Name) (port $($service.Port))" -ForegroundColor Green
         $healthyCount++
