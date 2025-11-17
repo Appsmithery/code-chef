@@ -23,6 +23,10 @@ from service import (
     process_review_request,
 )
 
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # LangGraph Infrastructure
 try:
     import sys
@@ -40,10 +44,6 @@ except Exception as e:
     checkpointer = None
     qdrant_client = None
     hybrid_memory = None
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="Code Review Agent",
