@@ -20,6 +20,10 @@ from service import (
     process_feature_request,
 )
 
+# Setup logging first
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # LangGraph Infrastructure
 try:
     import sys
@@ -37,8 +41,6 @@ except Exception as e:
     checkpointer = None
     qdrant_client = None
     hybrid_memory = None
-
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
