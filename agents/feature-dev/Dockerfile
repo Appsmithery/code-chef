@@ -10,12 +10,13 @@ COPY agents/feature-dev/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared modules
-COPY ../_shared/ ./agents/_shared/
+COPY agents/_shared/ ./agents/_shared/
 
 # Copy agent manifest
-COPY ../agents-manifest.json ./agents/agents-manifest.json
+COPY agents/agents-manifest.json ./agents/agents-manifest.json
 
-COPY agents/feature-dev/ ./
+# Copy agent source code
+COPY agents/feature-dev/src/ ./
 
 EXPOSE 8002
 

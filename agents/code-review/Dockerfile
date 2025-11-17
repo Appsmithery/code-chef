@@ -10,12 +10,13 @@ COPY agents/code-review/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared modules
-COPY ../_shared/ ./agents/_shared/
+COPY agents/_shared/ ./agents/_shared/
 
 # Copy agent manifest
-COPY ../agents-manifest.json ./agents/agents-manifest.json
+COPY agents/agents-manifest.json ./agents/agents-manifest.json
 
-COPY agents/code-review/ ./
+# Copy agent source code
+COPY agents/code-review/src/ ./
 
 EXPOSE 8003
 
