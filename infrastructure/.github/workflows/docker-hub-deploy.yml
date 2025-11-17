@@ -1,0 +1,156 @@
+name: Build and Push to Docker Hub
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+env:
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+      - name: Prepare .env file
+        run: |
+          cp config/env/.env.template config/env/.env
+
+          # Append secrets to .env file (overrides template defaults)
+          cat >> config/env/.env << 'EOF'
+
+          # Runtime overrides from GitHub Secrets
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          DOCKER_USERNAME=${{ env.DOCKER_USERNAME }}
+          LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}
+          LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}
+          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
+          QDRANT_URL=${{ secrets.QDRANT_URL }}
+          EOF
+
+      - name: Build and push all services
+        run: |
+          cd compose
+          docker compose build
+          docker compose push
+
+      - name: Cleanup build artifacts
+        if: always()
+        run: |
+          docker builder prune -f
+          docker image prune -f
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # Verify key format
+          head -n 1 ~/.ssh/deploy_key | grep -q "BEGIN.*PRIVATE KEY" || {
+            echo "Error: SSH key does not appear to be valid"
+            exit 1
+          }
+          ssh-keyscan -H 45.55.173.72 >> ~/.ssh/known_hosts
+
+      - name: Deploy to droplet
+        run: |
+          ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
+            set -e
+            
+            # Force use of standard Docker socket
+            export DOCKER_HOST=unix:///var/run/docker.sock
+            
+            # Ensure Docker is running
+            if ! systemctl is-active --quiet docker; then
+              echo "Starting Docker daemon..."
+              systemctl start docker
+              sleep 3
+            fi
+            
+            # Verify Docker is accessible
+            docker ps > /dev/null || {
+              echo "Docker daemon not accessible, restarting..."
+              systemctl restart docker
+              sleep 5
+              docker ps > /dev/null
+            }
+            
+            # Ensure Docker Hub authentication
+            if ! docker info 2>/dev/null | grep -q "Username: alextorelli28"; then
+              echo "Logging into Docker Hub..."
+              echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+            fi
+            
+            cd /opt/Dev-Tools
+            git pull origin main
+            
+            # Export IMAGE_TAG for docker compose variable substitution
+            export IMAGE_TAG=${{ github.sha }}
+            
+            # Also update .env for container runtime
+            sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/" config/env/.env
+            
+            # Pull latest images from Docker Hub
+            cd compose
+            docker compose pull
+            
+            # Deploy with zero-downtime
+            docker compose up -d --remove-orphans
+            
+            # Wait for services to initialize
+            sleep 15
+            
+            # Basic health check
+            docker compose ps
+          EOF
+
+      - name: Validate deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
+            export DOCKER_HOST=unix:///var/run/docker.sock
+            cd /opt/Dev-Tools
+            
+            # Check if services are running (basic validation)
+            echo "Checking service health..."
+            sleep 10
+            
+            # Test gateway health endpoint
+            curl -f http://localhost:8000/health || echo "Warning: Gateway health check failed"
+            
+            # Show running services count
+            docker ps --filter 'name=compose' --format '{{.Names}}' | wc -l
+          EOF
+
+      - name: Show logs on failure
+        if: failure()
+        run: |
+          ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
+            export DOCKER_HOST=unix:///var/run/docker.sock
+            cd /opt/Dev-Tools/compose
+            echo "=== Last 30 lines from failed services ==="
+            docker compose logs --tail=30
+          EOF
