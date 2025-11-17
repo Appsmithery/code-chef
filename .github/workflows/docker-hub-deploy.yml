@@ -108,7 +108,10 @@ jobs:
                     cd /opt/Dev-Tools
                     git pull origin main
                     
-                    # Update .env with image tag
+                    # Export IMAGE_TAG for docker compose variable substitution
+                    export IMAGE_TAG=${{ github.sha }}
+                    
+                    # Also update .env for container runtime
                     sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/" config/env/.env
                     
                     # Pull latest images from Docker Hub
