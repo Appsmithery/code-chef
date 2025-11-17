@@ -8,7 +8,7 @@ from langchain_core.callbacks.manager import CallbackManagerForChainRun
 from pydantic import ValidationError
 
 from agents.feature_dev.service import FeatureRequest, GuardrailViolation, process_feature_request
-from agents.langgraph.state import AgentState, ensure_agent_state
+from services.langgraph.state import AgentState, ensure_agent_state
 
 from .base import agent_response
 

@@ -15,13 +15,13 @@ from pydantic import BaseModel, Field
 import uvicorn
 import json
 
-from agents.langgraph.workflow import (
+from services.langgraph.workflow import (
     build_workflow,
     invoke_workflow,
     stream_workflow,
     stream_workflow_events,
 )
-from agents.langgraph.state import AgentState
+from services.langgraph.state import AgentState
 
 # Initialize Langfuse callback handler for FastAPI server
 _langfuse_handler = None
@@ -122,7 +122,7 @@ app = FastAPI(
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
-    from agents.langgraph.checkpointer import get_postgres_checkpointer
+    from services.langgraph.checkpointer import get_postgres_checkpointer
     
     # Check PostgreSQL checkpointer
     checkpointer = get_postgres_checkpointer()

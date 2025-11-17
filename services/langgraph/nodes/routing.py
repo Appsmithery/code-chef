@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Dict, Iterable
 
-from agents.langgraph.state import AgentState, ensure_agent_state
+from services.langgraph.state import AgentState, ensure_agent_state
 
 AGENT_KEYWORDS: Dict[str, Iterable[str]] = {
     "feature-dev": ("feature", "implement", "build", "add", "refactor"),

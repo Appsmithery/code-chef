@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Mapping, Optional
 from langgraph.graph import END, StateGraph
 from pydantic import BaseModel
 
-from agents.langgraph.state import AgentState, empty_agent_state, ensure_agent_state
-from agents.langgraph.nodes import (
+from services.langgraph.state import AgentState, empty_agent_state, ensure_agent_state
+from services.langgraph.nodes import (
     COMPLETE_ROUTE,
     cicd_node,
     code_review_node,
@@ -19,7 +19,7 @@ from agents.langgraph.nodes import (
     infrastructure_node,
     route_task,
 )
-from agents.langgraph.checkpointer import get_postgres_checkpointer
+from services.langgraph.checkpointer import get_postgres_checkpointer
 
 if TYPE_CHECKING:  # pragma: no cover - used only for typing
     from langgraph.graph import CompiledGraph
