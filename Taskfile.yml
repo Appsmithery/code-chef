@@ -1,57 +1,208 @@
 version: "3"
 
-# Root orchestration for Dev-Tools agent workflows
-# Per-agent Taskfiles live in agents/<agent>/Taskfile.yml
-
-includes:
-  orchestrator: ./agents/orchestrator/Taskfile.yml
-  feature-dev: ./agents/feature-dev/Taskfile.yml
-  code-review: ./agents/code-review/Taskfile.yml
-  documentation: ./agents/documentation/Taskfile.yml
-  infrastructure: ./agents/infrastructure/Taskfile.yml
-  cicd: ./agents/cicd/Taskfile.yml
+# Dev-Tools CI/CD and Development Workflows
+# Phase 8 structure with flat agent directories and support/ organization
 
 tasks:
   default:
-    desc: Display available agent workflows
+    desc: Display available workflows
     cmds:
       - task --list
 
-  # System management
-  health:
-    desc: Check health of all agent services
-    cmds:
-      - task orchestrator:health
-      - task feature-dev:health
-      - task code-review:health
-      - task documentation:health
-      - task infrastructure:health
-      - task cicd:health
-
-  build:all:
-    desc: Build all agent container images
-    cmds:
-      - task orchestrator:build
-      - task feature-dev:build
-      - task code-review:build
-      - task documentation:build
-      - task infrastructure:build
-      - task cicd:build
-
-  compose:up:
-    desc: Start all agent containers
-    dir: compose
+  # =============================================================================
+  # LOCAL DEVELOPMENT
+  # =============================================================================
+  
+  dev:up:
+    desc: Start full stack locally
+    dir: deploy
     cmds:
       - docker compose up -d
+      - echo "Waiting 15s for services to initialize..."
+      - sleep 15
+      - task dev:health
 
-  compose:down:
-    desc: Stop all agent containers
-    dir: compose
+  dev:down:
+    desc: Stop all local services
+    dir: deploy
     cmds:
-      - docker compose down
+      - docker compose down --remove-orphans
 
-  compose:logs:
+  dev:rebuild:
+    desc: Rebuild and restart services
+    dir: deploy
+    cmds:
+      - docker compose build
+      - docker compose up -d
+
+  dev:logs:
     desc: Tail logs for all services
-    dir: compose
+    dir: deploy
     cmds:
       - docker compose logs --tail=100 -f
+
+  dev:logs-agent:
+    desc: Tail logs for specific agent (usage - task dev:logs-agent AGENT=orchestrator)
+    dir: deploy
+    cmds:
+      - docker compose logs -f {{.AGENT}}
+
+  dev:health:
+    desc: Check health of all services
+    cmds:
+      - |
+        echo "Checking service health..."
+        for port in 8000 8001 8002 8003 8004 8005 8006 8007 8008; do
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/health 2>/dev/null || echo "000")
+          if [ "$status" = "200" ]; then
+            echo "  Port $port: ✓ Healthy"
+          else
+            echo "  Port $port: ✗ Failed (HTTP $status)"
+          fi
+        done
+
+  dev:clean:
+    desc: Clean up containers, volumes, and images
+    dir: deploy
+    cmds:
+      - docker compose down -v
+      - docker system prune -f
+      - echo "Cleanup complete"
+
+  # =============================================================================
+  # BUILD & PUSH
+  # =============================================================================
+
+  build:agent:
+    desc: Build single agent image (usage - task build:agent AGENT=orchestrator)
+    dir: deploy
+    cmds:
+      - docker compose build {{.AGENT}}
+
+  build:all:
+    desc: Build all agent images
+    dir: deploy
+    cmds:
+      - docker compose build
+
+  push:dockerhub:
+    desc: Push images to Docker Hub
+    cmds:
+      - pwsh ./support/scripts/push-dockerhub.ps1
+
+  push:docr:
+    desc: Push images to DigitalOcean Container Registry
+    cmds:
+      - pwsh ./support/scripts/push-docr.ps1
+
+  # =============================================================================
+  # REMOTE DEPLOYMENT
+  # =============================================================================
+
+  deploy:local:
+    desc: Deploy locally with validation
+    cmds:
+      - pwsh ./support/scripts/deploy.ps1 -Target local
+
+  deploy:remote:
+    desc: Deploy to DigitalOcean droplet
+    cmds:
+      - pwsh ./support/scripts/deploy.ps1 -Target remote
+
+  deploy:droplet:
+    desc: Deploy pre-built DOCR images to droplet
+    cmds:
+      - pwsh ./deploy-to-droplet.ps1
+
+  # =============================================================================
+  # VALIDATION & TESTING
+  # =============================================================================
+
+  validate:tracing:
+    desc: Validate Langfuse tracing setup
+    cmds:
+      - bash ./support/scripts/validate-tracing.sh
+
+  validate:mcp:
+    desc: Validate MCP configuration
+    cmds:
+      - pwsh ./support/scripts/validate-mcp-config.ps1
+
+  test:gradient:
+    desc: Test Gradient AI integration
+    cmds:
+      - python ./support/scripts/test_gradient_direct.py
+
+  test:llm:
+    desc: Test multi-provider LLM setup
+    cmds:
+      - python ./support/scripts/test_llm_provider.py
+
+  # =============================================================================
+  # SETUP & CONFIGURATION
+  # =============================================================================
+
+  setup:secrets:
+    desc: Initialize secrets for Docker Compose
+    cmds:
+      - bash ./support/scripts/setup_secrets.sh
+
+  setup:gradient:
+    desc: Configure Gradient AI integration
+    cmds:
+      - pwsh ./support/scripts/setup-gradient.ps1
+
+  setup:prometheus:
+    desc: Setup Prometheus metrics
+    cmds:
+      - pwsh ./support/scripts/setup-prometheus.ps1
+
+  # =============================================================================
+  # DATA MANAGEMENT
+  # =============================================================================
+
+  backup:volumes:
+    desc: Backup Docker volumes
+    cmds:
+      - bash ./support/scripts/backup_volumes.sh
+
+  restore:volumes:
+    desc: Restore Docker volumes from backup (usage - task restore:volumes BACKUP=./backups/20250117_120000)
+    cmds:
+      - bash ./support/scripts/restore_volumes.sh {{.BACKUP}}
+
+  qdrant:init:
+    desc: Initialize Qdrant collections
+    cmds:
+      - python ./support/scripts/init_qdrant_collections.py
+
+  qdrant:sync:
+    desc: Sync knowledge base to Qdrant
+    cmds:
+      - python ./support/scripts/sync_kb_to_qdrant.py
+
+  docs:index:
+    desc: Index local documentation to RAG
+    cmds:
+      - python ./support/scripts/index_local_docs.py
+
+  # =============================================================================
+  # UTILITIES
+  # =============================================================================
+
+  debug:agent:
+    desc: Debug specific agent (usage - task debug:agent AGENT=orchestrator)
+    cmds:
+      - pwsh ./support/scripts/debug-agent.ps1 -Agent {{.AGENT}}
+
+  shell:agent:
+    desc: Open shell in agent container (usage - task shell:agent AGENT=orchestrator)
+    dir: deploy
+    cmds:
+      - docker compose exec {{.AGENT}} /bin/sh
+
+  ps:
+    desc: Show running containers
+    dir: deploy
+    cmds:
+      - docker compose ps
