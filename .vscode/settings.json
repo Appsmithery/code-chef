@@ -37,5 +37,10 @@
   "taskfile.tree.status": false,
   "taskfile.tree.sort": "default",
   "taskfile.terminal.per": "window",
-  "taskfile.terminal.close": "never"
+  "taskfile.terminal.close": "never",
+  "github.copilot.chat.languageContext.typescript.enabled": true,
+  "github.copilot.chat.languageContext.typescript.includeDocumentation": true,
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.chat.languageContext.inline.typescript.enabled": true,
+  "github.copilot.chat.languageContext.fix.typescript.enabled": true
 }
