@@ -11,9 +11,9 @@ from typing import Any, Dict, List, Optional
 import httpx
 from pydantic import BaseModel, Field
 
-from agents._shared.gradient_client import get_gradient_client
-from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
-from agents._shared.mcp_client import MCPClient
+from lib.gradient_client import get_gradient_client
+from lib.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
+from lib.mcp_client import MCPClient
 
 logger = logging.getLogger(__name__)
 
