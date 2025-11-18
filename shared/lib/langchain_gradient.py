@@ -46,27 +46,13 @@ MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 # OpenAI (direct)
 OPENAI_API_KEY = os.getenv("OPEN_AI_DEVTOOLS_KEY")
 
-# Langfuse tracing (automatic when configured)
-LANGFUSE_ENABLED = all([
-    os.getenv("LANGFUSE_SECRET_KEY"),
-    os.getenv("LANGFUSE_PUBLIC_KEY"),
-    os.getenv("LANGFUSE_HOST")
-])
-
-_langfuse_handler = None
-if LANGFUSE_ENABLED:
-    try:
-        from langfuse.callback import CallbackHandler
-        _langfuse_handler = CallbackHandler(
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            host=os.getenv("LANGFUSE_HOST")
-        )
-        logger.info("Langfuse callback handler initialized")
-    except ImportError:
-        logger.warning("Langfuse not installed, tracing disabled")
-    except Exception as e:
-        logger.error(f"Failed to initialize Langfuse handler: {e}")
+# LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true
+# No callback handlers needed - tracing works natively with LangChain
+LANGSMITH_ENABLED = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+if LANGSMITH_ENABLED:
+    logger.info(f"LangSmith tracing ENABLED (project: {os.getenv('LANGCHAIN_PROJECT', 'default')})")
+else:
+    logger.info("LangSmith tracing DISABLED (set LANGCHAIN_TRACING_V2=true to enable)")
 
 
 def get_llm(
@@ -108,7 +94,7 @@ def get_llm(
         llm = get_llm("feature-dev", model="mistral-large-latest", provider="mistral")
     """
     provider = provider or LLM_PROVIDER
-    callbacks = [_langfuse_handler] if _langfuse_handler else []
+    # LangSmith tracing is automatic - no callbacks needed
     tags = [agent_name, provider]
 
     if provider == "gradient":
@@ -126,7 +112,6 @@ def get_llm(
             model=model or "llama3-8b-instruct",
             temperature=temperature,
             max_tokens=effective_max_tokens,
-            callbacks=callbacks,
             tags=tags,
             model_kwargs=kwargs
         )
@@ -142,7 +127,6 @@ def get_llm(
             model=model or "claude-3-5-haiku-20241022",
             temperature=temperature,
             max_tokens=max_tokens,
-            callbacks=callbacks,
             tags=tags,
             **kwargs
         )
@@ -158,7 +142,6 @@ def get_llm(
             model=model or "mistral-large-latest",
             temperature=temperature,
             max_tokens=max_tokens,
-            callbacks=callbacks,
             tags=tags,
             **kwargs
         )
@@ -173,7 +156,6 @@ def get_llm(
             model=model or "gpt-4o-mini",
             temperature=temperature,
             max_tokens=max_tokens,
-            callbacks=callbacks,
             tags=tags,
             model_kwargs=kwargs
         )
@@ -259,4 +241,4 @@ logger.info(f"LLM Provider: {LLM_PROVIDER}")
 logger.info(f"Embedding Provider: {EMBEDDING_PROVIDER}")
 logger.info(f"Gradient Base URL: {GRADIENT_BASE_URL}")
 logger.info(f"Gradient API Key: {'SET' if GRADIENT_API_KEY else 'NOT SET'}")
-logger.info(f"Langfuse tracing: {'ENABLED' if LANGFUSE_ENABLED else 'DISABLED'}")
+logger.info(f"LangSmith tracing: {'ENABLED' if LANGSMITH_ENABLED else 'DISABLED'}")
