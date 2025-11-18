@@ -354,10 +354,33 @@ def get_roadmap_updater() -> LinearRoadmapUpdater:
     return _roadmap_updater
 
 
+# Workspace constants (updated for workspace rename)
+WORKSPACE_ID = "project-roadmaps"  # Workspace name
+WORKSPACE_NAME = "Project Roadmaps"
+TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # Project Roadmaps (PR) team
+
 # Project constants
 PROJECT_ID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
 PROJECT_SHORT_ID = "78b3b839d36b"
-TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # Project Roadmaps (PR)
+
+# Workspace-level approval hub (to be populated after setup)
+APPROVAL_HUB_ISSUE_ID = None  # Team-level issue for all approvals
+
+# Multi-project registry
+PROJECT_REGISTRY = {
+    "dev-tools": {
+        "id": "b21cbaa1-9f09-40f4-b62a-73e0f86dd501",
+        "short_id": "78b3b839d36b",
+        "name": "AI DevOps Agent Platform",
+        "orchestrator_url": "http://45.55.173.72:8001"
+    },
+    "twkr": {
+        "id": None,  # To be created by orchestrator
+        "short_id": None,
+        "name": "TWKR",
+        "orchestrator_url": "http://45.55.173.72:8001"
+    }
+}
 
 # Phase issue IDs
 PHASE_ISSUES = {

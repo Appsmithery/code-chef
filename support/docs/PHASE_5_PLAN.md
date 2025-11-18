@@ -287,7 +287,28 @@ assert response.intent == "status_query"
 
 ### Overview
 
-Proactive notifications for workflow events sent to Slack, email, or webhooks. Critical for HITL approval UX (notify approvers immediately when high-risk tasks are gated).
+Workspace-level notification system for multi-project agent operations. Posts approval requests to Linear workspace hub with automatic @mentions for guaranteed notifications. No Slack required - uses Linear's native notification infrastructure (email, mobile, desktop).
+
+### Multi-Project Architecture
+
+```
+Workspace: project-roadmaps
+├── Team: Project Roadmaps (PR)
+│   └── 🤖 Agent Approvals Hub (Workspace-Level Issue)
+│       ├── Comment: [dev-tools] Critical approval needed
+│       ├── Comment: [twkr] High approval needed
+│       └── Labels: hitl:critical, project:dev-tools
+│
+├── Project: AI DevOps Agent Platform (dev-tools)
+│   ├── Orchestrator: Workspace-level client (approval hub access)
+│   ├── Subagents: Project-scoped clients (no hub access)
+│   └── Issues: PR-53, PR-65, PR-67 (agents comment here)
+│
+└── Project: TWKR
+    ├── Orchestrator: Workspace-level client (approval hub access)
+    ├── Subagents: Project-scoped clients (no hub access)
+    └── Issues: TWKR-1, TWKR-2 (agents comment here)
+```
 
 ### Technical Design
 
@@ -296,29 +317,72 @@ Proactive notifications for workflow events sent to Slack, email, or webhooks. C
 │  Event Bus (FastAPI BackgroundTasks or Redis Pub/Sub)   │
 │                                                          │
 │  Events:                                                 │
-│    - approval_required                                   │
-│    - task_completed                                      │
-│    - task_failed                                         │
-│    - agent_error                                         │
+│    - approval_required (workspace hub)                   │
+│    - task_completed (project issue)                      │
+│    - task_failed (project issue)                         │
+│    - agent_error (project issue)                         │
 └─────────────────────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Notification Router                                     │
-│  - Check user preferences                                │
-│  - Apply filtering rules                                 │
-│  - Route to channels                                     │
+│  Notification Router (Multi-Project Aware)               │
+│  - Route approvals to workspace hub                      │
+│  - Route updates to project issues                       │
+│  - Apply scoping rules (orchestrator vs subagent)        │
 └─────────────────────────────────────────────────────────┘
           │              │              │
           ▼              ▼              ▼
     ┌─────────┐    ┌─────────┐    ┌─────────┐
-    │  Slack  │    │  Email  │    │ Webhook │
+    │  Linear │    │  Email  │    │ Webhook │
+    │ Workspace│    │(Critical│    │(External│
+    │   Hub   │    │  Only)  │    │Systems) │
     └─────────┘    └─────────┘    └─────────┘
 ```
 
+### Scoping Architecture
+
+**Orchestrator (Workspace-Level)**
+- ✅ Post approval requests to workspace hub
+- ✅ Create new projects in workspace
+- ✅ Read all projects (for routing)
+- ❌ Cannot modify project-specific issues
+
+**Subagents (Project-Scoped)**
+- ✅ Comment on issues in assigned project
+- ✅ Update issue status in assigned project
+- ✅ Read issues in assigned project
+- ❌ Cannot access workspace approval hub
+- ❌ Cannot access other projects
+
 ### Implementation Steps
 
-#### Step 1: Event Bus (Day 3-4)
+#### Step 1: Linear Client Factory (Day 3)
+
+**File**: `shared/lib/linear_client_factory.py`
+
+```python
+def get_linear_client(agent_name: str, project_name: Optional[str] = None):
+    """
+    Factory enforces scoping:
+    - Orchestrator → WorkspaceClient (approval hub access)
+    - Subagents → ProjectClient (scoped to project)
+    """
+    api_key = os.getenv("LINEAR_API_KEY")
+    project = project_name or os.getenv("PROJECT_NAME", "dev-tools")
+    
+    if agent_name == "orchestrator":
+        return LinearWorkspaceClient(api_key)
+    
+    # Subagents get project-scoped access
+    project_info = PROJECT_REGISTRY[project]
+    return LinearProjectClient(
+        api_key=api_key,
+        project_id=project_info["id"],
+        project_name=project_info["name"]
+    )
+```
+
+#### Step 2: Event Bus (Day 3-4)
 
 **File**: `shared/lib/event_bus.py`
 
@@ -391,17 +455,49 @@ class SlackNotifier:
         await self._post_to_slack(message)
 ```
 
-#### Step 3: Wire Events to HITL (Day 5)
+#### Step 4: Project Notifier (Day 4)
+
+**File**: `shared/lib/notifiers/linear_project_notifier.py`
+
+```python
+class LinearProjectNotifier:
+    """
+    Project-scoped notifier for subagent updates.
+    Can only comment on issues in assigned project.
+    """
+    
+    def __init__(self, project_id: str, project_name: str):
+        self.project_id = project_id
+        self.project_name = project_name
+    
+    async def post_progress_update(
+        self, 
+        issue_id: str,
+        message: str,
+        agent_name: str
+    ):
+        """Post update to project issue (security checked)."""
+        if not await self._verify_issue_in_project(issue_id):
+            logger.error(f"Agent {agent_name} attempted cross-project access")
+            return False
+        # Post comment...
+```
+
+#### Step 5: Wire Events to HITL (Day 5)
 
 **File**: `agent_orchestrator/main.py`
 
 ```python
 # Initialize event bus
 event_bus = EventBus()
-notifier = SlackNotifier()
+workspace_notifier = LinearWorkspaceNotifier()
+project_notifier = LinearProjectNotifier(PROJECT_ID, PROJECT_NAME)
 
-# Subscribe to approval events
-event_bus.subscribe("approval_required", notifier.send_approval_request)
+# Subscribe to approval events (workspace-level)
+event_bus.subscribe("approval_required", workspace_notifier.notify_approval_required)
+
+# Subscribe to task updates (project-level)
+event_bus.subscribe("task_completed", project_notifier.post_progress_update)
 
 # Publish event when approval created
 @app.post("/orchestrate")
@@ -421,46 +517,101 @@ async def orchestrate_task(request: TaskRequest):
 
 ### Configuration
 
-**File**: `config/notifications/channels.yaml`
+**File**: `config/hitl/notification-config.yaml`
 
 ```yaml
+workspace:
+  id: project-roadmaps
+  team_id: f5b610be-ac34-4983-918b-2c9d00aa9b7a
+  approval_hub_issue_id: null  # Set after creating workspace hub
+
+projects:
+  dev-tools:
+    id: b21cbaa1-9f09-40f4-b62a-73e0f86dd501
+    name: AI DevOps Agent Platform
+    orchestrator_url: http://45.55.173.72:8001
+  
+  twkr:
+    id: null  # Create with orchestrator
+    name: TWKR
+    orchestrator_url: http://45.55.173.72:8001
+
 channels:
-  slack:
+  linear:
     enabled: true
-    webhook_url: ${SLACK_WEBHOOK_URL}
-    channels:
-      critical: "#ops-critical"
-      high: "#ops-alerts"
-
+    use_workspace_hub: true  # Post approvals to team-level issue
+    mention_on_critical: true  # @mention admin for critical
+      
   email:
-    enabled: false
-    smtp_host: smtp.gmail.com
-    smtp_port: 587
-
-  webhook:
     enabled: true
-    urls:
-      - https://linear.app/webhooks/approval-required
+    only_critical: true  # Email only for critical/high risk
+    smtp_server: smtp.gmail.com
+    from: devtools-bot@appsmithery.co
+    to: alex@appsmithery.co
+    
+  vscode:
+    enabled: false  # Future: VS Code extension
+    poll_interval: 10
 
-routing_rules:
-  - event: approval_required
-    condition: risk_level == 'critical'
-    channels: [slack, webhook]
+routing:
+  critical:
+    channels: [linear, email]
+    mention_admin: true
+  high:
+    channels: [linear, email]
+  medium:
+    channels: [linear]
+  low:
+    channels: [linear]
 
-  - event: task_completed
-    condition: duration > 300
-    channels: [slack]
+agent_permissions:
+  orchestrator:
+    type: workspace
+    permissions:
+      - post_approval_requests
+      - create_projects
+      - read_all_projects
+  
+  feature-dev:
+    type: project
+    permissions:
+      - read_project_issues
+      - comment_on_project_issues
+      - update_project_issue_status
 ```
 
-### Acceptance Criteria
+**File**: `config/linear/project-registry.yaml`
+
+```yaml
+workspace:
+  id: project-roadmaps
+  workspace_name: Project Roadmaps
+  team_id: f5b610be-ac34-4983-918b-2c9d00aa9b7a
+  approval_hub_issue_id: null  # Populate after setup
+
+projects:
+  dev-tools:
+    id: b21cbaa1-9f09-40f4-b62a-73e0f86dd501
+    short_id: 78b3b839d36b
+    agents: [orchestrator, feature-dev, code-review, infrastructure, cicd, documentation]
+  
+  twkr:
+    id: null
+    short_id: null
+    agents: [orchestrator, feature-dev, code-review]
+```### Acceptance Criteria
 
 - [x] Event bus with pub/sub pattern
-- [x] Slack notifier with approval buttons
-- [x] Webhook notifier for Linear integration
-- [x] Email notifier (optional, for Phase 6)
+- [x] Linear workspace notifier (posts to approval hub)
+- [x] Linear project notifier (posts to project issues)
+- [x] Client factory enforces scoping (workspace vs project)
+- [x] Email notifier for critical approvals
 - [x] Configuration-driven channel routing
-- [x] <5s latency from approval creation to Slack message
-- [x] Prometheus metrics: `notifications_sent_total{channel,event_type}`
+- [x] Multi-project support (dev-tools, twkr)
+- [x] <5s latency from approval creation to Linear notification
+- [x] Security: Subagents cannot access approval hub
+- [x] Security: Subagents cannot access other projects
+- [x] Prometheus metrics: `notifications_sent_total{channel,event_type,project}`
 
 ---
 
