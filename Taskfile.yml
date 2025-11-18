@@ -2,12 +2,12 @@ version: "3"
 #=============================================================================
 # DEV-TOOLS INFRASTRUCTURE & DEPLOYMENT WORKFLOWS
 # Focus: Docker lifecycle, remote deployment, health validation
+# Requires: task >=3.35, docker, docker compose, ssh, pwsh (Windows)
 #=============================================================================
 
-set:
-  - pipefail
+sh: '{{if eq OS "windows"}}pwsh -NoProfile -Command{{else}}bash -c{{end}}'
 
-vars:
+env:
   DEPLOY_DIR: deploy
   DROPLET_IP: 45.55.173.72
   DROPLET_PATH: /opt/Dev-Tools
@@ -15,14 +15,44 @@ vars:
 tasks:
   default:
     desc: Show available infrastructure commands
+    silent: true
     cmds:
       - task --list
+
+  #============================================================================
+  # BUILD & REGISTRY
+  #============================================================================
+
+  build:all:
+    desc: Build all agent images locally
+    summary: |
+      Builds all 6 agent images plus gateway, RAG, and state services using
+      docker-compose.yml definitions. Uses cache for faster builds.
+    dir: "{{.DEPLOY_DIR}}"
+    cmds:
+      - docker compose build
+
+  build:push-dockerhub:
+    desc: Push images to Docker Hub (apscolabs/dev-tools-*)
+    summary: |
+      Tags and pushes all Dev-Tools images to Docker Hub registry under
+      apscolabs organization. Requires Docker Hub authentication.
+    cmds:
+      - pwsh -File ./support/scripts/deploy/push-dockerhub.ps1
+
+  build:push-docr:
+    desc: Push images to DigitalOcean Container Registry
+    summary: |
+      Tags and pushes all images to DigitalOcean Container Registry.
+      Requires doctl authentication and DOCR repository setup.
+    cmds:
+      - pwsh -File ./support/scripts/deploy/push-docr.ps1
 
   #============================================================================
   # LOCAL STACK LIFECYCLE
   #============================================================================
 
-  local_deploy:up:
+  local:up:
     desc: Start full local stack with health checks
     summary: |
       Starts all Docker services in detached mode, waits 15 seconds for
@@ -30,11 +60,15 @@ tasks:
     dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose up -d
-      - echo "⏳ Waiting 15s for initialization..."
-      - sleep 15
+      - |
+        {{if eq OS "windows"}}
+          Start-Sleep -Seconds 15
+        {{else}}
+          sleep 15
+        {{end}}
       - task: health:local
 
-  local_deploy:down:
+  local:down:
     desc: Stop and clean up local stack
     summary: |
       Stops all services, removes orphaned containers, and prunes unused
@@ -44,7 +78,7 @@ tasks:
       - docker compose down --remove-orphans
       - docker builder prune -f
 
-  local_deploy:rebuild:
+  local:rebuild:
     desc: Rebuild all images and restart stack
     summary: |
       Nuclear rebuild: stops services, rebuilds all images without cache,
@@ -56,19 +90,19 @@ tasks:
       - docker compose up -d
       - task: health:local
 
-  local_deploy:logs:
+  local:logs:
     desc: Stream logs from all services (Ctrl+C to exit)
     dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose logs -f --tail=50
 
-  local_deploy:ps:
+  local:ps:
     desc: Show running services and their ports
     dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose ps
 
-  local_deploy:clean:
+  local:clean:
     desc: Nuclear cleanup - remove all containers, volumes, images
     summary: |
       ⚠️  DESTRUCTIVE: Removes all containers, volumes, images, networks, and
@@ -77,69 +111,12 @@ tasks:
     cmds:
       - docker compose down -v
       - docker system prune --all --volumes --force
-      - echo "✅ Cleanup complete"
-
-  #============================================================================
-  # BUILD & REGISTRY
-  #============================================================================
-
-  build:local:
-    desc: Build all agent images locally
-    summary: |
-      Builds all 6 agent images plus gateway, RAG, and state services using
-      docker-compose.yml definitions. Uses cache for faster builds.
-    dir: "{{.DEPLOY_DIR}}"
-    cmds:
-      - docker compose build
-
-  build:push_docker_hub:
-    desc: Push images to Docker Hub (apscolabs/dev-tools-*)
-    summary: |
-      Tags and pushes all Dev-Tools images to Docker Hub registry under
-      apscolabs organization. Requires Docker Hub authentication.
-    cmds:
-      - pwsh ./support/scripts/deploy/push-dockerhub.ps1
-
-  build:push_docr:
-    desc: Push images to DigitalOcean Container Registry
-    summary: |
-      Tags and pushes all images to DigitalOcean Container Registry.
-      Requires doctl authentication and DOCR repository setup.
-    cmds:
-      - pwsh ./support/scripts/deploy/push-docr.ps1
-
-  #============================================================================
-  # REMOTE DEPLOYMENT (DROPLET)
-  #============================================================================
-
-  prod_deploy:droplet:
-    desc: Deploy to DigitalOcean droplet (git pull + rebuild + health)
-    summary: |
-      Full deployment workflow: SSH to droplet, pull latest code, rebuild
-      all images, restart services, wait 20s, then run remote health checks.
-    cmds:
-      - echo "🚀 Deploying to {{.DROPLET_IP}}..."
-      - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && git pull origin main && cd deploy && docker compose down --remove-orphans && docker builder prune -f && docker compose build && docker compose up -d"
-      - echo "⏳ Waiting 20s for services to start..."
-      - powershell -Command "Start-Sleep -Seconds 20"
-      - task: health:remote
-
-  prod_deploy:docr:
-    desc: Deploy pre-built DOCR images to droplet (no rebuild)
-    summary: |
-      Fast deployment: pulls pre-built images from DOCR and restarts services
-      on droplet. Skips rebuild step. Requires prior push:docr.
-    cmds:
-      - pwsh ./deploy-to-droplet.ps1
-
-  prod_deploy:restart:
-    desc: Restart services on droplet without rebuild
-    summary: |
-      Quick restart of all services on droplet using existing images.
-      Useful for applying environment variable changes.
-    cmds:
-      - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && docker compose restart"
-      - task: health:remote
+      - |
+        {{if eq OS "windows"}}
+          Write-Host "Cleanup complete" -ForegroundColor Green
+        {{else}}
+          echo "✅ Cleanup complete"
+        {{end}}
 
   #============================================================================
   # HEALTH & VALIDATION
@@ -149,9 +126,9 @@ tasks:
     desc: Check health of local services (ports 8000-8008)
     summary: |
       Checks /health endpoints for all 9 services on localhost. Reports
-      status with ✅/❌ indicators. Use after 'up' or 'rebuild'.
+      status with check indicators. Use after 'up' or 'rebuild'.
     cmds:
-      - powershell -ExecutionPolicy Bypass -File ./support/scripts/validation/health-check-local.ps1
+      - '{{if eq OS "windows"}}pwsh -File ./support/scripts/validation/health-check-local.ps1{{else}}bash ./support/scripts/validation/health-check-local.sh{{end}}'
 
   health:remote:
     desc: Check health of droplet services
@@ -159,43 +136,64 @@ tasks:
       Checks /health endpoints for all 9 services on droplet (45.55.173.72).
       Use after deployment to verify successful startup.
     cmds:
-      - powershell -ExecutionPolicy Bypass -File ./support/scripts/validation/health-check-remote.ps1 -DropletIP {{.DROPLET_IP}}
+      - '{{if eq OS "windows"}}pwsh -File ./support/scripts/validation/health-check-remote.ps1 -DropletIP {{.DROPLET_IP}}{{else}}bash ./support/scripts/validation/health-check-remote.sh {{.DROPLET_IP}}{{end}}'
 
-  health:trace:
-    desc: Validate LangSmith tracing is working
+  #============================================================================
+  # REMOTE DEPLOYMENT (DROPLET)
+  #============================================================================
+
+  deploy:droplet:
+    desc: Deploy to DigitalOcean droplet (git pull + rebuild + health)
     summary: |
-      Runs validation script to test LangSmith tracing integration. Checks
-      environment variables and makes test LLM call to generate trace.
+      Full deployment workflow: SSH to droplet, pull latest code, rebuild
+      all images, restart services, wait 20s, then run remote health checks.
     cmds:
-      - bash ./support/scripts/validation/validate-tracing.sh
-      - echo "📊 View traces at https://smith.langchain.com"
+      - echo "Deploying to {{.DROPLET_IP}}..."
+      - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && git pull origin main && cd deploy && docker compose down --remove-orphans && docker builder prune -f && docker compose build && docker compose up -d"
+      - |
+        {{if eq OS "windows"}}
+          Start-Sleep -Seconds 20
+        {{else}}
+          sleep 20
+        {{end}}
+      - task: health:remote
+
+  deploy:docr:
+    desc: Deploy pre-built DOCR images to droplet (no rebuild)
+    summary: |
+      Fast deployment: pulls pre-built images from DOCR and restarts services
+      on droplet. Skips rebuild step. Requires prior build:push-docr.
+    cmds:
+      - pwsh -File ./deploy-to-droplet.ps1
+
+  deploy:restart:
+    desc: Restart services on droplet without rebuild
+    summary: |
+      Quick restart of all services on droplet using existing images.
+      Useful for applying environment variable changes.
+    cmds:
+      - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && docker compose restart"
+      - task: health:remote
 
   #============================================================================
   # DROPLET ADMIN
   #============================================================================
 
-  droplet:connect_ssh:
+  droplet:ssh:
     desc: SSH into droplet
     summary: Opens SSH session to production droplet as root user.
+    interactive: true
     cmds:
       - ssh root@{{.DROPLET_IP}}
 
-  droplet:check_status:
+  droplet:status:
     desc: Show droplet stack status and disk usage
     summary: |
       Comprehensive droplet status report: running services, disk usage,
       current git branch, and latest commit. Quick health overview.
     cmds:
-      - echo "📊 Droplet Status ({{.DROPLET_IP}}):"
+      - echo "Droplet Status ({{.DROPLET_IP}}):"
       - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && echo '=== Docker Services ===' && docker compose ps && echo '' && echo '=== Disk Usage ===' && df -h /opt && echo '' && echo '=== Git Branch ===' && cd .. && git branch --show-current && git log -1 --oneline"
-
-  droplet:backup:
-    desc: Backup droplet volumes to local machine
-    summary: |
-      Creates timestamped backup of all Docker volumes from droplet and
-      downloads to local ./backups/ directory via SCP.
-    cmds:
-      - powershell -ExecutionPolicy Bypass -File ./support/scripts/admin/backup-volumes.ps1 -DropletIP {{.DROPLET_IP}} -DropletPath {{.DROPLET_PATH}}
 
   #============================================================================
   # UTILITIES
@@ -207,7 +205,7 @@ tasks:
       Validates config/env/.env file and reports which required variables
       are configured. Checks for Gradient, LangSmith, and Linear keys.
     cmds:
-      - powershell -ExecutionPolicy Bypass -File ./support/scripts/validation/check-env.ps1
+      - '{{if eq OS "windows"}}pwsh -File ./support/scripts/validation/check-env.ps1{{else}}bash ./support/scripts/validation/check-env.sh{{end}}'
 
   utilities:ports:
     desc: Show port mappings and service URLs
@@ -215,14 +213,15 @@ tasks:
       Reference guide showing all service port mappings (8000-8008, 9090)
       and their purposes. Useful for debugging connectivity issues.
     cmds:
-      - echo "🔌 Service Port Mappings:"
-      - echo "  8000 → gateway-mcp (MCP tool routing)"
-      - echo "  8001 → orchestrator (task delegation)"
-      - echo "  8002 → feature-dev (code generation)"
-      - echo "  8003 → code-review (PR analysis)"
-      - echo "  8004 → infrastructure (Docker/K8s)"
-      - echo "  8005 → cicd (pipeline automation)"
-      - echo "  8006 → documentation (docs generation)"
-      - echo "  8007 → rag-context (vector search)"
-      - echo "  8008 → state-persistence (workflow DB)"
-      - echo "  9090 → prometheus (metrics)"
+      - |
+        echo "Service Port Mappings:"
+        echo "  8000 → gateway-mcp (MCP tool routing)"
+        echo "  8001 → orchestrator (task delegation)"
+        echo "  8002 → feature-dev (code generation)"
+        echo "  8003 → code-review (PR analysis)"
+        echo "  8004 → infrastructure (Docker/K8s)"
+        echo "  8005 → cicd (pipeline automation)"
+        echo "  8006 → documentation (docs generation)"
+        echo "  8007 → rag-context (vector search)"
+        echo "  8008 → state-persistence (workflow DB)"
+        echo "  9090 → prometheus (metrics)"
