@@ -96,6 +96,18 @@ approval_wait_time = Histogram(
     ["risk_level"]
 )
 
+approval_decisions_total = Counter(
+    "orchestrator_approval_decisions_total",
+    "Total approval decisions made (approved/rejected)",
+    ["decision", "risk_level"]
+)
+
+approval_expirations_total = Counter(
+    "orchestrator_approval_expirations_total",
+    "Total approval requests that expired without decision",
+    ["risk_level"]
+)
+
 # Track approval-pending tasks awaiting resumption
 pending_approval_registry: Dict[str, Dict[str, Any]] = {}
 
@@ -704,6 +716,201 @@ async def resume_approved_task(task_id: str):
         status_code=400,
         detail=f"Unexpected approval status: {approval_status}"
     )
+
+
+@app.post("/approve/{approval_id}")
+async def approve_request(
+    approval_id: str,
+    approver_id: str,
+    approver_role: str,
+    justification: Optional[str] = None
+):
+    """
+    Approve a pending HITL request.
+    
+    Args:
+        approval_id: UUID of the approval request
+        approver_id: Email or ID of the approver
+        approver_role: Role of the approver (developer, tech_lead, devops_engineer)
+        justification: Optional justification for approval
+    
+    Returns:
+        Success message with approval details
+    """
+    try:
+        # Attempt to approve
+        success = await hitl_manager.approve_request(
+            request_id=approval_id,
+            approver_id=approver_id,
+            approver_role=approver_role,
+            justification=justification
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=403,
+                detail="Approval failed: Unauthorized or expired"
+            )
+        
+        # Get updated status for metrics
+        status_info = await hitl_manager.check_approval_status(approval_id)
+        risk_level = status_info.get("risk_level", "unknown")
+        
+        # Update metrics
+        approval_decisions_total.labels(decision="approved", risk_level=risk_level).inc()
+        
+        # Log to MCP memory
+        await mcp_tool_client.create_memory_entity(
+            name=f"approval_{approval_id}",
+            entity_type="approval_decision",
+            observations=[
+                f"Approval ID: {approval_id}",
+                f"Decision: APPROVED",
+                f"Approver: {approver_id}",
+                f"Role: {approver_role}",
+                f"Risk Level: {risk_level}",
+                f"Timestamp: {datetime.utcnow().isoformat()}"
+            ]
+        )
+        
+        return {
+            "status": "approved",
+            "approval_id": approval_id,
+            "approver_id": approver_id,
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": "Request approved successfully"
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Approval error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.post("/reject/{approval_id}")
+async def reject_request(
+    approval_id: str,
+    approver_id: str,
+    approver_role: str,
+    reason: str
+):
+    """
+    Reject a pending HITL request.
+    
+    Args:
+        approval_id: UUID of the approval request
+        approver_id: Email or ID of the approver
+        approver_role: Role of the approver
+        reason: Reason for rejection (required)
+    
+    Returns:
+        Success message with rejection details
+    """
+    try:
+        # Attempt to reject
+        success = await hitl_manager.reject_request(
+            request_id=approval_id,
+            approver_id=approver_id,
+            approver_role=approver_role,
+            reason=reason
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=403,
+                detail="Rejection failed: Unauthorized or expired"
+            )
+        
+        # Get updated status for metrics
+        status_info = await hitl_manager.check_approval_status(approval_id)
+        risk_level = status_info.get("risk_level", "unknown")
+        
+        # Update metrics
+        approval_decisions_total.labels(decision="rejected", risk_level=risk_level).inc()
+        
+        # Log to MCP memory
+        await mcp_tool_client.create_memory_entity(
+            name=f"rejection_{approval_id}",
+            entity_type="approval_decision",
+            observations=[
+                f"Approval ID: {approval_id}",
+                f"Decision: REJECTED",
+                f"Approver: {approver_id}",
+                f"Role: {approver_role}",
+                f"Reason: {reason}",
+                f"Risk Level: {risk_level}",
+                f"Timestamp: {datetime.utcnow().isoformat()}"
+            ]
+        )
+        
+        return {
+            "status": "rejected",
+            "approval_id": approval_id,
+            "approver_id": approver_id,
+            "reason": reason,
+            "timestamp": datetime.utcnow().isoformat(),
+            "message": "Request rejected"
+        }
+        
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Rejection error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/approvals/pending")
+async def list_pending_approvals(
+    approver_role: Optional[str] = None,
+    limit: int = 50
+):
+    """
+    List all pending approval requests.
+    
+    Args:
+        approver_role: Filter by approver role (optional)
+        limit: Maximum number of results (default 50)
+    
+    Returns:
+        List of pending approval requests
+    """
+    try:
+        approvals = await hitl_manager.list_pending_approvals(
+            approver_role=approver_role,
+            limit=limit
+        )
+        
+        return {
+            "count": len(approvals),
+            "approvals": approvals
+        }
+        
+    except Exception as e:
+        logger.error(f"List approvals error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@app.get("/approvals/{approval_id}")
+async def get_approval_status(approval_id: str):
+    """
+    Get the status of a specific approval request.
+    
+    Args:
+        approval_id: UUID of the approval request
+    
+    Returns:
+        Approval request details and current status
+    """
+    try:
+        status_info = await hitl_manager.check_approval_status(approval_id)
+        return status_info
+        
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Get approval status error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 async def persist_task_state(
