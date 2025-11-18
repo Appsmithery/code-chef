@@ -1,47 +1,56 @@
 {
-  "folders": [
-    {
-      "path": ".",
-      "name": "Dev-Tools Root"
-    }
-  ],
-  "settings": {
-    "files.exclude": {
-      "**/.git": true,
-      "**/__pycache__": true
-    },
-    "github.copilot.chat.alternateGptPrompt.enabled": true,
-    "github.copilot.chat.anthropic.thinking.enabled": true,
-    "github.copilot.chat.anthropic.tools.websearch.enabled": true,
-    "github.copilot.chat.codesearch.enabled": true,
-    "github.copilot.chat.editor.temporalContext.enabled": true,
-    "github.copilot.chat.edits.temporalContext.enabled": true,
-    "github.copilot.chat.generateTests.codeLens": true,
-    "github.copilot.chat.languageContext.fix.typescript.enabled": true,
-    "github.copilot.chat.languageContext.inline.typescript.enabled": true,
-    "github.copilot.chat.languageContext.typescript.enabled": true,
-    "github.copilot.chat.languageContext.typescript.includeDocumentation": true,
-    "github.copilot.chat.newWorkspace.useContext7": true,
-    "github.copilot.chat.notebook.enhancedNextEditSuggestions.enabled": true,
-    "github.copilot.chat.notebook.followCellExecution.enabled": true,
-    "github.copilot.chat.responsesApiReasoningEffort": "high",
-    "github.copilot.chat.scopeSelection": true,
-    "github.copilot.chat.tools.memory.enabled": true
-  },
-  "extensions": {
-    "recommendations": [
-      "ms-azuretools.vscode-docker",
-      "ms-python.python",
-      "ms-python.black-formatter",
-      "GitHub.copilot",
-      "esbenp.prettier-vscode",
-      "redhat.vscode-yaml",
-      "ms-vscode-remote.remote-ssh",
-      "ms-vscode-remote.remote-containers",
-      "linear.linear-connect",
-      "chrisdias.promptboost",
-      "task.vscode-task",
-      "hfloveyy.langgraphv"
-    ]
-  }
+	"folders": [
+		{
+			"path": ".",
+			"name": "Dev-Tools Root"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/.git": true,
+			"**/__pycache__": true
+		},
+		"github.copilot.chat.alternateGptPrompt.enabled": true,
+		"github.copilot.chat.anthropic.thinking.enabled": true,
+		"github.copilot.chat.anthropic.tools.websearch.enabled": true,
+		"github.copilot.chat.codesearch.enabled": true,
+		"github.copilot.chat.editor.temporalContext.enabled": true,
+		"github.copilot.chat.edits.temporalContext.enabled": true,
+		"github.copilot.chat.generateTests.codeLens": true,
+		"github.copilot.chat.languageContext.fix.typescript.enabled": true,
+		"github.copilot.chat.languageContext.inline.typescript.enabled": true,
+		"github.copilot.chat.languageContext.typescript.enabled": true,
+		"github.copilot.chat.languageContext.typescript.includeDocumentation": true,
+		"github.copilot.chat.newWorkspace.useContext7": true,
+		"github.copilot.chat.notebook.enhancedNextEditSuggestions.enabled": true,
+		"github.copilot.chat.notebook.followCellExecution.enabled": true,
+		"github.copilot.chat.responsesApiReasoningEffort": "high",
+		"github.copilot.chat.scopeSelection": true,
+		"github.copilot.chat.tools.memory.enabled": true,
+		"mcp": {
+			"servers": {
+				"Docs by LangChain": {
+					"url": "https://docs.langchain.com/mcp",
+					"type": "http"
+				}
+			},
+			"inputs": []
+		}
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-azuretools.vscode-docker",
+			"ms-python.python",
+			"ms-python.black-formatter",
+			"GitHub.copilot",
+			"esbenp.prettier-vscode",
+			"redhat.vscode-yaml",
+			"ms-vscode-remote.remote-ssh",
+			"ms-vscode-remote.remote-containers",
+			"linear.linear-connect",
+			"chrisdias.promptboost",
+			"task.vscode-task",
+			"hfloveyy.langgraphv"
+		]
+	}
 }
