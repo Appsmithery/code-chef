@@ -4,6 +4,9 @@ version: "3"
 # Focus: Docker lifecycle, remote deployment, health validation
 #=============================================================================
 
+set:
+  - pipefail
+
 vars:
   DEPLOY_DIR: deploy
   DROPLET_IP: 45.55.173.72
@@ -29,7 +32,7 @@ tasks:
       - docker compose up -d
       - echo "⏳ Waiting 15s for initialization..."
       - sleep 15
-      - task: health
+      - task: health:local
 
   local_deploy:down:
     desc: Stop and clean up local stack
@@ -51,7 +54,7 @@ tasks:
       - docker compose down
       - docker compose build --no-cache
       - docker compose up -d
-      - task: health
+      - task: health:local
 
   local_deploy:logs:
     desc: Stream logs from all services (Ctrl+C to exit)
@@ -115,18 +118,11 @@ tasks:
       Full deployment workflow: SSH to droplet, pull latest code, rebuild
       all images, restart services, wait 20s, then run remote health checks.
     cmds:
-      - |
-        echo "🚀 Deploying to {{.DROPLET_IP}}..."
-        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && \
-          git pull origin main && \
-          cd deploy && \
-          docker compose down --remove-orphans && \
-          docker builder prune -f && \
-          docker compose build && \
-          docker compose up -d"
-        echo "⏳ Waiting 20s for services to start..."
-        sleep 20
-        task: health:remote
+      - echo "🚀 Deploying to {{.DROPLET_IP}}..."
+      - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && git pull origin main && cd deploy && docker compose down --remove-orphans && docker builder prune -f && docker compose build && docker compose up -d"
+      - echo "⏳ Waiting 20s for services to start..."
+      - powershell -Command "Start-Sleep -Seconds 20"
+      - task: health:remote
 
   prod_deploy:docr:
     desc: Deploy pre-built DOCR images to droplet (no rebuild)
@@ -142,10 +138,8 @@ tasks:
       Quick restart of all services on droplet using existing images.
       Useful for applying environment variable changes.
     cmds:
-      - |
-        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && \
-          docker compose restart"
-        task: health:remote
+      - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && docker compose restart"
+      - task: health:remote
 
   #============================================================================
   # HEALTH & VALIDATION
@@ -157,29 +151,7 @@ tasks:
       Checks /health endpoints for all 9 services on localhost. Reports
       status with ✅/❌ indicators. Use after 'up' or 'rebuild'.
     cmds:
-      - |
-        echo "🏥 Checking local service health..."
-        services=(
-          "8000:gateway-mcp"
-          "8001:orchestrator"
-          "8002:feature-dev"
-          "8003:code-review"
-          "8004:infrastructure"
-          "8005:cicd"
-          "8006:documentation"
-          "8007:rag-context"
-          "8008:state-persistence"
-        )
-        for svc in "${services[@]}"; do
-          port="${svc%%:*}"
-          name="${svc##*:}"
-          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/health 2>/dev/null || echo "000")
-          if [ "$status" = "200" ]; then
-            echo "  ✅ $name (port $port)"
-          else
-            echo "  ❌ $name (port $port) - HTTP $status"
-          fi
-        done
+      - powershell -ExecutionPolicy Bypass -File ./support/scripts/validation/health-check-local.ps1
 
   health:remote:
     desc: Check health of droplet services
@@ -187,29 +159,7 @@ tasks:
       Checks /health endpoints for all 9 services on droplet (45.55.173.72).
       Use after deployment to verify successful startup.
     cmds:
-      - |
-        echo "🏥 Checking droplet service health..."
-        services=(
-          "8000:gateway-mcp"
-          "8001:orchestrator"
-          "8002:feature-dev"
-          "8003:code-review"
-          "8004:infrastructure"
-          "8005:cicd"
-          "8006:documentation"
-          "8007:rag-context"
-          "8008:state-persistence"
-        )
-        for svc in "${services[@]}"; do
-          port="${svc%%:*}"
-          name="${svc##*:}"
-          status=$(curl -s -o /dev/null -w "%{http_code}" http://{{.DROPLET_IP}}:$port/health 2>/dev/null || echo "000")
-          if [ "$status" = "200" ]; then
-            echo "  ✅ $name (port $port)"
-          else
-            echo "  ❌ $name (port $port) - HTTP $status"
-          fi
-        done
+      - powershell -ExecutionPolicy Bypass -File ./support/scripts/validation/health-check-remote.ps1 -DropletIP {{.DROPLET_IP}}
 
   health:trace:
     desc: Validate LangSmith tracing is working
@@ -236,17 +186,8 @@ tasks:
       Comprehensive droplet status report: running services, disk usage,
       current git branch, and latest commit. Quick health overview.
     cmds:
-      - |
-        echo "📊 Droplet Status ({{.DROPLET_IP}}):"
-        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && \
-          echo '=== Docker Services ===' && \
-          docker compose ps && \
-          echo '' && \
-          echo '=== Disk Usage ===' && \
-          df -h /opt && \
-          echo '' && \
-          echo '=== Git Branch ===' && \
-          cd .. && git branch --show-current && git log -1 --oneline"
+      - echo "📊 Droplet Status ({{.DROPLET_IP}}):"
+      - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && echo '=== Docker Services ===' && docker compose ps && echo '' && echo '=== Disk Usage ===' && df -h /opt && echo '' && echo '=== Git Branch ===' && cd .. && git branch --show-current && git log -1 --oneline"
 
   droplet:backup:
     desc: Backup droplet volumes to local machine
@@ -254,15 +195,7 @@ tasks:
       Creates timestamped backup of all Docker volumes from droplet and
       downloads to local ./backups/ directory via SCP.
     cmds:
-      - |
-        timestamp=$(date +%Y%m%d_%H%M%S)
-        backup_dir="./backups/$timestamp"
-        mkdir -p "$backup_dir"
-        echo "📦 Backing up droplet volumes to $backup_dir..."
-        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && \
-          ./support/scripts/data/backup_volumes.sh"
-        scp root@{{.DROPLET_IP}}:{{.DROPLET_PATH}}/backups/latest/*.tar.gz "$backup_dir/"
-        echo "✅ Backup complete: $backup_dir"
+      - powershell -ExecutionPolicy Bypass -File ./support/scripts/admin/backup-volumes.ps1 -DropletIP {{.DROPLET_IP}} -DropletPath {{.DROPLET_PATH}}
 
   #============================================================================
   # UTILITIES
@@ -274,21 +207,7 @@ tasks:
       Validates config/env/.env file and reports which required variables
       are configured. Checks for Gradient, LangSmith, and Linear keys.
     cmds:
-      - |
-        echo "🔑 Environment Configuration Status:"
-        required_vars=(
-          "GRADIENT_MODEL_ACCESS_KEY"
-          "LANGCHAIN_API_KEY"
-          "LANGCHAIN_PROJECT"
-          "LINEAR_OAUTH_DEV_TOKEN"
-        )
-        for var in "${required_vars[@]}"; do
-          if grep -q "^$var=" config/env/.env 2>/dev/null; then
-            echo "  ✅ $var"
-          else
-            echo "  ❌ $var (missing)"
-          fi
-        done
+      - powershell -ExecutionPolicy Bypass -File ./support/scripts/validation/check-env.ps1
 
   utilities:ports:
     desc: Show port mappings and service URLs
@@ -296,15 +215,14 @@ tasks:
       Reference guide showing all service port mappings (8000-8008, 9090)
       and their purposes. Useful for debugging connectivity issues.
     cmds:
-      - |
-        echo "🔌 Service Port Mappings:"
-        echo "  8000 → gateway-mcp (MCP tool routing)"
-        echo "  8001 → orchestrator (task delegation)"
-        echo "  8002 → feature-dev (code generation)"
-        echo "  8003 → code-review (PR analysis)"
-        echo "  8004 → infrastructure (Docker/K8s)"
-        echo "  8005 → cicd (pipeline automation)"
-        echo "  8006 → documentation (docs generation)"
-        echo "  8007 → rag-context (vector search)"
-        echo "  8008 → state-persistence (workflow DB)"
-        echo "  9090 → prometheus (metrics)"
+      - echo "🔌 Service Port Mappings:"
+      - echo "  8000 → gateway-mcp (MCP tool routing)"
+      - echo "  8001 → orchestrator (task delegation)"
+      - echo "  8002 → feature-dev (code generation)"
+      - echo "  8003 → code-review (PR analysis)"
+      - echo "  8004 → infrastructure (Docker/K8s)"
+      - echo "  8005 → cicd (pipeline automation)"
+      - echo "  8006 → documentation (docs generation)"
+      - echo "  8007 → rag-context (vector search)"
+      - echo "  8008 → state-persistence (workflow DB)"
+      - echo "  9090 → prometheus (metrics)"
