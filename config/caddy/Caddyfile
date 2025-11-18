@@ -1,24 +1,54 @@
 {
-	# Uncomment and set your contact email to enable Let's Encrypt automatically
-	# email {$CADDY_ACME_EMAIL}
+	# Enable automatic HTTPS with Let's Encrypt
+	email {$CADDY_ACME_EMAIL:alex@appsmithery.co}
 }
 
-{$CADDY_DOMAIN:-:80} {
+{$CADDY_DOMAIN:theshop.appsmithery.co} {
 	encode gzip zstd
 
-	redir /prometheus /prometheus/
+	# Serve frontend files from mounted volume
+	root * /srv/frontend
+	file_server
+	
+	# Try files first, then fall back to index.html for SPA routing
+	try_files {path} /index.html
 
+	# API endpoints proxy to MCP gateway
+	handle_path /api/* {
+		reverse_proxy gateway-mcp:8000
+	}
+
+	# Prometheus monitoring with OAuth protection
+	redir /prometheus /prometheus/
 	handle_path /prometheus/* {
 		reverse_proxy oauth2-proxy:4180
 	}
 
-	# Pass OAuth callback traffic directly to oauth2-proxy
+	# OAuth2 callback traffic
 	handle_path /oauth2/* {
 		reverse_proxy oauth2-proxy:4180
 	}
 
-	# Default route points to the MCP gateway UI/API
-	handle {
-		reverse_proxy gateway-mcp:8000
+	# Agent health endpoints (optional, for direct monitoring)
+	handle_path /orchestrator/* {
+		reverse_proxy orchestrator:8001
 	}
+	handle_path /feature-dev/* {
+		reverse_proxy feature-dev:8002
+	}
+	handle_path /code-review/* {
+		reverse_proxy code-review:8003
+	}
+	handle_path /infrastructure/* {
+		reverse_proxy infrastructure:8004
+	}
+	handle_path /cicd/* {
+		reverse_proxy cicd:8005
+	}
+	handle_path /documentation/* {
+		reverse_proxy documentation:8006
+	}
+
+	# HTTPS configuration with automatic certificates
+	tls {$CADDY_ACME_EMAIL:alex@appsmithery.co}
 }
