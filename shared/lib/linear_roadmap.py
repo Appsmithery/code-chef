@@ -363,8 +363,8 @@ TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # Project Roadmaps (PR) team
 PROJECT_ID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
 PROJECT_SHORT_ID = "78b3b839d36b"
 
-# Workspace-level approval hub (to be populated after setup)
-APPROVAL_HUB_ISSUE_ID = None  # Team-level issue for all approvals
+# Workspace-level approval hub (created 2025-11-18)
+APPROVAL_HUB_ISSUE_ID = "PR-68"  # Team-level issue for all approvals
 
 # Multi-project registry
 PROJECT_REGISTRY = {
