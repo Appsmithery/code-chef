@@ -104,10 +104,61 @@ The following paths are **DEPRECATED** and exist only in `_archive/` for referen
 - Deploy path: `/opt/Dev-Tools`
 - Method 1: `./support/scripts/deploy.ps1 -Target remote` (copies .env, builds, deploys)
 - Method 2: SSH + git pull + docker-compose commands (see `support/docs/DEPLOY.md`)
-- Verify: Check health endpoints, Langfuse traces, Prometheus metricsent with langfuse.openai wrapper.
+- Verify: Check health endpoints, LangSmith traces, Prometheus metrics
 - API key from `GRADIENT_API_KEY` env var (uses DigitalOcean PAT); base URL `https://api.digitalocean.com/v2/ai`.
 - Per-agent models: orchestrator/code-review (70b), feature-dev (codellama-13b), infrastructure/cicd (8b), documentation (mistral-7b).
 - Cost: $0.20-0.60/1M tokens (150x cheaper than GPT-4); <50ms latency within DO network.
+
+### SSH Access from VS Code
+
+**VS Code Remote SSH Extension:**
+1. Install "Remote - SSH" extension (`ms-vscode-remote.remote-ssh`)
+2. Press `F1` → "Remote-SSH: Connect to Host"
+3. Enter: `root@45.55.173.72` or use alias `do-mcp-gateway`
+4. Opens new VS Code window connected to droplet
+5. Access terminal, files, and run commands directly on remote
+6. Edit files in place, debug services, and monitor logs in real-time
+
+**SSH Config Setup** (`C:\Users\<USER>\.ssh\config` on Windows, `~/.ssh/config` on Linux/Mac):
+```
+Host do-mcp-gateway
+    HostName 45.55.173.72
+    User root
+    IdentityFile ~/.ssh/github-actions-deploy
+    StrictHostKeyChecking no
+    ServerAliveInterval 60
+```
+
+**Quick Remote Commands:**
+```powershell
+# SSH directly from terminal
+ssh root@45.55.173.72
+
+# Execute single command
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull && docker compose ps"
+
+# SCP files to droplet
+scp local-file.txt root@45.55.173.72:/opt/Dev-Tools/
+
+# Tail logs remotely
+ssh root@45.55.173.72 "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
+
+# Check service health
+ssh root@45.55.173.72 "curl -s http://localhost:8001/health | jq ."
+
+# Restart specific service
+ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose restart orchestrator"
+```
+
+**Firewall Configuration (UFW):**
+```bash
+ssh root@45.55.173.72
+ufw allow 22/tcp              # SSH (CRITICAL)
+ufw allow 8000:8008/tcp       # Agent services
+ufw allow 80/tcp              # HTTP (Caddy)
+ufw allow 443/tcp             # HTTPS (Caddy with Let's Encrypt)
+ufw status                    # Verify rules
+```
 
 ### Container Hygiene & Cleanup (Required)
 
@@ -116,11 +167,13 @@ The following paths are **DEPRECATED** and exist only in `_archive/` for referen
 - **Verify health after cleanup.** Re-run `support/scripts/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
 - **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
 
-### Langfuse (LLM Tracing)
+### LangSmith (LLM Tracing)
 
-- Automatic tracing via `langfuse.openai` wrapper in gradient_client; no explicit tracing code needed in agents.
-- Captures prompts, completions, token counts, costs; grouped by `langfuse_session_id` (task_id), `langfuse_user_id` (agent_name).
-- Dashboard: https://us.cloud.langfuse.com; keys in `.env` as `LANGFUSE_SECRET_KEY` and `LANGFUSE_PUBLIC_KEY`.
+- Automatic tracing via LangChain's native `langchain.openai` wrapper in gradient_client; no explicit tracing code needed in agents.
+- Captures prompts, completions, token counts, costs, latencies; grouped by session_id (task_id) and user_id (agent_name).
+- Dashboard: https://smith.langchain.com; keys in `.env` as `LANGCHAIN_API_KEY` or `LANGCHAIN_SERVICE_KEY`.
+- Configuration: Set `LANGCHAIN_TRACING_V2=true`, `LANGCHAIN_PROJECT=dev-tools-prod`, `LANGCHAIN_ENDPOINT=https://api.smith.langchain.com`.
+- **Deprecation Note**: Langfuse has been replaced by LangSmith for all tracing functionality. Remove any `LANGFUSE_*` environment variables.
 
 ## Extension points
 
@@ -130,10 +183,10 @@ The following paths are **DEPRECATED** and exist only in `_archive/` for referen
 2. Initialize shared clients: `mcp_client = MCPClient(agent_name="...")` and `gradient_client = get_gradient_client("...")`
 3. Add Prometheus: `Instrumentator().instrument(app).expose(app)`
 4. Create `agent_<agent>/Dockerfile` (copy pattern from existing agents)
-5. Add service to `deploy/docker-compose.yml` with env vars (GRADIENT*MODEL, LANGFUSE*\*, MCP_GATEWAY_URL)
+5. Add service to `deploy/docker-compose.yml` with env vars (`GRADIENT_MODEL`, `PORT`, `MCP_GATEWAY_URL`)
 6. Update `config/mcp-agent-tool-mapping.yaml` with tool access
 7. Document endpoints in `support/docs/AGENT_ENDPOINTS.md`
-8. Add requirements.txt with: `fastapi`, `uvicorn`, `pydantic`, `httpx`, `langfuse>=2.0.0`, `prometheus-fastapi-instrumentator>=6.1.0`
+8. Add requirements.txt with: `fastapi`, `uvicorn`, `pydantic`, `httpx`, `langchain>=0.1.0`, `prometheus-fastapi-instrumentator>=6.1.0`
 
 ### MCP Servers
 
