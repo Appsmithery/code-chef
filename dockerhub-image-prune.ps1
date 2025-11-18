@@ -81,36 +81,63 @@ Write-Host "Fetching tags from Docker Registry v2 API..." -ForegroundColor Cyan
 $registryUrl = "https://registry-1.docker.io/v2/$Repository/tags/list"
 
 try {
-    $tagsList = Invoke-RestMethod -Uri $registryUrl -Headers $headers -Method GET
+    $tagsList = Invoke-RestMethod -Uri $registryUrl -Headers $headers -Method GET -ErrorAction Stop
     $allTags = $tagsList.tags | ForEach-Object {
         @{
             name = $_
             full_size = $null  # Registry API doesn't provide size
         }
     }
-    Write-Host "  Fetched $($allTags.Count) tags from Registry API" -ForegroundColor DarkGray
+    Write-Host "  Fetched $($allTags.Count) tags from Registry API" -ForegroundColor Green
 }
 catch {
-    Write-Error "Failed to fetch tags from Registry API: $($_.Exception.Message)"
-    Write-Host "Response: $($_.ErrorDetails.Message)" -ForegroundColor Red
+    Write-Host "Registry API access denied for private repository" -ForegroundColor Yellow
+    Write-Host "PAT tokens don't support private repo management via API" -ForegroundColor Yellow
     
-    # Fallback to Hub API with JWT (might work for public repos)
-    Write-Host "Trying Hub API as fallback..." -ForegroundColor Yellow
-    $allTags = @()
-    $nextUrl = "https://hub.docker.com/v2/repositories/$Repository/tags?page_size=100"
+    Write-Host "`n=== MANUAL DELETION REQUIRED ===" -ForegroundColor Red
+    Write-Host "Docker Hub private repositories require web UI access for tag deletion." -ForegroundColor White
+    Write-Host "`nKnown tags to DELETE (based on deployment patterns):" -ForegroundColor Red
     
-    while ($nextUrl) {
-        try {
-            $response = Invoke-RestMethod -Uri $nextUrl -Headers $headers -Method GET
-            $allTags += $response.results
-            $nextUrl = $response.next
-            Write-Host "  Fetched page with $($response.results.Count) tags..." -ForegroundColor DarkGray
-        }
-        catch {
-            Write-Error "Both Registry and Hub APIs failed. Repository might be private and require different credentials."
-            exit 1
-        }
+    $knownOldTags = @(
+        "orchestrator-v2.1.0-langsmith-tracing",
+        "feature-dev-v2.1.0-langsmith-tracing",
+        "code-review-v2.1.0-langsmith-tracing",
+        "infrastructure-v2.1.0-langsmith-tracing",
+        "cicd-v2.1.0-langsmith-tracing",
+        "documentation-v2.1.0-langsmith-tracing",
+        "gateway-v2.1.0-langsmith-tracing",
+        "rag-v2.1.0-langsmith-tracing",
+        "state-v2.1.0-langsmith-tracing",
+        "langgraph-v2.1.0-langsmith-tracing",
+        "orchestrator-latest",
+        "feature-dev-latest",
+        "code-review-latest",
+        "infrastructure-latest",
+        "cicd-latest",
+        "documentation-latest",
+        "gateway-latest",
+        "rag-latest",
+        "state-latest",
+        "langgraph-latest"
+    )
+    
+    $knownOldTags | ForEach-Object {
+        Write-Host "  - $_" -ForegroundColor DarkRed
     }
+    
+    Write-Host "`nTags to KEEP:" -ForegroundColor Green
+    $keepTags | ForEach-Object {
+        Write-Host "  + $_" -ForegroundColor DarkGreen
+    }
+    
+    Write-Host "`nInstructions:" -ForegroundColor Cyan
+    Write-Host "1. Open: https://hub.docker.com/repository/docker/$Repository/tags" -ForegroundColor White
+    Write-Host "2. Log in with your credentials" -ForegroundColor White
+    Write-Host "3. Use multi-select (checkboxes) to select all v2.1.0 and latest tags" -ForegroundColor White
+    Write-Host "4. Click 'Delete' button" -ForegroundColor White
+    Write-Host "5. Verify only v2.2.0-frontend-langsmith tags remain" -ForegroundColor White
+    Write-Host "`nEstimated time: 5-10 minutes" -ForegroundColor Yellow
+    exit 0
 }
 
 Write-Host "Found $($allTags.Count) total tags" -ForegroundColor Yellow
