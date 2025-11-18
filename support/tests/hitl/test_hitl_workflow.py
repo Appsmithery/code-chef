@@ -13,6 +13,10 @@ import asyncio
 from datetime import datetime, timedelta
 from typing import Dict
 
+# Configure pytest-anyio to use only asyncio backend
+pytest_plugins = ('pytest_anyio',)
+pytestmark = pytest.mark.anyio(backend='asyncio')
+
 # Add shared lib to path
 import sys
 import os
