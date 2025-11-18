@@ -1,208 +1,309 @@
 version: "3"
 
-# Dev-Tools CI/CD and Development Workflows
-# Phase 8 structure with flat agent directories and support/ organization
+# Dev-Tools Infrastructure & Deployment Workflows
+# Focus: Docker lifecycle, remote deployment, health validation
+
+vars:
+  DEPLOY_DIR: deploy
+  DROPLET_IP: 45.55.173.72
+  DROPLET_PATH: /opt/Dev-Tools
 
 tasks:
   default:
-    desc: Display available workflows
+    desc: Show available infrastructure commands
     cmds:
       - task --list
 
   # =============================================================================
-  # LOCAL DEVELOPMENT
+  # LOCAL STACK LIFECYCLE
   # =============================================================================
 
-  dev:up:
-    desc: Start full stack locally
-    dir: deploy
+  up:
+    desc: Start full local stack with health checks
+    summary: |
+      Starts all Docker services in detached mode, waits 15 seconds for
+      initialization, then runs health checks on all services.
+    dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose up -d
-      - echo "Waiting 15s for services to initialize..."
+      - echo "⏳ Waiting 15s for initialization..."
       - sleep 15
-      - task dev:health
+      - task: health
 
-  dev:down:
-    desc: Stop all local services
-    dir: deploy
+  down:
+    desc: Stop and clean up local stack
+    summary: |
+      Stops all services, removes orphaned containers, and prunes unused
+      Docker builder cache. Safe for regular development use.
+    dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose down --remove-orphans
+      - docker builder prune -f
 
-  dev:rebuild:
-    desc: Rebuild and restart services
-    dir: deploy
+  rebuild:
+    desc: Rebuild all images and restart stack
+    summary: |
+      Nuclear rebuild: stops services, rebuilds all images without cache,
+      starts stack, and runs health checks. Use when dependencies change.
+    dir: "{{.DEPLOY_DIR}}"
     cmds:
-      - docker compose build
+      - docker compose down
+      - docker compose build --no-cache
       - docker compose up -d
+      - task: health
 
-  dev:logs:
-    desc: Tail logs for all services
-    dir: deploy
+  logs:
+    desc: Stream logs from all services (Ctrl+C to exit)
+    dir: "{{.DEPLOY_DIR}}"
     cmds:
-      - docker compose logs --tail=100 -f
+      - docker compose logs -f --tail=50
 
-  dev:logs-agent:
-    desc: Tail logs for specific agent (usage - task dev:logs-agent AGENT=orchestrator)
-    dir: deploy
+  ps:
+    desc: Show running services and their ports
+    dir: "{{.DEPLOY_DIR}}"
     cmds:
-      - docker compose logs -f {{.AGENT}}
+      - docker compose ps
 
-  dev:health:
-    desc: Check health of all services
-    cmds:
-      - |
-        echo "Checking service health..."
-        for port in 8000 8001 8002 8003 8004 8005 8006 8007 8008; do
-          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/health 2>/dev/null || echo "000")
-          if [ "$status" = "200" ]; then
-            echo "  Port $port: ✓ Healthy"
-          else
-            echo "  Port $port: ✗ Failed (HTTP $status)"
-          fi
-        done
-
-  dev:clean:
-    desc: Clean up containers, volumes, and images
-    dir: deploy
+  clean:
+    desc: Nuclear cleanup - remove all containers, volumes, images
+    summary: |
+      ⚠️  DESTRUCTIVE: Removes all containers, volumes, images, networks, and
+      build cache. This will delete ALL local data including databases.
+    dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose down -v
-      - docker system prune -f
-      - echo "Cleanup complete"
+      - docker system prune --all --volumes --force
+      - echo "✅ Cleanup complete"
 
   # =============================================================================
-  # BUILD & PUSH
+  # BUILD & REGISTRY
   # =============================================================================
 
-  build:agent:
-    desc: Build single agent image (usage - task build:agent AGENT=orchestrator)
-    dir: deploy
-    cmds:
-      - docker compose build {{.AGENT}}
-
-  build:all:
-    desc: Build all agent images
-    dir: deploy
+  build:
+    desc: Build all agent images locally
+    summary: |
+      Builds all 6 agent images plus gateway, RAG, and state services using
+      docker-compose.yml definitions. Uses cache for faster builds.
+    dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose build
 
-  push:dockerhub:
-    desc: Push images to Docker Hub
+  push:hub:
+    desc: Push images to Docker Hub (apscolabs/dev-tools-*)
+    summary: |
+      Tags and pushes all Dev-Tools images to Docker Hub registry under
+      apscolabs organization. Requires Docker Hub authentication.
     cmds:
       - pwsh ./support/scripts/deploy/push-dockerhub.ps1
 
   push:docr:
     desc: Push images to DigitalOcean Container Registry
+    summary: |
+      Tags and pushes all images to DigitalOcean Container Registry.
+      Requires doctl authentication and DOCR repository setup.
     cmds:
       - pwsh ./support/scripts/deploy/push-docr.ps1
 
   # =============================================================================
-  # REMOTE DEPLOYMENT
+  # REMOTE DEPLOYMENT (DROPLET)
   # =============================================================================
 
-  deploy:local:
-    desc: Deploy locally with validation
+  deploy:
+    desc: Deploy to DigitalOcean droplet (git pull + rebuild + health)
+    summary: |
+      Full deployment workflow: SSH to droplet, pull latest code, rebuild
+      all images, restart services, wait 20s, then run remote health checks.
     cmds:
-      - pwsh ./support/scripts/deploy/deploy.ps1 -Target local
+      - |
+        echo "🚀 Deploying to {{.DROPLET_IP}}..."
+        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && \
+          git pull origin main && \
+          cd deploy && \
+          docker compose down --remove-orphans && \
+          docker builder prune -f && \
+          docker compose build && \
+          docker compose up -d"
+        echo "⏳ Waiting 20s for services to start..."
+        sleep 20
+        task: health:remote
 
-  deploy:remote:
-    desc: Deploy to DigitalOcean droplet
-    cmds:
-      - pwsh ./support/scripts/deploy/deploy.ps1 -Target remote
-
-  deploy:droplet:
-    desc: Deploy pre-built DOCR images to droplet
+  deploy:docr:
+    desc: Deploy pre-built DOCR images to droplet (no rebuild)
+    summary: |
+      Fast deployment: pulls pre-built images from DOCR and restarts services
+      on droplet. Skips rebuild step. Requires prior push:docr.
     cmds:
       - pwsh ./deploy-to-droplet.ps1
 
+  restart:
+    desc: Restart services on droplet without rebuild
+    summary: |
+      Quick restart of all services on droplet using existing images.
+      Useful for applying environment variable changes.
+    cmds:
+      - |
+        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && \
+          docker compose restart"
+        task: health:remote
+
   # =============================================================================
-  # VALIDATION & TESTING
+  # HEALTH & VALIDATION
   # =============================================================================
 
-  validate:tracing:
-    desc: Validate LangSmith tracing setup
+  health:
+    desc: Check health of local services (ports 8000-8008)
+    summary: |
+      Checks /health endpoints for all 9 services on localhost. Reports
+      status with ✅/❌ indicators. Use after 'up' or 'rebuild'.
+    cmds:
+      - |
+        echo "🏥 Checking local service health..."
+        services=(
+          "8000:gateway-mcp"
+          "8001:orchestrator"
+          "8002:feature-dev"
+          "8003:code-review"
+          "8004:infrastructure"
+          "8005:cicd"
+          "8006:documentation"
+          "8007:rag-context"
+          "8008:state-persistence"
+        )
+        for svc in "${services[@]}"; do
+          port="${svc%%:*}"
+          name="${svc##*:}"
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/health 2>/dev/null || echo "000")
+          if [ "$status" = "200" ]; then
+            echo "  ✅ $name (port $port)"
+          else
+            echo "  ❌ $name (port $port) - HTTP $status"
+          fi
+        done
+
+  health:remote:
+    desc: Check health of droplet services
+    summary: |
+      Checks /health endpoints for all 9 services on droplet (45.55.173.72).
+      Use after deployment to verify successful startup.
+    cmds:
+      - |
+        echo "🏥 Checking droplet service health..."
+        services=(
+          "8000:gateway-mcp"
+          "8001:orchestrator"
+          "8002:feature-dev"
+          "8003:code-review"
+          "8004:infrastructure"
+          "8005:cicd"
+          "8006:documentation"
+          "8007:rag-context"
+          "8008:state-persistence"
+        )
+        for svc in "${services[@]}"; do
+          port="${svc%%:*}"
+          name="${svc##*:}"
+          status=$(curl -s -o /dev/null -w "%{http_code}" http://{{.DROPLET_IP}}:$port/health 2>/dev/null || echo "000")
+          if [ "$status" = "200" ]; then
+            echo "  ✅ $name (port $port)"
+          else
+            echo "  ❌ $name (port $port) - HTTP $status"
+          fi
+        done
+
+  trace:
+    desc: Validate LangSmith tracing is working
+    summary: |
+      Runs validation script to test LangSmith tracing integration. Checks
+      environment variables and makes test LLM call to generate trace.
     cmds:
       - bash ./support/scripts/validation/validate-tracing.sh
-
-  validate:mcp:
-    desc: Validate MCP configuration
-    cmds:
-      - pwsh ./support/scripts/validation/validate-mcp-config.ps1
-
-  test:gradient:
-    desc: Test Gradient AI integration
-    cmds:
-      - python ./support/scripts/validation/test_gradient_direct.py
-
-  test:llm:
-    desc: Test multi-provider LLM setup
-    cmds:
-      - python ./support/scripts/validation/test_llm_provider.py
+      - echo "📊 View traces at https://smith.langchain.com"
 
   # =============================================================================
-  # SETUP & CONFIGURATION
+  # DROPLET ADMIN
   # =============================================================================
 
-  setup:secrets:
-    desc: Initialize secrets for Docker Compose (deprecated - manual setup required)
+  ssh:
+    desc: SSH into droplet
+    summary: Opens SSH session to production droplet as root user.
     cmds:
-      - echo "DEPRECATED - Manually create secrets in config/env/secrets/"
+      - ssh root@{{.DROPLET_IP}}
 
-  setup:gradient:
-    desc: Configure Gradient AI integration (deprecated - use config/env/.env)
+  status:
+    desc: Show droplet stack status and disk usage
+    summary: |
+      Comprehensive droplet status report: running services, disk usage,
+      current git branch, and latest commit. Quick health overview.
     cmds:
-      - echo "DEPRECATED - Configure via config/env/.env"
+      - |
+        echo "📊 Droplet Status ({{.DROPLET_IP}}):"
+        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}}/deploy && \
+          echo '=== Docker Services ===' && \
+          docker compose ps && \
+          echo '' && \
+          echo '=== Disk Usage ===' && \
+          df -h /opt && \
+          echo '' && \
+          echo '=== Git Branch ===' && \
+          cd .. && git branch --show-current && git log -1 --oneline"
 
-  setup:prometheus:
-    desc: Setup Prometheus metrics (deprecated - use config/prometheus/)
+  backup:
+    desc: Backup droplet volumes to local machine
+    summary: |
+      Creates timestamped backup of all Docker volumes from droplet and
+      downloads to local ./backups/ directory via SCP.
     cmds:
-      - echo "DEPRECATED - Configure via config/prometheus/prometheus.yml"
-
-  # =============================================================================
-  # DATA MANAGEMENT
-  # =============================================================================
-
-  backup:volumes:
-    desc: Backup Docker volumes
-    cmds:
-      - bash ./support/scripts/data/backup_volumes.sh
-
-  restore:volumes:
-    desc: Restore Docker volumes from backup (usage - task restore:volumes BACKUP=./backups/20250117_120000)
-    cmds:
-      - bash ./support/scripts/data/restore_volumes.sh {{.BACKUP}}
-
-  qdrant:init:
-    desc: Initialize Qdrant collections
-    cmds:
-      - python ./support/scripts/data/init_qdrant_collections.py
-
-  qdrant:sync:
-    desc: Sync knowledge base to Qdrant
-    cmds:
-      - python ./support/scripts/data/sync_kb_to_qdrant.py
-
-  docs:index:
-    desc: Index local documentation to RAG
-    cmds:
-      - python ./support/scripts/data/index_local_docs.py
+      - |
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        backup_dir="./backups/$timestamp"
+        mkdir -p "$backup_dir"
+        echo "📦 Backing up droplet volumes to $backup_dir..."
+        ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && \
+          ./support/scripts/data/backup_volumes.sh"
+        scp root@{{.DROPLET_IP}}:{{.DROPLET_PATH}}/backups/latest/*.tar.gz "$backup_dir/"
+        echo "✅ Backup complete: $backup_dir"
 
   # =============================================================================
   # UTILITIES
   # =============================================================================
 
-  debug:agent:
-    desc: Debug specific agent (usage - task debug:agent AGENT=orchestrator)
+  env:
+    desc: Show required environment variables status
+    summary: |
+      Validates config/env/.env file and reports which required variables
+      are configured. Checks for Gradient, LangSmith, and Linear keys.
     cmds:
-      - pwsh ./support/scripts/agents/debug-agent.ps1 -Agent {{.AGENT}}
+      - |
+        echo "🔑 Environment Configuration Status:"
+        required_vars=(
+          "GRADIENT_MODEL_ACCESS_KEY"
+          "LANGCHAIN_API_KEY"
+          "LANGCHAIN_PROJECT"
+          "LINEAR_OAUTH_DEV_TOKEN"
+        )
+        for var in "${required_vars[@]}"; do
+          if grep -q "^$var=" config/env/.env 2>/dev/null; then
+            echo "  ✅ $var"
+          else
+            echo "  ❌ $var (missing)"
+          fi
+        done
 
-  shell:agent:
-    desc: Open shell in agent container (usage - task shell:agent AGENT=orchestrator)
-    dir: deploy
+  ports:
+    desc: Show port mappings and service URLs
+    summary: |
+      Reference guide showing all service port mappings (8000-8008, 9090)
+      and their purposes. Useful for debugging connectivity issues.
     cmds:
-      - docker compose exec {{.AGENT}} /bin/sh
-
-  ps:
-    desc: Show running containers
-    dir: deploy
-    cmds:
-      - docker compose ps
+      - |
+        echo "🔌 Service Port Mappings:"
+        echo "  8000 → gateway-mcp (MCP tool routing)"
+        echo "  8001 → orchestrator (task delegation)"
+        echo "  8002 → feature-dev (code generation)"
+        echo "  8003 → code-review (PR analysis)"
+        echo "  8004 → infrastructure (Docker/K8s)"
+        echo "  8005 → cicd (pipeline automation)"
+        echo "  8006 → documentation (docs generation)"
+        echo "  8007 → rag-context (vector search)"
+        echo "  8008 → state-persistence (workflow DB)"
+        echo "  9090 → prometheus (metrics)"
