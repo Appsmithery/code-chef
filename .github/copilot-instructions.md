@@ -81,6 +81,10 @@ The following paths are **DEPRECATED** and exist only in `_archive/` for referen
 
 - Gateway exposes `/oauth/linear/install` (OAuth) and `/oauth/linear/status` (token check); issues via `/api/linear-issues`, projects via `/api/linear-project/:projectId`.
 - Tokens from `LINEAR_*` envs or `*_FILE` Docker secrets; maintain `config/env/secrets/linear_oauth_token.txt` (never commit `.env` secrets).
+- **Linear GraphQL API Scripts**: Use `support/scripts/update-linear-graphql.py`, `support/scripts/create-hitl-subtasks.py`, `support/scripts/mark-hitl-complete.py` for programmatic updates.
+- **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use GraphQL scripts with `LINEAR_API_KEY` env var (OAuth token from `.env`: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
+- **Project ID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` (short ID: `78b3b839d36b`)
+- **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
 
 ## Deployment workflows
 
@@ -233,5 +237,10 @@ ufw status                    # Verify rules
   - Use inline responses for status updates, not new files
   - Archive temporary/working files to `_archive/docs-temp/` after completion
   - Keep `support/docs/_temp/` clean - only active work-in-progress files
+- **Linear Integration**:
+  - When user says "update linear roadmap", update the **Linear project** via GraphQL API, NOT the markdown file
+  - Use scripts: `update-linear-graphql.py` (update descriptions), `create-hitl-subtasks.py` (create issues), `mark-hitl-complete.py` (mark complete)
+  - Set `$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"` before running
+  - Update `LINEAR_PROGRESS_ASSESSMENT.md` only for internal tracking, Linear project for external visibility
 - Pipeline or documentation generators should draw from `templates/pipelines` or `templates/docs`; keep generated artifacts out of version control unless curated.
 - Update MCP behavior alongside any new model integrations by wiring config files into `mcp/gateway` and the `compose` service volume mounts.
