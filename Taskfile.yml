@@ -88,12 +88,12 @@ tasks:
   push:dockerhub:
     desc: Push images to Docker Hub
     cmds:
-      - pwsh ./support/scripts/push-dockerhub.ps1
+      - pwsh ./support/scripts/deploy/push-dockerhub.ps1
 
   push:docr:
     desc: Push images to DigitalOcean Container Registry
     cmds:
-      - pwsh ./support/scripts/push-docr.ps1
+      - pwsh ./support/scripts/deploy/push-docr.ps1
 
   # =============================================================================
   # REMOTE DEPLOYMENT
@@ -102,12 +102,12 @@ tasks:
   deploy:local:
     desc: Deploy locally with validation
     cmds:
-      - pwsh ./support/scripts/deploy.ps1 -Target local
+      - pwsh ./support/scripts/deploy/deploy.ps1 -Target local
 
   deploy:remote:
     desc: Deploy to DigitalOcean droplet
     cmds:
-      - pwsh ./support/scripts/deploy.ps1 -Target remote
+      - pwsh ./support/scripts/deploy/deploy.ps1 -Target remote
 
   deploy:droplet:
     desc: Deploy pre-built DOCR images to droplet
@@ -121,41 +121,41 @@ tasks:
   validate:tracing:
     desc: Validate Langfuse tracing setup
     cmds:
-      - bash ./support/scripts/validate-tracing.sh
+      - bash ./support/scripts/validation/validate-tracing.sh
 
   validate:mcp:
     desc: Validate MCP configuration
     cmds:
-      - pwsh ./support/scripts/validate-mcp-config.ps1
+      - pwsh ./support/scripts/validation/validate-mcp-config.ps1
 
   test:gradient:
     desc: Test Gradient AI integration
     cmds:
-      - python ./support/scripts/test_gradient_direct.py
+      - python ./support/scripts/validation/test_gradient_direct.py
 
   test:llm:
     desc: Test multi-provider LLM setup
     cmds:
-      - python ./support/scripts/test_llm_provider.py
+      - python ./support/scripts/validation/test_llm_provider.py
 
   # =============================================================================
   # SETUP & CONFIGURATION
   # =============================================================================
 
   setup:secrets:
-    desc: Initialize secrets for Docker Compose
+    desc: Initialize secrets for Docker Compose (deprecated - manual setup required)
     cmds:
-      - bash ./support/scripts/setup_secrets.sh
+      - echo "DEPRECATED - Manually create secrets in config/env/secrets/"
 
   setup:gradient:
-    desc: Configure Gradient AI integration
+    desc: Configure Gradient AI integration (deprecated - use config/env/.env)
     cmds:
-      - pwsh ./support/scripts/setup-gradient.ps1
+      - echo "DEPRECATED - Configure via config/env/.env"
 
   setup:prometheus:
-    desc: Setup Prometheus metrics
+    desc: Setup Prometheus metrics (deprecated - use config/prometheus/)
     cmds:
-      - pwsh ./support/scripts/setup-prometheus.ps1
+      - echo "DEPRECATED - Configure via config/prometheus/prometheus.yml"
 
   # =============================================================================
   # DATA MANAGEMENT
@@ -164,27 +164,27 @@ tasks:
   backup:volumes:
     desc: Backup Docker volumes
     cmds:
-      - bash ./support/scripts/backup_volumes.sh
+      - bash ./support/scripts/data/backup_volumes.sh
 
   restore:volumes:
     desc: Restore Docker volumes from backup (usage - task restore:volumes BACKUP=./backups/20250117_120000)
     cmds:
-      - bash ./support/scripts/restore_volumes.sh {{.BACKUP}}
+      - bash ./support/scripts/data/restore_volumes.sh {{.BACKUP}}
 
   qdrant:init:
     desc: Initialize Qdrant collections
     cmds:
-      - python ./support/scripts/init_qdrant_collections.py
+      - python ./support/scripts/data/init_qdrant_collections.py
 
   qdrant:sync:
     desc: Sync knowledge base to Qdrant
     cmds:
-      - python ./support/scripts/sync_kb_to_qdrant.py
+      - python ./support/scripts/data/sync_kb_to_qdrant.py
 
   docs:index:
     desc: Index local documentation to RAG
     cmds:
-      - python ./support/scripts/index_local_docs.py
+      - python ./support/scripts/data/index_local_docs.py
 
   # =============================================================================
   # UTILITIES
@@ -193,7 +193,7 @@ tasks:
   debug:agent:
     desc: Debug specific agent (usage - task debug:agent AGENT=orchestrator)
     cmds:
-      - pwsh ./support/scripts/debug-agent.ps1 -Agent {{.AGENT}}
+      - pwsh ./support/scripts/agents/debug-agent.ps1 -Agent {{.AGENT}}
 
   shell:agent:
     desc: Open shell in agent container (usage - task shell:agent AGENT=orchestrator)
