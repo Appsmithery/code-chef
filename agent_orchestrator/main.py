@@ -41,13 +41,14 @@ from lib.progressive_mcp_loader import (
 )
 from lib.risk_assessor import get_risk_assessor
 from lib.hitl_manager import get_hitl_manager
-    def build_risk_context(request: TaskRequest) -> Dict[str, Any]:
-        """Derive operation metadata for risk assessment and approval workflows."""
-        description = request.description
-        operation = extract_operation_from_description(description)
-        environment = infer_environment(description, request.project_context)
-        resource_type = infer_resource_type(description)
-        data_sensitive = detect_sensitive_data(description)
+
+def build_risk_context(request: TaskRequest) -> Dict[str, Any]:
+    """Derive operation metadata for risk assessment and approval workflows."""
+    description = request.description
+    operation = extract_operation_from_description(description)
+    environment = infer_environment(description, request.project_context)
+    resource_type = infer_resource_type(description)
+    data_sensitive = detect_sensitive_data(description)
         estimated_cost = estimate_operation_cost(description, environment, resource_type)
         risk_factors = compile_risk_factors(operation, environment, resource_type, description)
 
