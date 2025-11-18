@@ -59,7 +59,7 @@ Write-Success "Code updated"
 try {
     # Stop and remove old containers
     Write-Step "Stopping containers and removing orphans"
-    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose down --remove-orphans"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/deploy ; docker compose down --remove-orphans"
     if ($LASTEXITCODE -ne 0) {
         Write-Failure "docker compose down failed"
         throw "Compose down failed"
@@ -74,7 +74,7 @@ try {
 
     # Pull images from registry
     Write-Step "Pulling images from $Registry (tag: $ImageTag)"
-    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; export IMAGE_TAG=$ImageTag ; export DOCR_REGISTRY=$Registry ; cd $DEPLOY_PATH/compose ; docker compose pull"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; export IMAGE_TAG=$ImageTag ; export DOCR_REGISTRY=$Registry ; cd $DEPLOY_PATH/deploy ; docker compose pull"
     if ($LASTEXITCODE -ne 0) {
         Write-Failure "docker compose pull failed"
         throw "Image pull failed"
@@ -83,7 +83,7 @@ try {
 
     # Start all services
     Write-Step "Starting all services"
-    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; export IMAGE_TAG=$ImageTag ; export DOCR_REGISTRY=$Registry ; cd $DEPLOY_PATH/compose ; docker compose up -d"
+    ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; export IMAGE_TAG=$ImageTag ; export DOCR_REGISTRY=$Registry ; cd $DEPLOY_PATH/deploy ; docker compose up -d"
     if ($LASTEXITCODE -ne 0) {
         Write-Failure "Service start failed"
         throw "Compose up failed"
@@ -122,7 +122,7 @@ try {
 
     if ($healthyCount -lt $services.Count) {
         Write-Failure "Some services are unhealthy; streaming logs..."
-        ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/compose ; docker compose logs --tail=50"
+        ssh $DROPLET "export DOCKER_HOST=unix:///var/run/docker.sock ; cd $DEPLOY_PATH/deploy ; docker compose logs --tail=50"
         throw "Health check failed for $($services.Count - $healthyCount) service(s)"
     }
 
@@ -142,7 +142,7 @@ if (-not $SkipTests) {
 
     # Run comprehensive validation script
     Write-Step "Running validate-tracing.sh on droplet"
-    scp -q scripts/validate-tracing.sh ${DROPLET}:/tmp/validate-tracing.sh
+    scp -q support/scripts/validate-tracing.sh ${DROPLET}:/tmp/validate-tracing.sh
     ssh $DROPLET "chmod +x /tmp/validate-tracing.sh ; /tmp/validate-tracing.sh"
     if ($LASTEXITCODE -ne 0) {
         Write-Failure "Validation script failed"
@@ -171,5 +171,15 @@ Write-Host "3. Manual curl tests:" -ForegroundColor White
 Write-Host "   ssh $DROPLET 'curl -X POST http://localhost:8001/orchestrate -H Content-Type:application/json -d {description:test,priority:high}'" -ForegroundColor Gray
 Write-Host ""
 Write-Host "4. Check logs:" -ForegroundColor White
-Write-Host "   ssh $DROPLET 'cd $DEPLOY_PATH/compose ; docker compose logs -f orchestrator'" -ForegroundColor Gray
+Write-Host "   ssh $DROPLET 'cd $DEPLOY_PATH/deploy ; docker compose logs -f orchestrator'" -ForegroundColor Gray
+Write-Host ""
+
+Write-Host "5. Manual deployment commands (if script fails):" -ForegroundColor Yellow
+Write-Host "   ssh $DROPLET" -ForegroundColor Gray
+Write-Host "   cd /opt/Dev-Tools" -ForegroundColor Gray
+Write-Host "   git pull origin main" -ForegroundColor Gray
+Write-Host "   cd deploy" -ForegroundColor Gray
+Write-Host "   docker compose pull" -ForegroundColor Gray
+Write-Host "   docker compose up -d" -ForegroundColor Gray
+Write-Host "   docker compose ps" -ForegroundColor Gray
 Write-Host ""
