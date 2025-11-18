@@ -876,7 +876,7 @@ async def list_pending_approvals(
         List of pending approval requests
     """
     try:
-        approvals = await hitl_manager.list_pending_approvals(
+        approvals = await hitl_manager.list_pending_requests(
             approver_role=approver_role,
             limit=limit
         )
