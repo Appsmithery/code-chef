@@ -49,119 +49,119 @@ def build_risk_context(request: TaskRequest) -> Dict[str, Any]:
     environment = infer_environment(description, request.project_context)
     resource_type = infer_resource_type(description)
     data_sensitive = detect_sensitive_data(description)
-        estimated_cost = estimate_operation_cost(description, environment, resource_type)
-        risk_factors = compile_risk_factors(operation, environment, resource_type, description)
+    estimated_cost = estimate_operation_cost(description, environment, resource_type)
+    risk_factors = compile_risk_factors(operation, environment, resource_type, description)
 
-        return {
-            "operation": operation,
-            "environment": environment,
-            "resource_type": resource_type,
-            "description": description,
-            "priority": request.priority,
-            "project_context": request.project_context or {},
+    return {
+        "operation": operation,
+        "environment": environment,
+        "resource_type": resource_type,
+        "description": description,
+        "priority": request.priority,
+        "project_context": request.project_context or {},
+        "workspace_config": request.workspace_config or {},
+        "estimated_cost": estimated_cost,
+        "data_sensitive": data_sensitive,
+        "risk_factors": risk_factors,
+        "impact": "high" if environment == "production" else "medium" if environment == "staging" else "low",
+        "details": {
             "workspace_config": request.workspace_config or {},
-            "estimated_cost": estimated_cost,
-            "data_sensitive": data_sensitive,
-            "risk_factors": risk_factors,
-            "impact": "high" if environment == "production" else "medium" if environment == "staging" else "low",
-            "details": {
-                "workspace_config": request.workspace_config or {},
-                "project_context": request.project_context or {}
-            }
+            "project_context": request.project_context or {}
         }
-
-
-    RISK_OPERATION_KEYWORDS = {
-        "delete": ["delete", "drop", "destroy", "remove", "truncate", "purge"],
-        "deploy": ["deploy", "release", "ship", "roll out", "rollout"],
-        "modify": ["modify", "change", "update", "patch", "tweak", "adjust"],
-        "create": ["create", "provision", "spin up", "add", "bootstrap"],
-        "migrate": ["migrate", "move", "transition", "rehost"],
     }
 
 
-    def extract_operation_from_description(description: str) -> str:
-        description_lower = description.lower()
-        for operation, keywords in RISK_OPERATION_KEYWORDS.items():
-            if any(keyword in description_lower for keyword in keywords):
-                return operation
-        return "modify"
+RISK_OPERATION_KEYWORDS = {
+    "delete": ["delete", "drop", "destroy", "remove", "truncate", "purge"],
+    "deploy": ["deploy", "release", "ship", "roll out", "rollout"],
+    "modify": ["modify", "change", "update", "patch", "tweak", "adjust"],
+    "create": ["create", "provision", "spin up", "add", "bootstrap"],
+    "migrate": ["migrate", "move", "transition", "rehost"],
+}
 
 
-    def infer_environment(description: str, project_context: Optional[Dict[str, Any]]) -> str:
-        if project_context:
-            env = project_context.get("environment") or project_context.get("env")
-            if isinstance(env, str) and env:
-                return env.lower()
-
-        description_lower = description.lower()
-        if any(term in description_lower for term in ["production", "prod"]):
-            return "production"
-        if any(term in description_lower for term in ["staging", "stage"]):
-            return "staging"
-        if any(term in description_lower for term in ["qa", "test"]):
-            return "qa"
-        return "dev"
+def extract_operation_from_description(description: str) -> str:
+    description_lower = description.lower()
+    for operation, keywords in RISK_OPERATION_KEYWORDS.items():
+        if any(keyword in description_lower for keyword in keywords):
+            return operation
+    return "modify"
 
 
-    RESOURCE_KEYWORDS = [
-        ("database", ["database", "db", "table", "schema", "postgres", "mysql", "qdrant"]),
-        ("infrastructure", ["infrastructure", "cluster", "kubernetes", "k8s", "terraform", "docker", "server", "network", "firewall", "load balancer"]),
-        ("pipeline", ["pipeline", "ci/cd", "workflow", "github actions", "gitlab", "deployment"]),
-        ("secret", ["secret", "token", "credential", "password", "key", "certificate"]),
-        ("data", ["data", "dataset", "export", "import", "backup"]),
-        ("application", ["service", "api", "app", "frontend", "backend"]),
-    ]
+def infer_environment(description: str, project_context: Optional[Dict[str, Any]]) -> str:
+    if project_context:
+        env = project_context.get("environment") or project_context.get("env")
+        if isinstance(env, str) and env:
+            return env.lower()
+
+    description_lower = description.lower()
+    if any(term in description_lower for term in ["production", "prod"]):
+        return "production"
+    if any(term in description_lower for term in ["staging", "stage"]):
+        return "staging"
+    if any(term in description_lower for term in ["qa", "test"]):
+        return "qa"
+    return "dev"
 
 
-    def infer_resource_type(description: str) -> str:
-        description_lower = description.lower()
-        for resource, keywords in RESOURCE_KEYWORDS:
-            if any(keyword in description_lower for keyword in keywords):
-                return resource
-        return "code"
+RESOURCE_KEYWORDS = [
+    ("database", ["database", "db", "table", "schema", "postgres", "mysql", "qdrant"]),
+    ("infrastructure", ["infrastructure", "cluster", "kubernetes", "k8s", "terraform", "docker", "server", "network", "firewall", "load balancer"]),
+    ("pipeline", ["pipeline", "ci/cd", "workflow", "github actions", "gitlab", "deployment"]),
+    ("secret", ["secret", "token", "credential", "password", "key", "certificate"]),
+    ("data", ["data", "dataset", "export", "import", "backup"]),
+    ("application", ["service", "api", "app", "frontend", "backend"]),
+]
 
 
-    SENSITIVE_KEYWORDS = [
-        "pii",
-        "personally identifiable",
-        "customer data",
-        "credit card",
-        "secret",
-        "token",
-        "credential",
-        "password",
-        "ssn",
-    ]
+def infer_resource_type(description: str) -> str:
+    description_lower = description.lower()
+    for resource, keywords in RESOURCE_KEYWORDS:
+        if any(keyword in description_lower for keyword in keywords):
+            return resource
+    return "code"
 
 
-    def detect_sensitive_data(description: str) -> bool:
-        description_lower = description.lower()
-        return any(keyword in description_lower for keyword in SENSITIVE_KEYWORDS)
+SENSITIVE_KEYWORDS = [
+    "pii",
+    "personally identifiable",
+    "customer data",
+    "credit card",
+    "secret",
+    "token",
+    "credential",
+    "password",
+    "ssn",
+]
 
 
-    def estimate_operation_cost(description: str, environment: str, resource_type: str) -> int:
-        base_cost = 50 if environment == "production" else 20
-        if resource_type in {"infrastructure", "pipeline"}:
-            base_cost += 150
-        if "cluster" in description.lower() or "autoscale" in description.lower():
-            base_cost += 100
-        return base_cost
+def detect_sensitive_data(description: str) -> bool:
+    description_lower = description.lower()
+    return any(keyword in description_lower for keyword in SENSITIVE_KEYWORDS)
 
 
-    def compile_risk_factors(operation: str, environment: str, resource_type: str, description: str) -> List[str]:
-        factors = []
-        if environment == "production":
-            factors.append("production-environment")
-        if operation in {"delete", "deploy"}:
-            factors.append(f"operation-{operation}")
-        if resource_type in {"database", "secret"}:
-            factors.append(f"resource-{resource_type}")
-        if "security" in description.lower() or "permission" in description.lower():
-            factors.append("security-impact")
-        if detect_sensitive_data(description):
-            factors.append("sensitive-data")
-        return factors
+def estimate_operation_cost(description: str, environment: str, resource_type: str) -> int:
+    base_cost = 50 if environment == "production" else 20
+    if resource_type in {"infrastructure", "pipeline"}:
+        base_cost += 150
+    if "cluster" in description.lower() or "autoscale" in description.lower():
+        base_cost += 100
+    return base_cost
+
+
+def compile_risk_factors(operation: str, environment: str, resource_type: str, description: str) -> List[str]:
+    factors = []
+    if environment == "production":
+        factors.append("production-environment")
+    if operation in {"delete", "deploy"}:
+        factors.append(f"operation-{operation}")
+    if resource_type in {"database", "secret"}:
+        factors.append(f"resource-{resource_type}")
+    if "security" in description.lower() or "permission" in description.lower():
+        factors.append("security-impact")
+    if detect_sensitive_data(description):
+        factors.append("sensitive-data")
+    return factors
 
 
 # Configure logging
