@@ -165,10 +165,10 @@ class HITLManager:
                            rejection_reason, expires_at
                     FROM approval_requests
                     WHERE id = %s
-                """,
-                (request_id,)
-            )
-            row = await cursor.fetchone()
+                    """,
+                    (request_id,)
+                )
+                row = await cursor.fetchone()
         
         if not row:
             raise ValueError(f"Approval request {request_id} not found")
