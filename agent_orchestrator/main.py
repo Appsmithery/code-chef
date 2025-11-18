@@ -41,6 +41,8 @@ from lib.progressive_mcp_loader import (
 )
 from lib.risk_assessor import get_risk_assessor
 from lib.hitl_manager import get_hitl_manager
+from lib.intent_recognizer import get_intent_recognizer, intent_to_task, IntentType
+from lib.session_manager import get_session_manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -82,6 +84,10 @@ progressive_loader = get_progressive_loader(mcp_client, mcp_discovery)
 # Risk evaluation + HITL orchestration
 risk_assessor = get_risk_assessor()
 hitl_manager = get_hitl_manager()
+
+# Chat interface components (Phase 5)
+intent_recognizer = get_intent_recognizer(gradient_client)
+session_manager = get_session_manager()
 
 # Approval workflow metrics
 approval_requests_total = Counter(
@@ -440,6 +446,11 @@ async def health_check():
         "integrations": {
             "linear": linear_client.is_enabled(),
             "gradient_ai": gradient_client.is_enabled()
+        },
+        "chat": {
+            "enabled": True,
+            "endpoint": "/chat",
+            "features": ["intent_recognition", "multi_turn", "task_submission", "status_query", "approval_decision"]
         }
     }
 
@@ -1682,6 +1693,247 @@ IMPORTANT: Only suggest using tools that are listed in the "Available MCP Tools"
     except Exception as e:
         logger.error(f"[Orchestrator] LLM decomposition failed: {e}", exc_info=True)
         print(f"[ERROR] LLM decomposition failed: {type(e).__name__}: {e}, falling back to rule-based")
+
+
+# ============================================================================
+# Chat Interface (Phase 5: Copilot Integration)
+# ============================================================================
+
+class ChatRequest(BaseModel):
+    """Chat message from user."""
+    message: str = Field(..., description="User's message")
+    session_id: Optional[str] = Field(None, description="Session ID (auto-generated if not provided)")
+    user_id: Optional[str] = Field(None, description="User identifier")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+
+
+class ChatResponse(BaseModel):
+    """Chat response to user."""
+    message: str = Field(..., description="Assistant's response")
+    session_id: str = Field(..., description="Session ID for multi-turn conversation")
+    task_id: Optional[str] = Field(None, description="Task ID if task was created")
+    intent: str = Field(..., description="Recognized intent type")
+    confidence: float = Field(..., description="Intent confidence score")
+    suggestions: Optional[List[str]] = Field(None, description="Suggested next actions")
+    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional response metadata")
+
+
+@app.post("/chat", response_model=ChatResponse, tags=["chat"])
+async def chat_endpoint(request: ChatRequest):
+    """
+    Natural language chat interface for task submission and status queries.
+    
+    Supports:
+    - Task submission: "Add error handling to login endpoint"
+    - Status queries: "What's the status of task abc123?"
+    - Clarification: "Use JWT authentication"
+    - Approval decisions: "Approve" or "Reject"
+    
+    Uses intent recognition to understand user's message and route appropriately.
+    Multi-turn conversations are supported via session_id.
+    """
+    # Create or load session
+    session_id = request.session_id or f"session-{uuid.uuid4()}"
+    
+    try:
+        # Ensure session exists
+        existing_session = await session_manager.get_session(session_id)
+        if not existing_session:
+            await session_manager.create_session(
+                session_id=session_id,
+                user_id=request.user_id,
+                metadata=request.context or {}
+            )
+            logger.info(f"Created new chat session: {session_id}")
+        
+        # Load conversation history
+        history = await session_manager.load_conversation_history(session_id, limit=10)
+        
+        # Save user message
+        await session_manager.add_message(
+            session_id=session_id,
+            role="user",
+            content=request.message,
+            metadata=request.context or {}
+        )
+        
+        # Recognize intent
+        intent = await intent_recognizer.recognize(request.message, history)
+        
+        logger.info(f"Chat [{session_id}]: Intent={intent.type}, Confidence={intent.confidence:.2f}")
+        
+        # Handle different intent types
+        if intent.type == IntentType.TASK_SUBMISSION:
+            if intent.needs_clarification:
+                # Need more information
+                response_message = intent.clarification_question or "I need more details to proceed."
+                
+                # Save assistant message
+                await session_manager.add_message(
+                    session_id=session_id,
+                    role="assistant",
+                    content=response_message
+                )
+                
+                return ChatResponse(
+                    message=response_message,
+                    session_id=session_id,
+                    intent=intent.type,
+                    confidence=intent.confidence,
+                    suggestions=["feature-dev", "code-review", "infrastructure", "cicd", "documentation"]
+                )
+            
+            # Convert intent to task request
+            try:
+                task_payload = await intent_to_task(intent, history)
+                
+                # Submit to orchestrator
+                task_request = TaskRequest(**task_payload)
+                orchestrate_response = await orchestrate_task(task_request)
+                
+                task_id = orchestrate_response.task_id
+                response_message = f"✓ Task created: {task_id}\n\n"
+                response_message += f"Breaking down into {len(orchestrate_response.subtasks)} subtasks:\n"
+                for i, subtask in enumerate(orchestrate_response.subtasks[:3], 1):
+                    response_message += f"{i}. {subtask.description} ({subtask.agent_type})\n"
+                
+                if len(orchestrate_response.subtasks) > 3:
+                    response_message += f"... and {len(orchestrate_response.subtasks) - 3} more\n"
+                
+                # Check if approval needed
+                if orchestrate_response.guardrail_report.status == GuardrailStatus.REQUIRES_APPROVAL:
+                    response_message += f"\n⏸ Approval required ({orchestrate_response.guardrail_report.risk_level} risk)\n"
+                    response_message += "Please review and approve/reject."
+                
+                # Save assistant message
+                await session_manager.add_message(
+                    session_id=session_id,
+                    role="assistant",
+                    content=response_message,
+                    metadata={"task_id": task_id}
+                )
+                
+                return ChatResponse(
+                    message=response_message,
+                    session_id=session_id,
+                    task_id=task_id,
+                    intent=intent.type,
+                    confidence=intent.confidence,
+                    metadata={
+                        "subtasks_count": len(orchestrate_response.subtasks),
+                        "requires_approval": orchestrate_response.guardrail_report.status == GuardrailStatus.REQUIRES_APPROVAL
+                    }
+                )
+                
+            except Exception as e:
+                logger.error(f"Failed to create task from intent: {e}", exc_info=True)
+                error_message = f"Sorry, I couldn't create that task: {str(e)}"
+                
+                await session_manager.add_message(
+                    session_id=session_id,
+                    role="assistant",
+                    content=error_message
+                )
+                
+                return ChatResponse(
+                    message=error_message,
+                    session_id=session_id,
+                    intent=intent.type,
+                    confidence=intent.confidence
+                )
+        
+        elif intent.type == IntentType.STATUS_QUERY:
+            # Look up task status
+            if intent.entity_id:
+                # Look up task in registry
+                task_response = task_registry.get(intent.entity_id)
+                if task_response:
+                    status_counts = {}
+                    for subtask in task_response.subtasks:
+                        status_counts[subtask.status] = status_counts.get(subtask.status, 0) + 1
+                    
+                    response_message = f"Task {intent.entity_id} status:\n"
+                    response_message += f"- Total subtasks: {len(task_response.subtasks)}\n"
+                    for status, count in status_counts.items():
+                        response_message += f"- {status}: {count}\n"
+                else:
+                    response_message = f"Task {intent.entity_id} not found. It may have been completed or doesn't exist."
+            else:
+                response_message = "Which task would you like to check? Please provide a task ID."
+            
+            await session_manager.add_message(
+                session_id=session_id,
+                role="assistant",
+                content=response_message
+            )
+            
+            return ChatResponse(
+                message=response_message,
+                session_id=session_id,
+                intent=intent.type,
+                confidence=intent.confidence
+            )
+        
+        elif intent.type == IntentType.APPROVAL_DECISION:
+            # Handle approval/rejection
+            # Look for pending approval in session context
+            approval_id = None
+            for msg in reversed(history):
+                if msg.get("metadata", {}).get("approval_id"):
+                    approval_id = msg["metadata"]["approval_id"]
+                    break
+            
+            if approval_id:
+                # Submit decision
+                if intent.decision == "approve":
+                    await approve_task(approval_id, {"reason": "User approval via chat", "user_id": request.user_id})
+                    response_message = f"✓ Approved request {approval_id}. Resuming workflow..."
+                else:
+                    await reject_task(approval_id, {"reason": "User rejection via chat", "user_id": request.user_id})
+                    response_message = f"✗ Rejected request {approval_id}. Workflow canceled."
+            else:
+                response_message = "I don't see any pending approvals in this conversation. Please provide an approval ID."
+            
+            await session_manager.add_message(
+                session_id=session_id,
+                role="assistant",
+                content=response_message
+            )
+            
+            return ChatResponse(
+                message=response_message,
+                session_id=session_id,
+                intent=intent.type,
+                confidence=intent.confidence
+            )
+        
+        else:
+            # General query or unknown
+            response_message = intent.suggested_response or """I can help you with:
+
+- **Creating tasks**: "Add error handling to login endpoint"
+- **Checking status**: "What's the status of task-abc123?"
+- **Approving requests**: "Approve" or "Reject"
+
+What would you like to do?"""
+            
+            await session_manager.add_message(
+                session_id=session_id,
+                role="assistant",
+                content=response_message
+            )
+            
+            return ChatResponse(
+                message=response_message,
+                session_id=session_id,
+                intent=intent.type,
+                confidence=intent.confidence,
+                suggestions=["Create a task", "Check task status", "Approve a request"]
+            )
+    
+    except Exception as e:
+        logger.error(f"Chat endpoint error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
         return decompose_request(request)
 
 
