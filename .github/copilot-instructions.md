@@ -4,6 +4,7 @@
 
 - **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md.
 - **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `shared/lib/mcp_client.py` for unified tool access. Gateway routes to servers in `shared/mcp/servers/`.
+- **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
 - **LLM Inference**: DigitalOcean Gradient AI integration via `shared/lib/gradient_client.py` with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
 - **Observability**: Langfuse automatic LLM tracing (langfuse.openai wrapper) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents.
 - **Service Ports**: gateway-mcp:8000, orchestrator:8001, feature-dev:8002, code-review:8003, infrastructure:8004, cicd:8005, documentation:8006, rag:8007, state:8008, prometheus:9090.
@@ -19,7 +20,11 @@ Dev-Tools/
 ├── agent_cicd/                  # CI/CD agent
 ├── agent_documentation/         # Documentation agent
 ├── shared/                      # Shared runtime components
-│   ├── lib/                     # Agent runtime libraries (11 Python modules)
+│   ├── lib/                     # Agent runtime libraries (12 Python modules)
+│   │   ├── progressive_mcp_loader.py  # Progressive tool disclosure (80-90% token savings)
+│   │   ├── mcp_client.py        # MCP gateway client
+│   │   ├── gradient_client.py   # Gradient AI LLM client
+│   │   └── ...                  # Other shared modules
 │   ├── services/                # Backend microservices (rag, state, langgraph)
 │   ├── gateway/                 # MCP gateway for tool routing
 │   ├── mcp/                     # MCP servers (17 servers)
@@ -49,6 +54,7 @@ Dev-Tools/
 ## ⚠️ Deprecated Paths (DO NOT USE)
 
 The following paths are **DEPRECATED** and exist only in `_archive/` for reference:
+
 - ❌ `agents/` (old nested structure) → Use `agent_*/` at root + `shared/lib/`
 - ❌ `containers/` (old Dockerfiles) → Use `agent_*/Dockerfile` and `shared/*/Dockerfile`
 - ❌ `compose/` (old compose files) → Use `deploy/docker-compose.yml`
@@ -139,6 +145,22 @@ The following paths are **DEPRECATED** and exist only in `_archive/` for referen
 - Pipeline generators: `support/templates/pipelines/`
 - Documentation generators: `support/templates/docs/`
 - Keep generated artifacts out of version control unless curated.
+
+### Progressive MCP Tool Disclosure
+
+- **Implementation**: `shared/lib/progressive_mcp_loader.py` with 4 loading strategies
+- **Orchestrator Integration**: Automatic lazy loading in `/orchestrate` endpoint
+- **Token Savings**: 80-90% reduction (150+ tools → 10-30 tools per task)
+- **Configuration**: Runtime strategy changes via `POST /config/tool-loading`
+- **Monitoring**: Token usage stats via `GET /config/tool-loading/stats`
+- **Strategies**:
+  - `MINIMAL`: Keyword-based (80-95% savings, recommended for simple tasks)
+  - `AGENT_PROFILE`: Agent manifest-based (60-80% savings)
+  - `PROGRESSIVE`: Minimal + high-priority agent tools (70-85% savings, default)
+  - `FULL`: All 150+ tools (0% savings, debugging only)
+- **Keyword Mappings**: 60+ keywords mapped to MCP servers in `keyword_to_servers` dict
+- **Extension**: Apply pattern to other agents by importing `get_progressive_loader()` and calling `get_tools_for_task()`
+- **Documentation**: `support/docs/_temp/progressive-mcp-disclosure-implementation.md`
 
 ## Quality bar
 
