@@ -1,18 +1,56 @@
 # Github Copilot Instructions for Dev-Tools
 
-## Architecture snapshot (Phase 7 Complete)
+## Architecture snapshot (Phase 8 Complete - Repository Reorganization)
 
-- **Agent Layer**: 6 FastAPI-based agents under `agents/*` (orchestrator, feature-dev, code-review, infrastructure, cicd, documentation) with container builds in `containers/*` and Docker orchestration in `compose/docker-compose.yml`.
-- **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `agents/_shared/mcp_client.py` for unified tool access. Gateway routes to servers in `mcp/servers/`.
-- **LLM Inference**: DigitalOcean Gradient AI integration via `agents/_shared/gradient_client.py` with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
+- **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md.
+- **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `shared/lib/mcp_client.py` for unified tool access. Gateway routes to servers in `shared/mcp/servers/`.
+- **LLM Inference**: DigitalOcean Gradient AI integration via `shared/lib/gradient_client.py` with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
 - **Observability**: Langfuse automatic LLM tracing (langfuse.openai wrapper) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents.
 - **Service Ports**: gateway-mcp:8000, orchestrator:8001, feature-dev:8002, code-review:8003, infrastructure:8004, cicd:8005, documentation:8006, rag:8007, state:8008, prometheus:9090.
+
+## Repository structure
+
+```
+Dev-Tools/
+├── agent_orchestrator/          # Orchestrator agent (root-level, no nesting)
+├── agent_feature-dev/           # Feature development agent
+├── agent_code-review/           # Code review agent
+├── agent_infrastructure/        # Infrastructure agent
+├── agent_cicd/                  # CI/CD agent
+├── agent_documentation/         # Documentation agent
+├── shared/                      # Shared runtime components
+│   ├── lib/                     # Agent runtime libraries (11 Python modules)
+│   ├── services/                # Backend microservices (rag, state, langgraph)
+│   ├── gateway/                 # MCP gateway for tool routing
+│   ├── mcp/                     # MCP servers (17 servers)
+│   └── context/                 # MCP server context data
+├── deploy/                      # Deployment orchestration
+│   ├── docker-compose.yml       # Service definitions
+│   ├── workflows/               # CI/CD workflows
+│   └── .env.template            # Environment template
+├── config/                      # Runtime configuration
+│   ├── env/                     # Environment variables
+│   ├── caddy/                   # Reverse proxy config
+│   ├── prometheus/              # Metrics config
+│   ├── rag/                     # RAG config
+│   ├── state/                   # State schema
+│   └── routing/                 # Task routing rules
+├── support/                     # Development support
+│   ├── scripts/                 # Operational scripts (30+ scripts)
+│   ├── docs/                    # Documentation
+│   ├── tests/                   # Test suites
+│   ├── templates/               # Templates for generation
+│   ├── reports/                 # Validation reports
+│   ├── pipelines/               # Pipeline templates
+│   └── frontend/                # HTML dashboards
+└── _archive/                    # Deprecated structure (agents/, containers/, compose/, infrastructure/, tmp/, bin/)
+```
 
 ## Configuration sources
 
 - **Environment**: `config/env/.env` contains all production credentials (Langfuse keys, Gradient API key, Linear OAuth, DO PAT, database creds). Copy from `config/env/.env.template` and populate secrets.
-- **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `./scripts/setup_secrets.sh` to create.
-- **Agent Models**: Per-agent Gradient model configured in `compose/docker-compose.yml` via `GRADIENT_MODEL` env var; models optimized for task complexity and cost.
+- **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `support/scripts/setup_secrets.sh` to create.
+- **Agent Models**: Per-agent Gradient model configured in `deploy/docker-compose.yml` via `GRADIENT_MODEL` env var; models optimized for task complexity and cost.
 - **Task Routing**: Rules in `config/routing/task-router.rules.yaml` (if used); orchestrator uses LLM-powered decomposition when `gradient_client.is_enabled()`.
 - **RAG Config**: `config/rag/indexing.yaml` + `config/rag/vectordb.config.yaml` define Qdrant vector DB sources and embedding targets.
 - **State Schema**: PostgreSQL-backed workflow state using `config/state/schema.sql`; migrate by extending schema and rebuilding stack.
@@ -29,24 +67,24 @@
 
 ### Quick Deploy
 
-- **Automated**: `./scripts/deploy.ps1` (validates env, builds, deploys, health checks); use `-Target remote` for droplet deployment.
-- **Manual**: `cd compose && docker-compose build && docker-compose up -d && docker-compose ps`
+- **Automated**: `./support/scripts/deploy.ps1` (validates env, builds, deploys, health checks); use `-Target remote` for droplet deployment.
+- **Manual**: `cd deploy && docker-compose build && docker-compose up -d && docker-compose ps`
 - **Health Checks**: Curl `/health` on ports 8000-8008; verify `{"status": "healthy"}` and `mcp_gateway: "connected"`.
 
 ### Local Development
 
-- Use `make up|down|rebuild|logs` (wraps `scripts/*.sh`) or direct `docker-compose` commands; scripts assume bash and run from repo root.
-- `./scripts/up.sh` brings stack online, waits 10s, prints health; `make logs-agent AGENT=<service>` for troubleshooting.
-- Rebuild when Python deps change: `scripts/rebuild.sh` or `docker-compose build <service>`.
-- Backups: `scripts/backup_volumes.sh` creates tarballs of `orchestrator-data`, `mcp-config`, `qdrant-data`, `postgres-data` under `./backups/<timestamp>`.
-- Local overrides: `compose/docker-compose.override.yml` (gitignored sample sets DEBUG/LOG_LEVEL).
+- Use `make up|down|rebuild|logs` (wraps `support/scripts/*.sh`) or direct `docker-compose` commands; scripts assume bash and run from repo root.
+- `./support/scripts/up.sh` brings stack online, waits 10s, prints health; `make logs-agent AGENT=<service>` for troubleshooting.
+- Rebuild when Python deps change: `support/scripts/rebuild.sh` or `docker-compose build <service>`.
+- Backups: `support/scripts/backup_volumes.sh` creates tarballs of `orchestrator-data`, `mcp-config`, `qdrant-data`, `postgres-data` under `./backups/<timestamp>`.
+- Local overrides: `deploy/docker-compose.override.yml` (gitignored sample sets DEBUG/LOG_LEVEL).
 
 ### Remote Deployment (DigitalOcean)
 
 - Target droplet: `45.55.173.72` (alex@appsmithery.co)
 - Deploy path: `/opt/Dev-Tools`
-- Method 1: `./scripts/deploy.ps1 -Target remote` (copies .env, builds, deploys)
-- Method 2: SSH + git pull + docker-compose commands (see `DEPLOY.md`)
+- Method 1: `./support/scripts/deploy.ps1 -Target remote` (copies .env, builds, deploys)
+- Method 2: SSH + git pull + docker-compose commands (see `support/docs/DEPLOY.md`)
 - Verify: Check health endpoints, Langfuse traces, Prometheus metricsent with langfuse.openai wrapper.
 - API key from `GRADIENT_API_KEY` env var (uses DigitalOcean PAT); base URL `https://api.digitalocean.com/v2/ai`.
 - Per-agent models: orchestrator/code-review (70b), feature-dev (codellama-13b), infrastructure/cicd (8b), documentation (mistral-7b).
@@ -56,7 +94,7 @@
 
 - **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
 - **Prune on errors.** If a compose build/push/deploy fails, follow up with `docker builder prune -f`, `docker image prune -f`, and (when on the droplet) `docker system prune --volumes --force` unless the user explicitly says otherwise.
-- **Verify health after cleanup.** Re-run `scripts/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
+- **Verify health after cleanup.** Re-run `support/scripts/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
 - **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
 
 ### Langfuse (LLM Tracing)
@@ -69,24 +107,24 @@
 
 ### Adding a New Agent
 
-1. Create `agents/<agent>/main.py` (FastAPI app with Pydantic models)
+1. Create `agent_<agent>/main.py` (FastAPI app with Pydantic models)
 2. Initialize shared clients: `mcp_client = MCPClient(agent_name="...")` and `gradient_client = get_gradient_client("...")`
 3. Add Prometheus: `Instrumentator().instrument(app).expose(app)`
-4. Create `containers/<agent>/Dockerfile` (copy pattern from existing agents)
-5. Add service to `compose/docker-compose.yml` with env vars (GRADIENT*MODEL, LANGFUSE*\*, MCP_GATEWAY_URL)
+4. Create `agent_<agent>/Dockerfile` (copy pattern from existing agents)
+5. Add service to `deploy/docker-compose.yml` with env vars (GRADIENT*MODEL, LANGFUSE*\*, MCP_GATEWAY_URL)
 6. Update `config/mcp-agent-tool-mapping.yaml` with tool access
-7. Document endpoints in `docs/AGENT_ENDPOINTS.md`
+7. Document endpoints in `support/docs/AGENT_ENDPOINTS.md`
 8. Add requirements.txt with: `fastapi`, `uvicorn`, `pydantic`, `httpx`, `langfuse>=2.0.0`, `prometheus-fastapi-instrumentator>=6.1.0`
 
 ### MCP Servers
 
-- Add new servers in `mcp/servers/<server-name>/`; gateway auto-discovers tools via stdio communication.
-- Update gateway routing if custom logic needed; maintain tool manifest in `agents/agents-manifest.json`.
+- Add new servers in `shared/mcp/servers/<server-name>/`; gateway auto-discovers tools via stdio communication.
+- Update gateway routing if custom logic needed; maintain tool manifest in `shared/lib/agents-manifest.json`.
 
 ### Templates
 
-- Pipeline generators: `templates/pipelines/`
-- Documentation generators: `templates/docs/`
+- Pipeline generators: `support/templates/pipelines/`
+- Documentation generators: `support/templates/docs/`
 - Keep generated artifacts out of version control unless curated.
 
 ## Quality bar
@@ -97,13 +135,7 @@
 - **Error Handling**: Graceful fallback when API keys missing (use `gradient_client.is_enabled()` check before LLM calls).
 - **Shell Scripts**: POSIX-compliant bash, executable permissions, consistent logging format (echo + status lines).
 - **Container Hygiene**: Treat Docker resources as disposable—tear down stray containers, prune layers after failures, and leave compose stacks either fully running or fully stopped.
-- **Documentation**: Update relevant docs in `docs/` when changing architecture; maintain `docs/README.md` index. Use `docs/_temp/` for working files, progress notes, and troubleshooting documents during active development.
-- Backups are volume-level tarballs written by `scripts/backup_volumes.sh`, storing `orchestrator-data` and `mcp-config` snapshots under `./backups/<timestamp>`.
-- Place local-only adjustments in `compose/docker-compose.override.yml`; the sample sets DEBUG/LOG_LEVEL for the orchestrator.
-
-## Extension points
-
-- When adding a new agent, mirror the pattern in `README.md`: create `agents/<agent>/` (FastAPI app), `containers/<agent>/Dockerfile`, add a service block to `compose/docker-compose.yml`, update routing rules, and document endpoints in `docs/AGENT_ENDPOINTS.md`.
+- **Documentation**: Update relevant docs in `support/docs/` when changing architecture; maintain `support/docs/README.md` index. Use `support/docs/_temp/` for working files, progress notes, and troubleshooting documents during active development.
 - Pipeline or documentation generators should draw from `templates/pipelines` or `templates/docs`; keep generated artifacts out of version control unless curated.
 - Update MCP behavior alongside any new model integrations by wiring config files into `mcp/gateway` and the `compose` service volume mounts.
 

@@ -3,21 +3,21 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install task runner
-RUN apt-get update && apt-get install -y curl && \
+RUN apt-get update && apt-get install -y curl git && \
     sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
-COPY agents/feature-dev/requirements.txt ./
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared modules
-COPY agents/_shared/ ./agents/_shared/
+COPY ../shared/lib/ ./lib/
 
 # Copy agent manifest
-COPY agents/agents-manifest.json ./agents/agents-manifest.json
+COPY ../shared/lib/agents-manifest.json ./agents-manifest.json
 
 # Copy agent source code
-COPY agents/feature-dev/src/ ./
+COPY . ./
 
-EXPOSE 8002
+EXPOSE 8003
 
 CMD ["python", "main.py"]

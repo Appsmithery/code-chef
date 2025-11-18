@@ -1,11 +1,11 @@
 """
-Code Review Agent
+Infrastructure Agent
 
-Primary Role: Quality assurance, static analysis, and security scanning
-- Performs static code analysis on diffs (not full codebases)
-- Executes security vulnerability scanning and dependency checks
-- Validates coding standards compliance and best practices
-- Reviews test coverage and test quality metrics
+Primary Role: Infrastructure-as-code generation and deployment configuration
+- Generates Docker Compose files, Dockerfiles, and container configurations
+- Creates Kubernetes manifests, Helm charts, and orchestration configs
+- Manages Terraform/CloudFormation templates for cloud infrastructure
+- Maintains template library for 80% of common deployment patterns
 """
 
 from fastapi import FastAPI, HTTPException
@@ -17,10 +17,11 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from service import (
     GuardrailViolation,
-    ReviewRequest,
-    ReviewResponse,
+    InfraRequest,
+    InfraResponse,
+    list_templates,
     mcp_client,
-    process_review_request,
+    process_infra_request,
 )
 
 # Configure logging
@@ -31,9 +32,9 @@ logger = logging.getLogger(__name__)
 try:
     import sys
     sys.path.insert(0, '/app')
-    from agents._shared.langgraph_base import get_postgres_checkpointer, create_workflow_config
-    from agents._shared.qdrant_client import get_qdrant_client
-    from agents._shared.langchain_memory import create_hybrid_memory
+    from lib.langgraph_base import get_postgres_checkpointer, create_workflow_config
+    from lib.qdrant_client import get_qdrant_client
+    from lib.langchain_memory import create_hybrid_memory
     
     checkpointer = get_postgres_checkpointer()
     qdrant_client = get_qdrant_client()
@@ -46,8 +47,8 @@ except Exception as e:
     hybrid_memory = None
 
 app = FastAPI(
-    title="Code Review Agent",
-    description="Quality assurance, static analysis, and security scanning",
+    title="Infrastructure Agent",
+    description="Infrastructure-as-code generation and deployment configuration",
     version="1.0.0"
 )
 
@@ -59,7 +60,7 @@ async def health_check():
     gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
-        "service": "code-review",
+        "service": "infrastructure",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
         "mcp": {
@@ -70,16 +71,17 @@ async def health_check():
         },
     }
 
-@app.post("/review", response_model=ReviewResponse)
-async def review_code(request: ReviewRequest):
+
+@app.post("/generate", response_model=InfraResponse)
+async def generate_infrastructure(request: InfraRequest):
     """
-    Main code review endpoint
-    - Receives only diff context (changed lines + 5-line context window)
-    - Uses rule-based workflows for 70% of standard review patterns
-    - Invokes LLM only for complex logic analysis
+    Generate infrastructure-as-code
+    - Template-first generation: customizes parameters vs full generation (70-85% token reduction)
+    - Loads only infrastructure specifications
+    - Generates configurations incrementally with validation checkpoints
     """
     try:
-        return await process_review_request(request)
+        return await process_infra_request(request)
     except GuardrailViolation as exc:
         raise HTTPException(
             status_code=409,
@@ -89,6 +91,13 @@ async def review_code(request: ReviewRequest):
             },
         )
 
+@app.get("/templates")
+async def list_infra_templates():
+    """Expose available infrastructure templates."""
+
+    return list_templates()
+
+
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", "8003"))
+    port = int(os.getenv("PORT", "8004"))
     uvicorn.run(app, host="0.0.0.0", port=port)

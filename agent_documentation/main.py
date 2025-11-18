@@ -1,11 +1,11 @@
 """
-Infrastructure Agent
+Documentation Agent
 
-Primary Role: Infrastructure-as-code generation and deployment configuration
-- Generates Docker Compose files, Dockerfiles, and container configurations
-- Creates Kubernetes manifests, Helm charts, and orchestration configs
-- Manages Terraform/CloudFormation templates for cloud infrastructure
-- Maintains template library for 80% of common deployment patterns
+Primary Role: Documentation generation and maintenance
+- Generates README files, API documentation, and user guides
+- Creates inline code comments and docstrings
+- Updates documentation for code changes
+- Maintains documentation templates and style guides
 """
 
 from fastapi import FastAPI, HTTPException
@@ -17,11 +17,11 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from service import (
     GuardrailViolation,
-    InfraRequest,
-    InfraResponse,
-    list_templates,
+    DocRequest,
+    DocResponse,
+    list_doc_templates,
     mcp_client,
-    process_infra_request,
+    process_doc_request,
 )
 
 # Configure logging
@@ -32,9 +32,9 @@ logger = logging.getLogger(__name__)
 try:
     import sys
     sys.path.insert(0, '/app')
-    from agents._shared.langgraph_base import get_postgres_checkpointer, create_workflow_config
-    from agents._shared.qdrant_client import get_qdrant_client
-    from agents._shared.langchain_memory import create_hybrid_memory
+    from lib.langgraph_base import get_postgres_checkpointer, create_workflow_config
+    from lib.qdrant_client import get_qdrant_client
+    from lib.langchain_memory import create_hybrid_memory
     
     checkpointer = get_postgres_checkpointer()
     qdrant_client = get_qdrant_client()
@@ -47,8 +47,8 @@ except Exception as e:
     hybrid_memory = None
 
 app = FastAPI(
-    title="Infrastructure Agent",
-    description="Infrastructure-as-code generation and deployment configuration",
+    title="Documentation Agent",
+    description="Documentation generation and maintenance",
     version="1.0.0"
 )
 
@@ -60,7 +60,7 @@ async def health_check():
     gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
-        "service": "infrastructure",
+        "service": "documentation",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
         "mcp": {
@@ -71,17 +71,16 @@ async def health_check():
         },
     }
 
-
-@app.post("/generate", response_model=InfraResponse)
-async def generate_infrastructure(request: InfraRequest):
+@app.post("/generate", response_model=DocResponse)
+async def generate_documentation(request: DocRequest):
     """
-    Generate infrastructure-as-code
-    - Template-first generation: customizes parameters vs full generation (70-85% token reduction)
-    - Loads only infrastructure specifications
-    - Generates configurations incrementally with validation checkpoints
+    Generate documentation
+    - Uses documentation templates for consistent formatting
+    - Queries RAG for context about code to document
+    - Generates user-friendly explanations and examples
     """
     try:
-        return await process_infra_request(request)
+        return await process_doc_request(request)
     except GuardrailViolation as exc:
         raise HTTPException(
             status_code=409,
@@ -92,12 +91,9 @@ async def generate_infrastructure(request: InfraRequest):
         )
 
 @app.get("/templates")
-async def list_infra_templates():
-    """Expose available infrastructure templates."""
-
-    return list_templates()
-
+async def list_doc_templates_endpoint():
+    return list_doc_templates()
 
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", "8004"))
+    port = int(os.getenv("PORT", "8006"))
     uvicorn.run(app, host="0.0.0.0", port=port)

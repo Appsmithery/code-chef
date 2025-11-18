@@ -1,16 +1,15 @@
 """
-CI/CD Pipeline Agent
+Code Review Agent
 
-Primary Role: Automation workflow generation and deployment orchestration
-- Generates GitHub Actions workflows, GitLab CI, or Jenkins pipelines
-- Creates deployment automation scripts and rollback procedures
-- Implements build, test, deploy sequences for approved changes
-- Handles conditional deployments based on branch strategies
+Primary Role: Quality assurance, static analysis, and security scanning
+- Performs static code analysis on diffs (not full codebases)
+- Executes security vulnerability scanning and dependency checks
+- Validates coding standards compliance and best practices
+- Reviews test coverage and test quality metrics
 """
 
 from fastapi import FastAPI, HTTPException
 from datetime import datetime
-from typing import Any, Dict
 import uvicorn
 import os
 import logging
@@ -18,11 +17,10 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from service import (
     GuardrailViolation,
-    PipelineRequest,
-    PipelineResponse,
+    ReviewRequest,
+    ReviewResponse,
     mcp_client,
-    process_pipeline_request,
-    trigger_deployment,
+    process_review_request,
 )
 
 # Configure logging
@@ -33,9 +31,9 @@ logger = logging.getLogger(__name__)
 try:
     import sys
     sys.path.insert(0, '/app')
-    from agents._shared.langgraph_base import get_postgres_checkpointer, create_workflow_config
-    from agents._shared.qdrant_client import get_qdrant_client
-    from agents._shared.langchain_memory import create_hybrid_memory
+    from lib.langgraph_base import get_postgres_checkpointer, create_workflow_config
+    from lib.qdrant_client import get_qdrant_client
+    from lib.langchain_memory import create_hybrid_memory
     
     checkpointer = get_postgres_checkpointer()
     qdrant_client = get_qdrant_client()
@@ -48,8 +46,8 @@ except Exception as e:
     hybrid_memory = None
 
 app = FastAPI(
-    title="CI/CD Pipeline Agent",
-    description="Automation workflow generation and deployment orchestration",
+    title="Code Review Agent",
+    description="Quality assurance, static analysis, and security scanning",
     version="1.0.0"
 )
 
@@ -61,7 +59,7 @@ async def health_check():
     gateway_health = await mcp_client.get_gateway_health()
     return {
         "status": "ok",
-        "service": "cicd",
+        "service": "code-review",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
         "mcp": {
@@ -72,17 +70,16 @@ async def health_check():
         },
     }
 
-
-@app.post("/generate", response_model=PipelineResponse)
-async def generate_pipeline(request: PipelineRequest):
+@app.post("/review", response_model=ReviewResponse)
+async def review_code(request: ReviewRequest):
     """
-    Generate CI/CD pipeline configuration
-    - Maintains pipeline template library for standard sequences
-    - Invokes LLM only for dynamic decision points
-    - Reduces generation tokens by 75% via template customization
+    Main code review endpoint
+    - Receives only diff context (changed lines + 5-line context window)
+    - Uses rule-based workflows for 70% of standard review patterns
+    - Invokes LLM only for complex logic analysis
     """
     try:
-        return await process_pipeline_request(request)
+        return await process_review_request(request)
     except GuardrailViolation as exc:
         raise HTTPException(
             status_code=409,
@@ -92,12 +89,6 @@ async def generate_pipeline(request: PipelineRequest):
             },
         )
 
-
-@app.post("/deploy")
-async def execute_deployment(deployment: Dict[str, Any]):
-    return await trigger_deployment(deployment)
-
-
 if __name__ == '__main__':
-    port = int(os.getenv("PORT", "8005"))
+    port = int(os.getenv("PORT", "8003"))
     uvicorn.run(app, host="0.0.0.0", port=port)

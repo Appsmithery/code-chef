@@ -28,9 +28,9 @@ logger = logging.getLogger(__name__)
 try:
     import sys
     sys.path.insert(0, '/app')
-    from agents._shared.langgraph_base import get_postgres_checkpointer, create_workflow_config
-    from agents._shared.qdrant_client import get_qdrant_client
-    from agents._shared.langchain_memory import create_hybrid_memory
+    from lib.langgraph_base import get_postgres_checkpointer, create_workflow_config
+    from lib.qdrant_client import get_qdrant_client
+    from lib.langchain_memory import create_hybrid_memory
     
     checkpointer = get_postgres_checkpointer()
     qdrant_client = get_qdrant_client()
