@@ -7,8 +7,8 @@ services:
   orchestrator:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:orchestrator-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: agents/orchestrator/Dockerfile
+      context: ..
+      dockerfile: agent_orchestrator/Dockerfile
     ports:
       - "8001:8001"
     environment:
@@ -33,8 +33,8 @@ services:
   feature-dev:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:feature-dev-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: agents/feature-dev/Dockerfile
+      context: ..
+      dockerfile: agent_feature-dev/Dockerfile
     ports:
       - "8002:8002"
     environment:
@@ -55,8 +55,8 @@ services:
   code-review:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:code-review-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: agents/code-review/Dockerfile
+      context: ..
+      dockerfile: agent_code-review/Dockerfile
     ports:
       - "8003:8003"
     environment:
@@ -77,8 +77,8 @@ services:
   infrastructure:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:infrastructure-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: agents/infrastructure/Dockerfile
+      context: ..
+      dockerfile: agent_infrastructure/Dockerfile
     ports:
       - "8004:8004"
     environment:
@@ -95,12 +95,12 @@ services:
       - rag-context
     restart: unless-stopped
 
-  # CI/CD Agent - Pipeline configuration
+  # CI/CD Agent - Pipeline automation
   cicd:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:cicd-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: agents/cicd/Dockerfile
+      context: ..
+      dockerfile: agent_cicd/Dockerfile
     ports:
       - "8005:8005"
     environment:
@@ -121,8 +121,8 @@ services:
   documentation:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:documentation-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: agents/documentation/Dockerfile
+      context: ..
+      dockerfile: agent_documentation/Dockerfile
     ports:
       - "8006:8006"
     environment:
@@ -147,8 +147,8 @@ services:
   gateway-mcp:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:gateway-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: gateway/Dockerfile
+      context: ..
+      dockerfile: shared/gateway/Dockerfile
     ports:
       - "8000:8000"
     environment:
@@ -170,8 +170,8 @@ services:
   rag-context:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:rag-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: services/rag/Dockerfile
+      context: ..
+      dockerfile: shared/services/rag/Dockerfile
     ports:
       - "8007:8007"
     environment:
@@ -198,8 +198,8 @@ services:
   state-persistence:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:state-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: services/state/Dockerfile
+      context: ..
+      dockerfile: shared/services/state/Dockerfile
     ports:
       - "8008:8008"
     environment:
@@ -237,8 +237,8 @@ services:
   langgraph:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:langgraph-${IMAGE_TAG:-latest}
     build:
-      context: ../..
-      dockerfile: services/langgraph/Dockerfile
+      context: ..
+      dockerfile: shared/services/langgraph/Dockerfile
     ports:
       - "8009:8009"
     environment:

@@ -19,19 +19,19 @@ import httpx
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from agents._shared.mcp_client import MCPClient, resolve_manifest_path
-from agents._shared.gradient_client import get_gradient_client
-from agents._shared.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
-from agents._shared.mcp_discovery import get_mcp_discovery
-from agents._shared.linear_client import get_linear_client
-from agents._shared.mcp_tool_client import get_mcp_tool_client
-from agents._shared.langgraph_base import (
+from lib.mcp_client import MCPClient, resolve_manifest_path
+from lib.gradient_client import get_gradient_client
+from lib.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
+from lib.mcp_discovery import get_mcp_discovery
+from lib.linear_client import get_linear_client
+from lib.mcp_tool_client import get_mcp_tool_client
+from lib.langgraph_base import (
     BaseAgentState,
     get_postgres_checkpointer,
     create_workflow_config
 )
-from agents._shared.qdrant_client import get_qdrant_client
-from agents._shared.langchain_memory import HybridMemory
+from lib.qdrant_client import get_qdrant_client
+from lib.langchain_memory import HybridMemory
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

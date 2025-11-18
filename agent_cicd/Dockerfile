@@ -6,18 +6,17 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y curl && \
     sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
 
-COPY agents/orchestrator/requirements.txt ./
+COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy shared modules
-COPY agents/_shared/ ./agents/_shared/
+COPY ../shared/lib/ ./lib/
 
 # Copy agent manifest
-COPY agents/agents-manifest.json ./agents/agents-manifest.json
+COPY ../shared/lib/agents-manifest.json ./agents-manifest.json
 
-# Copy agent source code
-COPY agents/orchestrator/src/ ./
+COPY . ./
 
-EXPOSE 8001
+EXPOSE 8005
 
 CMD ["python", "main.py"]
