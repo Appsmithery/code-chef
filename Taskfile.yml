@@ -14,11 +14,11 @@ tasks:
     cmds:
       - task --list
 
-  # =============================================================================
+  =============================================================================
   # LOCAL STACK LIFECYCLE
-  # =============================================================================
+  =============================================================================
 
-  up:
+  local_deploy:up:
     desc: Start full local stack with health checks
     summary: |
       Starts all Docker services in detached mode, waits 15 seconds for
@@ -30,7 +30,7 @@ tasks:
       - sleep 15
       - task: health
 
-  down:
+  local_deploy:down:
     desc: Stop and clean up local stack
     summary: |
       Stops all services, removes orphaned containers, and prunes unused
@@ -40,7 +40,7 @@ tasks:
       - docker compose down --remove-orphans
       - docker builder prune -f
 
-  rebuild:
+  local_deploy:rebuild:
     desc: Rebuild all images and restart stack
     summary: |
       Nuclear rebuild: stops services, rebuilds all images without cache,
@@ -52,19 +52,19 @@ tasks:
       - docker compose up -d
       - task: health
 
-  logs:
+  local_deploy:logs:
     desc: Stream logs from all services (Ctrl+C to exit)
     dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose logs -f --tail=50
 
-  ps:
+  local_deploy:ps:
     desc: Show running services and their ports
     dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose ps
 
-  clean:
+  local_deploy:clean:
     desc: Nuclear cleanup - remove all containers, volumes, images
     summary: |
       ⚠️  DESTRUCTIVE: Removes all containers, volumes, images, networks, and
@@ -75,11 +75,11 @@ tasks:
       - docker system prune --all --volumes --force
       - echo "✅ Cleanup complete"
 
-  # =============================================================================
+  =============================================================================
   # BUILD & REGISTRY
-  # =============================================================================
+  =============================================================================
 
-  build:
+  build:local:
     desc: Build all agent images locally
     summary: |
       Builds all 6 agent images plus gateway, RAG, and state services using
@@ -88,7 +88,7 @@ tasks:
     cmds:
       - docker compose build
 
-  push:hub:
+  build:push_docker_hub:
     desc: Push images to Docker Hub (apscolabs/dev-tools-*)
     summary: |
       Tags and pushes all Dev-Tools images to Docker Hub registry under
@@ -96,7 +96,7 @@ tasks:
     cmds:
       - pwsh ./support/scripts/deploy/push-dockerhub.ps1
 
-  push:docr:
+  build:push_docr:
     desc: Push images to DigitalOcean Container Registry
     summary: |
       Tags and pushes all images to DigitalOcean Container Registry.
@@ -104,11 +104,11 @@ tasks:
     cmds:
       - pwsh ./support/scripts/deploy/push-docr.ps1
 
-  # =============================================================================
+  =============================================================================
   # REMOTE DEPLOYMENT (DROPLET)
-  # =============================================================================
+  =============================================================================
 
-  deploy:
+  prod_deploy:droplet:
     desc: Deploy to DigitalOcean droplet (git pull + rebuild + health)
     summary: |
       Full deployment workflow: SSH to droplet, pull latest code, rebuild
@@ -127,7 +127,7 @@ tasks:
         sleep 20
         task: health:remote
 
-  deploy:docr:
+  prod_deploy:docr:
     desc: Deploy pre-built DOCR images to droplet (no rebuild)
     summary: |
       Fast deployment: pulls pre-built images from DOCR and restarts services
@@ -135,7 +135,7 @@ tasks:
     cmds:
       - pwsh ./deploy-to-droplet.ps1
 
-  restart:
+  prod_deploy:restart:
     desc: Restart services on droplet without rebuild
     summary: |
       Quick restart of all services on droplet using existing images.
@@ -146,11 +146,11 @@ tasks:
           docker compose restart"
         task: health:remote
 
-  # =============================================================================
+  =============================================================================
   # HEALTH & VALIDATION
-  # =============================================================================
+  =============================================================================
 
-  health:
+  health:local:
     desc: Check health of local services (ports 8000-8008)
     summary: |
       Checks /health endpoints for all 9 services on localhost. Reports
@@ -210,7 +210,7 @@ tasks:
           fi
         done
 
-  trace:
+  health:trace:
     desc: Validate LangSmith tracing is working
     summary: |
       Runs validation script to test LangSmith tracing integration. Checks
@@ -219,17 +219,17 @@ tasks:
       - bash ./support/scripts/validation/validate-tracing.sh
       - echo "📊 View traces at https://smith.langchain.com"
 
-  # =============================================================================
+  =============================================================================
   # DROPLET ADMIN
-  # =============================================================================
+  =============================================================================
 
-  ssh:
+  droplet:connect_ssh:
     desc: SSH into droplet
     summary: Opens SSH session to production droplet as root user.
     cmds:
       - ssh root@{{.DROPLET_IP}}
 
-  status:
+  droplet:check_status:
     desc: Show droplet stack status and disk usage
     summary: |
       Comprehensive droplet status report: running services, disk usage,
@@ -247,7 +247,7 @@ tasks:
           echo '=== Git Branch ===' && \
           cd .. && git branch --show-current && git log -1 --oneline"
 
-  backup:
+  droplet:backup:
     desc: Backup droplet volumes to local machine
     summary: |
       Creates timestamped backup of all Docker volumes from droplet and
@@ -263,11 +263,11 @@ tasks:
         scp root@{{.DROPLET_IP}}:{{.DROPLET_PATH}}/backups/latest/*.tar.gz "$backup_dir/"
         echo "✅ Backup complete: $backup_dir"
 
-  # =============================================================================
+  =============================================================================
   # UTILITIES
-  # =============================================================================
+  =============================================================================
 
-  env:
+  utilities:env:
     desc: Show required environment variables status
     summary: |
       Validates config/env/.env file and reports which required variables
@@ -289,7 +289,7 @@ tasks:
           fi
         done
 
-  ports:
+  utilities:ports:
     desc: Show port mappings and service URLs
     summary: |
       Reference guide showing all service port mappings (8000-8008, 9090)
