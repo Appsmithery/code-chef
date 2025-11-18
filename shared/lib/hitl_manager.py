@@ -122,9 +122,9 @@ class HITLManager:
                         agent_name,
                         risk_level,
                         self._calculate_risk_score(task, risk_level),
-                        task.get("risk_factors", {}),
+                        json.dumps(task.get("risk_factors", [])),
                         task.get("operation", ""),
-                        task.get("details", {}),
+                        json.dumps(task.get("details", {})),
                         task.get("impact", ""),
                         expires_at
                     )
