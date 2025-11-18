@@ -24,7 +24,7 @@
     "github.copilot.chat.newWorkspace.useContext7": true,
     "github.copilot.chat.notebook.enhancedNextEditSuggestions.enabled": true,
     "github.copilot.chat.notebook.followCellExecution.enabled": true,
-    "github.copilot.chat.responsesApiReasoningEffort": "high",
+    "github.copilot.chat.responsesApiReasoningEffort": "medium",
     "github.copilot.chat.scopeSelection": true,
     "github.copilot.chat.tools.memory.enabled": true,
     "mcp": {
@@ -35,7 +35,8 @@
         }
       },
       "inputs": []
-    }
+    },
+    "github.copilot.nextEditSuggestions.enabled": true
   },
   "extensions": {
     "recommendations": [
