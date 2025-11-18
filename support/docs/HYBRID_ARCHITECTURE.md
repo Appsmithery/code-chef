@@ -130,11 +130,11 @@ The deploy script now defaults `IMAGE_TAG` to the current git commit SHA and run
 
 ```powershell
 # Enable override with volume mounts for local iteration
-$env:COMPOSE_FILE = "compose/docker-compose.yml;compose/docker-compose.override.yml"
+$env:COMPOSE_FILE = "deploy/docker-compose.yml;deploy/docker-compose.override.yml"
 docker compose up -d
 ```
 
-The override file (`compose/docker-compose.override.yml`) contains local-only settings like `DEBUG=true` and source code mounts. It is gitignored to prevent dev flags from leaking into production.
+The override file (`deploy/docker-compose.override.yml`) contains local-only settings like `DEBUG=true` and source code mounts. It is gitignored to prevent dev flags from leaking into production.
 
 **Production (immutable images):**
 
@@ -314,7 +314,7 @@ The script now includes health checks for all agents, MCP tool discovery, and en
 
 2. **Restart gateway:**
    ```bash
-   ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose -f compose/docker-compose.yml restart gateway-mcp"
+   ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose -f deploy/docker-compose.yml restart gateway-mcp"
    ```
 
 ### Database Connection Issues
@@ -349,13 +349,13 @@ If you're currently running all services in Docker:
 3. **Stop Docker agent containers:**
 
    ```bash
-   docker compose -f compose/docker-compose.yml stop orchestrator feature-dev code-review infrastructure cicd documentation
+   docker compose -f deploy/docker-compose.yml stop orchestrator feature-dev code-review infrastructure cicd documentation
    ```
 
 4. **Keep infrastructure running:**
 
    ```bash
-   docker compose -f compose/docker-compose.yml up -d gateway-mcp rag-context state-persistence qdrant postgres
+   docker compose -f deploy/docker-compose.yml up -d gateway-mcp rag-context state-persistence qdrant postgres
    ```
 
 5. **Test agent endpoints:**
@@ -380,7 +380,7 @@ If you're currently running all services in Docker:
 3. **Version control:**
 
    - Agent code in `agents/*/` directories
-   - Infrastructure code in `containers/*/` directories
+   - Infrastructure code in `agent_*/` and `shared/` directories
    - Use git tags for deployments
 
 4. **Security:**

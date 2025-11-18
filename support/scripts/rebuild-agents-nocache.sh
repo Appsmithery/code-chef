@@ -14,14 +14,14 @@ agents=("orchestrator" "feature-dev" "code-review" "infrastructure" "cicd" "docu
 for agent in "${agents[@]}"; do
     echo "Building $agent..."
     docker build --no-cache \
-        -f containers/$agent/Dockerfile \
+        -f agent_$agent/Dockerfile \
         -t registry.digitalocean.com/the-shop-infra/$agent:local \
         .
     echo "✓ $agent built successfully"
 done
 
 echo "[REBUILD] All agents rebuilt! Restarting services..."
-cd compose
+cd deploy
 docker compose down
 docker compose up -d
 

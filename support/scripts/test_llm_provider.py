@@ -4,15 +4,15 @@ Test script for LLM multi-provider support
 
 Usage:
     # Test default provider (Gradient)
-    python scripts/test_llm_provider.py
+    python support/scripts/test_llm_provider.py
 
     # Test specific provider
-    LLM_PROVIDER=claude python scripts/test_llm_provider.py
-    LLM_PROVIDER=mistral python scripts/test_llm_provider.py
-    LLM_PROVIDER=openai python scripts/test_llm_provider.py
+    LLM_PROVIDER=claude python support/scripts/test_llm_provider.py
+    LLM_PROVIDER=mistral python support/scripts/test_llm_provider.py
+    LLM_PROVIDER=openai python support/scripts/test_llm_provider.py
 
     # Test all providers
-    python scripts/test_llm_provider.py --all
+    python support/scripts/test_llm_provider.py --all
 """
 
 import sys
@@ -34,7 +34,7 @@ else:
 agents_path = repo_root / "agents"
 sys.path.insert(0, str(agents_path))
 
-from _shared.langchain_gradient import get_llm, get_embeddings, LLM_PROVIDER, EMBEDDING_PROVIDER
+from shared.lib.langchain_gradient import get_llm, get_embeddings, LLM_PROVIDER, EMBEDDING_PROVIDER
 
 
 async def test_llm(provider: str, model: str = None):

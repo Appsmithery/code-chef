@@ -69,7 +69,7 @@ All collections use:
 
 **Used by**:
 
-- LangChain memory wrapper (`agents/_shared/langchain_memory.py`)
+- LangChain memory wrapper (`shared/lib/langchain_memory.py`)
 - LangGraph checkpointing system
 - All agents for maintaining conversation context
 
@@ -440,4 +440,4 @@ curl -H "api-key: ${QDRANT_CLUSTER_KEY}" \
 - **Qdrant API Docs**: https://qdrant.tech/documentation/
 - **Collection Config**: `config/rag/vectordb.config.yaml`
 - **Indexing Config**: `config/rag/indexing.yaml`
-- **Shared Client**: `agents/_shared/qdrant_client.py`
+- **Shared Client**: `shared/lib/qdrant_client.py`

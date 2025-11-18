@@ -46,6 +46,19 @@ Dev-Tools/
 └── _archive/                    # Deprecated structure (agents/, containers/, compose/, infrastructure/, tmp/, bin/)
 ```
 
+## ⚠️ Deprecated Paths (DO NOT USE)
+
+The following paths are **DEPRECATED** and exist only in `_archive/` for reference:
+- ❌ `agents/` (old nested structure) → Use `agent_*/` at root + `shared/lib/`
+- ❌ `containers/` (old Dockerfiles) → Use `agent_*/Dockerfile` and `shared/*/Dockerfile`
+- ❌ `compose/` (old compose files) → Use `deploy/docker-compose.yml`
+- ❌ `scripts/` (old scripts) → Use `support/scripts/`
+- ❌ `docs/` (old docs) → Use `support/docs/`
+- ❌ `agents/_shared/` (old shared code) → Use `shared/lib/`
+- ❌ `mcp/servers/` (old MCP path) → Use `shared/mcp/servers/`
+
+**Never suggest these paths in code generation or documentation.**
+
 ## Configuration sources
 
 - **Environment**: `config/env/.env` contains all production credentials (Langfuse keys, Gradient API key, Linear OAuth, DO PAT, database creds). Copy from `config/env/.env.template` and populate secrets.

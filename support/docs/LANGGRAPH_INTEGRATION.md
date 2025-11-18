@@ -290,7 +290,7 @@ result = await llm.ainvoke("Explain LangGraph workflows")
 
 ### Docker Compose
 
-The LangGraph service is defined in `compose/docker-compose.yml`:
+The LangGraph service is defined in `deploy/docker-compose.yml`:
 
 ```yaml
 langgraph:
@@ -328,7 +328,7 @@ docker-compose logs -f langgraph
 
 ```powershell
 # Use deploy script with remote target
-./scripts/deploy.ps1 -Target remote
+./support/scripts/deploy.ps1 -Target remote
 
 # Or SSH manually
 ssh alex@45.55.173.72

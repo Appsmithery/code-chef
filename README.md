@@ -42,7 +42,7 @@ Dev-Tools consolidates AI agents, MCP gateway, Docker orchestration, and develop
 - ✅ Zero 404 errors from eliminated HTTP gateway routing
 - ✅ Comprehensive documentation and pre-deployment checklist
 
-**Next:** Deploy to DigitalOcean droplet (see `docs/PRE_DEPLOYMENT_CHECKLIST.md`)
+**Next:** Deploy to DigitalOcean droplet (see `support/docs/PRE_DEPLOYMENT_CHECKLIST.md`)
 
 ## Quick Start
 
@@ -175,13 +175,13 @@ Dev-Tools (MCP Toolkit Integration - Direct Stdio Transport)
 - **Per-Agent Models**: Optimized LLM selection (70b for orchestrator, codellama-13b for feature-dev, etc.)
 - **Observability**: Automatic Langfuse tracing + Prometheus metrics on all agents
 
-For detailed architecture, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) and [docs/archive/IMPLEMENTATION_SUMMARY_MCP_LINEAR.md](docs/archive/IMPLEMENTATION_SUMMARY_MCP_LINEAR.md).
+For detailed architecture, see [support/docs/ARCHITECTURE.md](support/docs/ARCHITECTURE.md) and [support/docs/archive/IMPLEMENTATION_SUMMARY_MCP_LINEAR.md](support/docs/archive/IMPLEMENTATION_SUMMARY_MCP_LINEAR.md).
 
 ## 🚀 Deployment
 
 ### Production Deployment
 
-Follow our [45-minute DigitalOcean deployment guide](docs/DIGITALOCEAN_QUICK_DEPLOY.md) for production setup:
+Follow our [45-minute DigitalOcean deployment guide](support/docs/DIGITALOCEAN_QUICK_DEPLOY.md) for production setup:
 
 - 2GB RAM minimum (4GB recommended)
 - Ubuntu 22.04 LTS
@@ -192,7 +192,7 @@ Follow our [45-minute DigitalOcean deployment guide](docs/DIGITALOCEAN_QUICK_DEP
 
 See [Quick Start](#quick-start) above for local Docker Compose setup.
 
-For AWS, Azure, or GCP deployments, adapt the DigitalOcean guide or see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+For AWS, Azure, or GCP deployments, adapt the DigitalOcean guide or see [support/docs/DEPLOYMENT.md](support/docs/DEPLOYMENT.md).
 
 ### Service Ports
 
@@ -277,7 +277,7 @@ task <agent>:health
 task <agent>:logs
 ```
 
-For complete workflow documentation, see [docs/TASKFILE_WORKFLOWS.md](docs/TASKFILE_WORKFLOWS.md).
+For complete workflow documentation, see [support/docs/TASKFILE_WORKFLOWS.md](support/docs/TASKFILE_WORKFLOWS.md).
 
 ### Submit a Task
 
@@ -379,12 +379,12 @@ embeddings:
 
 ## Documentation
 
-- **[📚 Documentation Index](docs/README.md)** - Complete documentation hub with navigation
-- **[🚀 DigitalOcean Deployment](docs/DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
-- **[🏗️ Architecture Overview](docs/ARCHITECTURE.md)** - System design and components
-- **[📡 Agent Endpoints](docs/AGENT_ENDPOINTS.md)** - Complete API reference
-- **[🔒 Secrets Management](docs/SECRETS_MANAGEMENT.md)** - Security and configuration
-- **[📖 Operational Handbook](docs/HANDBOOK.md)** - Development practices and troubleshooting
+- **[📚 Documentation Index](support/docs/README.md)** - Complete documentation hub with navigation
+- **[🚀 DigitalOcean Deployment](support/docs/DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
+- **[🏭️ Architecture Overview](support/docs/ARCHITECTURE.md)** - System design and components
+- **[📡 Agent Endpoints](support/docs/AGENT_ENDPOINTS.md)** - Complete API reference
+- **[🔒 Secrets Management](support/docs/SECRETS_MANAGEMENT.md)** - Security and configuration
+- **[📖 Operational Handbook](support/docs/HANDBOOK.md)** - Development practices and troubleshooting
 
 ## Development
 

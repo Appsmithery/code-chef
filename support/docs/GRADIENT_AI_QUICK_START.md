@@ -196,7 +196,7 @@ embeddings = get_embeddings()  # Uses OpenAI if EMBEDDING_PROVIDER=gradient
 2. **Upgrade to llama3-70b for complex reasoning** (~$0.60/1M tokens)
 3. **Monitor token usage** in Langfuse traces
 4. **Fallback to OpenAI/Claude** for critical tasks requiring latest models
-5. **Test locally** before deploying: `python scripts/test_llm_provider.py`
+5. **Test locally** before deploying: `python support/scripts/test_llm_provider.py`
 
 ## Next Steps
 

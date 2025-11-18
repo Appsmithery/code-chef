@@ -29,7 +29,8 @@ Dev-Tools/
  agents/           # FastAPI agent implementations (orchestrator, feature-dev, code-review, etc.)
  compose/          # Docker Compose orchestration
  config/           # Configuration files (routing rules, MCP mappings, RAG config, secrets)
- containers/       # Dockerfiles for each service
+ agent_*/          # Agent services at repository root
+ shared/           # Shared libraries and services
  context/          # Temporary context files and repo metadata
  docs/             # Documentation
  frontend/         # Web UI for MCP servers and agent monitoring
@@ -85,7 +86,7 @@ agents/
 - **CI/CD Agent:** Pipeline synthesis, workflow execution, policy enforcement
 - **Documentation Agent:** Technical documentation generation and maintenance
 
-**Shared Modules (`agents/_shared/`):**
+**Shared Modules (`shared/lib/`):**
 
 - `mcp_client.py` - Legacy MCP HTTP gateway client (deprecated)
 - `mcp_discovery.py` - Real-time MCP server discovery via Docker MCP Toolkit
@@ -134,7 +135,7 @@ agents/
 - `GET /api/linear-project/:projectId` - Get project roadmap
 - `GET /health` - Gateway health check
 
-**Note:** MCP tool invocation now happens directly via Python SDK (`agents/_shared/mcp_tool_client.py`) using stdio transport, not through HTTP gateway.
+**Note:** MCP tool invocation now happens directly via Python SDK (`shared/lib/mcp_tool_client.py`) using stdio transport, not through HTTP gateway.
 
 ---
 
@@ -212,7 +213,7 @@ Agent (FastAPI)  HTTP  MCP Gateway  [NOT IMPLEMENTED]
 
 **Implementation:**
 
-Agents now use `agents/_shared/mcp_tool_client.py` for direct MCP tool invocation:
+Agents now use `shared/lib/mcp_tool_client.py` for direct MCP tool invocation:
 
 ```python
 from agents._shared.mcp_tool_client import MCPToolClient
@@ -395,8 +396,8 @@ Agent Code
 ### Adding New Agents
 
 1. Create `agents/<agent-name>/main.py` (FastAPI)
-2. Create `containers/<agent-name>/Dockerfile`
-3. Add service to `compose/docker-compose.yml`
+2. Create `agent_<agent-name>/Dockerfile`
+3. Add service to `deploy/docker-compose.yml`
 4. Update `config/routing/task-router.rules.yaml`
 5. Map MCP tools in `config/mcp-agent-tool-mapping.yaml`
 6. Document in `docs/AGENT_ENDPOINTS.md`

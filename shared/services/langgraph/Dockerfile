@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy shared dependencies
-COPY agents/_shared /app/agents/_shared
+COPY shared/lib /app/shared/lib
 
 # Copy agent source code (needed for workflow imports)
 COPY agents/feature-dev/src /app/agents/feature-dev

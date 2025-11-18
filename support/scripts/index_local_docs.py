@@ -80,16 +80,16 @@ def read_markdown_files(base_path: Path) -> List[Dict[str, Any]]:
     # Priority documentation files
     priority_files = [
         "README.md",
-        "docs/ARCHITECTURE.md",
-        "docs/DEPLOYMENT.md",
-        "docs/SETUP_GUIDE.md",
-        "docs/HANDBOOK.md",
-        "docs/MCP_INTEGRATION.md",
-        "docs/TASK_ORCHESTRATION.md",
-        "docs/LANGFUSE_TRACING.md",
-        "docs/PROMETHEUS_METRICS.md",
-        "docs/AGENT_ENDPOINTS.md",
-        "docs/QDRANT_COLLECTIONS.md",
+        "support/docs/ARCHITECTURE.md",
+        "support/docs/DEPLOYMENT.md",
+        "support/docs/SETUP_GUIDE.md",
+        "support/docs/HANDBOOK.md",
+        "support/docs/MCP_INTEGRATION.md",
+        "support/docs/TASK_ORCHESTRATION.md",
+        "support/docs/LANGFUSE_TRACING.md",
+        "support/docs/PROMETHEUS_METRICS.md",
+        "support/docs/AGENT_ENDPOINTS.md",
+        "support/docs/QDRANT_COLLECTIONS.md",
         ".github/copilot-instructions.md"
     ]
     

@@ -26,7 +26,7 @@ The hybrid DOCR + GitHub Actions rollout is now live. All agents deploy by pulli
    - Phase 3: End-to-end workflow tests (orchestrator, feature-dev, code-review, infrastructure, cicd, documentation).
    - Color-coded output with pass/fail summary.
 
-6. **Dev/Prod Isolation** – `compose/docker-compose.override.yml` contains local-only hot-reload mounts and `DEBUG=true` flags. It is only activated via `COMPOSE_FILE="compose/docker-compose.yml:compose/docker-compose.override.yml"` for local development.
+6. **Dev/Prod Isolation** – `deploy/docker-compose.override.yml` contains local-only hot-reload mounts and `DEBUG=true` flags. It is only activated via `COMPOSE_FILE="deploy/docker-compose.yml:deploy/docker-compose.override.yml"` for local development.
 
 ## Rollout Checklist ✅
 
@@ -65,7 +65,7 @@ The hybrid DOCR + GitHub Actions rollout is now live. All agents deploy by pulli
 
 ## recommendation
 
-- **Why DOCR helps**: Every service under docker-compose.yml currently builds locally from `containers/*`. Pushing those artifacts to DigitalOcean Container Registry (DOCR) centralizes images, avoids reprovisioning build tooling on droplets, gives DOKS clusters a fast pull target, and lets CI/CD gate deployments on signed artifacts instead of source. DO’s docs confirm we can authenticate either via `doctl registry login` (issues short-lived credentials) or a Docker `config.json`, and the control panel can fan that secret across every namespace in a DOKS cluster automatically, so runtime pulls become trivial.
+- **Why DOCR helps**: Every service under docker-compose.yml currently builds locally from `agent_*` and `shared/` directories. Pushing those artifacts to DigitalOcean Container Registry (DOCR) centralizes images, avoids reprovisioning build tooling on droplets, gives DOKS clusters a fast pull target, and lets CI/CD gate deployments on signed artifacts instead of source. DO's docs confirm we can authenticate either via `doctl registry login` (issues short-lived credentials) or a Docker `config.json`, and the control panel can fan that secret across every namespace in a DOKS cluster automatically, so runtime pulls bec...
 - **Security & governance**: The `docker-config.json` you attached can be stored as an encrypted secret (GitHub, Actions, or Kubernetes) and lets us create `kubernetes.io/dockerconfigjson` secrets exactly as described in the DO guide. DOCR also supports read/write or read-only password scopes, so we can grant CI the minimum needed.
 - **Deployment velocity**: Once images are in DOCR, GitHub Actions (or another CI) can follow DO’s push-to-deploy tutorial: build image → `doctl registry login --expiry-seconds …` → push → update manifests → `doctl kubernetes cluster kubeconfig save --expiry-seconds …` → `kubectl apply`. That removes manual SSH builds from the path to production and lines up with the “last step before deployment” goal.
 
@@ -75,7 +75,7 @@ Net: yes, adopt DOCR now. It reduces the gap between local Compose and cloud dep
 
 1. **Name images & tags**
 
-   - Pick a consistent naming scheme such as `registry.digitalocean.com/the-shop-infra/<service>:<git-sha>` for every Dockerfile in `containers/*`.
+   - Pick a consistent naming scheme such as `registry.digitalocean.com/the-shop-infra/<service>:<git-sha>` for every Dockerfile in agent and shared directories.
    - Update docker-compose.yml `build` blocks to include `image:` entries that follow this naming convention; Compose will tag them automatically when building.
 
 2. **Bootstrap registry auth for humans**

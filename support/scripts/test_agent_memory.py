@@ -14,7 +14,7 @@ def test_basic_memory():
     """Test basic conversation memory"""
     print("Testing basic conversation memory...")
     
-    from _shared.langchain_memory import create_conversation_memory
+    from shared.lib.langchain_memory import create_conversation_memory
     
     memory = create_conversation_memory()
     
@@ -40,7 +40,7 @@ def test_vector_memory():
     """Test vector store memory with Qdrant"""
     print("\nTesting vector memory (Qdrant Cloud)...")
     
-    from _shared.langchain_memory import create_vector_memory
+    from shared.lib.langchain_memory import create_vector_memory
     
     memory = create_vector_memory(
         collection_name="agent_memory",
@@ -102,7 +102,7 @@ def verify_qdrant_collection():
     """Verify agent_memory collection in Qdrant"""
     print("\nVerifying Qdrant Cloud collection...")
     
-    from _shared.qdrant_client import get_qdrant_client
+    from shared.lib.qdrant_client import get_qdrant_client
     
     client = get_qdrant_client()
     

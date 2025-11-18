@@ -5,7 +5,7 @@
 Node.js service that provides OAuth 2.0 authentication and API access for Linear.
 
 **Note:** This gateway handles **Linear integration only**. MCP tool routing has been
-moved to direct Python MCP SDK access in agents. See `docs/ARCHITECTURE.md` for details.
+moved to direct Python MCP SDK access in agents. See `support/docs/ARCHITECTURE.md` for details.
 
 ## Features
 

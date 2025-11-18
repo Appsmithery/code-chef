@@ -120,7 +120,7 @@ docker image prune -a
 
 ### Resource Limits
 
-Edit `compose/docker-compose.yml` to add limits:
+Edit `deploy/docker-compose.yml` to add limits:
 
 ```yaml
 services:
