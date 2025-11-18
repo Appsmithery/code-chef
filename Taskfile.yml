@@ -5,8 +5,6 @@ version: "3"
 # Requires: task >=3.35, docker, docker compose, ssh, pwsh (Windows)
 #=============================================================================
 
-sh: '{{if eq OS "windows"}}pwsh -NoProfile -Command{{else}}bash -c{{end}}'
-
 env:
   DEPLOY_DIR: deploy
   DROPLET_IP: 45.55.173.72
@@ -60,12 +58,7 @@ tasks:
     dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose up -d
-      - |
-        {{if eq OS "windows"}}
-          Start-Sleep -Seconds 15
-        {{else}}
-          sleep 15
-        {{end}}
+      - '{{if eq OS "windows"}}pwsh -NoProfile -Command "Start-Sleep -Seconds 15"{{else}}sleep 15{{end}}'
       - task: health:local
 
   local:down:
@@ -111,12 +104,7 @@ tasks:
     cmds:
       - docker compose down -v
       - docker system prune --all --volumes --force
-      - |
-        {{if eq OS "windows"}}
-          Write-Host "Cleanup complete" -ForegroundColor Green
-        {{else}}
-          echo "✅ Cleanup complete"
-        {{end}}
+      - '{{if eq OS "windows"}}pwsh -NoProfile -Command "Write-Host ''Cleanup complete'' -ForegroundColor Green"{{else}}echo "✅ Cleanup complete"{{end}}'
 
   #============================================================================
   # HEALTH & VALIDATION
@@ -150,12 +138,7 @@ tasks:
     cmds:
       - echo "Deploying to {{.DROPLET_IP}}..."
       - ssh root@{{.DROPLET_IP}} "cd {{.DROPLET_PATH}} && git pull origin main && cd deploy && docker compose down --remove-orphans && docker builder prune -f && docker compose build && docker compose up -d"
-      - |
-        {{if eq OS "windows"}}
-          Start-Sleep -Seconds 20
-        {{else}}
-          sleep 20
-        {{end}}
+      - '{{if eq OS "windows"}}pwsh -NoProfile -Command "Start-Sleep -Seconds 20"{{else}}sleep 20{{end}}'
       - task: health:remote
 
   deploy:docr:
