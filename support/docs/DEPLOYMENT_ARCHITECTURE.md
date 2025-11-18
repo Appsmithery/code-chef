@@ -96,7 +96,7 @@
 
 **All agents:**
 
-- Use `agents/_shared/gradient_client.py` for LLM inference
+- Use `shared/lib/gradient_client.py` for LLM inference
 - Connect to MCP Gateway at `http://gateway-mcp:8000` (Docker network)
 - Connect to RAG service at `http://rag-context:8007`
 - Connect to State service at `http://state-persistence:8008`
@@ -187,7 +187,7 @@ STATE_SERVICE_URL=http://state-persistence:8008
 
 ### Docker Compose Inheritance
 
-All services in `compose/docker-compose.yml` inherit from `.env` file:
+All services in `deploy/docker-compose.yml` inherit from `.env` file:
 
 ```yaml
 services:
@@ -234,9 +234,9 @@ cd /opt/Dev-Tools
 git pull origin main
 
 # Rebuild and restart services
-docker-compose -f compose/docker-compose.yml down
-docker-compose -f compose/docker-compose.yml build
-docker-compose -f compose/docker-compose.yml up -d
+docker-compose -f deploy/docker-compose.yml down
+docker-compose -f deploy/docker-compose.yml build
+docker-compose -f deploy/docker-compose.yml up -d
 
 # Verify health
 docker-compose ps

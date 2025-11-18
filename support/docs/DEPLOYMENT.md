@@ -136,7 +136,7 @@ done
 
 ### Why it matters
 
-- **Single source of truth** – `compose/docker-compose.yml` now tags every build as `${DOCR_REGISTRY}/<service>:${IMAGE_TAG}` so local, staging, and prod environments all pull the same artifact.
+- **Single source of truth** – `deploy/docker-compose.yml` now tags every build as `${DOCR_REGISTRY}/<service>:${IMAGE_TAG}` so local, staging, and prod environments all pull the same artifact.
 - **Short‑lived auth** – `digitalocean/action-doctl@v2` plus `doctl registry login --expiry-seconds 1200` keeps CI pushes secure while matching [DigitalOcean’s documented flow](https://docs.digitalocean.com/products/container-registry/how-to/use-registry-docker-kubernetes/#docker-integration).
 - **Kubernetes ready** – After [adding the secret to your DOKS cluster](https://docs.digitalocean.com/products/container-registry/how-to/use-registry-docker-kubernetes/#add-secret-control-panel) (or piping `doctl registry kubernetes-manifest | kubectl apply -f -`), workloads can reference DOCR images with no extra YAML changes.
 
@@ -240,7 +240,7 @@ Triggering a push to `main` (or running the workflow manually) will push fresh i
 - Executes `docker system prune --volumes --force` plus targeted log streaming if compose exits non-zero.
 
 3. **Health gates:** After the compose rollout, the script executes `scripts/validate-tracing.sh` and surfaces failing service logs so HITL operators can intervene without hunting SSH sessions.
-4. **Dev/prod isolation:** Keep hot-reload mounts inside `compose/docker-compose.override.yml` and only enable them via `COMPOSE_FILE="compose/docker-compose.yml:compose/docker-compose.override.yml"` during local development.
+4. **Dev/prod isolation:** Keep hot-reload mounts inside `deploy/docker-compose.override.yml` and only enable them via `COMPOSE_FILE="deploy/docker-compose.yml:deploy/docker-compose.override.yml"` during local development.
 5. **Plan for blue/green:** Once DOCR-driven deploys stay green for a week, snapshot the droplet, bring up a `-blue` twin, and flip DNS only after Prometheus + Langfuse checks succeed.
 
 ---
@@ -623,7 +623,7 @@ LINEAR_REDIRECT_URI=http://localhost:8000/oauth/linear/callback
 
 ### Override Configuration
 
-Create `compose/docker-compose.override.yml` for local customizations:
+Create `deploy/docker-compose.override.yml` for local customizations:
 
 ```yaml
 version: "3.8"

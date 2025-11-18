@@ -496,12 +496,12 @@ await store_metric(tool_usage_log)
 **Current Setup:**
 
 ```yaml
-# compose/docker-compose.yml
+# deploy/docker-compose.yml
 services:
   gateway-mcp:
     build:
       context: ..
-      dockerfile: containers/gateway-mcp/Dockerfile
+      dockerfile: shared/gateway/Dockerfile
     ports:
       - "8000:8000"
     environment:

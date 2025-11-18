@@ -152,38 +152,38 @@ All agents should have proper initialization:
 
 ### 4. Shared Libraries
 
-- [ ] **MCP Tool Client** (`agents/_shared/mcp_tool_client.py`) - **NEW**
+- [ ] **MCP Tool Client** (`shared/lib/mcp_tool_client.py`) - **NEW**
 
   - [ ] Direct stdio transport via Docker MCP Toolkit
   - [ ] JSON-RPC 2.0 protocol implementation
   - [ ] Convenience wrappers for memory, filesystem, git operations
   - [ ] Proper error handling and process cleanup
 
-- [ ] **MCP Discovery** (`agents/_shared/mcp_discovery.py`) - **NEW**
+- [ ] **MCP Discovery** (`shared/lib/mcp_discovery.py`) - **NEW**
 
   - [ ] Real-time server discovery via `docker mcp server list --json`
   - [ ] Caching with 5-minute TTL
   - [ ] Agent manifest generation
 
-- [ ] **Linear Client** (`agents/_shared/linear_client.py`) - **NEW**
+- [ ] **Linear Client** (`shared/lib/linear_client.py`) - **NEW**
 
   - [ ] Direct Linear SDK access using `LINEAR_API_KEY`
   - [ ] GraphQL queries for issues, projects, roadmaps
   - [ ] Async/await patterns for non-blocking operations
 
-- [ ] **MCP Client (Legacy)** (`agents/_shared/mcp_client.py`) - **DEPRECATED**
+- [ ] **MCP Client (Legacy)** (`shared/lib/mcp_client.py`) - **DEPRECATED**
 
   - [ ] HTTP-based gateway client (still used by 5 agents pending migration)
   - [ ] Reads `MCP_GATEWAY_URL` from environment
   - [ ] Will be removed after all agents migrate to direct access
 
-- [ ] **Gradient Client** (`agents/_shared/gradient_client.py`)
+- [ ] **Gradient Client** (`shared/lib/gradient_client.py`)
 
   - [ ] Reads `GRADIENT_API_KEY`, `GRADIENT_BASE_URL`, `GRADIENT_MODEL` from environment
   - [ ] Uses `langfuse.openai` wrapper for automatic tracing
   - [ ] Graceful fallback when API key not set (`is_enabled()` check)
 
-- [ ] **Gradient Warmup** (`agents/_shared/gradient_warmup.py`)
+- [ ] **Gradient Warmup** (`shared/lib/gradient_warmup.py`)
   - [ ] Optional background task to prevent cold starts
   - [ ] Pings models every 5 minutes
 
@@ -193,7 +193,7 @@ All agents should have proper initialization:
 
 ### 5. Docker Compose
 
-Verify `compose/docker-compose.yml` configuration:
+Verify `deploy/docker-compose.yml` configuration:
 
 - [ ] **Networks**
 
@@ -239,15 +239,15 @@ Verify `compose/docker-compose.yml` configuration:
 
 Verify all Dockerfiles exist and are correct:
 
-- [ ] `containers/orchestrator/Dockerfile`
-- [ ] `containers/feature-dev/Dockerfile`
-- [ ] `containers/code-review/Dockerfile`
-- [ ] `containers/infrastructure/Dockerfile`
-- [ ] `containers/cicd/Dockerfile`
-- [ ] `containers/documentation/Dockerfile`
-- [ ] `containers/gateway-mcp/Dockerfile`
-- [ ] `containers/rag/Dockerfile`
-- [ ] `containers/state/Dockerfile`
+- [ ] `agent_orchestrator/Dockerfile`
+- [ ] `agent_feature-dev/Dockerfile`
+- [ ] `agent_code-review/Dockerfile`
+- [ ] `agent_infrastructure/Dockerfile`
+- [ ] `agent_cicd/Dockerfile`
+- [ ] `agent_documentation/Dockerfile`
+- [ ] `shared/gateway/Dockerfile`
+- [ ] `shared/services/rag/Dockerfile`
+- [ ] `shared/services/state/Dockerfile`
 
 ---
 
@@ -471,25 +471,25 @@ Once all checks pass:
 5. **Build Containers**
 
    ```bash
-   docker-compose -f compose/docker-compose.yml build
+   docker-compose -f deploy/docker-compose.yml build
    ```
 
 6. **Deploy Stack**
 
    ```bash
-   docker-compose -f compose/docker-compose.yml up -d
+   docker-compose -f deploy/docker-compose.yml up -d
    ```
 
 7. **Verify Health**
 
    ```bash
-   docker-compose -f compose/docker-compose.yml ps
+   docker-compose -f deploy/docker-compose.yml ps
    curl http://localhost:8001/health | jq .
    ```
 
 8. **Monitor Logs**
    ```bash
-   docker-compose -f compose/docker-compose.yml logs -f
+   docker-compose -f deploy/docker-compose.yml logs -f
    ```
 
 ---

@@ -21,7 +21,7 @@ All Dev-Tools agents are instrumented with **Prometheus** for comprehensive syst
 ### 1. Validate Setup
 
 ```powershell
-./scripts/setup-prometheus.ps1
+./support/scripts/setup-prometheus.ps1
 ```
 
 This script verifies:
@@ -34,7 +34,7 @@ This script verifies:
 ### 2. Start Prometheus
 
 ```bash
-docker-compose -f compose/docker-compose.yml up -d prometheus
+docker-compose -f deploy/docker-compose.yml up -d prometheus
 ```
 
 Access Prometheus UI: http://localhost:9090
@@ -43,10 +43,10 @@ Access Prometheus UI: http://localhost:9090
 
 ```bash
 # Rebuild agents with prometheus-fastapi-instrumentator
-docker-compose -f compose/docker-compose.yml build
+docker-compose -f deploy/docker-compose.yml build
 
 # Restart agents
-docker-compose -f compose/docker-compose.yml restart orchestrator feature-dev code-review infrastructure cicd documentation
+docker-compose -f deploy/docker-compose.yml restart orchestrator feature-dev code-review infrastructure cicd documentation
 ```
 
 ### 4. Verify Metrics
@@ -201,7 +201,7 @@ Tool invocations per second through MCP.
 To add Grafana dashboards:
 
 ```yaml
-# compose/docker-compose.yml
+# deploy/docker-compose.yml
 grafana:
   image: grafana/grafana:latest
   ports: ["3001:3000"]
