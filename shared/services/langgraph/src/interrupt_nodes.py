@@ -51,8 +51,8 @@ async def approval_gate(state: Dict[str, Any]) -> Dict[str, Any]:
     # First pass: Create approval request and interrupt
     if approval_request_id is None:
         workflow_id = state.get("workflow_id")
-        thread_id = state.get("thread_id")
-        checkpoint_id = state.get("checkpoint_id")  # Provided by checkpointer
+        wf_thread_id = state.get("wf_thread_id")
+        wf_checkpoint_id = state.get("wf_checkpoint_id")  # Provided by checkpointer
         agent_name = state.get("agent_name", "unknown")
         
         logger.info(
@@ -63,8 +63,8 @@ async def approval_gate(state: Dict[str, Any]) -> Dict[str, Any]:
         # Create approval request (returns None if auto-approved)
         request_id = await hitl_manager.create_approval_request(
             workflow_id=workflow_id,
-            thread_id=thread_id,
-            checkpoint_id=checkpoint_id,
+            thread_id=wf_thread_id,
+            checkpoint_id=wf_checkpoint_id,
             task=pending_operation,
             agent_name=agent_name
         )
@@ -161,8 +161,8 @@ def create_approval_workflow(agent_name: str) -> StateGraph:
     
     class WorkflowState(TypedDict, total=False):
         workflow_id: str
-        thread_id: str
-        checkpoint_id: str
+        wf_thread_id: str
+        wf_checkpoint_id: str
         agent_name: str
         pending_operation: Dict
         approval_request_id: Optional[str]
@@ -230,7 +230,7 @@ async def example_feature_deployment():
     
     initial_state = {
         "workflow_id": "deploy-auth-feature-123",
-        "thread_id": "thread-abc",
+        "wf_thread_id": "thread-abc",
         "agent_name": "feature-dev",
         "pending_operation": {
             "operation": "deploy",
@@ -268,8 +268,8 @@ async def example_database_deletion():
     workflow = create_approval_workflow("infrastructure")
     
     initial_state = {
-        "workflow_id": "delete-db-456",
-        "thread_id": "thread-xyz",
+        "workflow_id": "delete-old-users-db",
+        "wf_thread_id": "thread-xyz",
         "agent_name": "infrastructure",
         "pending_operation": {
             "operation": "delete",

@@ -466,8 +466,8 @@ async def orchestrate_task(request: TaskRequest):
     if risk_assessor.requires_approval(risk_level):
         approval_request_id = await hitl_manager.create_approval_request(
             workflow_id=task_id,
-            thread_id=f"thread-{task_id}",
-            checkpoint_id=f"checkpoint-{task_id}",
+            thread_id=f"wf-thread-{task_id}",
+            checkpoint_id=f"wf-checkpoint-{task_id}",
             task=risk_context,
             agent_name="orchestrator"
         )

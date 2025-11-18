@@ -213,12 +213,14 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=devtools
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_USER=devtools
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
     networks:
       - devtools-network
     depends_on:
       - postgres
+    secrets:
+      - db_password
 
   # PostgreSQL Database
   postgres:
@@ -228,11 +230,14 @@ services:
     environment:
       - POSTGRES_DB=devtools
       - POSTGRES_USER=devtools
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-changeme}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
     networks:
       - devtools-network
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ../config/state:/docker-entrypoint-initdb.d
+    secrets:
+      - db_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devtools -d devtools"]
       interval: 10s
@@ -333,6 +338,8 @@ volumes:
   caddy-config:
 
 secrets:
+  db_password:
+    file: ../config/env/secrets/db_password.txt
   linear_oauth_token:
     file: ../config/env/secrets/linear_oauth_token.txt
   linear_webhook_secret:

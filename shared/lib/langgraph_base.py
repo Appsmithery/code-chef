@@ -9,6 +9,7 @@ from typing import TypedDict, Annotated, Sequence, Any
 from langchain_core.messages import BaseMessage
 import operator
 import os
+from pathlib import Path
 
 
 class BaseAgentState(TypedDict):
@@ -23,13 +24,25 @@ class BaseAgentState(TypedDict):
     metadata: dict[str, Any]
 
 
+def _read_secret(env_var: str, default: str = "") -> str:
+    """Read secret from file if *_FILE env var is set, otherwise read from env var directly"""
+    file_var = f"{env_var}_FILE"
+    if file_path := os.getenv(file_var):
+        try:
+            return Path(file_path).read_text().strip()
+        except Exception as e:
+            print(f"Warning: Could not read secret from {file_path}: {e}")
+            return default
+    return os.getenv(env_var, default)
+
+
 def get_postgres_checkpointer():
     """Get PostgreSQL checkpointer for state persistence"""
     db_host = os.getenv("DB_HOST", "postgres")
     db_port = os.getenv("DB_PORT", "5432")
     db_name = os.getenv("DB_NAME", "devtools")
     db_user = os.getenv("DB_USER", "devtools")
-    db_password = os.getenv("DB_PASSWORD", "changeme")
+    db_password = _read_secret("POSTGRES_PASSWORD", "changeme")
     
     conn_string = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
     
