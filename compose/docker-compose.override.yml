@@ -1,8 +1,0 @@
-# Override file for local development
-# Copy to docker-compose.override.yml and customize as needed
-
-services:
-  orchestrator:
-    environment:
-      - DEBUG=true
-      - LOG_LEVEL=debug
