@@ -22,7 +22,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -67,7 +66,7 @@ logs/
 *.tar
 *.gz
 docker-compose.override.yml
-!compose/docker-compose.override.yml
+!deploy/docker-compose.override.yml
 
 # Backups
 backups/
@@ -76,13 +75,12 @@ backups/
 # Temporary files
 *.tmp
 temp/
-tmp/
 .bin/
-docs/_temp/*
-!docs/_temp/.gitkeep
+support/docs/_temp/*
+!support/docs/_temp/.gitkeep
 
 # Gradient knowledge base exports
-tmp/kb-sync/
+support/scripts/tmp/
 
 # OS files
 Thumbs.db
@@ -94,5 +92,8 @@ package-lock.json
 yarn.lock
 
 # Reports and generated content
-reports/*.json
-!reports/.gitkeep
+support/reports/*.json
+!support/reports/.gitkeep
+
+# Archive directory (deprecated structure)
+_archive/

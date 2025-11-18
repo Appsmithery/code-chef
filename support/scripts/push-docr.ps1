@@ -19,7 +19,7 @@
     Path to the compose env file (default: config/env/.env).
 
 .PARAMETER ComposeFile
-    Path to the compose spec (default: compose/docker-compose.yml).
+    Path to the compose spec (default: deploy/docker-compose.yml).
 
 .PARAMETER Services
     Optional array of service names to scope the build/push.
@@ -41,7 +41,7 @@ param(
     [string]$ImageTag,
     [string]$Registry,
     [string]$EnvFile = "config/env/.env",
-    [string]$ComposeFile = "compose/docker-compose.yml",
+    [string]$ComposeFile = "deploy/docker-compose.yml",
     [string[]]$Services,
     [int]$RegistryLoginTtlSeconds = 1800,
     [switch]$SkipBuild,
@@ -144,7 +144,7 @@ try {
     }
 
     if (-not $doctlCmd) {
-        throw "doctl CLI not found. Run scripts/install-doctl.ps1 or install it manually."
+        throw "doctl CLI not found. Run support/scripts/install-doctl.ps1 or install it manually."
     }
 
     if (-not $SkipDoctlAccountCheck) {

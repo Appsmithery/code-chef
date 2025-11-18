@@ -21,11 +21,11 @@
     Deploy locally with full validation
 
 .EXAMPLE
-    ./scripts/deploy.ps1 -Target remote
+    ./support/scripts/deploy.ps1 -Target remote
     Deploy to DigitalOcean droplet
 
 .EXAMPLE
-    ./scripts/deploy.ps1 -SkipBuild
+    ./support/scripts/deploy.ps1 -SkipBuild
     Deploy locally without rebuilding containers
 #>
 

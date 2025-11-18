@@ -10,7 +10,7 @@ Write-Host "`n[STEP 1] Verifying configuration files..." -ForegroundColor Yellow
 
 $configDir = "config/prometheus"
 $prometheusYml = "$configDir/prometheus.yml"
-$dockerCompose = "compose/docker-compose.yml"
+$dockerCompose = "deploy/docker-compose.yml"
 
 if (Test-Path $prometheusYml) {
     Write-Host "  [OK] Found: $prometheusYml" -ForegroundColor Green
@@ -131,13 +131,13 @@ Write-Host "  * Documentation: http://localhost:8006/metrics" -ForegroundColor W
 
 Write-Host "`n[NEXT STEPS]" -ForegroundColor Yellow
 Write-Host "  1. Build agents with Prometheus support:" -ForegroundColor White
-Write-Host "     docker-compose -f compose/docker-compose.yml build" -ForegroundColor Gray
+Write-Host "     docker-compose -f deploy/docker-compose.yml build" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  2. Start Prometheus:" -ForegroundColor White
-Write-Host "     docker-compose -f compose/docker-compose.yml up -d prometheus" -ForegroundColor Gray
+Write-Host "     docker-compose -f deploy/docker-compose.yml up -d prometheus" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  3. Restart agents to enable metrics:" -ForegroundColor White
-Write-Host "     docker-compose -f compose/docker-compose.yml restart orchestrator feature-dev code-review infrastructure cicd documentation" -ForegroundColor Gray
+Write-Host "     docker-compose -f deploy/docker-compose.yml restart orchestrator feature-dev code-review infrastructure cicd documentation" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  4. Verify targets are being scraped:" -ForegroundColor White
 Write-Host "     Start-Process 'http://localhost:9090/targets'" -ForegroundColor Gray
