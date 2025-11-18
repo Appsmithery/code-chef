@@ -227,11 +227,11 @@ ufw status                    # Verify rules
 - **Error Handling**: Graceful fallback when API keys missing (use `gradient_client.is_enabled()` check before LLM calls).
 - **Shell Scripts**: POSIX-compliant bash, executable permissions, consistent logging format (echo + status lines).
 - **Container Hygiene**: Treat Docker resources as disposable—tear down stray containers, prune layers after failures, and leave compose stacks either fully running or fully stopped.
-- **Documentation**: Update relevant docs in `support/docs/` when changing architecture; maintain `support/docs/README.md` index. Use `support/docs/_temp/` for working files, progress notes, and troubleshooting documents during active development.
+- **Documentation Hygiene**:
+  - **DO NOT create summary/completion markdown files** unless explicitly requested by user
+  - Update existing docs in `support/docs/` when architecture changes
+  - Use inline responses for status updates, not new files
+  - Archive temporary/working files to `_archive/docs-temp/` after completion
+  - Keep `support/docs/_temp/` clean - only active work-in-progress files
 - Pipeline or documentation generators should draw from `templates/pipelines` or `templates/docs`; keep generated artifacts out of version control unless curated.
 - Update MCP behavior alongside any new model integrations by wiring config files into `mcp/gateway` and the `compose` service volume mounts.
-
-## Quality bar
-
-- Prefer typing, Pydantic models, and FastAPI routers consistent with existing requirements files; expose `/health` endpoints for every agent.
-- Keep shell scripts POSIX-compliant (bash) and executable, and respect the existing logging format used by scripts (echo + status lines).
