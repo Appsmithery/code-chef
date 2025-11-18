@@ -1,0 +1,103 @@
+# Approval Policies
+# Defines who can approve what and under what conditions
+
+roles:
+  developer:
+    can_approve:
+      - low
+    can_request: true
+    can_escalate: false
+
+  team_lead:
+    can_approve:
+      - low
+      - medium
+    can_request: true
+    can_escalate: true
+    max_concurrent_approvals: 10
+
+  tech_lead:
+    can_approve:
+      - low
+      - medium
+      - high
+    can_request: true
+    can_escalate: true
+    can_override: true
+    max_concurrent_approvals: 20
+
+  cto:
+    can_approve:
+      - low
+      - medium
+      - high
+      - critical
+    can_request: true
+    can_escalate: true
+    can_override: true
+    can_emergency_approve: true
+    max_concurrent_approvals: 50
+
+  security_team:
+    can_approve:
+      - critical
+    can_request: true
+    can_escalate: true
+    can_override: true
+    required_for_security_operations: true
+
+# Approval requirements by operation type
+operations:
+  production_deployment:
+    min_approvers: 2
+    required_roles:
+      - tech_lead
+    block_if_tests_failing: true
+    block_if_security_issues: true
+
+  infrastructure_change:
+    min_approvers: 1
+    required_roles:
+      - tech_lead
+    require_change_ticket: true
+
+  security_remediation:
+    min_approvers: 1
+    required_roles:
+      - security_team
+    expedited: true
+
+  data_operation:
+    min_approvers: 2
+    required_roles:
+      - tech_lead
+    require_backup_verification: true
+
+# Business hours and on-call
+schedule:
+  business_hours:
+    timezone: America/New_York
+    weekdays:
+      start: "09:00"
+      end: "17:00"
+    weekends: false
+
+  on_call_rotation:
+    enabled: true
+    primary: tech_lead
+    secondary: team_lead
+    escalation_minutes: 30
+
+  after_hours_policy:
+    critical_only: false
+    auto_escalate: true
+    notify_on_call: true
+
+# Audit requirements
+audit:
+  enabled: true
+  log_all_approvals: true
+  log_all_rejections: true
+  log_timeouts: true
+  retention_days: 365
+  export_format: json
