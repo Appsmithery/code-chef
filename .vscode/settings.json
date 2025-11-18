@@ -21,9 +21,21 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.tabSize": 2
   },
+  "yaml.schemas": {
+    "https://taskfile.dev/schema.json": ["Taskfile.yml", "**/Taskfile.yml"]
+  },
   "[json]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.tabSize": 2
   },
-  "docker.showStartPage": false
+  "docker.showStartPage": false,
+  "taskfile.path": "task",
+  "taskfile.updateOn": "save",
+  "taskfile.outputTo": "output",
+  "taskfile.checkForUpdates": true,
+  "taskfile.tree.nesting": true,
+  "taskfile.tree.status": false,
+  "taskfile.tree.sort": "default",
+  "taskfile.terminal.per": "window",
+  "taskfile.terminal.close": "never"
 }
