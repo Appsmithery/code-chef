@@ -3,11 +3,11 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Copy requirements and install dependencies
-COPY services/state/requirements.txt .
+COPY shared/services/state/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY services/state/ /app/
+COPY shared/services/state/ /app/
 COPY config/state/schema.sql /app/schema.sql
 
 # Expose port
