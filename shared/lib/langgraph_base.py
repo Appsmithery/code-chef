@@ -36,16 +36,20 @@ def _read_secret(env_var: str, default: str = "") -> str:
     return os.getenv(env_var, default)
 
 
-def get_postgres_checkpointer():
-    """Get PostgreSQL checkpointer for state persistence"""
+def get_postgres_connection_string():
+    """Get PostgreSQL connection string"""
     db_host = os.getenv("DB_HOST", "postgres")
     db_port = os.getenv("DB_PORT", "5432")
     db_name = os.getenv("DB_NAME", "devtools")
     db_user = os.getenv("DB_USER", "devtools")
     db_password = _read_secret("POSTGRES_PASSWORD", "changeme")
     
-    conn_string = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-    
+    return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+
+def get_postgres_checkpointer():
+    """Get PostgreSQL checkpointer for state persistence"""
+    conn_string = get_postgres_connection_string()
     return PostgresSaver.from_conn_string(conn_string)
 
 
