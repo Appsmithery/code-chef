@@ -13,6 +13,7 @@ services:
       - "8001:8001"
     environment:
       - AGENT_NAME=orchestrator
+      - PORT=8001
       - GRADIENT_MODEL=llama-3.1-70b-instruct
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
