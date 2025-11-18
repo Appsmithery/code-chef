@@ -1,30 +1,39 @@
 param(
-    [switch]$DryRun = $true,
-    [string]$Repository = "alextorelli28/appsmithery"
+    [string]$Repository = "alextorelli28/appsmithery",
+    [bool]$DryRun = $true
 )
 
 $ErrorActionPreference = "Stop"
 
-# Docker Hub credentials
-$username = "alextorelli28"
-$token = $env:DOCKER_HUB_TOKEN  # Set via: $env:DOCKER_HUB_TOKEN = "your-token"
+$username = $Repository.Split('/')[0]
+$repoName = $Repository.Split('/')[1]
+$token = $env:DOCKER_HUB_TOKEN
 
 if (-not $token) {
     Write-Error "DOCKER_HUB_TOKEN environment variable not set"
     exit 1
 }
 
-# Authenticate
+# Authenticate with Personal Access Token
+Write-Host "Authenticating with Docker Hub..." -ForegroundColor Cyan
+
+# Step 1: Get bearer token using PAT
 $authBody = @{
     username = $username
     password = $token
 } | ConvertTo-Json
 
-$authResponse = Invoke-RestMethod -Uri "https://hub.docker.com/v2/users/login" -Method POST -Body $authBody -ContentType "application/json"
-$jwtToken = $authResponse.token
+try {
+    $authResponse = Invoke-RestMethod -Uri "https://hub.docker.com/v2/users/login" -Method POST -Body $authBody -ContentType "application/json"
+    $bearerToken = $authResponse.token
+}
+catch {
+    Write-Error "Authentication failed: $($_.Exception.Message)"
+    exit 1
+}
 
 $headers = @{
-    Authorization = "Bearer $jwtToken"
+    Authorization = "Bearer $bearerToken"
 }
 
 # Tags to keep (production v2.2.0)
@@ -49,30 +58,31 @@ $deletePatterns = @(
     "sha256:*"
 )
 
-Write-Host "🔍 Fetching all tags from $Repository..." -ForegroundColor Cyan
-
-# Get all tags (paginated)
+# Fetch all tags
+Write-Host "Fetching tags for $Repository..." -ForegroundColor Cyan
 $allTags = @()
-$nextUrl = "https://hub.docker.com/v2/repositories/$Repository/tags?page_size=100"
+$page = 1
+$pageSize = 100
 
-while ($nextUrl) {
-    $response = Invoke-RestMethod -Uri $nextUrl -Headers $headers -Method GET
+do {
+    $url = "https://hub.docker.com/v2/repositories/$Repository/tags?page=$page&page_size=$pageSize"
+    $response = Invoke-RestMethod -Uri $url -Method GET -Headers $headers
     $allTags += $response.results
-    $nextUrl = $response.next
-}
+    $page++
+} while ($response.next)
 
-Write-Host "📊 Found $($allTags.Count) total tags" -ForegroundColor Yellow
+Write-Host "Found $($allTags.Count) total tags" -ForegroundColor Green
 
 # Filter tags to delete
 $tagsToDelete = $allTags | Where-Object {
     $tag = $_.name
     
-    # Keep if in keepTags list
+    # Keep protected tags
     if ($keepTags -contains $tag) {
         return $false
     }
     
-    # Delete if matches any delete pattern
+    # Check if matches any delete pattern
     foreach ($pattern in $deletePatterns) {
         if ($tag -like $pattern) {
             return $true
@@ -82,31 +92,21 @@ $tagsToDelete = $allTags | Where-Object {
     return $false
 }
 
-Write-Host "🗑️  Tags to delete: $($tagsToDelete.Count)" -ForegroundColor Red
-
-# Show what will be deleted
-$tagsToDelete | ForEach-Object {
-    $size = if ($_.full_size) { [math]::Round($_.full_size / 1MB, 1) } else { "?" }
-    Write-Host "  - $($_.name) ($size MB)" -ForegroundColor DarkGray
-}
-
-if ($tagsToDelete.Count -eq 0) {
-    Write-Host "✅ No tags to delete" -ForegroundColor Green
-    exit 0
-}
+Write-Host "Found $($tagsToDelete.Count) tags to delete:" -ForegroundColor Yellow
+$tagsToDelete | ForEach-Object { Write-Host "  - $($_.name)" -ForegroundColor Gray }
 
 if ($DryRun) {
-    Write-Host "`n⚠️  DRY RUN MODE - No tags will be deleted" -ForegroundColor Yellow
-    Write-Host "Run with -DryRun:`$false to actually delete" -ForegroundColor Yellow
+    Write-Host "`n[DRY RUN] No changes made" -ForegroundColor Cyan
+    Write-Host "Run with -DryRun `$false to actually delete" -ForegroundColor Yellow
     exit 0
 }
 
 # Confirm deletion
-Write-Host "`n⚠️  WARNING: About to delete $($tagsToDelete.Count) tags!" -ForegroundColor Red
-$confirm = Read-Host "Type 'DELETE' to confirm"
+Write-Host "`nWARNING: About to delete $($tagsToDelete.Count) tags!" -ForegroundColor Red
+$confirm = Read-Host "Type DELETE to confirm"
 
 if ($confirm -ne "DELETE") {
-    Write-Host "❌ Aborted" -ForegroundColor Yellow
+    Write-Host "Aborted" -ForegroundColor Yellow
     exit 0
 }
 
@@ -115,20 +115,21 @@ $deleted = 0
 $failed = 0
 
 foreach ($tag in $tagsToDelete) {
+    $tagName = $tag.name
+    $url = "https://hub.docker.com/v2/repositories/$Repository/tags/$tagName"
+    
     try {
-        $deleteUrl = "https://hub.docker.com/v2/repositories/$Repository/tags/$($tag.name)"
-        Invoke-RestMethod -Uri $deleteUrl -Headers $headers -Method DELETE | Out-Null
-        Write-Host "✅ Deleted: $($tag.name)" -ForegroundColor Green
+        Invoke-RestMethod -Uri $url -Method DELETE -Headers $headers | Out-Null
+        Write-Host "Deleted: $tagName" -ForegroundColor Green
         $deleted++
-    } catch {
-        Write-Host "❌ Failed: $($tag.name) - $($_.Exception.Message)" -ForegroundColor Red
+    }
+    catch {
+        Write-Host "Failed: $tagName - $($_.Exception.Message)" -ForegroundColor Red
         $failed++
     }
-    
-    Start-Sleep -Milliseconds 100  # Rate limiting
 }
 
-Write-Host "`n📊 Summary:" -ForegroundColor Cyan
-Write-Host "  ✅ Deleted: $deleted tags" -ForegroundColor Green
-Write-Host "  ❌ Failed: $failed tags" -ForegroundColor Red
-Write-Host "  📦 Kept: $($allTags.Count - $tagsToDelete.Count) tags" -ForegroundColor Yellow
+Write-Host "`nSummary:" -ForegroundColor Cyan
+Write-Host "  Deleted: $deleted" -ForegroundColor Green
+Write-Host "  Failed: $failed" -ForegroundColor Red
+Write-Host "  Kept: $($keepTags.Count)" -ForegroundColor Yellow
