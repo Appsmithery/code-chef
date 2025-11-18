@@ -2,11 +2,11 @@ FROM node:18-slim
 
 WORKDIR /app
 
-COPY gateway/src/package*.json ./
+COPY shared/gateway/src/package*.json ./
 RUN npm install --omit=dev
 
-COPY gateway/src/ ./
-COPY gateway/servers/ ./servers/
+COPY shared/gateway/src/ ./
+COPY shared/mcp/servers/ ./servers/
 
 ENV NODE_ENV=production
 
