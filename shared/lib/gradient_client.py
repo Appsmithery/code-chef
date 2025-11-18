@@ -1,8 +1,12 @@
 """
 DigitalOcean Gradient AI Serverless Inference Client
 
-Uses official Gradient SDK for serverless model inference with automatic Langfuse tracing.
+Uses official Gradient SDK for serverless model inference with automatic LangSmith tracing.
 https://gradient-sdk.digitalocean.com/getting-started/serverless-inference
+
+LangSmith Tracing:
+    Set LANGCHAIN_TRACING_V2=true for automatic tracing (no code changes needed)
+    Configure via LANGCHAIN_API_KEY and LANGCHAIN_PROJECT environment variables
 """
 
 import os
@@ -16,12 +20,8 @@ logger = logging.getLogger(__name__)
 GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY")
 GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama-3.1-8b-instruct")
 
-# Langfuse Configuration
-LANGFUSE_ENABLED = all([
-    os.getenv("LANGFUSE_SECRET_KEY"),
-    os.getenv("LANGFUSE_PUBLIC_KEY"),
-    os.getenv("LANGFUSE_HOST")
-])
+# LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true
+# No manual configuration needed
 
 # Validate configuration
 GRADIENT_ENABLED = bool(GRADIENT_MODEL_ACCESS_KEY)
@@ -29,18 +29,19 @@ GRADIENT_ENABLED = bool(GRADIENT_MODEL_ACCESS_KEY)
 
 class GradientClient:
     """
-    Gradient AI Serverless Inference client with automatic Langfuse tracing.
+    Gradient AI Serverless Inference client with automatic LangSmith tracing.
     
     Uses the official Gradient SDK (not OpenAI SDK) for serverless model inference.
-    Langfuse tracing is automatically enabled when environment variables are set.
+    LangSmith tracing is automatically enabled when LANGCHAIN_TRACING_V2=true.
     
     Authentication:
         - GRADIENT_MODEL_ACCESS_KEY: For serverless inference (sk-do-* format)
     
-    Langfuse Tracing (automatic when configured):
-        - LANGFUSE_SECRET_KEY
-        - LANGFUSE_PUBLIC_KEY
-        - LANGFUSE_HOST
+    LangSmith Tracing (automatic when configured):
+        - LANGCHAIN_TRACING_V2=true
+        - LANGCHAIN_API_KEY: Get from https://smith.langchain.com
+        - LANGCHAIN_PROJECT: Project name for organizing traces
+        - LANGCHAIN_ENDPOINT: https://api.smith.langchain.com (default)
     """
     
     def __init__(
@@ -61,21 +62,8 @@ class GradientClient:
         self.model = model or GRADIENT_MODEL
         self.model_access_key = model_access_key or GRADIENT_MODEL_ACCESS_KEY
         
-        # Initialize Langfuse callback handler if configured
-        self.langfuse_handler = None
-        if LANGFUSE_ENABLED:
-            try:
-                from langfuse.callback import CallbackHandler
-                self.langfuse_handler = CallbackHandler(
-                    secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-                    public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-                    host=os.getenv("LANGFUSE_HOST")
-                )
-                logger.info(f"[{agent_name}] Langfuse callback handler initialized")
-            except ImportError:
-                logger.warning(f"[{agent_name}] Langfuse package not installed, tracing disabled")
-            except Exception as e:
-                logger.error(f"[{agent_name}] Failed to initialize Langfuse handler: {e}")
+        # LangSmith tracing is automatic via environment variables
+        # No callback handlers needed when LANGCHAIN_TRACING_V2=true
 
         if not self.model_access_key:
             logger.warning(f"[{agent_name}] GRADIENT_MODEL_ACCESS_KEY not set, LLM calls will fail")
@@ -94,10 +82,12 @@ class GradientClient:
                 logger.info(f"[{agent_name}] Model: {self.model}")
                 logger.info(f"[{agent_name}] Model access key: {self.model_access_key[:20]}...")
 
-                if self.langfuse_handler:
-                    logger.info(f"[{agent_name}] Langfuse tracing ENABLED (host: {os.getenv('LANGFUSE_HOST')})")
+                langsmith_enabled = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+                if langsmith_enabled:
+                    project = os.getenv("LANGCHAIN_PROJECT", "default")
+                    logger.info(f"[{agent_name}] LangSmith tracing ENABLED (project: {project})")
                 else:
-                    logger.info(f"[{agent_name}] Langfuse tracing DISABLED (env vars not set)")
+                    logger.info(f"[{agent_name}] LangSmith tracing DISABLED (set LANGCHAIN_TRACING_V2=true to enable)")
 
             except ImportError:
                 logger.error(f"[{agent_name}] Gradient SDK not installed. Run: pip install gradient")
@@ -117,7 +107,7 @@ class GradientClient:
         """
         Generate completion using Gradient serverless inference.
         
-        Langfuse tracing is automatic if environment variables are configured.
+        LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true.
         
         Args:
             prompt: User prompt
