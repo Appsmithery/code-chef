@@ -12,7 +12,7 @@ import logging
 import psycopg
 
 from .risk_assessor import get_risk_assessor, RiskLevel
-from .checkpoint_connection import get_checkpoint_connection
+from .checkpoint_connection import get_async_connection
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +58,8 @@ class HITLManager:
         self.db_connection = None
     
     async def _get_connection(self):
-        """Get or create database connection"""
-        if self.db_connection is None:
-            self.db_connection = get_checkpoint_connection()
-        return self.db_connection
+        """Get async database connection context manager"""
+        return get_async_connection()
     
     async def create_approval_request(
         self,
@@ -96,9 +94,8 @@ class HITLManager:
         timeout_minutes = self.risk_assessor.get_timeout_minutes(risk_level)
         expires_at = datetime.utcnow() + timedelta(minutes=timeout_minutes)
         
-        conn = await self._get_connection()
-        
-        async with conn.cursor() as cursor:
+        async with (await self._get_connection()) as conn:
+            async with conn.cursor() as cursor:
             await cursor.execute(
                 """
                 INSERT INTO approval_requests (
@@ -159,15 +156,14 @@ class HITLManager:
                 - approved_at: Timestamp of approval
                 - expired: Boolean indicating if request expired
         """
-        conn = await self._get_connection()
-        
-        async with conn.cursor() as cursor:
-            await cursor.execute(
-                """
-                SELECT status, approver_id, approved_at, rejected_at,
-                       rejection_reason, expires_at
-                FROM approval_requests
-                WHERE id = %s
+        async with (await self._get_connection()) as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    """
+                    SELECT status, approver_id, approved_at, rejected_at,
+                           rejection_reason, expires_at
+                    FROM approval_requests
+                    WHERE id = %s
                 """,
                 (request_id,)
             )
@@ -214,14 +210,13 @@ class HITLManager:
             True if approval succeeded, False if unauthorized or expired
         """
         # Get request details
-        conn = await self._get_connection()
-        
-        async with conn.cursor() as cursor:
-            await cursor.execute(
-                "SELECT risk_level, status, expires_at FROM approval_requests WHERE id = %s",
-                (request_id,)
-            )
-            row = await cursor.fetchone()
+        async with (await self._get_connection()) as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "SELECT risk_level, status, expires_at FROM approval_requests WHERE id = %s",
+                    (request_id,)
+                )
+                row = await cursor.fetchone()
         
         if not row:
             raise ValueError(f"Approval request {request_id} not found")
@@ -284,15 +279,14 @@ class HITLManager:
         Returns:
             True if rejection succeeded
         """
-        conn = await self._get_connection()
-        
-        async with conn.cursor() as cursor:
-            await cursor.execute(
-                """
-                UPDATE approval_requests
-                SET status = 'rejected',
-                    approver_id = %s,
-                    rejected_at = NOW(),
+        async with (await self._get_connection()) as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    """
+                    UPDATE approval_requests
+                    SET status = 'rejected',
+                        approver_id = %s,
+                        rejected_at = NOW(),
                     rejection_reason = %s,
                     updated_at = NOW()
                 WHERE id = %s AND status = 'pending'
@@ -319,15 +313,14 @@ class HITLManager:
         Returns:
             List of approval request dicts
         """
-        conn = await self._get_connection()
-        
-        query = """
-            SELECT id, workflow_id, task_type, task_description,
-                   agent_name, risk_level, action_type, action_impact,
-                   created_at, expires_at
-            FROM approval_requests
-            WHERE status = 'pending' AND expires_at > NOW()
-            ORDER BY created_at DESC
+        async with (await self._get_connection()) as conn:
+            query = """
+                SELECT id, workflow_id, task_type, task_description,
+                       agent_name, risk_level, action_type, action_impact,
+                       created_at, expires_at
+                FROM approval_requests
+                WHERE status = 'pending' AND expires_at > NOW()
+                ORDER BY created_at DESC
             LIMIT %s
         """
         
@@ -385,13 +378,13 @@ class HITLManager:
     
     async def _mark_expired(self, request_id: str):
         """Mark request as expired"""
-        conn = await self._get_connection()
-        async with conn.cursor() as cursor:
-            await cursor.execute(
-                "UPDATE approval_requests SET status = 'expired', updated_at = NOW() WHERE id = %s",
-                (request_id,)
-            )
-            await conn.commit()
+        async with (await self._get_connection()) as conn:
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    "UPDATE approval_requests SET status = 'expired', updated_at = NOW() WHERE id = %s",
+                    (request_id,)
+                )
+                await conn.commit()
     
     async def _send_notifications(self, request_id: str, risk_level: RiskLevel, task: Dict):
         """Send notifications about approval request (placeholder)"""
