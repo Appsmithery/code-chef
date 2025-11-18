@@ -12,18 +12,18 @@ RUN apt-get update && apt-get install -y \
 COPY shared/lib /app/shared/lib
 
 # Copy agent source code (needed for workflow imports)
-COPY agents/feature-dev/src /app/agents/feature-dev
-COPY agents/code-review/src /app/agents/code-review
-COPY agents/infrastructure/src /app/agents/infrastructure
-COPY agents/cicd/src /app/agents/cicd
-COPY agents/documentation/src /app/agents/documentation
-COPY agents/orchestrator/src /app/agents/orchestrator
+COPY agent_feature-dev /app/agents/feature-dev
+COPY agent_code-review /app/agents/code-review
+COPY agent_infrastructure /app/agents/infrastructure
+COPY agent_cicd /app/agents/cicd
+COPY agent_documentation /app/agents/documentation
+COPY agent_orchestrator /app/agents/orchestrator
 
 # Copy LangGraph service
-COPY services/langgraph /app/services/langgraph
+COPY shared/services/langgraph /app/services/langgraph
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r services/langgraph/requirements.txt
+RUN pip install --no-cache-dir -r /app/services/langgraph/requirements.txt
 
 # Install shared dependencies (Gradient, MCP, etc.)
 RUN pip install --no-cache-dir \
