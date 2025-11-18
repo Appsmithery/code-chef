@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 import yaml
 import os
 import logging
+import json
 import psycopg
 
 from .risk_assessor import get_risk_assessor, RiskLevel
