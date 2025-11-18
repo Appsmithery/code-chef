@@ -112,6 +112,7 @@ The following paths are **DEPRECATED** and exist only in `_archive/` for referen
 ### SSH Access from VS Code
 
 **VS Code Remote SSH Extension:**
+
 1. Install "Remote - SSH" extension (`ms-vscode-remote.remote-ssh`)
 2. Press `F1` → "Remote-SSH: Connect to Host"
 3. Enter: `root@45.55.173.72` or use alias `do-mcp-gateway`
@@ -120,6 +121,7 @@ The following paths are **DEPRECATED** and exist only in `_archive/` for referen
 6. Edit files in place, debug services, and monitor logs in real-time
 
 **SSH Config Setup** (`C:\Users\<USER>\.ssh\config` on Windows, `~/.ssh/config` on Linux/Mac):
+
 ```
 Host do-mcp-gateway
     HostName 45.55.173.72
@@ -130,6 +132,7 @@ Host do-mcp-gateway
 ```
 
 **Quick Remote Commands:**
+
 ```powershell
 # SSH directly from terminal
 ssh root@45.55.173.72
@@ -151,6 +154,7 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose restart orches
 ```
 
 **Firewall Configuration (UFW):**
+
 ```bash
 ssh root@45.55.173.72
 ufw allow 22/tcp              # SSH (CRITICAL)
