@@ -96,40 +96,40 @@ class HITLManager:
         
         async with (await self._get_connection()) as conn:
             async with conn.cursor() as cursor:
-            await cursor.execute(
-                """
-                INSERT INTO approval_requests (
-                    id, workflow_id, thread_id, checkpoint_id,
-                    task_type, task_description,
-                    agent_name, risk_level, risk_score, risk_factors,
-                    action_type, action_details, action_impact,
-                    status, expires_at, created_at
-                ) VALUES (
-                    %s, %s, %s, %s,
-                    %s, %s,
-                    %s, %s, %s, %s,
-                    %s, %s, %s,
-                    'pending', %s, NOW()
+                await cursor.execute(
+                    """
+                    INSERT INTO approval_requests (
+                        id, workflow_id, thread_id, checkpoint_id,
+                        task_type, task_description,
+                        agent_name, risk_level, risk_score, risk_factors,
+                        action_type, action_details, action_impact,
+                        status, expires_at, created_at
+                    ) VALUES (
+                        %s, %s, %s, %s,
+                        %s, %s,
+                        %s, %s, %s, %s,
+                        %s, %s, %s,
+                        'pending', %s, NOW()
+                    )
+                    """,
+                    (
+                        request_id,
+                        workflow_id,
+                        thread_id,
+                        checkpoint_id,
+                        task.get("operation", "unknown"),
+                        task.get("description", ""),
+                        agent_name,
+                        risk_level,
+                        self._calculate_risk_score(task, risk_level),
+                        task.get("risk_factors", {}),
+                        task.get("operation", ""),
+                        task.get("details", {}),
+                        task.get("impact", ""),
+                        expires_at
+                    )
                 )
-                """,
-                (
-                    request_id,
-                    workflow_id,
-                    thread_id,
-                    checkpoint_id,
-                    task.get("operation", "unknown"),
-                    task.get("description", ""),
-                    agent_name,
-                    risk_level,
-                    self._calculate_risk_score(task, risk_level),
-                    task.get("risk_factors", {}),
-                    task.get("operation", ""),
-                    task.get("details", {}),
-                    task.get("impact", ""),
-                    expires_at
-                )
-            )
-            await conn.commit()
+                await conn.commit()
         
         logger.info(
             f"[HITLManager] Created approval request {request_id} "
@@ -217,47 +217,47 @@ class HITLManager:
                     (request_id,)
                 )
                 row = await cursor.fetchone()
-        
-        if not row:
-            raise ValueError(f"Approval request {request_id} not found")
-        
-        risk_level, status, expires_at = row
-        
-        # Check expiration
-        if datetime.utcnow() > expires_at:
-            await self._mark_expired(request_id)
-            logger.warning(f"[HITLManager] Request {request_id} expired")
-            return False
-        
-        # Check authorization
-        if not self._can_approve(approver_role, risk_level):
-            logger.warning(
-                f"[HITLManager] User {approver_id} (role={approver_role}) "
-                f"cannot approve risk level {risk_level}"
-            )
-            return False
-        
-        # Check justification requirement
-        if self.risk_assessor.requires_justification(risk_level) and not justification:
-            logger.warning(f"[HITLManager] Justification required for risk level {risk_level}")
-            return False
-        
-        # Update request
-        async with conn.cursor() as cursor:
-            await cursor.execute(
-                """
-                UPDATE approval_requests
-                SET status = 'approved',
-                    approver_id = %s,
-                    approver_role = %s,
-                    approved_at = NOW(),
-                    approval_justification = %s,
-                    updated_at = NOW()
-                WHERE id = %s AND status = 'pending'
-                """,
-                (approver_id, approver_role, justification, request_id)
-            )
-            await conn.commit()
+            
+            if not row:
+                raise ValueError(f"Approval request {request_id} not found")
+            
+            risk_level, status, expires_at = row
+            
+            # Check expiration
+            if datetime.utcnow() > expires_at:
+                await self._mark_expired(request_id)
+                logger.warning(f"[HITLManager] Request {request_id} expired")
+                return False
+            
+            # Check authorization
+            if not self._can_approve(approver_role, risk_level):
+                logger.warning(
+                    f"[HITLManager] User {approver_id} (role={approver_role}) "
+                    f"cannot approve risk level {risk_level}"
+                )
+                return False
+            
+            # Check justification requirement
+            if self.risk_assessor.requires_justification(risk_level) and not justification:
+                logger.warning(f"[HITLManager] Justification required for risk level {risk_level}")
+                return False
+            
+            # Update request
+            async with conn.cursor() as cursor:
+                await cursor.execute(
+                    """
+                    UPDATE approval_requests
+                    SET status = 'approved',
+                        approver_id = %s,
+                        approver_role = %s,
+                        approved_at = NOW(),
+                        approval_justification = %s,
+                        updated_at = NOW()
+                    WHERE id = %s AND status = 'pending'
+                    """,
+                    (approver_id, approver_role, justification, request_id)
+                )
+                await conn.commit()
         
         logger.info(f"[HITLManager] Request {request_id} approved by {approver_id}")
         return True
@@ -321,12 +321,12 @@ class HITLManager:
                 FROM approval_requests
                 WHERE status = 'pending' AND expires_at > NOW()
                 ORDER BY created_at DESC
-            LIMIT %s
-        """
-        
-        async with conn.cursor() as cursor:
-            await cursor.execute(query, (limit,))
-            rows = await cursor.fetchall()
+                LIMIT %s
+            """
+            
+            async with conn.cursor() as cursor:
+                await cursor.execute(query, (limit,))
+                rows = await cursor.fetchall()
         
         results = []
         for row in rows:
