@@ -33,6 +33,11 @@ from lib.langgraph_base import (
 )
 from lib.qdrant_client import get_qdrant_client
 from lib.langchain_memory import HybridMemory
+from lib.progressive_mcp_loader import (
+    get_progressive_loader,
+    ToolLoadingStrategy,
+    ProgressiveMCPLoader
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -67,6 +72,9 @@ linear_client = get_linear_client()
 
 # MCP tool client for direct tool invocation (replaces HTTP gateway calls)
 mcp_tool_client = get_mcp_tool_client("orchestrator")
+
+# Progressive MCP loader for token-optimized tool disclosure
+progressive_loader = get_progressive_loader(mcp_client, mcp_discovery)
 
 # LangGraph infrastructure
 try:
@@ -277,17 +285,41 @@ async def health_check():
 @app.post("/orchestrate", response_model=TaskResponse)
 async def orchestrate_task(request: TaskRequest):
     """
-    Main orchestration endpoint with tool-aware routing
+    Main orchestration endpoint with progressive tool disclosure
     - Analyzes request and decomposes into subtasks
+    - Progressively loads only relevant MCP tools (10-30 vs 150+)
     - Validates tool availability before routing
     - Routes to appropriate specialized agents
     - Returns routing plan with minimal context pointers
     
-    Token Optimization: Processes only task metadata (< 500 tokens per routing decision)
+    Token Optimization: Only loads relevant tools per task (80-90% token reduction)
     """
     import uuid
     
     task_id = str(uuid.uuid4())
+
+    # Progressive tool loading: Get minimal tools based on task description
+    relevant_toolsets = progressive_loader.get_tools_for_task(
+        task_description=request.description,
+        strategy=ToolLoadingStrategy.MINIMAL
+    )
+    
+    # Log token savings
+    stats = progressive_loader.get_tool_usage_stats(relevant_toolsets)
+    logger.info(f"[Orchestrator] Progressive loading stats: {stats}")
+    await mcp_tool_client.create_memory_entity(
+        name=f"tool_loading_stats_{task_id}",
+        entity_type="orchestrator_metrics",
+        observations=[
+            f"Task: {task_id}",
+            f"Loaded tools: {stats['loaded_tools']} / {stats['total_tools']}",
+            f"Token savings: {stats['savings_percent']}%",
+            f"Estimated tokens saved: {stats['estimated_tokens_saved']}"
+        ]
+    )
+    
+    # Format tools for LLM context
+    available_tools_context = progressive_loader.format_tools_for_llm(relevant_toolsets)
 
     guardrail_report = await guardrail_orchestrator.run(
         "orchestrator",
@@ -310,19 +342,34 @@ async def orchestrate_task(request: TaskRequest):
     # Analyze required tools for this task
     required_tools = get_required_tools_for_task(request.description)
     
-    # Decompose request into subtasks (use LLM if available, else rule-based)
+    # Decompose request into subtasks with tool context (use LLM if available, else rule-based)
     if gradient_client.is_enabled():
-        subtasks = await decompose_with_llm(request, task_id)
+        subtasks = await decompose_with_llm(
+            request,
+            task_id,
+            available_tools=available_tools_context
+        )
     else:
         subtasks = decompose_request(request)
     
-    # Validate tool availability for each subtask
+    # Validate tool availability for each subtask with progressive loading
     validation_results = {}
     for subtask in subtasks:
+        # Load tools for assigned agent progressively
+        agent_toolsets = progressive_loader.get_tools_for_task(
+            task_description=subtask.description,
+            assigned_agent=subtask.agent_type.value,
+            strategy=ToolLoadingStrategy.PROGRESSIVE
+        )
+        
         # Determine required tools for this specific subtask
         subtask_required_tools = get_required_tools_for_task(subtask.description)
         availability = await check_agent_tool_availability(subtask.agent_type, subtask_required_tools)
-        validation_results[subtask.id] = availability
+        validation_results[subtask.id] = {
+            **availability,
+            "loaded_toolsets": len(agent_toolsets),
+            "tools_context": progressive_loader.format_tools_for_llm(agent_toolsets)
+        }
         
         # Log warning if tools are missing (but don't block - fallback available)
         if not availability["available"]:
@@ -853,10 +900,79 @@ def estimate_duration(subtasks: List[SubTask]) -> int:
     return len(subtasks) * 5
 
 
-async def decompose_with_llm(request: TaskRequest, task_id: str) -> List[SubTask]:
+@app.post("/config/tool-loading")
+async def configure_tool_loading(request: Dict[str, Any]):
+    """
+    Configure progressive tool loading strategy at runtime.
+    
+    Request:
+        {
+            "strategy": "minimal" | "agent_profile" | "progressive" | "full",
+            "reason": "debugging" | "cost_optimization" | "high_complexity_task"
+        }
+    """
+    strategy_name = request.get("strategy", "progressive")
+    reason = request.get("reason", "runtime_config")
+    
+    try:
+        strategy = ToolLoadingStrategy(strategy_name)
+        progressive_loader.default_strategy = strategy
+        
+        await mcp_tool_client.create_memory_entity(
+            name=f"tool_loading_config_change_{datetime.utcnow().isoformat()}",
+            entity_type="orchestrator_config",
+            observations=[
+                f"Strategy changed to: {strategy_name}",
+                f"Reason: {reason}",
+                f"Timestamp: {datetime.utcnow().isoformat()}"
+            ]
+        )
+        
+        return {
+            "success": True,
+            "current_strategy": strategy_name,
+            "reason": reason
+        }
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid strategy: {strategy_name}. Valid values: minimal, agent_profile, progressive, full"
+        )
+
+
+@app.get("/config/tool-loading/stats")
+async def get_tool_loading_stats():
+    """
+    Get statistics about current tool loading configuration.
+    """
+    # Get current strategy tools
+    sample_toolsets = progressive_loader.get_tools_for_task(
+        task_description="sample task",
+        strategy=progressive_loader.default_strategy
+    )
+    
+    stats = progressive_loader.get_tool_usage_stats(sample_toolsets)
+    
+    return {
+        "current_strategy": progressive_loader.default_strategy.value,
+        "stats": stats,
+        "recommendation": (
+            "Consider using 'minimal' or 'progressive' for cost optimization"
+            if stats["savings_percent"] < 50
+            else "Current strategy is well-optimized"
+        )
+    }
+
+
+async def decompose_with_llm(
+    request: TaskRequest,
+    task_id: str,
+    available_tools: Optional[str] = None
+) -> List[SubTask]:
     """
     Decompose task using Gradient AI with Langfuse tracing.
     Provides intelligent task breakdown with dependency analysis.
+    Includes progressive tool context for tool-aware decomposition.
     """
     import uuid
     import json
@@ -886,7 +1002,10 @@ Return JSON with this structure:
 Project Context: {json.dumps(request.project_context) if request.project_context else "General project"}
 Priority: {request.priority}
 
-Break this down into subtasks. Consider dependencies and execution order."""
+{available_tools if available_tools else ""}
+
+Break this down into subtasks. Consider dependencies and execution order.
+IMPORTANT: Only suggest using tools that are listed in the "Available MCP Tools" section above."""
     
     try:
         logger.info(f"[Orchestrator] Attempting LLM-powered decomposition for task {task_id}")
