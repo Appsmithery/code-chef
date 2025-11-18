@@ -202,7 +202,7 @@ function Test-ManifestValidation {
 function Test-DockerComposeConfig {
     Write-TestHeader -TestName "Docker Compose Configuration" -TestNumber 4
     
-    $composePath = "compose/docker-compose.yml"
+    $composePath = "deploy/docker-compose.yml"
     
     if (-not (Test-Path $composePath)) {
         Write-Failure "Docker Compose file not found at: $composePath"

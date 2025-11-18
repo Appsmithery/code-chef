@@ -67,10 +67,10 @@ cp config/env/.env.template config/env/.env
 # Edit .env with your settings
 
 # Make scripts executable (Linux/Mac)
-chmod +x scripts/*.sh
+chmod +x support/scripts/*.sh
 
 # Start services
-cd compose
+cd deploy
 docker-compose up -d
 
 # Verify services
@@ -80,8 +80,8 @@ docker-compose ps
 **Windows PowerShell:**
 
 ```powershell
-# Navigate to compose directory
-cd compose
+# Navigate to deploy directory
+cd deploy
 
 # Start all services
 docker-compose up -d
@@ -150,13 +150,13 @@ Dev-Tools (MCP Toolkit Integration - Direct Stdio Transport)
 │   ├── CI/CD (8005) - Pipeline automation
 │   └── Documentation (8006) - Doc generation
 ├── MCP Integration
-│   ├── Direct Stdio Access (agents/_shared/mcp_tool_client.py)
+│   ├── Direct Stdio Access (shared/lib/mcp_tool_client.py)
 │   ├── Docker MCP Toolkit (150+ tools, 17 servers)
 │   └── Linear Gateway (8000) - OAuth only (Node.js)
 ├── Supporting Services
 │   ├── RAG Context (8007) - Qdrant vector search
 │   └── State Persistence (8008) - PostgreSQL workflow state
-├── Shared Modules (agents/_shared/)
+├── Shared Modules (shared/lib/)
 │   ├── mcp_tool_client.py - Direct MCP tool invocation
 │   ├── mcp_discovery.py - Real-time server discovery
 │   ├── linear_client.py - Direct Linear SDK access
@@ -406,11 +406,12 @@ make down
 
 ### Adding New Agents
 
-1. Create agent directory: `agents/new-agent/`
-2. Add Dockerfile: `containers/new-agent/Dockerfile`
-3. Update `compose/docker-compose.yml`
+1. Create agent directory: `agent_<name>/` at repository root
+2. Add main.py, Dockerfile, requirements.txt, README.md
+3. Update `deploy/docker-compose.yml` with service definition
 4. Add routing rules: `config/routing/task-router.rules.yaml`
-5. Document endpoints: `docs/AGENT_ENDPOINTS.md`
+5. Document endpoints: `support/docs/AGENT_ENDPOINTS.md`
+6. Update tool access: `config/mcp-agent-tool-mapping.yaml`
 
 ## Contributing
 

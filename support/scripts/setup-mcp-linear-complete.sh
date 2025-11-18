@@ -30,9 +30,9 @@ echo -e "\n4. Listing MCP servers..."
 docker mcp list 2>/dev/null || echo "No MCP servers or command not available"
 
 echo -e "\n5. Rebuilding orchestrator with new environment..."
-docker compose -f compose/docker-compose.yml stop orchestrator
-docker compose -f compose/docker-compose.yml rm -f orchestrator
-docker compose -f compose/docker-compose.yml up -d orchestrator
+docker compose -f deploy/docker-compose.yml stop orchestrator
+docker compose -f deploy/docker-compose.yml rm -f orchestrator
+docker compose -f deploy/docker-compose.yml up -d orchestrator
 
 echo -e "\n6. Waiting for orchestrator to start..."
 sleep 10

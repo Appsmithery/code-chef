@@ -1,0 +1,647 @@
+﻿{
+    "profiles":  [
+                     {
+                         "mcp_tools":  {
+                                           "recommended":  [
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "create_entities",
+                                                                                 "create_relations",
+                                                                                 "read_graph",
+                                                                                 "search_nodes"
+                                                                             ],
+                                                                   "server":  "memory",
+                                                                   "rationale":  "Maintain task graph, agent relationships, and workflow state in knowledge graph format"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "search_docs",
+                                                                                 "list_docs"
+                                                                             ],
+                                                                   "server":  "context7",
+                                                                   "rationale":  "Retrieve orchestration patterns, agent capabilities, and routing rules from documentation corpus"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "create_page",
+                                                                                 "update_page",
+                                                                                 "search_pages",
+                                                                                 "query_database",
+                                                                                 "create_database_item"
+                                                                             ],
+                                                                   "server":  "notion",
+                                                                   "rationale":  "Maintain global task board, SLA tracking, and stakeholder visibility dashboards"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "get_current_time",
+                                                                                 "convert_timezone"
+                                                                             ],
+                                                                   "server":  "time",
+                                                                   "rationale":  "Timestamp events, schedule follow-ups, and track SLA deadlines across timezones"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "send_email",
+                                                                                 "search_emails",
+                                                                                 "get_email"
+                                                                             ],
+                                                                   "server":  "gmail-mcp",
+                                                                   "rationale":  "Notify stakeholders, escalate blocked tasks, and handle email-triggered workflows"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "think_step"
+                                                                             ],
+                                                                   "server":  "sequentialthinking",
+                                                                   "rationale":  "Break down complex, ambiguous requests into structured subtask plans using step-by-step reasoning"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "query_metrics",
+                                                                                 "list_metrics",
+                                                                                 "get_alerts"
+                                                                             ],
+                                                                   "server":  "prometheus",
+                                                                   "rationale":  "Monitor agent health, track orchestration latency, and aggregate system-wide observability (when available)"
+                                                               }
+                                                           ],
+                                           "shared":  [
+                                                          "memory",
+                                                          "time",
+                                                          "rust-mcp-filesystem",
+                                                          "context7",
+                                                          "notion",
+                                                          "fetch"
+                                                      ]
+                                       },
+                         "capabilities":  [
+                                              "task_decomposition",
+                                              "agent_routing",
+                                              "workflow_coordination",
+                                              "sla_tracking",
+                                              "stakeholder_notification"
+                                          ],
+                         "name":  "orchestrator",
+                         "mission":  "Coordinates task routing, agent hand-offs, workflow state, and global observability",
+                         "status":  "active",
+                         "health_check":  "http://orchestrator:8001/health",
+                         "display_name":  "Orchestrator",
+                         "endpoint":  "http://orchestrator:8001"
+                     },
+                     {
+                         "mcp_tools":  {
+                                           "recommended":  [
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "list_directory",
+                                                                                 "read_file",
+                                                                                 "write_file",
+                                                                                 "create_directory",
+                                                                                 "move_file",
+                                                                                 "search_files",
+                                                                                 "get_file_info"
+                                                                             ],
+                                                                   "server":  "rust-mcp-filesystem",
+                                                                   "rationale":  "Navigate repository structure, read existing code, write new modules, and organize artifacts"
+                                                               },
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "create_branch",
+                                                                                 "commit_changes",
+                                                                                 "create_pull_request",
+                                                                                 "get_diff",
+                                                                                 "get_file_contents"
+                                                                             ],
+                                                                   "server":  "gitmcp",
+                                                                   "rationale":  "Create feature branches, commit code, and open PRs for review"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "search_docs",
+                                                                                 "list_docs"
+                                                                             ],
+                                                                   "server":  "context7",
+                                                                   "rationale":  "Retrieve coding standards, architecture patterns, and API documentation"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "generate_code",
+                                                                                 "code_completion",
+                                                                                 "explain_code"
+                                                                             ],
+                                                                   "server":  "hugging-face",
+                                                                   "rationale":  "LLM-powered code synthesis, completion suggestions, and explanation generation"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "analyze_build",
+                                                                                 "get_routes",
+                                                                                 "check_performance",
+                                                                                 "inspect_cache"
+                                                                             ],
+                                                                   "server":  "next-devtools-mcp",
+                                                                   "rationale":  "Analyze Next.js projects for build optimization and routing structure"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "navigate",
+                                                                                 "screenshot",
+                                                                                 "click",
+                                                                                 "fill",
+                                                                                 "evaluate"
+                                                                             ],
+                                                                   "server":  "playwright",
+                                                                   "rationale":  "Generate E2E tests, capture UI states, and validate feature behavior"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "get_page",
+                                                                                 "search_pages",
+                                                                                 "append_blocks"
+                                                                             ],
+                                                                   "server":  "notion",
+                                                                   "rationale":  "Retrieve feature specs, acceptance criteria, and append implementation notes"
+                                                               },
+                                                               {
+                                                                   "priority":  "low",
+                                                                   "tools":  [
+                                                                                 "ask",
+                                                                                 "search_recent"
+                                                                             ],
+                                                                   "server":  "perplexity-ask",
+                                                                   "rationale":  "Research external APIs, frameworks, or best practices for feature implementation"
+                                                               }
+                                                           ],
+                                           "shared":  [
+                                                          "memory",
+                                                          "time",
+                                                          "rust-mcp-filesystem",
+                                                          "context7",
+                                                          "notion",
+                                                          "fetch"
+                                                      ]
+                                       },
+                         "capabilities":  [
+                                              "code_generation",
+                                              "scaffolding",
+                                              "test_creation",
+                                              "git_operations",
+                                              "branch_management"
+                                          ],
+                         "name":  "feature-dev",
+                         "mission":  "Implements features through code generation, scaffolding, and test creation",
+                         "status":  "active",
+                         "health_check":  "http://feature-dev:8002/health",
+                         "display_name":  "Feature Dev",
+                         "endpoint":  "http://feature-dev:8002"
+                     },
+                     {
+                         "mcp_tools":  {
+                                           "recommended":  [
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "get_diff",
+                                                                                 "get_file_contents",
+                                                                                 "get_commit_history",
+                                                                                 "get_pull_request"
+                                                                             ],
+                                                                   "server":  "gitmcp",
+                                                                   "rationale":  "Retrieve diffs, file contents, and PR context for comprehensive review"
+                                                               },
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "read_file",
+                                                                                 "search_files",
+                                                                                 "get_file_info"
+                                                                             ],
+                                                                   "server":  "rust-mcp-filesystem",
+                                                                   "rationale":  "Read source files, search for patterns, and analyze file structure"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "analyze_code",
+                                                                                 "detect_bugs",
+                                                                                 "suggest_improvements"
+                                                                             ],
+                                                                   "server":  "hugging-face",
+                                                                   "rationale":  "AI-powered code analysis, bug detection, and refactoring suggestions"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "search_docs"
+                                                                             ],
+                                                                   "server":  "context7",
+                                                                   "rationale":  "Reference coding standards, security policies, and best practice guidelines"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "evaluate",
+                                                                                 "console_messages"
+                                                                             ],
+                                                                   "server":  "playwright",
+                                                                   "rationale":  "Execute code in browser context to detect runtime issues"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "create_page",
+                                                                                 "append_blocks",
+                                                                                 "add_comment"
+                                                                             ],
+                                                                   "server":  "notion",
+                                                                   "rationale":  "Document review findings, create issue tickets, and add review comments"
+                                                               },
+                                                               {
+                                                                   "priority":  "low",
+                                                                   "tools":  [
+                                                                                 "send_email"
+                                                                             ],
+                                                                   "server":  "gmail-mcp",
+                                                                   "rationale":  "Notify developers of critical findings or review completion"
+                                                               }
+                                                           ],
+                                           "shared":  [
+                                                          "memory",
+                                                          "time",
+                                                          "rust-mcp-filesystem",
+                                                          "context7",
+                                                          "notion",
+                                                          "fetch"
+                                                      ]
+                                       },
+                         "capabilities":  [
+                                              "quality_analysis",
+                                              "security_scanning",
+                                              "standards_enforcement",
+                                              "diff_analysis",
+                                              "actionable_feedback"
+                                          ],
+                         "name":  "code-review",
+                         "mission":  "Analyzes code quality, security, style, and maintainability",
+                         "status":  "active",
+                         "health_check":  "http://code-review:8003/health",
+                         "display_name":  "Code Review",
+                         "endpoint":  "http://code-review:8003"
+                     },
+                     {
+                         "mcp_tools":  {
+                                           "recommended":  [
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "search_images",
+                                                                                 "get_image_details",
+                                                                                 "list_tags",
+                                                                                 "pull_image",
+                                                                                 "run_container",
+                                                                                 "list_containers",
+                                                                                 "stop_container",
+                                                                                 "inspect_container",
+                                                                                 "get_container_logs"
+                                                                             ],
+                                                                   "server":  "dockerhub",
+                                                                   "rationale":  "Discover, pull, and manage container images; orchestrate containerized infrastructure"
+                                                               },
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "read_file",
+                                                                                 "write_file",
+                                                                                 "create_directory",
+                                                                                 "list_directory",
+                                                                                 "directory_tree"
+                                                                             ],
+                                                                   "server":  "rust-mcp-filesystem",
+                                                                   "rationale":  "Generate IaC files (Terraform, Compose), read configs, and manage deployment artifacts"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "create_branch",
+                                                                                 "commit_changes",
+                                                                                 "create_pull_request"
+                                                                             ],
+                                                                   "server":  "gitmcp",
+                                                                   "rationale":  "Version control infrastructure code and trigger GitOps workflows"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "create_page",
+                                                                                 "query_database",
+                                                                                 "update_page"
+                                                                             ],
+                                                                   "server":  "notion",
+                                                                   "rationale":  "Maintain infrastructure documentation, runbooks, and deployment logs"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "send_email"
+                                                                             ],
+                                                                   "server":  "gmail-mcp",
+                                                                   "rationale":  "Send deployment notifications and alert on infrastructure failures"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "query_metrics",
+                                                                                 "get_alerts"
+                                                                             ],
+                                                                   "server":  "prometheus",
+                                                                   "rationale":  "Monitor infrastructure health, resource utilization, and drift detection"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "search_docs"
+                                                                             ],
+                                                                   "server":  "context7",
+                                                                   "rationale":  "Reference infrastructure patterns, security baselines, and compliance requirements"
+                                                               },
+                                                               {
+                                                                   "priority":  "low",
+                                                                   "tools":  [
+                                                                                 "geocode_address",
+                                                                                 "reverse_geocode"
+                                                                             ],
+                                                                   "server":  "google-maps-comprehensive",
+                                                                   "rationale":  "Resolve datacenter locations and region metadata for multi-region deployments"
+                                                               }
+                                                           ],
+                                           "shared":  [
+                                                          "memory",
+                                                          "time",
+                                                          "rust-mcp-filesystem",
+                                                          "context7",
+                                                          "notion",
+                                                          "fetch"
+                                                      ]
+                                       },
+                         "capabilities":  [
+                                              "iac_authoring",
+                                              "deployment_automation",
+                                              "container_management",
+                                              "drift_detection",
+                                              "compliance_validation"
+                                          ],
+                         "name":  "infrastructure",
+                         "mission":  "Manages IaC, deployments, environment configuration, and resource provisioning",
+                         "status":  "active",
+                         "health_check":  "http://infrastructure:8004/health",
+                         "display_name":  "Infrastructure",
+                         "endpoint":  "http://infrastructure:8004"
+                     },
+                     {
+                         "mcp_tools":  {
+                                           "recommended":  [
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "create_pull_request",
+                                                                                 "get_commit_history",
+                                                                                 "get_diff",
+                                                                                 "create_branch"
+                                                                             ],
+                                                                   "server":  "gitmcp",
+                                                                   "rationale":  "Trigger pipeline runs on commits, PRs, and branch events"
+                                                               },
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "read_file",
+                                                                                 "write_file",
+                                                                                 "list_directory"
+                                                                             ],
+                                                                   "server":  "rust-mcp-filesystem",
+                                                                   "rationale":  "Generate CI/CD pipeline files (GitHub Actions, GitLab CI, etc.) and read build configs"
+                                                               },
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "pull_image",
+                                                                                 "run_container",
+                                                                                 "list_containers",
+                                                                                 "get_container_logs",
+                                                                                 "stop_container"
+                                                                             ],
+                                                                   "server":  "dockerhub",
+                                                                   "rationale":  "Execute builds in isolated containers, run tests, and manage build artifacts"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "navigate",
+                                                                                 "screenshot",
+                                                                                 "evaluate",
+                                                                                 "get_text",
+                                                                                 "pdf"
+                                                                             ],
+                                                                   "server":  "playwright",
+                                                                   "rationale":  "Run E2E tests, capture test artifacts, and generate visual regression reports"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "create_page",
+                                                                                 "query_database",
+                                                                                 "append_blocks"
+                                                                             ],
+                                                                   "server":  "notion",
+                                                                   "rationale":  "Log build history, track flaky tests, and maintain CI/CD documentation"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "send_email"
+                                                                             ],
+                                                                   "server":  "gmail-mcp",
+                                                                   "rationale":  "Notify teams of build failures, successful deployments, or test regressions"
+                                                               },
+                                                               {
+                                                                   "priority":  "low",
+                                                                   "tools":  [
+                                                                                 "list_customers",
+                                                                                 "get_payment_intent"
+                                                                             ],
+                                                                   "server":  "stripe",
+                                                                   "rationale":  "Run payment integration tests in CI pipelines (for payment-related features)"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "query_metrics"
+                                                                             ],
+                                                                   "server":  "prometheus",
+                                                                   "rationale":  "Monitor pipeline performance, build times, and resource utilization"
+                                                               }
+                                                           ],
+                                           "shared":  [
+                                                          "memory",
+                                                          "time",
+                                                          "rust-mcp-filesystem",
+                                                          "context7",
+                                                          "notion",
+                                                          "fetch"
+                                                      ]
+                                       },
+                         "capabilities":  [
+                                              "pipeline_generation",
+                                              "workflow_execution",
+                                              "test_automation",
+                                              "artifact_management",
+                                              "deployment_orchestration"
+                                          ],
+                         "name":  "cicd",
+                         "mission":  "Generates pipelines, orchestrates builds/tests, and manages deployment automation",
+                         "status":  "active",
+                         "health_check":  "http://cicd:8005/health",
+                         "display_name":  "Cicd",
+                         "endpoint":  "http://cicd:8005"
+                     },
+                     {
+                         "mcp_tools":  {
+                                           "recommended":  [
+                                                               {
+                                                                   "priority":  "critical",
+                                                                   "tools":  [
+                                                                                 "read_file",
+                                                                                 "write_file",
+                                                                                 "search_files",
+                                                                                 "list_directory",
+                                                                                 "directory_tree"
+                                                                             ],
+                                                                   "server":  "rust-mcp-filesystem",
+                                                                   "rationale":  "Read source code for docstring extraction, write README/docs files, and organize documentation"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "get_file_contents",
+                                                                                 "get_commit_history",
+                                                                                 "create_pull_request"
+                                                                             ],
+                                                                   "server":  "gitmcp",
+                                                                   "rationale":  "Track code changes, generate changelogs, and submit documentation updates"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "search_docs",
+                                                                                 "list_docs"
+                                                                             ],
+                                                                   "server":  "context7",
+                                                                   "rationale":  "Reference existing documentation, maintain consistency, and find gaps"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "create_page",
+                                                                                 "append_blocks",
+                                                                                 "search_pages",
+                                                                                 "update_page",
+                                                                                 "export_page"
+                                                                             ],
+                                                                   "server":  "notion",
+                                                                   "rationale":  "Publish documentation to Notion, maintain wiki pages, and export to multiple formats"
+                                                               },
+                                                               {
+                                                                   "priority":  "high",
+                                                                   "tools":  [
+                                                                                 "explain_code",
+                                                                                 "generate_docstrings",
+                                                                                 "summarize_text"
+                                                                             ],
+                                                                   "server":  "hugging-face",
+                                                                   "rationale":  "Generate docstrings, explain complex code, and summarize long documents"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "screenshot",
+                                                                                 "pdf"
+                                                                             ],
+                                                                   "server":  "playwright",
+                                                                   "rationale":  "Capture UI screenshots for documentation and generate PDF manuals"
+                                                               },
+                                                               {
+                                                                   "priority":  "medium",
+                                                                   "tools":  [
+                                                                                 "get_routes",
+                                                                                 "analyze_build"
+                                                                             ],
+                                                                   "server":  "next-devtools-mcp",
+                                                                   "rationale":  "Document Next.js route structure and API endpoints"
+                                                               },
+                                                               {
+                                                                   "priority":  "low",
+                                                                   "tools":  [
+                                                                                 "ask",
+                                                                                 "search_recent"
+                                                                             ],
+                                                                   "server":  "perplexity-ask",
+                                                                   "rationale":  "Research industry standards, best practices, and external documentation patterns"
+                                                               },
+                                                               {
+                                                                   "priority":  "low",
+                                                                   "tools":  [
+                                                                                 "get_transcript",
+                                                                                 "search_videos"
+                                                                             ],
+                                                                   "server":  "youtube_transcript",
+                                                                   "rationale":  "Extract transcripts from tutorial videos to generate written guides"
+                                                               }
+                                                           ],
+                                           "shared":  [
+                                                          "memory",
+                                                          "time",
+                                                          "rust-mcp-filesystem",
+                                                          "context7",
+                                                          "notion",
+                                                          "fetch"
+                                                      ]
+                                       },
+                         "capabilities":  [
+                                              "doc_generation",
+                                              "api_documentation",
+                                              "diagram_synthesis",
+                                              "wiki_management",
+                                              "changelog_generation"
+                                          ],
+                         "name":  "documentation",
+                         "mission":  "Generates, maintains, and audits technical documentation, diagrams, and knowledge bases",
+                         "status":  "active",
+                         "health_check":  "http://documentation:8006/health",
+                         "display_name":  "Documentation",
+                         "endpoint":  "http://documentation:8006"
+                     }
+                 ],
+    "generatedAt":  "2025-11-15T04:45:09.0575498-05:00",
+    "version":  "2.0.0",
+    "discovery_summary":  {
+                              "total_tools":  150,
+                              "total_servers":  18,
+                              "discovery_timestamp":  "2025-11-13T22:40:00Z",
+                              "discovery_method":  "Docker MCP Toolkit CLI"
+                          }
+}

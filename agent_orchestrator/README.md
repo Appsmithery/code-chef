@@ -22,7 +22,7 @@ The orchestrator leverages the **Model Context Protocol (MCP)** through a centra
 
 **Shared Tool Servers:** `time`, `fetch`, additional filesystem/context tools
 
-The orchestrator uses the **MCPClient** from `agents._shared.mcp_client` to invoke tools, log telemetry, and validate agent capabilities before routing subtasks. Tool allocations are pre-loaded from `agents/agents-manifest.json` for zero-latency routing decisions.
+The orchestrator uses the **MCPClient** from `lib.mcp_client` to invoke tools, log telemetry, and validate agent capabilities before routing subtasks. Tool allocations are pre-loaded from `shared/lib/agents-manifest.json` for zero-latency routing decisions.
 
 ## Core Responsibilities
 

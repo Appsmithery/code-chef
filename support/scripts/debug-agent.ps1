@@ -21,7 +21,7 @@
     Number of log lines to retrieve (default: 100)
 
 .PARAMETER ComposeFile
-    Path to docker-compose.yml (default: compose/docker-compose.yml)
+    Path to docker-compose.yml (default: deploy/docker-compose.yml)
 
 .EXAMPLE
     .\scripts\debug-agent.ps1 -Agent orchestrator
@@ -47,7 +47,7 @@ param(
     
     [switch]$Remote,
     [int]$Lines = 100,
-    [string]$ComposeFile = "compose/docker-compose.yml"
+    [string]$ComposeFile = "deploy/docker-compose.yml"
 )
 
 $ErrorActionPreference = "Stop"

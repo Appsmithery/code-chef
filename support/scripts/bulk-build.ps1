@@ -1,6 +1,6 @@
 param(
     [string]$EnvFile = "config/env/.env",
-    [string]$ComposeFile = "compose/docker-compose.yml",
+    [string]$ComposeFile = "deploy/docker-compose.yml",
     [string]$Profiles = "agents,infra,rag",
     [string]$Registry = "",
     [string]$ImageTag = "",

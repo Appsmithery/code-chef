@@ -20,7 +20,7 @@ if (-not $env:GRADIENT_API_KEY) {
     Write-Host "  3. Copy the API key (format: do-api-XXXXXXXX)" -ForegroundColor White
     Write-Host "`nThen run:" -ForegroundColor Yellow
     Write-Host "  `$env:GRADIENT_API_KEY='do-api-XXXXXXXX'" -ForegroundColor Gray
-    Write-Host "  ./scripts/setup-gradient.ps1" -ForegroundColor Gray
+    Write-Host "  ./support/scripts/setup-gradient.ps1" -ForegroundColor Gray
     exit 1
 }
 
@@ -91,7 +91,7 @@ foreach ($agent in $agentModels.Keys) {
 
 Write-Host "`n[STEP 4] Updating docker-compose.yml..." -ForegroundColor Yellow
 
-$composeFile = "compose/docker-compose.yml"
+$composeFile = "deploy/docker-compose.yml"
 
 if (-not (Test-Path $composeFile)) {
     Write-Host "  [ERROR] $composeFile not found" -ForegroundColor Red
@@ -141,7 +141,7 @@ if (-not $allAgentsExist) {
 
 Write-Host "`n[STEP 6] Creating Gradient warmup module..." -ForegroundColor Yellow
 
-$warmupFile = "agents/_shared/gradient_warmup.py"
+$warmupFile = "shared/lib/gradient_warmup.py"
 $warmupContent = @"
 """
 Gradient AI Platform Warmup Module
@@ -250,7 +250,7 @@ foreach ($agent in $agentModels.Keys) {
 
 Write-Host "`n[FILES UPDATED]" -ForegroundColor Cyan
 Write-Host "  [OK] config/env/.env" -ForegroundColor Green
-Write-Host "  [OK] agents/_shared/gradient_warmup.py" -ForegroundColor Green
+Write-Host "  [OK] shared/lib/gradient_warmup.py" -ForegroundColor Green
 Write-Host "  [INFO] agents/*/main.py (manual update required)" -ForegroundColor Yellow
 
 Write-Host "`n[NEXT STEPS]" -ForegroundColor Yellow
