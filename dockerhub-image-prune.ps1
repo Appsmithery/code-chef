@@ -1,39 +1,17 @@
 param(
     [string]$Repository = "alextorelli28/appsmithery",
-    [bool]$DryRun = $true
+    [switch]$DryRun = $true
 )
 
 $ErrorActionPreference = "Stop"
 
-$username = $Repository.Split('/')[0]
-$repoName = $Repository.Split('/')[1]
-$token = $env:DOCKER_HUB_TOKEN
+# Authenticate Docker CLI with PAT
+Write-Host "🔐 Authenticating Docker CLI..." -ForegroundColor Cyan
+$env:DOCKER_HUB_TOKEN | docker login -u alextorelli28 --password-stdin
 
-if (-not $token) {
-    Write-Error "DOCKER_HUB_TOKEN environment variable not set"
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Docker login failed"
     exit 1
-}
-
-# Authenticate with Personal Access Token
-Write-Host "Authenticating with Docker Hub..." -ForegroundColor Cyan
-
-# Step 1: Get bearer token using PAT
-$authBody = @{
-    username = $username
-    password = $token
-} | ConvertTo-Json
-
-try {
-    $authResponse = Invoke-RestMethod -Uri "https://hub.docker.com/v2/users/login" -Method POST -Body $authBody -ContentType "application/json"
-    $bearerToken = $authResponse.token
-}
-catch {
-    Write-Error "Authentication failed: $($_.Exception.Message)"
-    exit 1
-}
-
-$headers = @{
-    Authorization = "Bearer $bearerToken"
 }
 
 # Tags to keep (production v2.2.0)
@@ -54,35 +32,44 @@ $keepTags = @(
 $deletePatterns = @(
     "*-v2.1.0-*",
     "*-latest",
-    "*-progressive-mcp",
-    "sha256:*"
+    "*-progressive-mcp"
 )
 
-# Fetch all tags
-Write-Host "Fetching tags for $Repository..." -ForegroundColor Cyan
+Write-Host "🔍 Fetching tags from Docker Hub..." -ForegroundColor Cyan
+
+# Use Docker Hub API v2 (doesn't require JWT, uses Basic Auth with PAT)
+$base64Auth = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("alextorelli28:$env:DOCKER_HUB_TOKEN"))
+$headers = @{
+    Authorization = "Basic $base64Auth"
+}
+
 $allTags = @()
-$page = 1
-$pageSize = 100
+$nextUrl = "https://hub.docker.com/v2/repositories/$Repository/tags?page_size=100"
 
-do {
-    $url = "https://hub.docker.com/v2/repositories/$Repository/tags?page=$page&page_size=$pageSize"
-    $response = Invoke-RestMethod -Uri $url -Method GET -Headers $headers
-    $allTags += $response.results
-    $page++
-} while ($response.next)
+while ($nextUrl) {
+    try {
+        $response = Invoke-RestMethod -Uri $nextUrl -Headers $headers -Method GET
+        $allTags += $response.results
+        $nextUrl = $response.next
+    }
+    catch {
+        Write-Error "Failed to fetch tags: $($_.Exception.Message)"
+        exit 1
+    }
+}
 
-Write-Host "Found $($allTags.Count) total tags" -ForegroundColor Green
+Write-Host "📊 Found $($allTags.Count) total tags" -ForegroundColor Yellow
 
 # Filter tags to delete
 $tagsToDelete = $allTags | Where-Object {
     $tag = $_.name
     
-    # Keep protected tags
+    # Skip if in keep list
     if ($keepTags -contains $tag) {
         return $false
     }
     
-    # Check if matches any delete pattern
+    # Delete if matches pattern
     foreach ($pattern in $deletePatterns) {
         if ($tag -like $pattern) {
             return $true
@@ -92,44 +79,64 @@ $tagsToDelete = $allTags | Where-Object {
     return $false
 }
 
-Write-Host "Found $($tagsToDelete.Count) tags to delete:" -ForegroundColor Yellow
-$tagsToDelete | ForEach-Object { Write-Host "  - $($_.name)" -ForegroundColor Gray }
+Write-Host "🗑️  Found $($tagsToDelete.Count) tags to delete:" -ForegroundColor Red
+$tagsToDelete | ForEach-Object {
+    $size = if ($_.full_size) { [math]::Round($_.full_size / 1MB, 1) } else { "?" }
+    Write-Host "  - $($_.name) ($size MB)" -ForegroundColor DarkGray
+}
+
+if ($tagsToDelete.Count -eq 0) {
+    Write-Host "✅ No tags to delete" -ForegroundColor Green
+    docker logout
+    exit 0
+}
 
 if ($DryRun) {
-    Write-Host "`n[DRY RUN] No changes made" -ForegroundColor Cyan
-    Write-Host "Run with -DryRun `$false to actually delete" -ForegroundColor Yellow
+    Write-Host "`n⚠️  DRY RUN MODE - No deletions performed" -ForegroundColor Yellow
+    Write-Host "Run with -DryRun:`$false to actually delete" -ForegroundColor Cyan
+    docker logout
     exit 0
 }
 
 # Confirm deletion
-Write-Host "`nWARNING: About to delete $($tagsToDelete.Count) tags!" -ForegroundColor Red
-$confirm = Read-Host "Type DELETE to confirm"
+Write-Host "`n⚠️  WARNING: About to delete $($tagsToDelete.Count) tags from $Repository!" -ForegroundColor Red
+Write-Host "This action cannot be undone." -ForegroundColor Yellow
+$confirm = Read-Host "Type 'DELETE' to confirm"
 
 if ($confirm -ne "DELETE") {
-    Write-Host "Aborted" -ForegroundColor Yellow
+    Write-Host "❌ Aborted" -ForegroundColor Yellow
+    docker logout
     exit 0
 }
 
-# Delete tags
+# Delete tags using Docker Hub API v2
+Write-Host "`n🗑️  Deleting tags..." -ForegroundColor Cyan
 $deleted = 0
 $failed = 0
 
 foreach ($tag in $tagsToDelete) {
     $tagName = $tag.name
-    $url = "https://hub.docker.com/v2/repositories/$Repository/tags/$tagName"
+    $deleteUrl = "https://hub.docker.com/v2/repositories/$Repository/tags/$tagName"
     
     try {
-        Invoke-RestMethod -Uri $url -Method DELETE -Headers $headers | Out-Null
-        Write-Host "Deleted: $tagName" -ForegroundColor Green
+        Invoke-RestMethod -Uri $deleteUrl -Headers $headers -Method DELETE | Out-Null
+        Write-Host "✅ Deleted: $tagName" -ForegroundColor Green
         $deleted++
+        Start-Sleep -Milliseconds 200  # Rate limiting
     }
     catch {
-        Write-Host "Failed: $tagName - $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host "❌ Failed: $tagName - $($_.Exception.Message)" -ForegroundColor Red
         $failed++
     }
 }
 
-Write-Host "`nSummary:" -ForegroundColor Cyan
-Write-Host "  Deleted: $deleted" -ForegroundColor Green
-Write-Host "  Failed: $failed" -ForegroundColor Red
-Write-Host "  Kept: $($keepTags.Count)" -ForegroundColor Yellow
+docker logout
+
+Write-Host "`n📊 Summary:" -ForegroundColor Cyan
+Write-Host "  ✅ Deleted: $deleted tags" -ForegroundColor Green
+Write-Host "  ❌ Failed: $failed tags" -ForegroundColor Red
+Write-Host "  📦 Kept: $($allTags.Count - $deleted) tags" -ForegroundColor Yellow
+
+if ($deleted -gt 0) {
+    Write-Host "`n💡 Tip: Untagged image layers will be garbage collected by Docker Hub within 24 hours" -ForegroundColor Cyan
+}
