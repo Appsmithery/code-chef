@@ -40,12 +40,13 @@ The orchestrator uses the **MCPClient** from `lib.mcp_client` to invoke tools, l
 
 ## API Surface
 
-| Method | Path                 | Purpose                                                        | Primary Request Fields                                            | Success Response Snapshot                                                        |
-| ------ | -------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `POST` | `/orchestrate`       | Submit a new high-level task and trigger decomposition         | `task_id`, `title`, `description`, `priority`, `metadata.context` | `{ "task_id": "...", "status": "planned", "subtasks": [...] }`                   |
-| `POST` | `/execute/{task_id}` | Begin or resume execution of a planned workflow                | `execution_mode` (`auto`/`manual`), optional checkpoints          | `{ "task_id": "...", "status": "running" }`                                      |
-| `GET`  | `/tasks/{task_id}`   | Fetch real-time status, agent assignments, and artifacts       | n/a                                                               | `{ "task_id": "...", "status": "running", "subtasks": [...], "metrics": {...} }` |
-| `GET`  | `/agents`            | Discover available specialist agents and their declared skills | query filters: `domain`, `capability`, `health`                   | `{ "agents": [{"name": "code-review", "skills": [...]}] }`                       |
+| Method | Path                 | Purpose                                                                                | Primary Request Fields                                            | Success Response Snapshot                                                            |
+| ------ | -------------------- | -------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `POST` | `/orchestrate`       | Submit a new high-level task and trigger decomposition (may return `approval_pending`) | `task_id`, `title`, `description`, `priority`, `metadata.context` | `{ "task_id": "...", "status": "planned" \| "approval_pending", "subtasks": [...] }` |
+| `POST` | `/resume/{task_id}`  | Resume a workflow once its approval request is approved                                | `task_id` (path)                                                  | `{ "task_id": "...", "status": "planned", "subtasks": [...] }`                       |
+| `POST` | `/execute/{task_id}` | Begin or resume execution of a planned workflow                                        | `execution_mode` (`auto`/`manual`), optional checkpoints          | `{ "task_id": "...", "status": "running" }`                                          |
+| `GET`  | `/tasks/{task_id}`   | Fetch real-time status, agent assignments, and artifacts                               | n/a                                                               | `{ "task_id": "...", "status": "running", "subtasks": [...], "metrics": {...} }`     |
+| `GET`  | `/agents`            | Discover available specialist agents and their declared skills                         | query filters: `domain`, `capability`, `health`                   | `{ "agents": [{"name": "code-review", "skills": [...]}] }`                           |
 
 ### Sample: `POST /orchestrate`
 
@@ -91,6 +92,38 @@ The orchestrator uses the **MCPClient** from `lib.mcp_client` to invoke tools, l
   }
 }
 ```
+
+## HITL Workflow Runbook
+
+Certain tasks (production deploys, destructive DB work, secrets rotation) require a human approval gate. The orchestrator enforces this by returning `routing_plan.status = "approval_pending"` along with an `approval_request_id`.
+
+1. Initialize the approval schema once per environment:
+
+```powershell
+task workflow:init-db
+```
+
+2. Submit a high-risk task. Capture both the `task_id` and `approval_request_id` returned by `/orchestrate`.
+3. Inspect the queue:
+
+```powershell
+task workflow:list-pending
+```
+
+4. Approve or reject:
+
+```powershell
+task workflow:approve REQUEST_ID=<uuid>
+task workflow:reject REQUEST_ID=<uuid> REASON="Need rollback plan"
+```
+
+5. Resume orchestration once approved:
+
+```powershell
+Invoke-RestMethod -Uri http://localhost:8001/resume/<task_id> -Method Post
+```
+
+Rejections or expirations propagate back as HTTP errors (403/410) so the requester can re-plan safely.
 
 ## Context Contracts
 

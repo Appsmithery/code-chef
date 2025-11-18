@@ -211,13 +211,13 @@
 
 ### Phase 2 Hardening (Post-Completion Follow-ups)
 
-**Status**: IN PROGRESS (15% remaining)  
+**Status**: IN PROGRESS (75% complete)  
 **Focus Items**:
 
-1. Wire `RiskAssessor` + HITL decisioning directly into `/orchestrate` before dispatching agents.
-2. Run end-to-end HITL happy-path + rejection-path tests (feature → approval → resume) against local stack.
-3. Execute `task workflow:init-db` + apply schema on the droplet instance.
-4. Update `AGENT_ENDPOINTS.md` + README with `/workflows/*` runbooks + approvals SOP.
+1. ✅ Wire `RiskAssessor` + HITL decisioning directly into `/orchestrate` before dispatching agents. (Done via `agent_orchestrator/main.py`, adds approval gating + `/resume/{task_id}`.)
+2. ⚠️ Run end-to-end HITL happy-path + rejection-path tests. (Risk-level tests pass; DB-backed flows blocked locally because `DB_PASSWORD`/Postgres + `trio` backend are unavailable.)
+3. ⚠️ Execute `task workflow:init-db` on the droplet and verify schema. (Pending remote credentials; script ready at `support/scripts/workflow/init-approval-schema.ps1`.)
+4. ✅ Update `AGENT_ENDPOINTS.md`, `README.md`, and `agent_orchestrator/README.md` with HITL runbooks + approval SOPs.
 
 ### Phase 5: Copilot Integration Layer (0% Complete)
 
@@ -295,11 +295,32 @@
 
 **Rationale**:
 
-- Nice-to-have for improved UX
-- Can be implemented after HITL
-- Non-blocking for core functionality
+- Unlocks conversational submission + proactive nudges so operators stop crafting raw JSON payloads
+- Builds on HITL audit + LangGraph memory that now exist (Phase 2/3 dependencies satisfied)
+- Still non-blocking for core reliability, so queued behind HITL hardening punch list
 
-**Defer to**: After Phase 2 complete
+**Kick-off Plan (target start once HITL hardening closes):**
+
+1. **5.1 Conversational Interface**
+
+- Owner: Orchestrator team
+- Deliverables: `/chat` endpoint, session memory via `HybridMemory`, streaming responses
+- Dependencies: finalize prompt templates + embed guardrails for scope creep
+
+2. **5.2 Notification + Copilot Surface**
+
+- Owner: Documentation/Infra joint squad
+- Deliverables: Event bus emitting workflow milestones, webhook relay to Slack/Linear, optional VS Code panel
+- Dependencies: MCP gateway event hooks, Linear tokens
+
+3. **Milestones**
+
+- Day 0-1: Stand up beta `/chat` route (echo + memory plumbing)
+- Day 2-3: Prototype Copilot UI (embedded webview or VS Code sidecar)
+- Day 4: Wire notifications + add regression tests
+- Day 5: Pilot run with internal operators, capture feedback
+
+**Defer to**: Immediately after Phase 2 hardening action items (tests + DB init) are marked ✅
 
 ---
 

@@ -325,6 +325,43 @@ Invoke-RestMethod -Uri http://localhost:8001/orchestrate `
 }
 ```
 
+### Human-in-the-Loop (HITL) Approvals
+
+High-risk operations (production deploys, destructive database work, secrets handling) trigger a human approval gate before orchestration proceeds.
+
+1. **First-time setup:**
+
+
+    ```powershell
+    task workflow:init-db
+    ```
+    Initializes the `approval_requests` table in PostgreSQL.
+
+2. **Submit task:** `/orchestrate` responds with `routing_plan.status = "approval_pending"` and an `approval_request_id`.
+3. **Review queue:**
+
+
+    ```powershell
+    task workflow:list-pending
+    ```
+
+4. **Approve or reject:**
+
+
+    ```powershell
+    task workflow:approve REQUEST_ID=<uuid>
+    task workflow:reject REQUEST_ID=<uuid> REASON="Needs runbook"
+    ```
+
+5. **Resume orchestration:**
+
+
+    ```powershell
+    Invoke-RestMethod -Uri http://localhost:8001/resume/<task_id> -Method Post
+    ```
+
+Rejected or expired approvals return HTTP errors with explanatory messages so the operator can re-submit safely.
+
 ### Backup Volumes
 
 ```bash

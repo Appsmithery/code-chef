@@ -5,7 +5,7 @@ risk_levels:
   low:
     auto_approve: true
     notify: false
-    timeout_minutes: 0
+    timeout_minutes: 5
     description: "Low-risk operations that can be auto-executed"
 
   medium:
@@ -21,7 +21,7 @@ risk_levels:
   high:
     auto_approve: false
     notify: true
-    timeout_minutes: 30
+    timeout_minutes: 60
     approvers:
       - team_lead
       - tech_lead
@@ -33,7 +33,7 @@ risk_levels:
   critical:
     auto_approve: false
     notify: true
-    timeout_minutes: 15
+    timeout_minutes: 90
     approvers:
       - tech_lead
       - cto
