@@ -83,6 +83,122 @@ Content-Type: application/json
 }
 ```
 
+### Update Issue Description
+
+```bash
+PATCH http://localhost:8001/linear/issues/{issue_id}
+Content-Type: application/json
+
+{
+  "description": "Updated description with completion details"
+}
+```
+
+### Update Phase Completion
+
+```bash
+POST http://localhost:8001/linear/roadmap/update-phase
+Content-Type: application/json
+
+{
+  "issue_id": "b3d90ca5-386e-48f4-8665-39deb258667c",
+  "phase_name": "Phase 2: HITL Integration",
+  "status": "COMPLETE",
+  "summary": "Complete HITL approval system deployed and verified in production.",
+  "components": [
+    "Risk Assessment Engine",
+    "Approval Workflow",
+    "REST API (5 endpoints)"
+  ],
+  "subtasks": [
+    {"title": "Task 2.1: Interrupt Configuration", "status": "complete"},
+    {"title": "Task 2.2: Taskfile Commands", "status": "complete"}
+  ],
+  "metrics": {
+    "total_requests": 4,
+    "avg_approval_time": "1.26 seconds",
+    "risk_distribution": "2 critical, 1 high, 1 medium"
+  },
+  "artifacts": {
+    "agent_orchestrator/main.py": "HITL API endpoints (lines 705-901)",
+    "shared/lib/hitl_manager.py": "Approval lifecycle manager"
+  },
+  "tests": [
+    "End-to-end approval flow verified",
+    "Rejection workflow tested",
+    "Database persistence validated"
+  ],
+  "deployment_url": "https://agent.appsmithery.co"
+}
+```
+
+## Programmatic Updates via Python Scripts
+
+For automated roadmap updates, use the GraphQL helper scripts:
+
+### Update Issue Description
+
+```powershell
+$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"
+python support/scripts/update-linear-graphql.py
+```
+
+### Create Subtasks
+
+```powershell
+$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"
+python support/scripts/create-hitl-subtasks.py
+```
+
+### Mark Tasks Complete
+
+```powershell
+$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"
+python support/scripts/mark-hitl-complete.py
+```
+
+## Using the Linear Roadmap Helper (Agents)
+
+Agents can use the `linear_roadmap` module for programmatic updates:
+
+```python
+from lib.linear_roadmap import (
+    get_roadmap_updater,
+    PHASE_ISSUES,
+    WORKFLOW_STATES,
+    PROJECT_ID,
+    TEAM_ID
+)
+
+# Initialize
+updater = get_roadmap_updater()
+
+# Update a phase with completion details
+await updater.update_phase_completion(
+    issue_id=PHASE_ISSUES["phase_2"],
+    phase_name="Phase 2: HITL Integration",
+    status="COMPLETE",
+    components=["Risk Assessment", "Approval Workflow", "REST API"],
+    metrics={"total_requests": 4, "avg_time": "1.26s"},
+    tests=["End-to-end flow verified"]
+)
+
+# Mark issue as complete
+await updater.mark_issue_complete(
+    issue_id="task_id_here",
+    state_id=WORKFLOW_STATES["completed"]
+)
+
+# Create a subtask
+await updater.create_subtask(
+    title="Task 2.3: API Endpoints",
+    description="Complete REST API implementation",
+    parent_id=PHASE_ISSUES["phase_2"],
+    project_id=PROJECT_ID,
+    team_id=TEAM_ID
+)
+```
+
 ## Integration Architecture
 
 ```

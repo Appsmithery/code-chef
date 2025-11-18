@@ -1174,6 +1174,127 @@ async def get_linear_project(project_id: str):
         "roadmap": roadmap
     }
 
+
+@app.patch("/linear/issues/{issue_id}")
+async def update_linear_issue(issue_id: str, request: Dict[str, Any]):
+    """Update an existing Linear issue (description, state, etc.)."""
+    if not linear_client.is_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Linear integration not configured"
+        )
+
+    success = await linear_client.update_issue(issue_id, **request)
+    
+    if success:
+        return {
+            "success": True,
+            "issue_id": issue_id,
+            "updated_fields": list(request.keys())
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update Linear issue"
+        )
+
+
+@app.post("/linear/roadmap/update-phase")
+async def update_phase_completion(request: Dict[str, Any]):
+    """
+    Update a phase issue with completion status and metrics.
+    
+    Expected payload:
+    {
+        "issue_id": "...",
+        "phase_name": "Phase 2: HITL Integration",
+        "status": "COMPLETE",
+        "components": ["Risk Assessment", "Approval Workflow", ...],
+        "subtasks": [{"title": "Task 2.1", "status": "complete"}, ...],
+        "metrics": {"total_requests": 4, "avg_time": "1.26s"},
+        "artifacts": {"main.py": "lines 705-901", ...}
+    }
+    """
+    if not linear_client.is_enabled():
+        raise HTTPException(
+            status_code=503,
+            detail="Linear integration not configured"
+        )
+    
+    issue_id = request["issue_id"]
+    phase_name = request["phase_name"]
+    status = request.get("status", "IN PROGRESS")
+    components = request.get("components", [])
+    subtasks = request.get("subtasks", [])
+    metrics = request.get("metrics", {})
+    artifacts = request.get("artifacts", {})
+    
+    # Build comprehensive description
+    description_parts = [
+        f"## {phase_name} - {status}",
+        "",
+        "### Implementation Summary",
+        request.get("summary", "Complete implementation verified in production."),
+        "",
+    ]
+    
+    if components:
+        description_parts.extend([
+            "### Components Delivered",
+            *[f"{i+1}. **{comp}**" for i, comp in enumerate(components)],
+            "",
+        ])
+    
+    if subtasks:
+        description_parts.extend([
+            "### Subtasks Completed",
+            *[f"- {'✅' if task.get('status') == 'complete' else '⏳'} {task['title']}" 
+              for task in subtasks],
+            "",
+        ])
+    
+    if metrics:
+        description_parts.extend([
+            f"### Production Metrics (as of {datetime.now().strftime('%Y-%m-%d')})",
+            *[f"- {key.replace('_', ' ').title()}: {value}" 
+              for key, value in metrics.items()],
+            "",
+        ])
+    
+    if artifacts:
+        description_parts.extend([
+            "### Artifacts",
+            *[f"- `{path}`: {desc}" for path, desc in artifacts.items()],
+            "",
+        ])
+    
+    description_parts.extend([
+        "### Testing",
+        *[f"✅ {test}" for test in request.get("tests", [])],
+        "",
+        f"**Status**: {status}",
+        f"**Deployment**: {request.get('deployment_url', 'Production')}",
+    ])
+    
+    description = "\n".join(description_parts)
+    
+    success = await linear_client.update_issue(issue_id, description=description)
+    
+    if success:
+        logger.info(f"Updated Linear phase issue {issue_id}: {phase_name} - {status}")
+        return {
+            "success": True,
+            "issue_id": issue_id,
+            "phase": phase_name,
+            "status": status
+        }
+    else:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update phase issue"
+        )
+
+
 @app.post("/execute/{task_id}")
 async def execute_workflow(task_id: str):
     """Execute workflow by calling agents in sequence based on routing plan"""
