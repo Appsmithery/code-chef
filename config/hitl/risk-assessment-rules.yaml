@@ -1,0 +1,107 @@
+# Risk Assessment Rules for HITL Workflows
+# Defines risk levels and approval requirements
+
+risk_levels:
+  low:
+    auto_approve: true
+    notify: false
+    timeout_minutes: 0
+    description: "Low-risk operations that can be auto-executed"
+
+  medium:
+    auto_approve: false
+    notify: true
+    timeout_minutes: 30
+    approvers:
+      - team_lead
+    escalate_to:
+      - tech_lead
+    description: "Medium-risk operations requiring team lead approval"
+
+  high:
+    auto_approve: false
+    notify: true
+    timeout_minutes: 30
+    approvers:
+      - team_lead
+      - tech_lead
+    escalate_to:
+      - cto
+    require_justification: false
+    description: "High-risk operations requiring leadership approval"
+
+  critical:
+    auto_approve: false
+    notify: true
+    timeout_minutes: 15
+    approvers:
+      - tech_lead
+      - cto
+    escalate_to:
+      - security_team
+    require_justification: true
+    require_secondary_approval: true
+    description: "Critical operations with potential for significant impact"
+
+# Operation-specific risk mappings
+triggers:
+  # Production operations
+  delete_production: critical
+  deploy_production: high
+  modify_production_db: critical
+  scale_production: high
+
+  # Infrastructure changes
+  modify_infrastructure: high
+  create_infrastructure: medium
+  delete_infrastructure: high
+  modify_network: high
+
+  # Security-related
+  security_finding_critical: critical
+  security_finding_high: high
+  security_finding_medium: medium
+  modify_secrets: critical
+  modify_permissions: high
+
+  # Cost management
+  cost_above_1000: high
+  cost_above_100: medium
+  cost_above_10: low
+
+  # Data operations
+  data_export: high
+  data_import: medium
+  data_delete: critical
+
+  # Deployment stages
+  deploy_staging: medium
+  deploy_development: low
+
+  # Code changes
+  merge_to_main: medium
+  merge_to_production: high
+
+# Notification channels
+notification_channels:
+  low:
+    - log
+  medium:
+    - log
+    - linear
+  high:
+    - log
+    - linear
+    - email
+  critical:
+    - log
+    - linear
+    - email
+    - slack
+
+# Escalation policy
+escalation:
+  enabled: true
+  check_interval_minutes: 5
+  max_escalations: 3
+  escalation_message: "Approval timeout exceeded for {risk_level} operation: {description}"

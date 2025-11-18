@@ -208,3 +208,67 @@ tasks:
         echo "  8007 → rag-context (vector search)"
         echo "  8008 → state-persistence (workflow DB)"
         echo "  9090 → prometheus (metrics)"
+
+  #============================================================================
+  # WORKFLOW MANAGEMENT (HITL)
+  #============================================================================
+
+  workflow:init-db:
+    desc: Initialize approval_requests table in PostgreSQL
+    summary: |
+      Applies approval_requests.sql schema to the devtools database.
+      Idempotent - safe to run multiple times. Requires running postgres service.
+    cmds:
+      - pwsh -File ./support/scripts/workflow/init-approval-schema.ps1
+
+  workflow:list-pending:
+    desc: List pending approval requests
+    summary: |
+      Shows all pending approval requests with risk levels, timeouts, and
+      descriptions. Use to see what workflows are waiting for approval.
+    cmds:
+      - pwsh -File ./support/scripts/workflow/list-pending-approvals.ps1
+
+  workflow:approve:
+    desc: Approve a pending request (usage - task workflow:approve REQUEST_ID=<uuid>)
+    summary: |
+      Approve a specific approval request by UUID. Workflow will resume
+      execution after approval. Requires approver role authorization.
+
+      Example: task workflow:approve REQUEST_ID=abc-123-def-456
+    requires:
+      vars: [REQUEST_ID]
+    cmds:
+      - pwsh -File ./support/scripts/workflow/approve-request.ps1 -RequestId "{{.REQUEST_ID}}"
+
+  workflow:reject:
+    desc: Reject a pending request (usage - task workflow:reject REQUEST_ID=<uuid> REASON="...")
+    summary: |
+      Reject a specific approval request with reason. Workflow will be
+      terminated and agent will be notified of rejection.
+
+      Example: task workflow:reject REQUEST_ID=abc-123 REASON="Security concerns"
+    requires:
+      vars: [REQUEST_ID, REASON]
+    cmds:
+      - pwsh -File ./support/scripts/workflow/reject-request.ps1 -RequestId "{{.REQUEST_ID}}" -Reason "{{.REASON}}"
+
+  workflow:status:
+    desc: Show status of specific workflow (usage - task workflow:status WORKFLOW_ID=<id>)
+    summary: |
+      Display detailed status of a workflow including all subtasks, approval
+      requests, and execution history.
+
+      Example: task workflow:status WORKFLOW_ID=deploy-auth-123
+    requires:
+      vars: [WORKFLOW_ID]
+    cmds:
+      - pwsh -File ./support/scripts/workflow/workflow-status.ps1 -WorkflowId "{{.WORKFLOW_ID}}"
+
+  workflow:clean-expired:
+    desc: Clean up expired approval requests
+    summary: |
+      Marks all expired approval requests as 'expired' status and logs
+      cleanup actions. Runs as maintenance task.
+    cmds:
+      - pwsh -File ./support/scripts/workflow/clean-expired-approvals.ps1
