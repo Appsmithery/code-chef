@@ -44,7 +44,14 @@ Complete API reference for all Dev-Tools agents.
 
   - Body: `{"description": "string", "project_context": {}, "workspace_config": {}, "priority": "string"}`
   - Returns: `{"task_id": "uuid", "subtasks": [...], "routing_plan": {...}, "estimated_tokens": number}`
+  - **HITL Behavior:** When a request is flagged as high/critical risk, the response includes `routing_plan.status = "approval_pending"` plus an `approval_request_id`. Operators must approve via `task workflow:approve REQUEST_ID=<id>` before resuming.
   - **Token Usage:** < 500 tokens per routing decision
+
+- `POST /resume/{task_id}` — Resume an approval-gated workflow after human approval
+
+  - Usage: `curl -X POST http://localhost:8001/resume/<task_id>` once the corresponding approval request shows `status=approved`
+  - Returns the same payload schema as `/orchestrate`, but now with populated subtasks/routing plan
+  - Errors: `409` (still pending), `403` (rejected), `410` (expired)
 
 - `GET /tasks/{task_id}` — Retrieve task status and subtask progress
 

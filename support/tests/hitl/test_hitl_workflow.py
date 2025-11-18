@@ -16,10 +16,10 @@ from typing import Dict
 # Add shared lib to path
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'shared', 'lib'))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'shared')))
 
-from risk_assessor import get_risk_assessor, RiskLevel
-from hitl_manager import get_hitl_manager
+from lib.risk_assessor import get_risk_assessor, RiskLevel
+from lib.hitl_manager import get_hitl_manager
 
 
 class TestRiskAssessor:
@@ -101,7 +101,7 @@ class TestHITLManager:
         """Provide HITLManager instance"""
         return get_hitl_manager()
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_create_approval_request(self, manager):
         """Create approval request for high-risk operation"""
         task = {
@@ -127,7 +127,7 @@ class TestHITLManager:
         status = await manager.check_approval_status(request_id)
         assert status["status"] == "pending"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_auto_approve_low_risk(self, manager):
         """Low risk tasks should not create approval requests"""
         task = {
@@ -147,7 +147,7 @@ class TestHITLManager:
         
         assert request_id is None, "Low risk task should auto-approve (no request created)"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_approve_request(self, manager):
         """Approve a pending request"""
         # Create request
@@ -181,7 +181,7 @@ class TestHITLManager:
         assert status["status"] == "approved"
         assert status["approver_id"] == "john.doe"
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_reject_request(self, manager):
         """Reject a pending request"""
         task = {
@@ -211,7 +211,7 @@ class TestHITLManager:
         assert status["status"] == "rejected"
         assert "insufficient" in status["rejection_reason"].lower()
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_authorization_check(self, manager):
         """Developers cannot approve critical risk requests"""
         task = {
@@ -251,7 +251,7 @@ class TestHITLManager:
 class TestWorkflowIntegration:
     """Test LangGraph workflow integration"""
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_interrupt_before_approval_gate(self):
         """Workflow should interrupt at approval gate for high-risk ops"""
         from interrupt_nodes import create_approval_workflow
@@ -281,7 +281,7 @@ class TestWorkflowIntegration:
         
         # TODO: Complete test with approval and resumption
     
-    @pytest.mark.asyncio
+    @pytest.mark.anyio
     async def test_auto_approve_low_risk_workflow(self):
         """Low risk operations should not interrupt workflow"""
         from interrupt_nodes import create_approval_workflow
