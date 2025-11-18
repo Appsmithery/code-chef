@@ -6,6 +6,7 @@ Primary Role: Task delegation, context routing, and workflow coordination
 - Routes tasks to appropriate worker agents based on MECE responsibility boundaries
 - Maintains task registry mapping request types to specialized agent capabilities
 - Tracks task completion status and triggers hand-offs between agents
+
 """
 
 from fastapi import FastAPI, HTTPException
