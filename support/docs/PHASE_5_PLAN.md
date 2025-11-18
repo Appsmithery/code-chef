@@ -342,12 +342,14 @@ Workspace: project-roadmaps
 ### Scoping Architecture
 
 **Orchestrator (Workspace-Level)**
+
 - ✅ Post approval requests to workspace hub
 - ✅ Create new projects in workspace
 - ✅ Read all projects (for routing)
 - ❌ Cannot modify project-specific issues
 
 **Subagents (Project-Scoped)**
+
 - ✅ Comment on issues in assigned project
 - ✅ Update issue status in assigned project
 - ✅ Read issues in assigned project
@@ -369,10 +371,10 @@ def get_linear_client(agent_name: str, project_name: Optional[str] = None):
     """
     api_key = os.getenv("LINEAR_API_KEY")
     project = project_name or os.getenv("PROJECT_NAME", "dev-tools")
-    
+
     if agent_name == "orchestrator":
         return LinearWorkspaceClient(api_key)
-    
+
     # Subagents get project-scoped access
     project_info = PROJECT_REGISTRY[project]
     return LinearProjectClient(
@@ -465,13 +467,13 @@ class LinearProjectNotifier:
     Project-scoped notifier for subagent updates.
     Can only comment on issues in assigned project.
     """
-    
+
     def __init__(self, project_id: str, project_name: str):
         self.project_id = project_id
         self.project_name = project_name
-    
+
     async def post_progress_update(
-        self, 
+        self,
         issue_id: str,
         message: str,
         agent_name: str
@@ -523,34 +525,34 @@ async def orchestrate_task(request: TaskRequest):
 workspace:
   id: project-roadmaps
   team_id: f5b610be-ac34-4983-918b-2c9d00aa9b7a
-  approval_hub_issue_id: null  # Set after creating workspace hub
+  approval_hub_issue_id: null # Set after creating workspace hub
 
 projects:
   dev-tools:
     id: b21cbaa1-9f09-40f4-b62a-73e0f86dd501
     name: AI DevOps Agent Platform
     orchestrator_url: http://45.55.173.72:8001
-  
+
   twkr:
-    id: null  # Create with orchestrator
+    id: null # Create with orchestrator
     name: TWKR
     orchestrator_url: http://45.55.173.72:8001
 
 channels:
   linear:
     enabled: true
-    use_workspace_hub: true  # Post approvals to team-level issue
-    mention_on_critical: true  # @mention admin for critical
-      
+    use_workspace_hub: true # Post approvals to team-level issue
+    mention_on_critical: true # @mention admin for critical
+
   email:
     enabled: true
-    only_critical: true  # Email only for critical/high risk
+    only_critical: true # Email only for critical/high risk
     smtp_server: smtp.gmail.com
     from: devtools-bot@appsmithery.co
     to: alex@appsmithery.co
-    
+
   vscode:
-    enabled: false  # Future: VS Code extension
+    enabled: false # Future: VS Code extension
     poll_interval: 10
 
 routing:
@@ -571,7 +573,7 @@ agent_permissions:
       - post_approval_requests
       - create_projects
       - read_all_projects
-  
+
   feature-dev:
     type: project
     permissions:
@@ -582,7 +584,7 @@ agent_permissions:
 
 **File**: `config/linear/project-registry.yaml`
 
-```yaml
+````yaml
 workspace:
   id: project-roadmaps
   workspace_name: Project Roadmaps
@@ -594,7 +596,7 @@ projects:
     id: b21cbaa1-9f09-40f4-b62a-73e0f86dd501
     short_id: 78b3b839d36b
     agents: [orchestrator, feature-dev, code-review, infrastructure, cicd, documentation]
-  
+
   twkr:
     id: null
     short_id: null
@@ -623,31 +625,33 @@ Embedded chat panel in VS Code for interacting with agents without leaving the I
 
 ### Technical Design
 
-```
+````
+
 ┌─────────────────────────────────────────────────────────┐
-│  VS Code Extension (TypeScript)                          │
-│                                                          │
-│  ┌────────────────────────────────────────────────┐    │
-│  │  Chat Panel (WebView)                          │    │
-│  │  - Message input                                │    │
-│  │  - Conversation history                         │    │
-│  │  - Task status indicators                       │    │
-│  └────────────────────────────────────────────────┘    │
-│                      │                                   │
-│                      │ HTTP/WebSocket                    │
-│                      ▼                                   │
-│  ┌────────────────────────────────────────────────┐    │
-│  │  Extension Host (Node.js)                      │    │
-│  │  - API client (orchestrator:8001/chat)         │    │
-│  │  - Authentication (OAuth token)                │    │
-│  │  - File context injection                      │    │
-│  └────────────────────────────────────────────────┘    │
+│ VS Code Extension (TypeScript) │
+│ │
+│ ┌────────────────────────────────────────────────┐ │
+│ │ Chat Panel (WebView) │ │
+│ │ - Message input │ │
+│ │ - Conversation history │ │
+│ │ - Task status indicators │ │
+│ └────────────────────────────────────────────────┘ │
+│ │ │
+│ │ HTTP/WebSocket │
+│ ▼ │
+│ ┌────────────────────────────────────────────────┐ │
+│ │ Extension Host (Node.js) │ │
+│ │ - API client (orchestrator:8001/chat) │ │
+│ │ - Authentication (OAuth token) │ │
+│ │ - File context injection │ │
+│ └────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
-                      │
-                      ▼
+│
+▼
 ┌─────────────────────────────────────────────────────────┐
-│  agent_orchestrator:8001/chat                            │
+│ agent_orchestrator:8001/chat │
 └─────────────────────────────────────────────────────────┘
+
 ```
 
 ### Implementation Steps (Optional - Phase 6)
@@ -797,3 +801,4 @@ If implementing:
 ---
 
 **Next Steps**: Review this plan, confirm priorities, and begin Day 1 implementation of chat endpoint foundation.
+```
