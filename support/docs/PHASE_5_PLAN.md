@@ -96,21 +96,21 @@ Add `/chat` endpoint to orchestrator that accepts natural language input and tra
 async def chat_endpoint(request: ChatRequest):
     """
     Natural language interface for task submission.
-    
+
     Supports:
     - Task submission: "Add error handling to login endpoint"
     - Status queries: "What's the status of task abc123?"
     - Clarification: "Use JWT authentication"
     """
     session_id = request.session_id or f"session-{uuid.uuid4()}"
-    
+
     # Load conversation history
     memory = HybridMemory(session_id=session_id)
     history = await memory.load_conversation_history(limit=10)
-    
+
     # Intent recognition
     intent = await recognize_intent(request.message, history)
-    
+
     if intent.needs_clarification:
         # Store partial task and ask for more info
         await memory.store_partial_task(intent.task_draft)
@@ -120,17 +120,17 @@ async def chat_endpoint(request: ChatRequest):
             intent="clarification",
             suggestions=intent.suggestions
         )
-    
+
     # Convert to task
     task_request = await intent_to_task(intent, history)
-    
+
     # Submit to orchestrator
     task_id = await orchestrate_task(task_request)
-    
+
     # Save to memory
     await memory.add_message("user", request.message)
     await memory.add_message("assistant", f"Task created: {task_id}")
-    
+
     return ChatResponse(
         message=f"✓ Task created: {task_id}",
         session_id=session_id,
@@ -164,7 +164,7 @@ class ChatResponse(BaseModel):
 ```python
 class IntentRecognizer:
     """Classify user messages into actionable intents."""
-    
+
     INTENT_CATEGORIES = [
         "task_submission",      # "Add feature X"
         "status_query",         # "What's the status?"
@@ -172,18 +172,18 @@ class IntentRecognizer:
         "approval_action",      # "Approve task abc"
         "general_query",        # "What can you do?"
     ]
-    
+
     async def recognize(self, message: str, history: List[Dict]) -> Intent:
         """
         Use LLM to classify intent and extract parameters.
-        
+
         Prompt:
         ---
         You are an intent classifier for a DevOps AI assistant.
         Given user message and conversation history, classify the intent.
-        
+
         User: "Add HITL approval for database migrations"
-        
+
         Response:
         {
             "intent": "task_submission",
@@ -210,20 +210,20 @@ class IntentRecognizer:
 ```python
 class HybridMemory:
     """Extended with conversation persistence."""
-    
+
     async def add_message(self, role: str, content: str):
         """Store a chat message (user or assistant)."""
         await self.short_term.add_message(role, content)
-        
+
         # Summarize and store in Qdrant for long-term
         if len(await self.short_term.messages) > 20:
             summary = await self._summarize_conversation()
             await self.long_term.store_summary(summary)
-    
+
     async def load_conversation_history(self, limit: int = 10) -> List[Dict]:
         """Retrieve recent messages."""
         return await self.short_term.get_messages(limit=limit)
-    
+
     async def store_partial_task(self, task_draft: Dict):
         """Save incomplete task for multi-turn completion."""
         key = f"partial_task:{self.session_id}"
@@ -240,11 +240,11 @@ from fastapi.responses import StreamingResponse
 @app.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
     """Stream chat responses as they're generated."""
-    
+
     async def event_generator():
         async for chunk in process_chat_streaming(request):
             yield f"data: {json.dumps(chunk)}\n\n"
-    
+
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream"
@@ -325,20 +325,20 @@ Proactive notifications for workflow events sent to Slack, email, or webhooks. C
 ```python
 class EventBus:
     """Simple in-memory event bus with Redis fallback."""
-    
+
     def __init__(self):
         self.subscribers: Dict[str, List[Callable]] = {}
-    
+
     def subscribe(self, event_type: str, handler: Callable):
         """Register a handler for event type."""
         if event_type not in self.subscribers:
             self.subscribers[event_type] = []
         self.subscribers[event_type].append(handler)
-    
+
     async def publish(self, event_type: str, data: Dict[str, Any]):
         """Publish event to all subscribers."""
         handlers = self.subscribers.get(event_type, [])
-        
+
         for handler in handlers:
             try:
                 await handler(data)
@@ -353,7 +353,7 @@ class EventBus:
 ```python
 class SlackNotifier:
     """Send notifications to Slack via webhook."""
-    
+
     async def send_approval_request(self, approval: ApprovalRequest):
         """Notify approvers about pending approval."""
         message = {
@@ -387,7 +387,7 @@ class SlackNotifier:
                 }
             ]
         }
-        
+
         await self._post_to_slack(message)
 ```
 
@@ -407,10 +407,10 @@ event_bus.subscribe("approval_required", notifier.send_approval_request)
 @app.post("/orchestrate")
 async def orchestrate_task(request: TaskRequest):
     # ... existing logic ...
-    
+
     if requires_approval:
         approval = await hitl_manager.create_approval_request(...)
-        
+
         # Publish event
         await event_bus.publish("approval_required", {
             "approval_id": approval.id,
@@ -431,22 +431,22 @@ channels:
     channels:
       critical: "#ops-critical"
       high: "#ops-alerts"
-      
+
   email:
     enabled: false
     smtp_host: smtp.gmail.com
     smtp_port: 587
-    
+
   webhook:
     enabled: true
     urls:
       - https://linear.app/webhooks/approval-required
-      
+
 routing_rules:
   - event: approval_required
     condition: risk_level == 'critical'
     channels: [slack, webhook]
-    
+
   - event: task_completed
     condition: duration > 300
     channels: [slack]
@@ -502,11 +502,13 @@ Embedded chat panel in VS Code for interacting with agents without leaving the I
 ### Implementation Steps (Optional - Phase 6)
 
 This is lower priority and can be deferred. For MVP, operators can use:
+
 1. **Curl/Postman**: Direct API calls
 2. **Support scripts**: PowerShell wrappers for `/chat`
 3. **HTML dashboard**: Simple web UI at `support/frontend/chat.html`
 
 If implementing:
+
 - Use VS Code Webview API
 - Bundle with existing MCP gateway extension
 - Authenticate via Linear OAuth tokens
@@ -516,18 +518,21 @@ If implementing:
 ## Implementation Timeline
 
 ### Day 1-2: Chat Endpoint Foundation
+
 - [x] Create `/chat` endpoint with basic NL processing
 - [x] Intent recognition using Gradient LLM
 - [x] Conversation memory integration (HybridMemory)
 - [x] Unit tests for intent classification
 
 ### Day 3: Advanced Chat Features
+
 - [x] Multi-turn clarification loops
 - [x] Streaming responses via SSE
 - [x] Session management and persistence
 - [x] Integration with existing `/orchestrate`
 
 ### Day 4-5: Notification System
+
 - [x] Event bus implementation
 - [x] Slack notifier with approval buttons
 - [x] Webhook notifier for Linear
@@ -535,12 +540,14 @@ If implementing:
 - [x] Wire to HITL approval creation
 
 ### Day 6: Testing & Integration
+
 - [x] End-to-end chat workflow tests
 - [x] Notification delivery tests
 - [x] Load testing (100 concurrent sessions)
 - [x] Prometheus metrics validation
 
 ### Day 7: Documentation & Rollout
+
 - [x] Update AGENT_ENDPOINTS.md with `/chat` docs
 - [x] Create operator guide for conversational interface
 - [x] Add examples to README
@@ -551,6 +558,7 @@ If implementing:
 ## Dependencies & Prerequisites
 
 ### Required (Phase 2-3 Complete ✅)
+
 - ✅ LangGraph workflows with state persistence
 - ✅ HybridMemory system (short-term + long-term)
 - ✅ HITL approval system
@@ -558,11 +566,13 @@ If implementing:
 - ✅ Gradient LLM client
 
 ### New Dependencies
+
 - `aiohttp` - Async HTTP for notifications (already installed)
 - `python-multipart` - File uploads in chat (optional)
 - `redis` - Event bus scalability (optional, can use in-memory)
 
 ### Configuration Additions
+
 - `SLACK_WEBHOOK_URL` - Slack incoming webhook
 - `NOTIFICATION_CHANNELS` - Comma-separated list (slack,email,webhook)
 - `CHAT_SESSION_TTL` - Session timeout in seconds (default: 3600)
@@ -572,18 +582,21 @@ If implementing:
 ## Success Metrics
 
 ### Functional
+
 - ✅ 90%+ intent recognition accuracy on test dataset (100 examples)
 - ✅ <2s response time for simple queries
 - ✅ <5s end-to-end for approval notifications (create → Slack delivery)
 - ✅ 3+ turn clarification conversations working
 
 ### Operational
+
 - ✅ Zero downtime deployment of chat endpoint
 - ✅ Prometheus metrics for all endpoints
 - ✅ LangSmith traces capturing chat interactions
 - ✅ Memory system handles 1000+ sessions
 
 ### User Experience
+
 - ✅ Operators can submit tasks via natural language (no JSON)
 - ✅ Approvers receive Slack notifications within 5s
 - ✅ Clarification questions are clear and actionable
@@ -593,13 +606,13 @@ If implementing:
 
 ## Risks & Mitigations
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
+| Risk                             | Impact                                   | Mitigation                                                                             |
+| -------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------- |
 | Intent recognition accuracy <90% | User frustration, incorrect task routing | Build test dataset (100+ examples), tune prompt engineering, fallback to clarification |
-| Slack rate limits (1 msg/sec) | Notification delays | Implement queue with batching, max 1 critical notification per user per minute |
-| Session state loss on restart | Conversation context lost | Persist sessions to PostgreSQL or Redis with auto-restore |
-| LLM latency >5s | Poor chat UX | Use streaming responses, show typing indicators, cache common intents |
-| Memory bloat (1000s of sessions) | OOM errors | Implement session TTL (1 hour), background cleanup job, Redis eviction policy |
+| Slack rate limits (1 msg/sec)    | Notification delays                      | Implement queue with batching, max 1 critical notification per user per minute         |
+| Session state loss on restart    | Conversation context lost                | Persist sessions to PostgreSQL or Redis with auto-restore                              |
+| LLM latency >5s                  | Poor chat UX                             | Use streaming responses, show typing indicators, cache common intents                  |
+| Memory bloat (1000s of sessions) | OOM errors                               | Implement session TTL (1 hour), background cleanup job, Redis eviction policy          |
 
 ---
 
@@ -616,12 +629,15 @@ If implementing:
 ## Open Questions
 
 1. **Should chat endpoint support file attachments?** (e.g., "Review this diff")
+
    - **Decision**: Phase 6 - adds complexity, operators can use `/code-review` directly for now
 
 2. **Redis vs. in-memory event bus?**
+
    - **Decision**: Start in-memory, migrate to Redis if >100 concurrent users
 
 3. **Should we support markdown in chat responses?**
+
    - **Decision**: Yes - use CommonMark, render in HTML dashboard
 
 4. **How to handle long-running tasks in chat UX?**
