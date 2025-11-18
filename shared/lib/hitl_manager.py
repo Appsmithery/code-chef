@@ -162,7 +162,7 @@ class HITLManager:
                 await cursor.execute(
                     """
                     SELECT status, approver_id, approved_at, rejected_at,
-                           rejection_reason, expires_at
+                           rejection_reason, expires_at, risk_level
                     FROM approval_requests
                     WHERE id = %s
                     """,
@@ -173,7 +173,7 @@ class HITLManager:
         if not row:
             raise ValueError(f"Approval request {request_id} not found")
         
-        status, approver_id, approved_at, rejected_at, rejection_reason, expires_at = row
+        status, approver_id, approved_at, rejected_at, rejection_reason, expires_at, risk_level = row
         
         # Check expiration
         expired = False
@@ -184,6 +184,7 @@ class HITLManager:
         
         return {
             "status": status,
+            "risk_level": risk_level,
             "approver_id": approver_id,
             "rejection_reason": rejection_reason,
             "approved_at": approved_at.isoformat() if approved_at else None,
@@ -266,7 +267,8 @@ class HITLManager:
     async def reject_request(
         self,
         request_id: str,
-        rejector_id: str,
+        approver_id: str,
+        approver_role: str,
         reason: str
     ) -> bool:
         """
@@ -274,7 +276,8 @@ class HITLManager:
         
         Args:
             request_id: Approval request UUID
-            rejector_id: User ID of person rejecting
+            approver_id: User ID of person rejecting
+            approver_role: Role of the person rejecting
             reason: Rejection reason
         
         Returns:
@@ -287,16 +290,17 @@ class HITLManager:
                     UPDATE approval_requests
                     SET status = 'rejected',
                         approver_id = %s,
+                        approver_role = %s,
                         rejected_at = NOW(),
-                    rejection_reason = %s,
-                    updated_at = NOW()
-                WHERE id = %s AND status = 'pending'
-                """,
-                (rejector_id, reason, request_id)
-            )
-            await conn.commit()
+                        rejection_reason = %s,
+                        updated_at = NOW()
+                    WHERE id = %s AND status = 'pending'
+                    """,
+                    (approver_id, approver_role, reason, request_id)
+                )
+                await conn.commit()
         
-        logger.info(f"[HITLManager] Request {request_id} rejected by {rejector_id}: {reason}")
+        logger.info(f"[HITLManager] Request {request_id} rejected by {approver_id} ({approver_role}): {reason}")
         return True
     
     async def list_pending_requests(
