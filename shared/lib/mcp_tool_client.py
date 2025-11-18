@@ -229,7 +229,7 @@ class MCPToolClient:
 
     async def list_servers(self) -> List[str]:
         """List available MCP servers."""
-        from agents._shared.mcp_discovery import get_mcp_discovery
+        from lib.mcp_discovery import get_mcp_discovery
 
         discovery = get_mcp_discovery()
         servers = discovery.discover_servers()
