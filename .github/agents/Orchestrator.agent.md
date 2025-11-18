@@ -185,8 +185,6 @@ You have **recommended access** to these MCP tool servers via `gateway-mcp:8000`
 
 ## Workflow Orchestration Patterns
 
-## Workflow Orchestration Patterns
-
 ### Pattern 1: Sequential Execution (Feature → Review → Deploy)
 
 ```
