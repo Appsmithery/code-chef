@@ -108,6 +108,7 @@ class IntentRecognizer:
             # Use JSON mode for structured output
             response = await self.gradient_client.complete(
                 prompt=prompt,
+                system_prompt="You are a JSON-only API. Respond ONLY with valid JSON, no markdown, no explanations.",
                 temperature=0.1,  # Low temperature for consistent classification
                 max_tokens=500
             )
@@ -115,6 +116,12 @@ class IntentRecognizer:
             # Extract content from response dict and parse as JSON
             import json
             content = response.get("content", "")
+            logger.debug(f"LLM response content: {content[:200]}...")  # Log first 200 chars
+            
+            if not content or not content.strip():
+                logger.warning("Empty response from LLM, using fallback")
+                return self._fallback_recognize(message)
+            
             intent_data = json.loads(content)
             
             # Validate and construct Intent
