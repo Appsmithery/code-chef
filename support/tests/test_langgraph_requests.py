@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import pytest
+import sys
+from pathlib import Path
 
-from agents.feature_dev.service import FeatureRequest
-from agents.langgraph.workflow import invoke_workflow
+# Add agent_feature-dev to path (hyphens not allowed in Python imports)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "agent_feature-dev"))
+from service import FeatureRequest
+sys.path.pop(0)
+
+from shared.services.langgraph.workflow import invoke_workflow
 
 
 class DummyGraph:
