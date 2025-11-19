@@ -15,8 +15,34 @@ from datetime import datetime
 
 from shared.lib.event_bus import get_event_bus, InterAgentEvent
 from shared.lib.registry_client import RegistryClient
+from prometheus_client import Counter, Histogram
 
 logger = logging.getLogger(__name__)
+
+# Metrics
+DELEGATION_ATTEMPTS = Counter(
+    "orchestrator_delegation_attempts_total",
+    "Total number of task delegation attempts",
+    ["target_agent", "capability"]
+)
+
+DELEGATION_SUCCESS = Counter(
+    "orchestrator_delegation_success_total",
+    "Total number of successful delegations",
+    ["target_agent"]
+)
+
+DELEGATION_FAILURES = Counter(
+    "orchestrator_delegation_failures_total",
+    "Total number of failed delegations",
+    ["target_agent", "reason"]
+)
+
+DELEGATION_LATENCY = Histogram(
+    "orchestrator_delegation_latency_seconds",
+    "Time taken to delegate a task",
+    ["target_agent"]
+)
 
 class DelegationManager:
     def __init__(self, registry_client: RegistryClient):
@@ -40,6 +66,7 @@ class DelegationManager:
         Returns:
             Delegation result metadata
         """
+        start_time = datetime.utcnow()
         target_agent = preferred_agent
         
         # If no specific agent, find one by capability/type
@@ -53,12 +80,16 @@ class DelegationManager:
             else:
                 # Fallback or error
                 logger.error(f"No agent type specified for subtask {subtask.get('id')}")
+                DELEGATION_FAILURES.labels(target_agent="unknown", reason="no_agent_specified").inc()
                 return {"status": "failed", "reason": "no_agent_specified"}
+
+        DELEGATION_ATTEMPTS.labels(target_agent=target_agent, capability=subtask.get("capability", "unknown")).inc()
 
         # Verify agent is active
         agent_info = await self.registry.get_agent(target_agent)
         if not agent_info or agent_info.get("status") == "offline":
             logger.warning(f"Target agent {target_agent} is offline or not found")
+            DELEGATION_FAILURES.labels(target_agent=target_agent, reason="agent_offline").inc()
             # Could implement retry or fallback logic here
             
         # Emit delegation event
@@ -72,22 +103,32 @@ class DelegationManager:
             "deadline": subtask.get("deadline")
         }
         
-        await self.event_bus.emit(
-            "task.delegated",
-            event_payload,
-            source="orchestrator",
-            target_agent=target_agent,
-            correlation_id=task_id
-        )
-        
-        logger.info(f"Delegated subtask {subtask.get('id')} to {target_agent} (delegation_id={delegation_id})")
-        
-        return {
-            "status": "delegated",
-            "delegation_id": delegation_id,
-            "target_agent": target_agent,
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        try:
+            await self.event_bus.emit(
+                "task.delegated",
+                event_payload,
+                source="orchestrator",
+                target_agent=target_agent,
+                correlation_id=task_id
+            )
+            
+            logger.info(f"Delegated subtask {subtask.get('id')} to {target_agent} (delegation_id={delegation_id})")
+            
+            DELEGATION_SUCCESS.labels(target_agent=target_agent).inc()
+            
+            duration = (datetime.utcnow() - start_time).total_seconds()
+            DELEGATION_LATENCY.labels(target_agent=target_agent).observe(duration)
+            
+            return {
+                "status": "delegated",
+                "delegation_id": delegation_id,
+                "target_agent": target_agent,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        except Exception as e:
+            logger.error(f"Failed to delegate subtask {subtask.get('id')} to {target_agent}: {e}")
+            DELEGATION_FAILURES.labels(target_agent=target_agent, reason="event_bus_error").inc()
+            return {"status": "failed", "reason": str(e)}
 
     async def broadcast_task(self, task_description: str, capability: str):
         """Broadcast a task to any agent with specific capability."""
