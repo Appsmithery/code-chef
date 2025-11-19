@@ -1935,7 +1935,6 @@ What would you like to do?"""
     except Exception as e:
         logger.error(f"Chat endpoint error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
-        return decompose_request(request)
 
 
 if __name__ == '__main__':
