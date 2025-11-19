@@ -74,6 +74,7 @@ class WorkflowState(BaseModel):
     completed_at: Optional[datetime] = None
     status: str
     error_message: Optional[str] = None
+    version: int = 1
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -158,8 +159,8 @@ class WorkflowStateManager:
                 """
                 INSERT INTO workflow_state (
                     workflow_id, workflow_type, current_step, state_data,
-                    participating_agents, started_at, updated_at, status, metadata
-                ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9::jsonb)
+                    participating_agents, started_at, updated_at, status, metadata, version
+                ) VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9::jsonb, 1)
                 """,
                 workflow_id,
                 workflow_type,
@@ -212,42 +213,56 @@ class WorkflowStateManager:
         agent_id: Optional[str] = None
     ):
         """
-        Update workflow state.
+        Update workflow state with optimistic locking.
         
         Args:
             workflow_id: Workflow identifier
             updates: State updates to apply (merged with existing state)
             agent_id: Agent performing the update (for audit trail)
         """
-        async with self.pool.acquire() as conn:
-            # Get current state
-            current_state_raw = await conn.fetchval(
-                "SELECT state_data FROM workflow_state WHERE workflow_id = $1",
-                workflow_id
-            )
-            
-            if current_state_raw is None:
-                raise ValueError(f"Workflow {workflow_id} not found")
-            
-            # Parse JSON if needed
-            current_state = json.loads(current_state_raw) if isinstance(current_state_raw, str) else current_state_raw
-            
-            # Merge updates
-            new_state = {**current_state, **updates}
-            
-            # Update database
-            await conn.execute(
-                """
-                UPDATE workflow_state
-                SET state_data = $1::jsonb, updated_at = $2
-                WHERE workflow_id = $3
-                """,
-                json.dumps(new_state),
-                datetime.utcnow(),
-                workflow_id
-            )
+        max_retries = 3
+        for attempt in range(max_retries):
+            async with self.pool.acquire() as conn:
+                # Get current state and version
+                row = await conn.fetchrow(
+                    "SELECT state_data, version FROM workflow_state WHERE workflow_id = $1",
+                    workflow_id
+                )
+                
+                if not row:
+                    raise ValueError(f"Workflow {workflow_id} not found")
+                
+                current_state_raw = row['state_data']
+                current_version = row['version']
+                
+                # Parse JSON if needed
+                current_state = json.loads(current_state_raw) if isinstance(current_state_raw, str) else current_state_raw
+                
+                # Merge updates
+                new_state = {**current_state, **updates}
+                
+                # Update database with version check
+                result = await conn.execute(
+                    """
+                    UPDATE workflow_state
+                    SET state_data = $1::jsonb, updated_at = $2, version = version + 1
+                    WHERE workflow_id = $3 AND version = $4
+                    """,
+                    json.dumps(new_state),
+                    datetime.utcnow(),
+                    workflow_id,
+                    current_version
+                )
+                
+                if result == "UPDATE 1":
+                    logger.info(f"Updated workflow {workflow_id} state (by {agent_id or 'system'})")
+                    return
+                
+                # If we get here, version mismatch occurred
+                logger.warning(f"Concurrent update detected for workflow {workflow_id}, retrying ({attempt + 1}/{max_retries})")
+                await asyncio.sleep(0.1 * (attempt + 1))  # Exponential backoff
         
-        logger.info(f"Updated workflow {workflow_id} state (by {agent_id or 'system'})")
+        raise RuntimeError(f"Failed to update workflow {workflow_id} after {max_retries} attempts due to concurrent modifications")
     
     async def update_step(
         self,
@@ -267,7 +282,7 @@ class WorkflowStateManager:
             await conn.execute(
                 """
                 UPDATE workflow_state
-                SET current_step = $1, updated_at = $2
+                SET current_step = $1, updated_at = $2, version = version + 1
                 WHERE workflow_id = $3
                 """,
                 current_step,
@@ -303,7 +318,8 @@ class WorkflowStateManager:
                         status = $2,
                         completed_at = $3,
                         updated_at = $3,
-                        error_message = $4
+                        error_message = $4,
+                        version = version + 1
                     WHERE workflow_id = $5
                     """,
                     json.dumps(final_state),
@@ -319,7 +335,8 @@ class WorkflowStateManager:
                     SET status = $1,
                         completed_at = $2,
                         updated_at = $2,
-                        error_message = $3
+                        error_message = $3,
+                        version = version + 1
                     WHERE workflow_id = $4
                     """,
                     status,
@@ -466,7 +483,8 @@ class WorkflowStateManager:
                 UPDATE workflow_state
                 SET current_step = $1,
                     state_data = state_data || $2::jsonb,
-                    updated_at = $3
+                    updated_at = $3,
+                    version = version + 1
                 WHERE workflow_id = $4
                 """,
                 row["step_name"],

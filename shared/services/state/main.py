@@ -171,6 +171,24 @@ async def initialize_schema():
         
         with open(schema_path, 'r') as f:
             schema_sql = f.read()
+            
+        # Read workflow state schema (Phase 6)
+        workflow_schema_path = "/app/workflow_state.sql"
+        if not os.path.exists(workflow_schema_path):
+            workflow_schema_path = "../../config/state/workflow_state.sql"
+            
+        if os.path.exists(workflow_schema_path):
+            with open(workflow_schema_path, 'r') as f:
+                schema_sql += "\n" + f.read()
+                
+        # Read resource locks schema (Phase 6)
+        locks_schema_path = "/app/resource_locks.sql"
+        if not os.path.exists(locks_schema_path):
+            locks_schema_path = "../../config/state/resource_locks.sql"
+            
+        if os.path.exists(locks_schema_path):
+            with open(locks_schema_path, 'r') as f:
+                schema_sql += "\n" + f.read()
         
         cursor = conn.cursor()
         cursor.execute(schema_sql)
