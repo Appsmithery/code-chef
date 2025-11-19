@@ -1,0 +1,34 @@
+# Linear Project Registry
+#
+# Maps project names to Linear project IDs for client scoping.
+#
+# Structure:
+#   project-name:
+#     project_id: <Linear project UUID>
+#     team_id: <Linear team UUID>
+#     description: <Human-readable description>
+#
+# Usage:
+#   linear_client = get_linear_client(agent_name="feature-dev", project_name="phase-5-chat")
+#
+# Security:
+#   - Subagents can only access their assigned project
+#   - Orchestrator has workspace-level access (no project scoping)
+
+# AI DevOps Agent Platform (main project)
+ai-devops-platform:
+  project_id: "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"
+  team_id: "f5b610be-ac34-4983-918b-2c9d00aa9b7a" # Project Roadmaps (PR)
+  description: "Main AI DevOps Agent Platform project"
+
+# Phase 5: Conversational Interface
+phase-5-chat:
+  project_id: "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" # Same project for now
+  team_id: "f5b610be-ac34-4983-918b-2c9d00aa9b7a"
+  description: "Phase 5 chat endpoint and notification system"
+# Add new projects here as they are created
+# Example:
+# infrastructure-automation:
+#   project_id: "<UUID from Linear>"
+#   team_id: "<UUID from Linear>"
+#   description: "Infrastructure as code automation"

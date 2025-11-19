@@ -1,0 +1,154 @@
+# Notification Configuration
+#
+# Configures notification channels, routing rules, and recipients.
+#
+# Usage:
+#   - Orchestrator loads this at startup
+#   - Determines where to send approval notifications
+#   - Configures Linear workspace hub and email fallback
+#
+# Environment Variables (required):
+#   - LINEAR_API_KEY: Linear OAuth token
+#   - LINEAR_APPROVAL_HUB_ISSUE_ID: Linear issue ID for approval hub
+#   - SMTP_HOST: SMTP server hostname
+#   - SMTP_PORT: SMTP server port (default: 587)
+#   - SMTP_USER: SMTP username
+#   - SMTP_PASS: SMTP password
+#   - NOTIFICATION_EMAIL_FROM: Sender email address
+#   - NOTIFICATION_EMAIL_TO: Recipient email addresses (comma-separated)
+
+# Linear Workspace Notifications
+linear_workspace:
+  enabled: true
+
+  # Approval hub settings
+  approval_hub:
+    # Issue ID loaded from LINEAR_APPROVAL_HUB_ISSUE_ID env var
+    # Default approver mention (@mention format)
+    default_approver: "@ops-lead"
+
+    # Minimum risk level to notify
+    # Options: low, medium, high, critical
+    min_risk_level: "low"
+
+    # Risk-specific approvers (override default)
+    risk_approvers:
+      critical: "@ops-lead"
+      high: "@ops-lead"
+      medium: "@ops-lead"
+      low: "@ops-lead"
+
+  # Rate limiting
+  rate_limit:
+    enabled: false
+    max_per_minute: 10
+    burst_size: 5
+
+# Email Notifications
+email:
+  enabled: true
+
+  # When to send emails
+  triggers:
+    - approval_required # Always notify on approval
+    - task_failed # Notify on task failures
+    - agent_error # Notify on agent errors
+
+  # Fallback behavior
+  fallback:
+    # Send email if Linear notification fails
+    on_linear_failure: true
+    # Retry Linear before falling back to email
+    retry_linear: true
+    retry_count: 2
+
+  # Minimum risk level for email notifications
+  min_risk_level: "medium"
+
+  # Risk-specific recipients (override NOTIFICATION_EMAIL_TO)
+  risk_recipients:
+    critical: "alex@appsmithery.co,ops@appsmithery.co"
+    high: "alex@appsmithery.co"
+    medium: "" # Uses NOTIFICATION_EMAIL_TO
+    low: "" # Uses NOTIFICATION_EMAIL_TO
+
+# Notification Routing Rules
+routing:
+  # Route approvals by project
+  project_routing:
+    enabled: true
+
+    # Project-specific settings
+    projects:
+      phase-5-chat:
+        linear_enabled: true
+        email_enabled: true
+        approver: "@alex"
+        email_override: "alex@appsmithery.co"
+
+      infrastructure-automation:
+        linear_enabled: true
+        email_enabled: true
+        approver: "@ops-lead"
+        email_override: "ops@appsmithery.co"
+
+  # Route by risk level
+  risk_routing:
+    critical:
+      channels: ["linear", "email"] # Both channels
+      priority: "urgent"
+    high:
+      channels: ["linear", "email"]
+      priority: "high"
+    medium:
+      channels: ["linear"] # Linear only
+      priority: "normal"
+    low:
+      channels: ["linear"]
+      priority: "low"
+
+# Notification Templates
+templates:
+  # Linear comment templates
+  linear:
+    approval_required: |
+      {risk_emoji} **{risk_level_upper} Approval Required**
+
+      **Project**: `{project_name}`
+      **Approval ID**: `{approval_id}`
+
+      {approver_mention} - Your approval is needed:
+
+      {task_description}
+
+      **Actions**:
+      - ✅ Approve: `task workflow:approve REQUEST_ID={approval_id}`
+      - ❌ Reject: `task workflow:reject REQUEST_ID={approval_id} REASON="<reason>"`
+
+      **Details**: [View in dashboard](http://45.55.173.72:8001/approvals/{approval_id})
+
+  # Email templates (HTML)
+  email:
+    subject: "{risk_emoji} {risk_level_upper} Approval Required: {project_name}"
+
+    body_html: |
+      <html>
+      <body>
+        <h2>{risk_emoji} {risk_level_upper} Approval Required</h2>
+        <p><strong>Project:</strong> {project_name}</p>
+        <p><strong>Approval ID:</strong> {approval_id}</p>
+        <p><strong>Task:</strong> {task_description}</p>
+        <p><a href="http://45.55.173.72:8001/approvals/{approval_id}">View in Dashboard</a></p>
+      </body>
+      </html>
+
+# Monitoring
+monitoring:
+  # Log notification metrics
+  log_metrics: true
+
+  # Alert if notification latency > threshold
+  latency_alert_threshold: 5000 # milliseconds
+
+  # Alert if notification failure rate > threshold
+  failure_rate_threshold: 0.1 # 10%

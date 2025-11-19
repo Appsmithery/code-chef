@@ -44,6 +44,13 @@ from lib.risk_assessor import get_risk_assessor
 from lib.hitl_manager import get_hitl_manager
 from lib.intent_recognizer import get_intent_recognizer, intent_to_task, IntentType
 from lib.session_manager import get_session_manager
+from lib.event_bus import get_event_bus, Event
+from lib.notifiers import (
+    LinearWorkspaceNotifier,
+    EmailNotifier,
+    NotificationConfig,
+    EmailConfig
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -89,6 +96,19 @@ hitl_manager = get_hitl_manager()
 # Chat interface components (Phase 5)
 intent_recognizer = get_intent_recognizer(gradient_client)
 session_manager = get_session_manager()
+
+# Event bus for notifications (Phase 5.2)
+event_bus = get_event_bus()
+
+# Initialize notifiers
+linear_notifier = LinearWorkspaceNotifier(agent_name="orchestrator")
+email_notifier = EmailNotifier()
+
+# Subscribe notifiers to event bus
+event_bus.subscribe("approval_required", linear_notifier.on_approval_required)
+event_bus.subscribe("approval_required", email_notifier.on_approval_required)
+
+logger.info("Notification system initialized (Linear + Email)")
 
 # Approval workflow metrics
 approval_requests_total = Counter(
@@ -511,6 +531,26 @@ async def orchestrate_task(request: TaskRequest):
                 "risk_level": risk_level,
                 "created_at": datetime.utcnow(),
             }
+
+            # Emit approval_required event for notifications
+            await event_bus.emit(
+                "approval_required",
+                {
+                    "approval_id": approval_request_id,
+                    "task_description": request.task,
+                    "risk_level": risk_level,
+                    "project_name": "ai-devops-platform",  # TODO: Extract from request context
+                    "metadata": {
+                        "task_id": task_id,
+                        "priority": request.priority,
+                        "agent": "orchestrator",
+                        "timestamp": datetime.utcnow().isoformat()
+                    }
+                },
+                source="orchestrator",
+                correlation_id=task_id
+            )
+            logger.info(f"Emitted approval_required event for {approval_request_id}")
 
             response = TaskResponse(
                 task_id=task_id,
