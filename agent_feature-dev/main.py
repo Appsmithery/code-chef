@@ -11,6 +11,8 @@ import httpx
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
+from contextlib import asynccontextmanager
+from lib.event_bus import get_event_bus
 
 from service import (
     FeatureRequest,
@@ -43,10 +45,22 @@ except Exception as e:
     hybrid_memory = None
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Connect to Event Bus
+    event_bus = get_event_bus()
+    try:
+        await event_bus.connect()
+        logger.info("✅ Connected to Event Bus")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to connect to Event Bus: {e}")
+    yield
+
 app = FastAPI(
     title="Feature Development Agent",
     description="Application code generation and feature implementation",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 Instrumentator().instrument(app).expose(app)
