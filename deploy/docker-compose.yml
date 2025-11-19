@@ -28,6 +28,7 @@ services:
       - state-persistence
     volumes:
       - orchestrator-data:/app/data
+      - ../config/hitl:/app/config/hitl:ro
     restart: unless-stopped
 
   # Feature Development Agent - Code generation
