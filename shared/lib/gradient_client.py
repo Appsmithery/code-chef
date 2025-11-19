@@ -17,8 +17,9 @@ from typing import Optional, Dict, Any, List
 logger = logging.getLogger(__name__)
 
 # Gradient Serverless Inference Configuration
-GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY")
-GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "meta-llama-3.1-8b-instruct")
+GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY") or os.getenv("DO_SERVERLESS_INFERENCE_KEY")
+GRADIENT_WORKSPACE_ID = os.getenv("GRADIENT_WORKSPACE_ID", "default")
+GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama-3.1-70b-instruct")
 
 # LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true
 # No manual configuration needed
@@ -74,8 +75,10 @@ class GradientClient:
                 from gradient import Gradient
 
                 # Initialize client for serverless inference
+                # Reference: https://gradient-sdk.digitalocean.com/api/python/
                 self.client = Gradient(
-                    model_access_key=self.model_access_key
+                    access_token=self.model_access_key,
+                    workspace_id=GRADIENT_WORKSPACE_ID
                 )
 
                 logger.info(f"[{agent_name}] Gradient SDK initialized for serverless inference")
@@ -129,9 +132,10 @@ class GradientClient:
         messages.append({"role": "user", "content": prompt})
         
         try:
-            # Call Gradient serverless inference
-            # SDK automatically traces with Langfuse if configured
-            response = self.client.chat.completions.create(
+            # Call Gradient serverless inference via agents.chat.completions API
+            # Reference: https://gradient-sdk.digitalocean.com/api/python/resources/agents/subresources/chat/subresources/completions/methods/create
+            # SDK automatically traces with LangSmith if LANGCHAIN_TRACING_V2=true
+            response = self.client.agents.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
