@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 class NotificationConfig:
     """Configuration for workspace notifications."""
     enabled: bool = True
-    approver_mention: str = "@ops-lead"  # Default Linear @mention
+    approver_mention: str = "@lead-minion"  # Default Linear @mention
     min_risk_level: str = "low"  # Only notify if risk >= this level
 
 
