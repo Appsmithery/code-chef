@@ -36,18 +36,16 @@ class HITLManager:
         self.risk_assessor = get_risk_assessor()
         
         if policies_path is None:
-            # Check environment variable first
+            # Check environment variable first (for container deployments)
             policies_path = os.environ.get('HITL_POLICIES_PATH')
             
             if policies_path is None:
-                # Fall back to relative path
+                # Fall back to relative path (for local development)
                 policies_path = os.path.join(
                     os.path.dirname(__file__),
                     "..", "..", "config", "hitl", "approval-policies.yaml"
                 )
                 policies_path = os.path.abspath(policies_path)
-        
-        logger.info(f"[HITLManager] Attempting to load policies from: {policies_path}")
         
         try:
             with open(policies_path) as f:
@@ -366,12 +364,7 @@ class HITLManager:
         """Check if role can approve risk level"""
         role_config = self.policies.get("roles", {}).get(role, {})
         can_approve_levels = role_config.get("can_approve", [])
-        result = risk_level in can_approve_levels
-        logger.info(
-            f"[HITLManager] Authorization check: role={role}, risk_level={risk_level}, "
-            f"can_approve_levels={can_approve_levels}, result={result}"
-        )
-        return result
+        return risk_level in can_approve_levels
     
     def _calculate_risk_score(self, task: Dict, risk_level: RiskLevel) -> float:
         """Calculate numeric risk score (0.0-10.0)"""
