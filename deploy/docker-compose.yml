@@ -240,6 +240,8 @@ services:
       - POSTGRES_USER=devtools
       - POSTGRES_PASSWORD=changeme
       - HEARTBEAT_TIMEOUT_SECONDS=60
+      - REDIS_URL=redis://redis:6379
+      - EVENT_BUS_URL=redis://redis:6379
     env_file:
       - ../config/env/.env
     networks:
@@ -284,9 +286,9 @@ services:
       context: ..
       dockerfile: shared/services/langgraph/Dockerfile
     ports:
-      - "8009:8009"
+      - "8010:8010"
     environment:
-      - PORT=8009
+      - PORT=8010
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - DB_HOST=postgres
       - DB_PORT=5432
