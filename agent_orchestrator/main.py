@@ -537,9 +537,9 @@ async def orchestrate_task(request: TaskRequest):
                 "approval_required",
                 {
                     "approval_id": approval_request_id,
-                    "task_description": request.task,
+                    "task_description": request.description,
                     "risk_level": risk_level,
-                    "project_name": "ai-devops-platform",  # TODO: Extract from request context
+                    "project_name": request.project_context.get("project", "ai-devops-platform") if request.project_context else "ai-devops-platform",
                     "metadata": {
                         "task_id": task_id,
                         "priority": request.priority,
