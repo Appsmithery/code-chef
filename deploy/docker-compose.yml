@@ -234,7 +234,11 @@ services:
       - "8009:8009"
     environment:
       - PORT=8009
-      - DATABASE_URL=postgresql://devtools:${POSTGRES_PASSWORD}@postgres:5432/devtools
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=devtools
+      - POSTGRES_USER=devtools
+      - POSTGRES_PASSWORD=changeme
       - HEARTBEAT_TIMEOUT_SECONDS=60
     env_file:
       - ../config/env/.env
