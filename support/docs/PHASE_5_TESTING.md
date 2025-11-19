@@ -13,13 +13,15 @@
 1. **Foundation for Phase 5**: The chat endpoint is the entry point for all conversational features. If intent recognition or session management is broken, everything else breaks.
 
 2. **Database Dependencies**: We need to verify:
+
    - Chat sessions table exists (did we run migrations?)
    - Session persistence works across requests
    - Message history is properly stored
 
 3. **Integration Points**: Chat endpoint integrates with:
+
    - `/orchestrate` (for task submissions)
-   - Task registry (for status queries)  
+   - Task registry (for status queries)
    - Approval endpoints (for approval decisions)
    - If any of these are broken, we'll catch it now vs. after building more features on top
 
@@ -51,13 +53,14 @@ docker compose exec postgres psql -U devtools -d devtools -f /opt/Dev-Tools/conf
 ```
 
 **Verify Migration**:
+
 ```bash
 # Check tables exist
 docker compose exec postgres psql -U devtools -d devtools -c "\dt chat_*"
 
 # Expected output:
 #              List of relations
-# Schema |     Name      | Type  |  Owner   
+# Schema |     Name      | Type  |  Owner
 #--------+---------------+-------+----------
 # public | chat_messages | table | devtools
 # public | chat_sessions | table | devtools
@@ -86,6 +89,7 @@ curl http://localhost:8001/health | jq .
 ```
 
 **Health Check Verification**:
+
 ```json
 {
   "status": "ok",
@@ -107,6 +111,7 @@ curl http://localhost:8001/health | jq .
 ### Step 3: Run Test Script Locally (Against Remote)
 
 **Option A: Test Against Remote Droplet**
+
 ```powershell
 # From local machine
 cd D:\INFRA\Dev-Tools\Dev-Tools
@@ -120,6 +125,7 @@ python support/scripts/test-chat-endpoint.py
 ```
 
 **Option B: Test Locally (if orchestrator running locally)**
+
 ```powershell
 cd D:\INFRA\Dev-Tools\Dev-Tools
 
@@ -133,6 +139,7 @@ python support/scripts/test-chat-endpoint.py
 ### Step 4: Verify Results
 
 **Expected Output**:
+
 ```
 ============================================================
 Phase 5 Chat Endpoint Test
@@ -186,6 +193,7 @@ After running tests, verify:
 - [ ] Database has records in `chat_sessions` and `chat_messages` tables
 
 **Database Verification**:
+
 ```bash
 # Check session records
 docker compose exec postgres psql -U devtools -d devtools -c "SELECT session_id, user_id, created_at FROM chat_sessions LIMIT 5;"
@@ -201,17 +209,20 @@ docker compose exec postgres psql -U devtools -d devtools -c "SELECT session_id,
 Once chat endpoint is verified working:
 
 1. **Day 3**: Build `LinearWorkspaceClient` and `LinearProjectClient`
+
    - File: `shared/lib/linear_workspace_client.py`
    - File: `shared/lib/linear_project_client.py`
    - File: `shared/lib/linear_client_factory.py`
 
 2. **Day 4**: Build notifiers (Linear + Email)
+
    - File: `shared/lib/notifiers/linear_workspace_notifier.py`
    - File: `shared/lib/notifiers/linear_project_notifier.py`
    - File: `shared/lib/notifiers/email_notifier.py`
    - File: `shared/lib/event_bus.py`
 
 3. **Day 5**: Wire everything together with event bus
+
    - Update orchestrator to use client factory
    - Create `config/hitl/notification-config.yaml`
    - Create `config/linear/project-registry.yaml`
@@ -228,10 +239,13 @@ Once chat endpoint is verified working:
 ### Common Issues & Solutions
 
 #### 1. Database Connection Errors
+
 ```
 Error: could not connect to PostgreSQL
 ```
+
 **Solution**:
+
 ```bash
 # Check postgres is running
 docker compose ps postgres
@@ -244,10 +258,13 @@ docker compose exec postgres psql -U devtools -d devtools -c "SELECT version();"
 ```
 
 #### 2. Missing Database Tables
+
 ```
 Error: relation "chat_sessions" does not exist
 ```
+
 **Solution**:
+
 ```bash
 # Run migrations
 docker compose exec postgres psql -U devtools -d devtools -f /opt/Dev-Tools/config/state/schema.sql
@@ -257,10 +274,13 @@ docker compose exec postgres psql -U devtools -d devtools -c "\dt"
 ```
 
 #### 3. Gradient API Errors
+
 ```
 Error: Gradient API key not configured
 ```
+
 **Solution**:
+
 ```bash
 # Check API key in .env
 grep GRADIENT config/env/.env
@@ -274,10 +294,13 @@ docker compose restart orchestrator
 ```
 
 #### 4. Import Errors
+
 ```
 ModuleNotFoundError: No module named 'lib.intent_recognizer'
 ```
+
 **Solution**:
+
 ```bash
 # Rebuild orchestrator with new dependencies
 docker compose build orchestrator
@@ -288,10 +311,13 @@ docker compose logs -f orchestrator
 ```
 
 #### 5. Session Not Persisting
+
 ```
 Chat works but messages not saved across requests
 ```
+
 **Solution**:
+
 ```bash
 # Check session_manager database pool initialization
 docker compose logs orchestrator | grep "database pool"
@@ -301,10 +327,13 @@ docker compose exec orchestrator env | grep DB_
 ```
 
 #### 6. Intent Recognition Falls Back to Keywords
+
 ```
 All intents return confidence 0.5-0.8 (keyword fallback)
 ```
+
 **Solution**:
+
 ```bash
 # Check Gradient client initialization
 docker compose logs orchestrator | grep -i gradient
@@ -353,6 +382,7 @@ curl -X POST http://45.55.173.72:8001/chat \
 ## Performance Benchmarks
 
 Expected response times (with Gradient AI):
+
 - Health check: <100ms
 - Intent recognition: 200-500ms (LLM call)
 - Task submission: 1-3s (includes /orchestrate)
@@ -360,6 +390,7 @@ Expected response times (with Gradient AI):
 - General query: <100ms (no LLM needed)
 
 If response times exceed these, investigate:
+
 1. Gradient API latency (check LangSmith traces)
 2. Database connection pool exhaustion
 3. Network latency to droplet
@@ -374,6 +405,7 @@ If response times exceed these, investigate:
 4. **Move to Day 3**: Begin Linear client factory implementation
 
 **Test Completion Signature**:
+
 ```
 Date: _______________
 Tester: _______________
