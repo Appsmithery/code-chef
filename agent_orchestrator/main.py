@@ -113,6 +113,13 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.warning(f"⚠️  Failed to register with agent registry: {e}")
     
+    # Connect to Event Bus
+    try:
+        await event_bus.connect()
+        logger.info("✅ Connected to Event Bus")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to connect to Event Bus: {e}")
+
     yield
     
     # Shutdown: Stop heartbeat

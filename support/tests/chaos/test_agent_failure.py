@@ -27,7 +27,7 @@ logger = logging.getLogger("chaos-test")
 ORCHESTRATOR_URL = "http://localhost:8001"
 REGISTRY_URL = "http://localhost:8009"
 TARGET_AGENT = "code-review"
-DOCKER_CONTAINER_NAME = "dev-tools-code-review-1" # Adjust based on your compose project name
+DOCKER_CONTAINER_NAME = "deploy-code-review-1" # Adjust based on your compose project name
 
 async def run_chaos_test():
     """

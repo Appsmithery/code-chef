@@ -187,10 +187,21 @@ class EventBus:
         self.redis_pubsub = None
         self._redis_task = None
         
-        if REDIS_AVAILABLE:
-            asyncio.create_task(self._connect_redis())
+        # Do not connect in __init__ as it may be called before event loop is running
+        # Call connect() explicitly during application startup
             
         logger.info("Event bus initialized")
+
+    async def connect(self):
+        """Connect to Redis and start listening for events."""
+        if not REDIS_AVAILABLE:
+            logger.warning("Redis not available, skipping connection")
+            return
+
+        if self.redis_client:
+            return  # Already connected
+
+        await self._connect_redis()
 
     async def _connect_redis(self):
         """Connect to Redis and start listening for events."""

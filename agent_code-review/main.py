@@ -72,6 +72,15 @@ try:
             )
         ]
         
+        # Connect to Event Bus
+        from lib.event_bus import get_event_bus
+        event_bus = get_event_bus()
+        try:
+            await event_bus.connect()
+            logger.info("✅ Connected to Event Bus")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to connect to Event Bus: {e}")
+
         # Register and start heartbeat
         try:
             await registry_client.register(capabilities)

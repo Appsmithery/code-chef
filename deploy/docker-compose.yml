@@ -279,6 +279,22 @@ services:
       timeout: 5s
       retries: 5
 
+  # Redis for Event Bus & Caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - devtools-network
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # LangGraph Workflow Service
   langgraph:
     image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:langgraph-${IMAGE_TAG:-latest}
@@ -368,6 +384,7 @@ volumes:
   orchestrator-data:
   mcp-config:
   postgres-data:
+  redis-data:
   prometheus-data:
   caddy-data:
   caddy-config:
