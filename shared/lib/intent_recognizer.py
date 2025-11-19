@@ -106,11 +106,10 @@ class IntentRecognizer:
         
         try:
             # Use JSON mode for structured output
-            response = await self.gradient_client.generate_completion(
+            response = await self.gradient_client.complete(
                 prompt=prompt,
                 temperature=0.1,  # Low temperature for consistent classification
-                max_tokens=500,
-                response_format={"type": "json_object"}
+                max_tokens=500
             )
             
             # Parse JSON response
