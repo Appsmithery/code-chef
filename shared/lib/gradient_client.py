@@ -131,15 +131,14 @@ class GradientClient:
         messages.append({"role": "user", "content": prompt})
         
         try:
-            # Call Gradient serverless inference via agents.chat.completions API
-            # Reference: https://gradient-sdk.digitalocean.com/api/python/resources/agents/subresources/chat/subresources/completions/methods/create
+            # Call Gradient serverless inference via chat.completions API
+            # Reference: https://gradient-sdk.digitalocean.com/getting-started/serverless-inference
             # SDK automatically traces with LangSmith if LANGCHAIN_TRACING_V2=true
-            response = self.client.agents.chat.completions.create(
+            response = self.client.chat.completions.create(
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens,
-                agent_access_key=self.model_access_key
+                max_tokens=max_tokens
             )
             
             return {
