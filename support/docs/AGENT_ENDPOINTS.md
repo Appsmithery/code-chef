@@ -60,6 +60,26 @@ Complete API reference for all Dev-Tools agents.
 - `GET /agents` — List available specialized agents and their endpoints
   - Returns: `{"agents": [{"type": "string", "endpoint": "url", "status": "string"}]}`
 
+- `POST /approve/{approval_id}` — Approve a pending approval request
+  - Query Params: `approver_id` (email), `approver_role` (tech_lead/devops_engineer), `justification` (optional)
+  - Returns: `{"status": "approved", "approval_id": "uuid", "approver_id": "email", "timestamp": "ISO8601"}`
+  - Emits: `approval_approved` event to notification subscribers
+
+- `POST /reject/{approval_id}` — Reject a pending approval request
+  - Query Params: `approver_id` (email), `approver_role` (tech_lead/devops_engineer), `reason` (required)
+  - Returns: `{"status": "rejected", "approval_id": "uuid", "approver_id": "email", "reason": "string", "timestamp": "ISO8601"}`
+  - Emits: `approval_rejected` event to notification subscribers
+
+- `GET /approvals/pending` — List all pending approval requests
+  - Query Params: `approver_role` (optional filter)
+  - Returns: `{"approvals": [{"id": "uuid", "task_type": "string", "risk_level": "string", "created_at": "ISO8601", "expires_at": "ISO8601"}]}`
+
+- `GET /approvals/{approval_id}` — Get details for a specific approval request
+  - Returns: `{"id": "uuid", "status": "pending|approved|rejected|expired", "task_description": "string", "risk_level": "string", "approver_id": "string", "created_at": "ISO8601"}`
+
+**Notification System:**  
+Approval requests trigger `approval_required` events → Linear workspace hub (PR-68) receives formatted comments with @mentions → Operators notified via Linear (email/mobile/desktop) in <1 second. See `support/docs/NOTIFICATION_SYSTEM.md` for architecture.
+
 **Hand-off Protocol:**  
 Receives user requests → Decomposes into subtasks → Routes to specialized agents → Tracks completion
 
