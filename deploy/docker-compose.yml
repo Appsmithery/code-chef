@@ -18,6 +18,7 @@ services:
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
       - STATE_SERVICE_URL=http://state-persistence:8008
+      - HITL_POLICIES_PATH=/app/config/hitl/approval-policies.yaml
     env_file:
       - ../config/env/.env
     networks:

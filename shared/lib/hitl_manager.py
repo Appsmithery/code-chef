@@ -36,13 +36,17 @@ class HITLManager:
         self.risk_assessor = get_risk_assessor()
         
         if policies_path is None:
-            policies_path = os.path.join(
-                os.path.dirname(__file__),
-                "..", "..", "config", "hitl", "approval-policies.yaml"
-            )
+            # Check environment variable first
+            policies_path = os.environ.get('HITL_POLICIES_PATH')
+            
+            if policies_path is None:
+                # Fall back to relative path
+                policies_path = os.path.join(
+                    os.path.dirname(__file__),
+                    "..", "..", "config", "hitl", "approval-policies.yaml"
+                )
+                policies_path = os.path.abspath(policies_path)
         
-        # Resolve to absolute path
-        policies_path = os.path.abspath(policies_path)
         logger.info(f"[HITLManager] Attempting to load policies from: {policies_path}")
         
         try:
