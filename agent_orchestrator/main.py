@@ -2078,6 +2078,143 @@ What would you like to do?"""
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
 
 
+# === Agent-to-Agent Communication (Phase 6) ===
+
+from lib.agent_events import AgentRequestEvent, AgentResponseEvent, AgentRequestType
+from lib.agent_request_handler import handle_agent_request
+
+@app.post("/agent-request", response_model=AgentResponseEvent, tags=["agent-communication"])
+async def agent_request_endpoint(request: AgentRequestEvent):
+    """
+    Handle requests from other agents.
+    
+    Supports:
+    - DECOMPOSE_TASK: Break complex task into subtasks
+    - ROUTE_REQUEST: Find appropriate agent for capability
+    - AGGREGATE_RESULTS: Combine results from multiple agents
+    - GET_STATUS: Query orchestrator state
+    """
+    return await handle_agent_request(
+        request=request,
+        handler=handle_orchestrator_request,
+        agent_name="orchestrator"
+    )
+
+
+async def handle_orchestrator_request(request: AgentRequestEvent) -> Dict[str, Any]:
+    """
+    Process agent requests based on type.
+    
+    Args:
+        request: AgentRequestEvent with request_type and payload
+    
+    Returns:
+        Dict with result data
+    
+    Raises:
+        ValueError: If request type not supported
+    """
+    request_type = request.request_type
+    payload = request.payload
+    
+    if request_type == AgentRequestType.DECOMPOSE_TASK:
+        # Decompose complex task into subtasks
+        task_description = payload.get("task_description", "")
+        
+        if not task_description:
+            raise ValueError("task_description required for DECOMPOSE_TASK")
+        
+        # Use Gradient AI to decompose (if available)
+        if gradient_client.is_enabled():
+            prompt = f"""Decompose this development task into 3-5 subtasks:
+
+Task: {task_description}
+
+Return JSON array of subtasks with:
+- description: What to do
+- agent: Which agent should handle it (feature-dev, code-review, infrastructure, cicd, documentation)
+- priority: high/normal/low
+- dependencies: List of prerequisite subtask indices"""
+
+            decomposition = await gradient_client.generate(
+                prompt=prompt,
+                session_id=request.correlation_id or request.request_id
+            )
+            
+            return {
+                "subtasks": decomposition,
+                "original_task": task_description,
+                "decomposition_method": "llm"
+            }
+        else:
+            # Fallback: Simple rule-based decomposition
+            return {
+                "subtasks": [
+                    {"description": task_description, "agent": "feature-dev", "priority": "normal"}
+                ],
+                "decomposition_method": "fallback"
+            }
+    
+    elif request_type == AgentRequestType.ROUTE_REQUEST:
+        # Find appropriate agent for capability
+        capability_query = payload.get("capability", "")
+        
+        if not capability_query:
+            raise ValueError("capability required for ROUTE_REQUEST")
+        
+        # Query agent registry
+        if registry_client:
+            try:
+                agents = await registry_client.search_capabilities(capability_query)
+                
+                if agents:
+                    # Return first match (could implement scoring later)
+                    best_agent = agents[0]
+                    return {
+                        "agent_id": best_agent["agent_id"],
+                        "agent_name": best_agent["agent_name"],
+                        "capabilities": best_agent["capabilities"],
+                        "confidence": 0.9
+                    }
+                else:
+                    return {
+                        "agent_id": None,
+                        "error": f"No agents found with capability: {capability_query}"
+                    }
+            except Exception as e:
+                logger.error(f"Registry query failed: {e}")
+                return {"error": str(e)}
+        else:
+            return {"error": "Agent registry not available"}
+    
+    elif request_type == AgentRequestType.AGGREGATE_RESULTS:
+        # Combine results from multiple agents
+        results = payload.get("results", [])
+        
+        if not results:
+            raise ValueError("results array required for AGGREGATE_RESULTS")
+        
+        # Simple aggregation (could use LLM for smarter merging)
+        return {
+            "aggregated_count": len(results),
+            "results": results,
+            "summary": f"Aggregated {len(results)} results from multiple agents"
+        }
+    
+    elif request_type == AgentRequestType.GET_STATUS:
+        # Return orchestrator health and stats
+        return {
+            "status": "healthy",
+            "pending_approvals": len(pending_approval_registry),
+            "active_sessions": session_manager.get_session_count() if session_manager else 0,
+            "mcp_tools_loaded": len(progressive_loader.get_loaded_tools()),
+            "registry_connected": registry_client is not None
+        }
+    
+    else:
+        raise ValueError(f"Unsupported request type: {request_type}")
+
+
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "8001"))
     uvicorn.run(app, host="0.0.0.0", port=port)

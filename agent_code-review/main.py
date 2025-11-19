@@ -156,6 +156,97 @@ async def review_code(request: ReviewRequest):
             },
         )
 
+
+# === Agent-to-Agent Communication (Phase 6) ===
+
+from lib.agent_events import AgentRequestEvent, AgentResponseEvent, AgentRequestType
+from lib.agent_request_handler import handle_agent_request
+from typing import Dict, Any
+
+@app.post("/agent-request", response_model=AgentResponseEvent, tags=["agent-communication"])
+async def agent_request_endpoint(request: AgentRequestEvent):
+    """
+    Handle requests from other agents.
+    
+    Supports:
+    - REVIEW_CODE: Perform code review on changes
+    - EXPLAIN_CODE: Explain code structure/logic
+    - GET_STATUS: Query agent health
+    """
+    return await handle_agent_request(
+        request=request,
+        handler=handle_code_review_request,
+        agent_name="code-review"
+    )
+
+
+async def handle_code_review_request(request: AgentRequestEvent) -> Dict[str, Any]:
+    """
+    Process agent requests for code review tasks.
+    
+    Args:
+        request: AgentRequestEvent with request_type and payload
+    
+    Returns:
+        Dict with result data
+    
+    Raises:
+        ValueError: If request type not supported
+    """
+    request_type = request.request_type
+    payload = request.payload
+    
+    if request_type == AgentRequestType.REVIEW_CODE:
+        # Perform code review
+        file_path = payload.get("file_path", "")
+        changes = payload.get("changes", "")
+        context = payload.get("context", {})
+        
+        if not file_path or not changes:
+            raise ValueError("file_path and changes required for REVIEW_CODE")
+        
+        # Create review request
+        review_req = ReviewRequest(
+            file_path=file_path,
+            changes=changes,
+            context=context
+        )
+        
+        # Process review
+        review_response = await process_review_request(review_req)
+        
+        return {
+            "issues": review_response.issues,
+            "suggestions": review_response.suggestions,
+            "severity": review_response.severity,
+            "approved": review_response.approved
+        }
+    
+    elif request_type == AgentRequestType.EXPLAIN_CODE:
+        # Explain code structure/logic
+        code = payload.get("code", "")
+        language = payload.get("language", "python")
+        
+        if not code:
+            raise ValueError("code required for EXPLAIN_CODE")
+        
+        return {
+            "explanation": f"Code explanation for {language} (placeholder)",
+            "complexity": "medium",
+            "suggestions": []
+        }
+    
+    elif request_type == AgentRequestType.GET_STATUS:
+        return {
+            "status": "healthy",
+            "capabilities": ["review_code", "explain_code"],
+            "registry_connected": registry_client is not None
+        }
+    
+    else:
+        raise ValueError(f"Unsupported request type: {request_type}")
+
+
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "8003"))
     uvicorn.run(app, host="0.0.0.0", port=port)
