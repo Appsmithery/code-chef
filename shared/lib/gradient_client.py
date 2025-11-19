@@ -138,7 +138,8 @@ class GradientClient:
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens
+                max_tokens=max_tokens,
+                agent_access_key=self.model_access_key
             )
             
             return {
