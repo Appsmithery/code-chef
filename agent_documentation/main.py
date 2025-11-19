@@ -14,6 +14,9 @@ import uvicorn
 import os
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
+from contextlib import asynccontextmanager
+from lib.event_bus import get_event_bus
+from lib.registry_client import RegistryClient, AgentCapability
 
 from service import (
     GuardrailViolation,
@@ -46,10 +49,75 @@ except Exception as e:
     qdrant_client = None
     hybrid_memory = None
 
+# Agent registry client
+registry_client: RegistryClient | None = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Register with agent registry
+    registry_url = os.getenv("AGENT_REGISTRY_URL", "http://agent-registry:8009")
+    agent_id = "documentation"
+    agent_name = "Documentation Agent"
+    base_url = f"http://documentation:{os.getenv('PORT', '8006')}"
+    
+    global registry_client
+    registry_client = RegistryClient(
+        registry_url=registry_url,
+        agent_id=agent_id,
+        agent_name=agent_name,
+        base_url=base_url
+    )
+    
+    # Define capabilities
+    capabilities = [
+        AgentCapability(
+            name="generate_docs",
+            description="Generate documentation from code",
+            parameters={"repo_url": "str", "format": "str"},
+            cost_estimate="~150 tokens",
+            tags=["documentation", "generation", "markdown"]
+        ),
+        AgentCapability(
+            name="update_readme",
+            description="Update README with new content",
+            parameters={"content": "str", "section": "str"},
+            cost_estimate="~50 tokens",
+            tags=["documentation", "readme"]
+        )
+    ]
+    
+    # Register and start heartbeat
+    try:
+        await registry_client.register(capabilities)
+        await registry_client.start_heartbeat()
+        logger.info(f"✅ Registered {agent_id} with agent registry")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to register with agent registry: {e}")
+
+    # Connect to Event Bus
+    event_bus = get_event_bus()
+    try:
+        await event_bus.connect()
+        logger.info("✅ Connected to Event Bus")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to connect to Event Bus: {e}")
+    
+    yield
+    
+    # Shutdown: Stop heartbeat
+    if registry_client:
+        try:
+            await registry_client.stop_heartbeat()
+            await registry_client.close()
+            logger.info(f"🛑 Unregistered {agent_id} from agent registry")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to unregister from agent registry: {e}")
+
 app = FastAPI(
     title="Documentation Agent",
     description="Documentation generation and maintenance",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable Prometheus metrics collection

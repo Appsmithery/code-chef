@@ -15,6 +15,9 @@ import uvicorn
 import os
 import logging
 from prometheus_fastapi_instrumentator import Instrumentator
+from contextlib import asynccontextmanager
+from lib.event_bus import get_event_bus
+from lib.registry_client import RegistryClient, AgentCapability
 
 from service import (
     GuardrailViolation,
@@ -47,10 +50,75 @@ except Exception as e:
     qdrant_client = None
     hybrid_memory = None
 
+# Agent registry client
+registry_client: RegistryClient | None = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Register with agent registry
+    registry_url = os.getenv("AGENT_REGISTRY_URL", "http://agent-registry:8009")
+    agent_id = "cicd"
+    agent_name = "CI/CD Agent"
+    base_url = f"http://cicd:{os.getenv('PORT', '8005')}"
+    
+    global registry_client
+    registry_client = RegistryClient(
+        registry_url=registry_url,
+        agent_id=agent_id,
+        agent_name=agent_name,
+        base_url=base_url
+    )
+    
+    # Define capabilities
+    capabilities = [
+        AgentCapability(
+            name="run_pipeline",
+            description="Run CI/CD pipeline for repository",
+            parameters={"repo_url": "str", "branch": "str"},
+            cost_estimate="~60s compute",
+            tags=["ci", "cd", "pipeline", "github-actions"]
+        ),
+        AgentCapability(
+            name="validate_build",
+            description="Validate build artifacts and run tests",
+            parameters={"build_id": "str"},
+            cost_estimate="~30s compute",
+            tags=["testing", "validation"]
+        )
+    ]
+    
+    # Register and start heartbeat
+    try:
+        await registry_client.register(capabilities)
+        await registry_client.start_heartbeat()
+        logger.info(f"✅ Registered {agent_id} with agent registry")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to register with agent registry: {e}")
+
+    # Connect to Event Bus
+    event_bus = get_event_bus()
+    try:
+        await event_bus.connect()
+        logger.info("✅ Connected to Event Bus")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to connect to Event Bus: {e}")
+    
+    yield
+    
+    # Shutdown: Stop heartbeat
+    if registry_client:
+        try:
+            await registry_client.stop_heartbeat()
+            await registry_client.close()
+            logger.info(f"🛑 Unregistered {agent_id} from agent registry")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to unregister from agent registry: {e}")
+
 app = FastAPI(
     title="CI/CD Pipeline Agent",
     description="Automation workflow generation and deployment orchestration",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable Prometheus metrics collection
