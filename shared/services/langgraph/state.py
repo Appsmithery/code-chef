@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any, Dict, Iterable, List, Mapping, Optional, TypedDict, cast
+import operator
+from datetime import datetime
+from typing import Annotated, Any, Dict, Iterable, List, Mapping, Optional, Sequence, TypedDict, cast
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -34,6 +36,37 @@ def _append_unique(existing: Optional[List[str]], updates: Optional[Iterable[str
         if value not in base:
             base.append(value)
     return base
+
+
+class MultiAgentState(TypedDict):
+    """
+    Shared state for multi-agent workflows (Phase 6).
+    Supports task decomposition, parallel execution, and resource locking.
+    """
+    task_id: str
+    workflow_type: str  # "sequential", "parallel", "map-reduce"
+
+    # Task decomposition
+    subtasks: Annotated[Sequence[dict], operator.add]
+    subtask_status: dict  # {subtask_id: "pending"|"in_progress"|"completed"|"failed"}
+
+    # Agent assignments
+    agent_assignments: dict  # {subtask_id: agent_id}
+    agent_status: dict  # {agent_id: "idle"|"busy"}
+
+    # Coordination
+    locks: dict  # {resource_id: agent_id}
+    checkpoints: Annotated[Sequence[dict], operator.add]
+
+    # Results aggregation
+    partial_results: dict  # {subtask_id: result}
+    final_result: Optional[dict]
+
+    # Metadata
+    started_at: datetime
+    updated_at: datetime
+    error_log: Annotated[Sequence[str], operator.add]
+    _version: int  # Optimistic locking version
 
 
 class AgentState(TypedDict, total=False):
