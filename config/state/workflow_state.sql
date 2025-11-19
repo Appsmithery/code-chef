@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS workflow_state (
     completed_at TIMESTAMP,
     status VARCHAR(32) NOT NULL CHECK (status IN ('running', 'paused', 'completed', 'failed', 'cancelled')),
     error_message TEXT,
+    version INTEGER NOT NULL DEFAULT 1,
     metadata JSONB DEFAULT '{}'::jsonb
 );
 
