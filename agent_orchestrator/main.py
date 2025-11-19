@@ -811,6 +811,21 @@ async def approve_request(
         # Update metrics
         approval_decisions_total.labels(decision="approved", risk_level=risk_level).inc()
         
+        # Emit approval_approved event
+        await event_bus.emit(
+            "approval_approved",
+            {
+                "approval_id": approval_id,
+                "approver_id": approver_id,
+                "approver_role": approver_role,
+                "risk_level": risk_level,
+                "justification": justification,
+                "timestamp": datetime.utcnow().isoformat()
+            },
+            source="orchestrator",
+            correlation_id=approval_id
+        )
+        
         # Log to MCP memory
         await mcp_tool_client.create_memory_entity(
             name=f"approval_{approval_id}",
@@ -880,6 +895,21 @@ async def reject_request(
         
         # Update metrics
         approval_decisions_total.labels(decision="rejected", risk_level=risk_level).inc()
+        
+        # Emit approval_rejected event
+        await event_bus.emit(
+            "approval_rejected",
+            {
+                "approval_id": approval_id,
+                "approver_id": approver_id,
+                "approver_role": approver_role,
+                "risk_level": risk_level,
+                "reason": reason,
+                "timestamp": datetime.utcnow().isoformat()
+            },
+            source="orchestrator",
+            correlation_id=approval_id
+        )
         
         # Log to MCP memory
         await mcp_tool_client.create_memory_entity(
