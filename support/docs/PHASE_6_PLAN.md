@@ -31,7 +31,7 @@ Enable agents to collaborate on complex, multi-step tasks through event-driven c
 
 ## 🏗️ Architecture
 
-### Current State (Phase 5)
+### Current State (Phase 6.4 Complete)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -40,8 +40,19 @@ Enable agents to collaborate on complex, multi-step tasks through event-driven c
 │  - Task decomposition (LLM-powered)                         │
 │  - Direct agent invocation (HTTP calls)                     │
 │  - HITL approval workflow                                   │
+│  - Multi-agent workflow graphs (LangGraph) [NEW]            │
 └─────────────────────────────────────────────────────────────┘
                               │
+          ┌───────────────────┴───────────────────┐
+          ▼                                       ▼
+┌─────────────────────┐               ┌─────────────────────┐
+│   Agent Registry    │               │     Event Bus       │
+│  - Capability DB    │               │  - Pub/Sub routing  │
+│  - Health checks    │               │  - Agent messaging  │
+│  - Discovery API    │               │  - Workflow events  │
+└─────────────────────┘               └─────────────────────┘
+          │                                       │
+          └───────────────────┬───────────────────┘
                               ▼
           ┌───────────────────────────────────────┐
           │         MCP Gateway (150+ tools)      │
@@ -50,18 +61,24 @@ Enable agents to collaborate on complex, multi-step tasks through event-driven c
           ┌───────┬───────┬───────┬───────┬───────┐
           ▼       ▼       ▼       ▼       ▼       ▼
        Feature  Code   Infra   CI/CD   Docs    (5 Agents)
-         Dev   Review
+         Dev   Review                           + Registry
+                                                 + Event Bus
+                                                 + Shared State
+                                                 + Resource Locks
 ```
 
-**Limitations**:
+**Capabilities Unlocked**:
 
-- Orchestrator must know all agent URLs
-- No agent-to-agent communication
-- No shared context between agents
-- No dynamic agent discovery
-- Linear workflows only (no branching/parallelism)
+- Agents discover each other dynamically (Registry)
+- Agents can delegate subtasks to peers (Event Bus)
+- Shared context across agent boundaries (Shared State)
+- Automatic resource conflict prevention (Resource Locks)
 
-### Target State (Phase 6)
+**Pending**:
+
+- Complex multi-agent workflow examples (Task 6.5)
+
+### Target State (Phase 6 Complete)
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -495,9 +512,9 @@ class WorkflowStateManager:
 
 **Deliverables**:
 
-- [ ] `config/state/workflow_state.sql`
-- [ ] `shared/lib/workflow_state.py`
-- [ ] LangGraph PostgreSQL checkpointer integration
+- [x] `config/state/workflow_state.sql`
+- [x] `shared/lib/workflow_state.py`
+- [x] LangGraph PostgreSQL checkpointer integration
 - [ ] Example multi-agent workflows
 - [ ] State recovery tests
 - [ ] Documentation
@@ -633,8 +650,8 @@ async def deploy_service(request: DeployRequest):
 
 **Deliverables**:
 
-- [ ] `shared/lib/resource_lock.py`
-- [ ] `config/state/resource_locks.sql`
+- [x] `shared/lib/resource_lock.py`
+- [x] `config/state/resource_locks.sql`
 - [ ] Lock acquisition tests (concurrent scenarios)
 - [ ] Auto-cleanup of expired locks
 - [ ] Prometheus metrics (lock contention, wait time)
@@ -859,9 +876,9 @@ workflow.add_conditional_edges(
 
 **Deliverables**:
 
-- [ ] `agent_orchestrator/workflows/pr_deployment.py`
-- [ ] `agent_orchestrator/workflows/parallel_docs.py`
-- [ ] `agent_orchestrator/workflows/self_healing.py`
+- [x] `agent_orchestrator/workflows/pr_deployment.py`
+- [x] `agent_orchestrator/workflows/parallel_docs.py`
+- [x] `agent_orchestrator/workflows/self_healing.py`
 - [ ] Integration tests for each workflow
 - [ ] Performance benchmarks
 - [ ] Documentation with diagrams

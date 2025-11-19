@@ -16,6 +16,17 @@ from shared.services.langgraph.workflows import (
 from shared.services.langgraph.state import MultiAgentState
 from shared.services.langgraph.persistence import WorkflowPersistence
 
+# Import new Phase 6 workflows
+try:
+    from .workflows.pr_deployment import pr_deployment_app
+    from .workflows.parallel_docs import parallel_docs_app
+    from .workflows.self_healing import self_healing_app
+except ImportError:
+    # Fallback for when running outside of package context
+    from workflows.pr_deployment import pr_deployment_app
+    from workflows.parallel_docs import parallel_docs_app
+    from workflows.self_healing import self_healing_app
+
 logger = logging.getLogger(__name__)
 
 class WorkflowManager:
@@ -25,7 +36,11 @@ class WorkflowManager:
         self.workflows = {
             "sequential": create_sequential_workflow([]), # Empty template
             "parallel": create_parallel_workflow(),
-            "map_reduce": create_map_reduce_workflow()
+            "map_reduce": create_map_reduce_workflow(),
+            # Phase 6 Workflows
+            "pr_deployment": pr_deployment_app,
+            "parallel_docs": parallel_docs_app,
+            "self_healing": self_healing_app
         }
 
     async def start_workflow(
