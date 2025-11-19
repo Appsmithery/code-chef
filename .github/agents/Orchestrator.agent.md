@@ -9,7 +9,6 @@ tools:
     "runCommands",
     "runTasks",
     "Copilot Container Tools/*",
-    "Docs by LangChain/*",
     "vscode.mermaid-chat-features/renderMermaidDiagram",
     "chrisdias.promptboost/promptBoost",
     "usages",
