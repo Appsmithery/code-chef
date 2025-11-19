@@ -24,10 +24,16 @@ from pydantic import BaseModel, Field
 # ============================================================================
 
 PORT = int(os.getenv("PORT", "8009"))
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://devtools:devtools@state:5432/devtools"
-)
+
+# Build database URL
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "postgres")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB", "devtools")
+POSTGRES_USER = os.getenv("POSTGRES_USER", "devtools")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "changeme")
+
+DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+
 HEARTBEAT_TIMEOUT_SECONDS = int(os.getenv("HEARTBEAT_TIMEOUT_SECONDS", "60"))
 
 
@@ -242,7 +248,9 @@ async def register_agent(registration: AgentRegistration):
             now = datetime.utcnow()
             
             # Serialize capabilities to JSON
-            capabilities_json = [cap.model_dump() for cap in registration.capabilities]
+            import json as json_lib
+            capabilities_json = json_lib.dumps([cap.model_dump() for cap in registration.capabilities])
+            metadata_json = json_lib.dumps(registration.metadata or {})
             
             # Upsert agent registration
             await conn.execute(
@@ -251,7 +259,7 @@ async def register_agent(registration: AgentRegistration):
                     agent_id, agent_name, base_url, status, 
                     capabilities, metadata, last_heartbeat, created_at, updated_at
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
+                VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, $8, $8)
                 ON CONFLICT (agent_id) DO UPDATE SET
                     agent_name = EXCLUDED.agent_name,
                     base_url = EXCLUDED.base_url,
@@ -266,7 +274,7 @@ async def register_agent(registration: AgentRegistration):
                 registration.base_url,
                 registration.status,
                 capabilities_json,
-                registration.metadata or {},
+                metadata_json,
                 now,
                 now
             )
@@ -312,10 +320,19 @@ async def list_agents(
             
             agents = []
             for row in rows:
-                # Parse capabilities from JSON
+                # Parse capabilities from JSON (already deserialized by asyncpg)
+                import json as json_lib
+                caps_data = row["capabilities"]
+                if isinstance(caps_data, str):
+                    caps_data = json_lib.loads(caps_data)
+                
                 capabilities = [
-                    AgentCapability(**cap) for cap in row["capabilities"]
+                    AgentCapability(**cap) for cap in caps_data
                 ]
+                
+                metadata = row["metadata"]
+                if isinstance(metadata, str):
+                    metadata = json_lib.loads(metadata)
                 
                 agents.append(AgentInfo(
                     agent_id=row["agent_id"],
@@ -323,7 +340,7 @@ async def list_agents(
                     base_url=row["base_url"],
                     status=row["status"],
                     capabilities=capabilities,
-                    metadata=row["metadata"],
+                    metadata=metadata,
                     last_heartbeat=row["last_heartbeat"],
                     created_at=row["created_at"],
                     updated_at=row["updated_at"]
@@ -355,9 +372,18 @@ async def get_agent(agent_id: str):
                 raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
             
             # Parse capabilities from JSON
+            import json as json_lib
+            caps_data = row["capabilities"]
+            if isinstance(caps_data, str):
+                caps_data = json_lib.loads(caps_data)
+            
             capabilities = [
-                AgentCapability(**cap) for cap in row["capabilities"]
+                AgentCapability(**cap) for cap in caps_data
             ]
+            
+            metadata = row["metadata"]
+            if isinstance(metadata, str):
+                metadata = json_lib.loads(metadata)
             
             return AgentInfo(
                 agent_id=row["agent_id"],
@@ -365,7 +391,7 @@ async def get_agent(agent_id: str):
                 base_url=row["base_url"],
                 status=row["status"],
                 capabilities=capabilities,
-                metadata=row["metadata"],
+                metadata=metadata,
                 last_heartbeat=row["last_heartbeat"],
                 created_at=row["created_at"],
                 updated_at=row["updated_at"]
@@ -432,10 +458,13 @@ async def search_capabilities(
             matches = []
             query_lower = q.lower()
             
+            import json as json_lib
             for row in rows:
-                capabilities = row["capabilities"]
+                caps_data = row["capabilities"]
+                if isinstance(caps_data, str):
+                    caps_data = json_lib.loads(caps_data)
                 
-                for cap in capabilities:
+                for cap in caps_data:
                     # Search in name, description, and tags
                     name_match = query_lower in cap["name"].lower()
                     desc_match = query_lower in cap["description"].lower()
