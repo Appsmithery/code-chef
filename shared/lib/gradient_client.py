@@ -17,8 +17,8 @@ from typing import Optional, Dict, Any, List
 logger = logging.getLogger(__name__)
 
 # Gradient Serverless Inference Configuration
+# Reference: https://gradient-sdk.digitalocean.com/getting-started/serverless-inference
 GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY") or os.getenv("DO_SERVERLESS_INFERENCE_KEY")
-GRADIENT_WORKSPACE_ID = os.getenv("GRADIENT_WORKSPACE_ID", "default")
 GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama-3.1-70b-instruct")
 
 # LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true
@@ -77,8 +77,7 @@ class GradientClient:
                 # Initialize client for serverless inference
                 # Reference: https://gradient-sdk.digitalocean.com/api/python/
                 self.client = Gradient(
-                    access_token=self.model_access_key,
-                    workspace_id=GRADIENT_WORKSPACE_ID
+                    access_token=self.model_access_key
                 )
 
                 logger.info(f"[{agent_name}] Gradient SDK initialized for serverless inference")
