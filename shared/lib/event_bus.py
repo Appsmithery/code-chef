@@ -46,6 +46,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 import os
 from enum import Enum
+import json
+import uuid
+
+try:
+    import redis.asyncio as redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +67,59 @@ class EventType(str, Enum):
     TASK_COMPLETED = "task_completed"
     TASK_FAILED = "task_failed"
     AGENT_ERROR = "agent_error"
+    
+    # Inter-agent events
+    TASK_DELEGATED = "task.delegated"
+    TASK_ACCEPTED = "task.accepted"
+    TASK_REJECTED = "task.rejected"
+    RESOURCE_LOCKED = "resource.locked"
+    RESOURCE_UNLOCKED = "resource.unlocked"
+    AGENT_STATUS_CHANGE = "agent.status_change"
+    WORKFLOW_CHECKPOINT = "workflow.checkpoint"
+
+
+@dataclass
+class InterAgentEvent:
+    """
+    Standardized event for agent-to-agent communication.
+    """
+    event_type: str
+    source_agent: str
+    payload: Dict[str, Any]
+    target_agent: Optional[str] = None  # None = broadcast
+    event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    timestamp: datetime = field(default_factory=datetime.utcnow)
+    correlation_id: Optional[str] = None
+    priority: int = 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "event_id": self.event_id,
+            "event_type": self.event_type,
+            "source_agent": self.source_agent,
+            "target_agent": self.target_agent,
+            "payload": self.payload,
+            "timestamp": self.timestamp.isoformat(),
+            "correlation_id": self.correlation_id,
+            "priority": self.priority
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'InterAgentEvent':
+        ts = data.get("timestamp")
+        if isinstance(ts, str):
+            ts = datetime.fromisoformat(ts)
+            
+        return cls(
+            event_type=data["event_type"],
+            source_agent=data["source_agent"],
+            payload=data["payload"],
+            target_agent=data.get("target_agent"),
+            event_id=data.get("event_id", str(uuid.uuid4())),
+            timestamp=ts or datetime.utcnow(),
+            correlation_id=data.get("correlation_id"),
+            priority=data.get("priority", 0)
+        )
 
 
 @dataclass
@@ -114,9 +176,71 @@ class EventBus:
             "subscriber_errors": 0,
             "agent_requests_sent": 0,
             "agent_responses_received": 0,
-            "agent_timeouts": 0
+            "agent_timeouts": 0,
+            "redis_events_published": 0,
+            "redis_events_received": 0
         }
+        
+        # Redis setup
+        self.redis_url = os.getenv("REDIS_URL", "redis://redis:6379")
+        self.redis_client = None
+        self.redis_pubsub = None
+        self._redis_task = None
+        
+        if REDIS_AVAILABLE:
+            asyncio.create_task(self._connect_redis())
+            
         logger.info("Event bus initialized")
+
+    async def _connect_redis(self):
+        """Connect to Redis and start listening for events."""
+        try:
+            self.redis_client = redis.from_url(self.redis_url, decode_responses=True)
+            await self.redis_client.ping()
+            logger.info(f"✅ Connected to Redis at {self.redis_url}")
+            
+            # Start listener
+            self.redis_pubsub = self.redis_client.pubsub()
+            await self.redis_pubsub.subscribe("agent-events")
+            self._redis_task = asyncio.create_task(self._redis_listener())
+            
+        except Exception as e:
+            logger.warning(f"⚠️  Redis connection failed: {e}. Inter-agent events will be local-only.")
+            self.redis_client = None
+
+    async def _redis_listener(self):
+        """Listen for Redis messages and dispatch to local subscribers."""
+        try:
+            async for message in self.redis_pubsub.listen():
+                if message["type"] == "message":
+                    try:
+                        data = json.loads(message["data"])
+                        event = InterAgentEvent.from_dict(data)
+                        
+                        # Dispatch locally
+                        # We use a special prefix or just map to local event types
+                        # For now, we'll emit as a standard Event
+                        
+                        self._stats["redis_events_received"] += 1
+                        
+                        # Avoid re-publishing to Redis if we are the source (simple check)
+                        # In a real system, we'd check source_agent against our identity
+                        
+                        await self.emit(
+                            event.event_type,
+                            event.payload,
+                            source=event.source_agent,
+                            correlation_id=event.correlation_id,
+                            publish_to_redis=False  # Don't echo back
+                        )
+                        
+                    except Exception as e:
+                        logger.error(f"Error processing Redis message: {e}")
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Redis listener error: {e}")
+            # Retry logic could go here
     
     @classmethod
     def get_instance(cls) -> 'EventBus':
@@ -191,7 +315,8 @@ class EventBus:
         event_type: str,
         data: Dict[str, Any],
         source: str = "unknown",
-        correlation_id: Optional[str] = None
+        correlation_id: Optional[str] = None,
+        publish_to_redis: bool = True
     ) -> None:
         """
         Emit event to all subscribers.
@@ -201,6 +326,7 @@ class EventBus:
             data: Event payload (dict with event-specific fields)
             source: Which agent/component is emitting
             correlation_id: Optional ID to correlate related events
+            publish_to_redis: Whether to broadcast to other agents via Redis
         
         Example:
             await bus.emit(
@@ -226,13 +352,33 @@ class EventBus:
         
         self._stats["events_emitted"] += 1
         
+        # Publish to Redis if enabled and connected
+        if publish_to_redis and self.redis_client:
+            try:
+                inter_agent_event = InterAgentEvent(
+                    event_type=event_type,
+                    source_agent=source,
+                    payload=data,
+                    correlation_id=correlation_id
+                )
+                await self.redis_client.publish(
+                    "agent-events",
+                    json.dumps(inter_agent_event.to_dict())
+                )
+                self._stats["redis_events_published"] += 1
+            except Exception as e:
+                logger.error(f"Failed to publish to Redis: {e}")
+
         # Get subscribers for this event type
         subscribers = self._subscribers.get(event_type, [])
         
         if not subscribers:
-            logger.warning(
-                f"No subscribers for event '{event_type}' from {source}"
-            )
+            # If no local subscribers, we still might have remote ones via Redis
+            # so we don't warn if we published to Redis
+            if not (publish_to_redis and self.redis_client):
+                logger.debug(
+                    f"No subscribers for event '{event_type}' from {source}"
+                )
             return
         
         logger.info(
