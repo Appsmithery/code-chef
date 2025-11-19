@@ -112,9 +112,10 @@ class IntentRecognizer:
                 max_tokens=500
             )
             
-            # Parse JSON response
+            # Extract content from response dict and parse as JSON
             import json
-            intent_data = json.loads(response)
+            content = response.get("content", "")
+            intent_data = json.loads(content)
             
             # Validate and construct Intent
             intent = Intent(**intent_data)
