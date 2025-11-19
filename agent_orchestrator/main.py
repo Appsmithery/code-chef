@@ -18,6 +18,7 @@ import uvicorn
 import os
 import httpx
 import logging
+import uuid
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Counter, Histogram
 
