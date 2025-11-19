@@ -22,10 +22,76 @@ from service import (
     mcp_client,
     process_review_request,
 )
+from typing import Optional
+from contextlib import asynccontextmanager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Agent Registry Client (Phase 6)
+try:
+    import sys
+    sys.path.insert(0, '/app')
+    from lib.registry_client import RegistryClient, AgentCapability
+    
+    registry_client: Optional[RegistryClient] = None
+    
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        """Lifespan event handler for startup/shutdown"""
+        # Startup: Register with agent registry
+        registry_url = os.getenv("AGENT_REGISTRY_URL", "http://agent-registry:8009")
+        agent_id = "code-review"
+        agent_name = "Code Review Agent"
+        base_url = f"http://code-review:{os.getenv('PORT', '8003')}"
+        
+        global registry_client
+        registry_client = RegistryClient(
+            registry_url=registry_url,
+            agent_id=agent_id,
+            agent_name=agent_name,
+            base_url=base_url
+        )
+        
+        # Define capabilities
+        capabilities = [
+            AgentCapability(
+                name="review_pr",
+                description="Review pull request for code quality and security",
+                parameters={"repo_url": "str", "pr_number": "int"},
+                cost_estimate="~100 tokens",
+                tags=["git", "security", "code-quality"]
+            ),
+            AgentCapability(
+                name="static_analysis",
+                description="Perform static code analysis on diffs",
+                parameters={"diff": "str", "language": "str"},
+                cost_estimate="~50 tokens",
+                tags=["analysis", "code-quality"]
+            )
+        ]
+        
+        # Register and start heartbeat
+        try:
+            await registry_client.register(capabilities)
+            await registry_client.start_heartbeat()
+            logger.info(f"✅ Registered {agent_id} with agent registry")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to register with agent registry: {e}")
+        
+        yield
+        
+        # Shutdown: Stop heartbeat
+        try:
+            await registry_client.stop_heartbeat()
+            await registry_client.close()
+            logger.info(f"🛑 Unregistered {agent_id} from agent registry")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to unregister from agent registry: {e}")
+except ImportError:
+    logger.warning("Registry client not available")
+    lifespan = None
 
 # LangGraph Infrastructure
 try:
@@ -48,7 +114,8 @@ except Exception as e:
 app = FastAPI(
     title="Code Review Agent",
     description="Quality assurance, static analysis, and security scanning",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan if lifespan else None
 )
 
 # Enable Prometheus metrics collection

@@ -51,15 +51,83 @@ from lib.notifiers import (
     NotificationConfig,
     EmailConfig
 )
+from lib.registry_client import (
+    RegistryClient,
+    AgentCapability
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Lifespan event handler for agent registry
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan event handler for startup/shutdown"""
+    # Startup: Register with agent registry
+    registry_url = os.getenv("AGENT_REGISTRY_URL", "http://agent-registry:8009")
+    agent_id = "orchestrator"
+    agent_name = "Orchestrator Agent"
+    base_url = f"http://orchestrator:{os.getenv('PORT', '8001')}"
+    
+    global registry_client
+    registry_client = RegistryClient(
+        registry_url=registry_url,
+        agent_id=agent_id,
+        agent_name=agent_name,
+        base_url=base_url
+    )
+    
+    # Define capabilities
+    capabilities = [
+        AgentCapability(
+            name="orchestrate_task",
+            description="Decompose and route complex development tasks",
+            parameters={"task_description": "str"},
+            cost_estimate="~50-100 tokens",
+            tags=["coordination", "routing", "workflow"]
+        ),
+        AgentCapability(
+            name="chat_interface",
+            description="Natural language task submission and conversation",
+            parameters={"message": "str", "session_id": "str"},
+            cost_estimate="~30-80 tokens",
+            tags=["chat", "nlp", "conversation"]
+        ),
+        AgentCapability(
+            name="hitl_approval",
+            description="Human-in-the-loop approval workflow management",
+            parameters={"action": "str", "context": "dict"},
+            cost_estimate="~20 tokens",
+            tags=["approval", "hitl", "workflow"]
+        )
+    ]
+    
+    # Register and start heartbeat
+    try:
+        await registry_client.register(capabilities)
+        await registry_client.start_heartbeat()
+        logger.info(f"✅ Registered {agent_id} with agent registry")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to register with agent registry: {e}")
+    
+    yield
+    
+    # Shutdown: Stop heartbeat
+    try:
+        await registry_client.stop_heartbeat()
+        await registry_client.close()
+        logger.info(f"🛑 Unregistered {agent_id} from agent registry")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to unregister from agent registry: {e}")
+
 app = FastAPI(
     title="DevOps Orchestrator Agent",
     description="Task delegation, context routing, and workflow coordination",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # Enable Prometheus metrics collection
@@ -99,6 +167,9 @@ session_manager = get_session_manager()
 
 # Event bus for notifications (Phase 5.2)
 event_bus = get_event_bus()
+
+# Agent registry client (Phase 6)
+registry_client: Optional[RegistryClient] = None
 
 # Initialize notifiers
 linear_notifier = LinearWorkspaceNotifier(agent_name="orchestrator")

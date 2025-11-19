@@ -224,6 +224,33 @@ services:
     secrets:
       - db_password
 
+  # Agent Registry Service (Phase 6 - Multi-Agent Collaboration)
+  agent-registry:
+    image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:agent-registry-${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: shared/services/agent-registry/Dockerfile
+    ports:
+      - "8009:8009"
+    environment:
+      - PORT=8009
+      - DATABASE_URL=postgresql://devtools:${POSTGRES_PASSWORD}@postgres:5432/devtools
+      - HEARTBEAT_TIMEOUT_SECONDS=60
+    env_file:
+      - ../config/env/.env
+    networks:
+      - devtools-network
+    depends_on:
+      - postgres
+    secrets:
+      - db_password
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8009/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
