@@ -35,16 +35,16 @@ Enable agents to collaborate on complex, multi-step tasks through event-driven c
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Orchestrator                          │
-│  - Natural language task parsing (Gradient AI)               │
-│  - Task decomposition (LLM-powered)                          │
-│  - Direct agent invocation (HTTP calls)                      │
-│  - HITL approval workflow                                     │
+│                        Orchestrator                         │
+│  - Natural language task parsing (Gradient AI)              │
+│  - Task decomposition (LLM-powered)                         │
+│  - Direct agent invocation (HTTP calls)                     │
+│  - HITL approval workflow                                   │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
           ┌───────────────────────────────────────┐
-          │         MCP Gateway (150+ tools)       │
+          │         MCP Gateway (150+ tools)      │
           └───────────────────────────────────────┘
                               │
           ┌───────┬───────┬───────┬───────┬───────┐
@@ -65,11 +65,11 @@ Enable agents to collaborate on complex, multi-step tasks through event-driven c
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│                       Orchestrator                            │
-│  - Multi-agent workflow graphs (LangGraph)                    │
-│  - Shared state management (PostgreSQL checkpointing)         │
-│  - Event bus coordination (async pub/sub)                     │
-│  - Dynamic agent discovery (registry queries)                 │
+│                       Orchestrator                           │
+│  - Multi-agent workflow graphs (LangGraph)                   │
+│  - Shared state management (PostgreSQL checkpointing)        │
+│  - Event bus coordination (async pub/sub)                    │
+│  - Dynamic agent discovery (registry queries)                │
 └──────────────────────────────────────────────────────────────┘
                               │
           ┌───────────────────┴───────────────────┐
@@ -84,7 +84,7 @@ Enable agents to collaborate on complex, multi-step tasks through event-driven c
           └───────────────────┬───────────────────┘
                               ▼
           ┌───────────────────────────────────────┐
-          │         MCP Gateway (150+ tools)       │
+          │         MCP Gateway (150+ tools)      │
           └───────────────────────────────────────┘
                               │
           ┌───────┬───────┬───────┬───────┬───────┐
@@ -356,19 +356,19 @@ if review_result["approved"]:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    LangGraph Workflow                        │
-│                                                               │
-│   ┌──────────┐     ┌──────────┐     ┌──────────┐           │
+│                    LangGraph Workflow                       │
+│                                                             │
+│   ┌──────────┐     ┌──────────┐     ┌──────────┐            │
 │   │  Review  │────▶│  Tests   │────▶│  Deploy  │           │
-│   │  (Agent) │     │  (Agent) │     │  (Agent) │           │
-│   └──────────┘     └──────────┘     └──────────┘           │
-│         │                │                 │                 │
-│         └────────────────┴─────────────────┘                 │
-│                          ▼                                    │
-│              ┌────────────────────────┐                      │
-│              │   Shared State Store   │                      │
-│              │   (PostgreSQL)         │                      │
-│              └────────────────────────┘                      │
+│   │  (Agent) │     │  (Agent) │     │  (Agent) │            │
+│   └──────────┘     └──────────┘     └──────────┘            │
+│         │                │                 │                │
+│         └────────────────┴─────────────────┘                │
+│                          ▼                                  │
+│              ┌────────────────────────┐                     │
+│              │   Shared State Store   │                     │
+│              │   (PostgreSQL)         │                     │
+│              └────────────────────────┘                     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
