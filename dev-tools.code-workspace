@@ -36,7 +36,9 @@
       },
       "inputs": []
     },
-    "github.copilot.nextEditSuggestions.enabled": true
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "github.copilot.chat.responsesApiReasoningSummary": "off",
+    "github.copilot.chat.summarizeAgentConversationHistory.enabled": true
   },
   "extensions": {
     "recommendations": [

@@ -24,8 +24,11 @@ async def test_chat_endpoint():
         print("\n[Test 1] Health check...")
         response = await client.get(f"{base_url}/health")
         health = response.json()
+        print(f"Raw health response: {json.dumps(health, indent=2)}")
         print(f"✓ Service: {health['service']}")
-        print(f"✓ Chat enabled: {health.get('chat', {}).get('enabled', False)}")
+        chat_config = health.get('chat', {})
+        print(f"Chat config: {chat_config}")
+        print(f"✓ Chat enabled: {chat_config.get('enabled', False)}")
         
         # Test 2: Simple task submission
         print("\n[Test 2] Task submission - 'Add error handling to login endpoint'")
@@ -36,8 +39,15 @@ async def test_chat_endpoint():
                 "user_id": "test-user"
             }
         )
+        print(f"Status: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code != 200:
+            print(f"❌ Chat endpoint returned {response.status_code}")
+            return
+            
         chat1 = response.json()
-        session_id = chat1["session_id"]
+        session_id = chat1.get("session_id", "unknown")
         print(f"✓ Intent: {chat1['intent']}")
         print(f"✓ Confidence: {chat1['confidence']:.2f}")
         print(f"✓ Session: {session_id}")
