@@ -6,8 +6,13 @@ import logging
 from langchain_core.messages import HumanMessage
 from langchain_core.callbacks.manager import CallbackManagerForChainRun
 from pydantic import ValidationError
+import sys
+from pathlib import Path
 
-from agents.feature_dev.service import FeatureRequest, GuardrailViolation, process_feature_request
+# Add agent_feature-dev to path (hyphens not allowed in Python imports)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "agent_feature-dev"))
+from service import FeatureRequest, GuardrailViolation, process_feature_request
+sys.path.pop(0)
 from services.langgraph.state import AgentState, ensure_agent_state
 
 from .base import agent_response

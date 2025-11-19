@@ -5,7 +5,7 @@ from __future__ import annotations
 from langchain_core.messages import HumanMessage
 from pydantic import ValidationError
 
-from agents.documentation.service import (
+from agent_documentation.service import (
     DocRequest,
     GuardrailViolation,
     process_doc_request,

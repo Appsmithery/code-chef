@@ -238,7 +238,7 @@ class MCPToolClient:
 
     async def list_tools(self, server: str) -> List[str]:
         """List tools available on a server."""
-        from agents._shared.mcp_discovery import get_mcp_discovery
+        from shared.lib.mcp_discovery import get_mcp_discovery
 
         discovery = get_mcp_discovery()
         server_info = discovery.get_server(server)

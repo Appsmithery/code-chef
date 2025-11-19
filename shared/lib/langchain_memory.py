@@ -18,8 +18,8 @@ class SimpleMemory:
 
 try:
     from langchain_qdrant import QdrantVectorStore
-    from agents._shared.qdrant_client import get_qdrant_client
-    from agents._shared.langchain_gradient import gradient_embeddings
+    from shared.lib.qdrant_client import get_qdrant_client
+    from shared.lib.langchain_gradient import gradient_embeddings
 except ImportError:
     pass
 

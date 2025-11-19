@@ -7,7 +7,7 @@ import os
 from typing import Dict, Any, Optional
 import logging
 
-from agents._shared.langchain_gradient import (
+from shared.lib.langchain_gradient import (
     orchestrator_llm,
     feature_dev_llm,
     code_review_llm,
@@ -18,8 +18,8 @@ from agents._shared.langchain_gradient import (
     get_gradient_llm,
     get_gradient_embeddings
 )
-from agents._shared.qdrant_client import get_qdrant_client
-from agents._shared.langgraph_base import get_postgres_checkpointer
+from shared.lib.qdrant_client import get_qdrant_client
+from shared.lib.langgraph_base import get_postgres_checkpointer
 
 logger = logging.getLogger(__name__)
 

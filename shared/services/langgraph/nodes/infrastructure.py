@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 from pydantic import ValidationError
+import sys
+from pathlib import Path
 
-from agents.infrastructure.service import (
+# Add agent_infrastructure to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "agent_infrastructure"))
+from service import (
     GuardrailViolation,
     InfraRequest,
     process_infra_request,
 )
+sys.path.pop(0)
 from services.langgraph.state import AgentState, ensure_agent_state
 
 from .base import agent_response

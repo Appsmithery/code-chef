@@ -64,7 +64,7 @@ def init_qdrant_client() -> QdrantClient:
 
 def init_gradient_embeddings():
     """Initialize DO Gradient AI embeddings via unified LangChain config"""
-    from agents._shared.langchain_gradient import gradient_embeddings
+    from shared.lib.langchain_gradient import gradient_embeddings
     
     if not gradient_embeddings:
         raise ValueError("Gradient embeddings not configured. Set GRADIENT_API_KEY in .env")

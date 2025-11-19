@@ -1,8 +1,8 @@
 # Github Copilot Instructions for Dev-Tools
 
-## Architecture snapshot (Phase 5 Complete - Copilot Integration Layer)
+## Architecture snapshot (Phase 5 Complete - Repository Cleanup Complete)
 
-**Current Phase**: Phase 5 Complete ✅ | **Next Phase**: Phase 6 - Multi-Agent Collaboration | **Overall Progress**: ~90% (4.5/5 phases)
+**Current Phase**: Phase 5 Complete ✅ + Repository Cleanup ✅ | **Next Phase**: Phase 6 - Multi-Agent Collaboration | **Overall Progress**: ~95% (Phase 6 ready)
 
 - **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md.
 - **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `shared/lib/mcp_client.py` for unified tool access. Gateway routes to servers in `shared/mcp/servers/`.
@@ -59,19 +59,21 @@ Dev-Tools/
 └── _archive/                    # Deprecated structure (agents/, containers/, compose/, infrastructure/, tmp/, bin/)
 ```
 
-## ⚠️ Deprecated Paths (DO NOT USE)
+## ⚠️ Deprecated Paths (REMOVED - November 19, 2025)
 
-The following paths are **DEPRECATED** and exist only in `_archive/` for reference:
+The `_archive/` directory has been **PERMANENTLY REMOVED** from the repository as of November 19, 2025.
 
-- ❌ `agents/` (old nested structure) → Use `agent_*/` at root + `shared/lib/`
-- ❌ `containers/` (old Dockerfiles) → Use `agent_*/Dockerfile` and `shared/*/Dockerfile`
-- ❌ `compose/` (old compose files) → Use `deploy/docker-compose.yml`
-- ❌ `scripts/` (old scripts) → Use `support/scripts/`
-- ❌ `docs/` (old docs) → Use `support/docs/`
-- ❌ `agents/_shared/` (old shared code) → Use `shared/lib/`
-- ❌ `mcp/servers/` (old MCP path) → Use `shared/mcp/servers/`
+**All imports have been updated to current structure:**
 
-**Never suggest these paths in code generation or documentation.**
+- ✅ `agents._shared.*` → `shared.lib.*`
+- ✅ `agents.<agent>.*` → `agent_<agent>.*` (with sys.path for hyphenated names)
+- ✅ All deprecated paths cleaned up (0 violations)
+- ✅ Docker environment pruned (8GB freed)
+- ✅ Repository optimized (~8.1GB reduction)
+
+**Backup**: `_archive/` backed up to `support/reports/_archive_backup_*.zip` before deletion.
+
+**Never suggest `_archive/`, `agents/`, `containers/`, or `compose/` paths in code generation or documentation.**
 
 ## Configuration sources
 

@@ -1,0 +1,72 @@
+PHASE 1: DISCOVERY & ANALYSIS SUMMARY
+=====================================
+Date: November 19, 2025
+
+## Key Findings
+
+### 1. Deprecated Path References
+- Total files scanned: 268 unique files with deprecated patterns
+- Most common violations:
+  * docker-compose.yml: 17 references
+  * docr-build.yml: 18 references
+  * copilot-instructions.md: 18 references
+  * Support docs: Multiple references across ARCHITECTURE.md, DEPLOYMENT.md, etc.
+
+### 2. Python Import Violations
+- Files scanned: 100 Python files
+- Total violations: 17 import statements
+- Files with violations: 11 files
+- All violations are 'from_import' type
+
+Critical files requiring fixes:
+- shared\lib\langchain_memory.py (2 violations)
+- shared\lib\mcp_tool_client.py (1 violation)
+- shared\services\langgraph\config.py (3 violations)
+- shared\services\langgraph\src\config.py (3 violations)
+- shared\services\langgraph\nodes\*.py (5 violations across agent nodes)
+- support\scripts\data\index_local_docs.py (1 violation)
+- support\tests\test_langgraph_requests.py (2 violations)
+
+### 3. Archive Size
+- Total size: 101.16 MB
+- Total files: 195 files
+- Recommendation: Compress and remove from active repository
+
+### 4. Docker Images
+- No deprecated images found with patterns "agents|containers|compose"
+- Docker registry appears clean
+
+### 5. Documentation Inventory
+- Total markdown files: 260+ files
+- Categories:
+  * ACTIVE: 40+ primary documentation files in support/docs/
+  * DEPRECATED: 13+ files in _archive/docs-temp/ and support/docs/_temp/
+  * REVIEW: 200+ files in node_modules (can be ignored)
+
+Key deprecated documentation to consolidate:
+- support/docs/_temp/Pre-flight v3.md
+- support/docs/_temp/progressive-mcp-deployment-checklist.md
+- _archive/docs-temp/* (all 13 files)
+
+## Recommendations
+
+### Immediate Actions (Phase 2):
+1. Fix 17 Python import violations
+2. Consolidate 13 deprecated documentation files
+3. Update copilot-instructions.md (18 deprecated references)
+4. Update docker-compose.yml references
+
+### Phase 3 Actions:
+1. Compress _archive/ directory (101.16 MB)
+2. Remove _archive/ from repository
+3. Clean up support/docs/_temp/
+4. Update all configuration files
+
+### Risk Assessment:
+- LOW: Python import fixes (clear mappings available)
+- LOW: Documentation consolidation (files are well-categorized)
+- MEDIUM: Docker compose updates (requires careful path validation)
+- LOW: Archive removal (can be backed up first)
+
+## Next Steps
+Proceed to Phase 2: Documentation Consolidation

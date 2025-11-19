@@ -4,13 +4,18 @@ from __future__ import annotations
 
 from langchain_core.messages import HumanMessage
 from pydantic import ValidationError
+import sys
+from pathlib import Path
 
-from agents.code_review.service import (
+# Add agent_code-review to path (hyphens not allowed in Python imports)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "agent_code-review"))
+from service import (
     CodeDiff,
     GuardrailViolation,
     ReviewRequest,
     process_review_request,
 )
+sys.path.pop(0)
 from services.langgraph.state import AgentState, ensure_agent_state
 
 from .base import agent_response

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import ValidationError
 
-from agents.cicd.service import (
+from agent_cicd.service import (
     GuardrailViolation,
     PipelineRequest,
     process_pipeline_request,
