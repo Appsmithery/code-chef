@@ -122,7 +122,6 @@ class LinearWorkspaceNotifier:
                 task_description=task_description,
                 risk_level=risk_level,
                 project_name=project_name,
-                approver_mention=self.config.approver_mention,
                 metadata=metadata
             )
             
