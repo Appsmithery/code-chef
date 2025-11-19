@@ -38,7 +38,8 @@
     },
     "github.copilot.nextEditSuggestions.enabled": true,
     "github.copilot.chat.responsesApiReasoningSummary": "off",
-    "github.copilot.chat.summarizeAgentConversationHistory.enabled": true
+    "github.copilot.chat.summarizeAgentConversationHistory.enabled": true,
+    "editor.aiStats.enabled": true
   },
   "extensions": {
     "recommendations": [
