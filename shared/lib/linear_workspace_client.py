@@ -62,7 +62,6 @@ class LinearWorkspaceClient:
         task_description: str,
         risk_level: str,
         project_name: str,
-        approver_mention: str,
         metadata: Optional[Dict[str, Any]] = None
     ) -> str:
         """
@@ -100,7 +99,7 @@ class LinearWorkspaceClient:
 **Project**: `{project_name}`
 **Approval ID**: `{approval_id}`
 
-{approver_mention} - Your approval is needed:
+@lead-minion - Your approval is needed:
 
 {task_description}
 
