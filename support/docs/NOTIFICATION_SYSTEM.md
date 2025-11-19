@@ -74,6 +74,7 @@ The notification system provides real-time alerts for approval workflows using a
 **Purpose**: Centralized async pub/sub event routing
 
 **Implementation**:
+
 ```python
 from shared.lib.event_bus import get_event_bus
 
@@ -96,12 +97,14 @@ await event_bus.emit(
 ```
 
 **Features**:
+
 - Singleton pattern (one instance per agent)
 - Async event handlers (non-blocking)
 - Multiple subscribers per event type
 - Correlation IDs for event tracing
 
 **Current Event Types**:
+
 - `approval_required` - New approval request created (2 subscribers)
 - `approval_approved` - Approval decision made (0 subscribers, future use)
 - `approval_rejected` - Rejection decision made (0 subscribers, future use)
@@ -113,6 +116,7 @@ await event_bus.emit(
 **Authentication**: OAuth token (`LINEAR_API_KEY` env var)
 
 **Key Methods**:
+
 ```python
 from shared.lib.linear_client_factory import create_linear_workspace_client
 
@@ -129,11 +133,13 @@ comment_id = await client.post_to_approval_hub(
 ```
 
 **Environment Variables**:
-- `LINEAR_API_KEY` - OAuth token (lin_oauth_*)
+
+- `LINEAR_API_KEY` - OAuth token (lin*oauth*\*)
 - `LINEAR_APPROVAL_HUB_ISSUE_ID` - Workspace hub issue ID (PR-68)
 
 **Comment Format**:
-```markdown
+
+````markdown
 🟠 **HIGH Approval Required**
 
 **Project**: `phase-5-chat`
@@ -144,6 +150,7 @@ comment_id = await client.post_to_approval_hub(
 Deploy production API changes for real-time notifications system
 
 **Actions**:
+
 - ✅ Approve: `task workflow:approve REQUEST_ID=...`
 - ❌ Reject: `task workflow:reject REQUEST_ID=... REASON="<reason>"`
 
@@ -151,8 +158,9 @@ Deploy production API changes for real-time notifications system
 
 **Metadata**: ```json
 {'task_id': '...', 'priority': 'critical', 'agent': 'orchestrator'}
-```
-```
+````
+
+````
 
 ### 3. Linear Workspace Notifier (`shared/lib/notifiers/linear_workspace_notifier.py`)
 
@@ -164,9 +172,10 @@ from shared.lib.notifiers.linear_workspace_notifier import LinearWorkspaceNotifi
 
 notifier = LinearWorkspaceNotifier()
 await event_bus.subscribe("approval_required", notifier.on_approval_required)
-```
+````
 
 **Behavior**:
+
 - Subscribes to `approval_required` events on initialization
 - Posts formatted comments to Linear approval hub (PR-68)
 - Includes risk emoji, @mentions, action commands
@@ -179,6 +188,7 @@ await event_bus.subscribe("approval_required", notifier.on_approval_required)
 **Status**: ⚠️ Disabled (SMTP not configured in production)
 
 **Configuration** (optional):
+
 ```bash
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -188,6 +198,7 @@ NOTIFICATION_EMAIL_TO=ops-team@company.com
 ```
 
 **Behavior**:
+
 - Subscribes to `approval_required` events
 - Sends formatted HTML emails with approval details
 - Automatically disabled when SMTP env vars missing
@@ -199,6 +210,7 @@ NOTIFICATION_EMAIL_TO=ops-team@company.com
 ### Required Environment Variables
 
 **Orchestrator** (`config/env/.env`):
+
 ```bash
 # Linear OAuth Authentication
 LINEAR_API_KEY=lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571
@@ -217,11 +229,13 @@ NOTIFICATION_EMAIL_TO=ops-team@company.com
 **⚠️ Important**: Do NOT quote values in `.env` files. Quotes may prevent environment variables from loading correctly in Docker containers.
 
 **Incorrect**:
+
 ```bash
 LINEAR_APPROVAL_HUB_ISSUE_ID="PR-68"  # ❌ Quotes block loading
 ```
 
 **Correct**:
+
 ```bash
 LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68    # ✅ Loads correctly
 ```
@@ -229,6 +243,7 @@ LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68    # ✅ Loads correctly
 ### Docker Compose Integration
 
 **Orchestrator service** (`deploy/docker-compose.yml`):
+
 ```yaml
 orchestrator:
   build:
@@ -242,6 +257,7 @@ orchestrator:
 ```
 
 **Reloading Environment Changes**:
+
 ```bash
 # Restart won't reload .env - must force-recreate
 cd deploy
@@ -299,15 +315,15 @@ class CustomNotifier:
         self.event_bus = get_event_bus()
         self.event_bus.subscribe("approval_required", self.on_approval_required)
         logger.info("Custom notifier initialized")
-    
+
     async def on_approval_required(self, event_data: dict):
         """Handle approval_required events"""
         approval_id = event_data.get("approval_id")
         risk_level = event_data.get("risk_level")
-        
+
         # Your notification logic here
         logger.info(f"Sending notification for {approval_id} (risk: {risk_level})")
-        
+
         # Example: Post to custom webhook
         # await self.post_to_webhook(event_data)
 ```
@@ -315,6 +331,7 @@ class CustomNotifier:
 ### 3. Testing Notification Flow
 
 **Create Approval Request**:
+
 ```bash
 curl -X POST http://45.55.173.72:8001/orchestrate \
   -H "Content-Type: application/json" \
@@ -329,6 +346,7 @@ curl -X POST http://45.55.173.72:8001/orchestrate \
 ```
 
 **Expected Flow**:
+
 1. Orchestrator creates approval in PostgreSQL
 2. Emits `approval_required` event (2 subscribers)
 3. Linear notifier posts comment to PR-68 (<1s latency)
@@ -336,11 +354,13 @@ curl -X POST http://45.55.173.72:8001/orchestrate \
 5. Operator receives Linear notification (email/mobile/desktop)
 
 **Verify Logs**:
+
 ```bash
 docker logs deploy-orchestrator-1 --tail 50 | grep -E 'Emitting|Posted approval|Linear'
 ```
 
 **Expected Output**:
+
 ```
 INFO:lib.event_bus:Emitting 'approval_required' to 2 subscribers
 INFO:lib.notifiers.linear_workspace_notifier:Posting approval ... to workspace hub
@@ -355,6 +375,7 @@ INFO:lib.notifiers.linear_workspace_notifier:✅ Posted approval ... to workspac
 ### Step 1: Define Event Schema
 
 **Document event structure**:
+
 ```python
 # Event: approval_approved
 {
@@ -402,17 +423,17 @@ class ApprovalDecisionNotifier:
     def __init__(self):
         self.event_bus = get_event_bus()
         self.linear_client = LinearWorkspaceClient(agent_name="orchestrator")
-        
+
         # Subscribe to decision events
         self.event_bus.subscribe("approval_approved", self.on_approval_approved)
         self.event_bus.subscribe("approval_rejected", self.on_approval_rejected)
-        
+
         logger.info("Approval decision notifier initialized")
-    
+
     async def on_approval_approved(self, event_data: dict):
         approval_id = event_data.get("approval_id")
         approver_id = event_data.get("approver_id")
-        
+
         # Post "Approved" comment to Linear
         await self.linear_client.post_to_approval_hub(
             approval_id=approval_id,
@@ -421,7 +442,7 @@ class ApprovalDecisionNotifier:
             project_name="approval-decision",
             metadata=event_data
         )
-        
+
         logger.info(f"Posted approval decision for {approval_id}")
 ```
 
@@ -449,6 +470,7 @@ logger.info("Notification system initialized (Linear + Email + Decisions)")
 **Symptom**: Event emitted but no comment in PR-68
 
 **Checks**:
+
 ```bash
 # 1. Verify environment variables loaded
 docker exec deploy-orchestrator-1 printenv | grep LINEAR
@@ -470,6 +492,7 @@ curl -X POST https://api.linear.app/graphql \
 ```
 
 **Fixes**:
+
 - Ensure `LINEAR_APPROVAL_HUB_ISSUE_ID` has no quotes in `.env`
 - Force-recreate container: `docker compose up -d orchestrator --force-recreate`
 - Verify OAuth token is valid (not expired or revoked)
@@ -482,6 +505,7 @@ curl -X POST https://api.linear.app/graphql \
 **Explanation**: Event emitted but no handlers subscribed yet. This is expected for `approval_approved` and `approval_rejected` events in Phase 5.2 (future enhancement).
 
 **Fix** (if intentional):
+
 - Create subscriber class (see "Adding New Event Types")
 - Initialize subscriber in agent startup
 - Verify subscription: `docker logs ... | grep "Subscribed to"`
@@ -491,6 +515,7 @@ curl -X POST https://api.linear.app/graphql \
 **Symptom**: `WARNING:lib.notifiers.email_notifier:Email notifier is disabled`
 
 **Explanation**: SMTP environment variables not configured. Email notifier requires:
+
 - `SMTP_HOST`
 - `SMTP_PORT`
 - `SMTP_USER`
@@ -498,6 +523,7 @@ curl -X POST https://api.linear.app/graphql \
 - `NOTIFICATION_EMAIL_TO`
 
 **Fix** (optional):
+
 1. Add SMTP config to `config/env/.env`
 2. Force-recreate orchestrator: `docker compose up -d orchestrator --force-recreate`
 3. Test email: Create approval request and check logs for "Email sent"
@@ -509,6 +535,7 @@ curl -X POST https://api.linear.app/graphql \
 **Explanation**: `docker compose restart` doesn't reload environment files
 
 **Fix**:
+
 ```bash
 # Wrong: restart won't reload .env
 docker compose restart orchestrator
@@ -523,18 +550,18 @@ docker compose up -d orchestrator --force-recreate
 
 **Production Validation** (November 18, 2025):
 
-| Metric | Target | Actual | Status |
-|--------|--------|--------|--------|
-| Event → Linear Comment | < 5s | < 1s | ✅ |
-| Event Subscribers | 2+ | 2 | ✅ |
-| Notification Delivery | 95%+ | 100% | ✅ |
-| Failed Events | < 1% | 0% | ✅ |
+| Metric                 | Target | Actual | Status |
+| ---------------------- | ------ | ------ | ------ |
+| Event → Linear Comment | < 5s   | < 1s   | ✅     |
+| Event Subscribers      | 2+     | 2      | ✅     |
+| Notification Delivery  | 95%+   | 100%   | ✅     |
+| Failed Events          | < 1%   | 0%     | ✅     |
 
 **Test Results**:
+
 - Approval Created: `e69e47dd-a8a8-4e18-8e1b-ab5bd58deb2e` (high risk)
   - Event emitted: 02:20:28 UTC
   - Linear comment: 02:20:29 UTC (1s latency) ✅
-  
 - Approval Rejected: `671e84c4-2b10-43dc-b47f-659972e822dd` (critical risk)
   - Event emitted: 02:28:34 UTC
   - Linear comment: 02:28:35 UTC (1s latency) ✅
@@ -546,16 +573,19 @@ docker compose up -d orchestrator --force-recreate
 ### Phase 5.3 (Optional)
 
 1. **Decision Event Subscribers**
+
    - Subscribe to `approval_approved` and `approval_rejected`
    - Post decision comments to Linear ("✅ Approved by @user")
    - Update approval hub issue status
 
 2. **Multi-Project Support**
+
    - Project-specific approval hubs (not just PR-68)
    - Dynamic hub routing based on project context
    - Per-project notification preferences
 
 3. **Notification Analytics**
+
    - Prometheus metrics for event latency
    - Subscriber error tracking
    - Notification delivery rates

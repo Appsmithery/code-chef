@@ -8,13 +8,13 @@
 
 ## Module Index
 
-| Module | Purpose | Status | Dependencies |
-|--------|---------|--------|--------------|
-| `event_bus.py` | Async pub/sub event routing | ✅ Production | asyncio, logging |
-| `linear_workspace_client.py` | GraphQL API client for Linear | ✅ Production | gql[requests], httpx |
-| `linear_client_factory.py` | Factory for Linear client instances | ✅ Production | linear_workspace_client |
-| `notifiers/linear_workspace_notifier.py` | Event subscriber for Linear | ✅ Production | event_bus, linear_workspace_client |
-| `notifiers/email_notifier.py` | SMTP-based email notifications | ⚠️ Disabled | smtplib, email.mime |
+| Module                                   | Purpose                             | Status        | Dependencies                       |
+| ---------------------------------------- | ----------------------------------- | ------------- | ---------------------------------- |
+| `event_bus.py`                           | Async pub/sub event routing         | ✅ Production | asyncio, logging                   |
+| `linear_workspace_client.py`             | GraphQL API client for Linear       | ✅ Production | gql[requests], httpx               |
+| `linear_client_factory.py`               | Factory for Linear client instances | ✅ Production | linear_workspace_client            |
+| `notifiers/linear_workspace_notifier.py` | Event subscriber for Linear         | ✅ Production | event_bus, linear_workspace_client |
+| `notifiers/email_notifier.py`            | SMTP-based email notifications      | ⚠️ Disabled   | smtplib, email.mime                |
 
 ---
 
@@ -60,10 +60,12 @@ Returns the singleton EventBus instance. Creates one if it doesn't exist.
 Subscribe a handler function to an event type.
 
 **Parameters**:
+
 - `event_type` (str): Event type identifier (e.g., "approval_required")
 - `handler` (Callable): Async function accepting event_data dict
 
 **Example**:
+
 ```python
 async def on_approval(data: dict):
     approval_id = data.get("approval_id")
@@ -77,12 +79,14 @@ await event_bus.subscribe("approval_required", on_approval)
 Emit an event to all subscribers asynchronously.
 
 **Parameters**:
+
 - `event_type` (str): Event type identifier
 - `event_data` (dict): Event payload
 - `source` (str): Source component name
 - `correlation_id` (str): Correlation ID for tracing
 
 **Example**:
+
 ```python
 await event_bus.emit(
     "approval_required",
@@ -97,6 +101,7 @@ await event_bus.emit(
 ```
 
 **Logging**:
+
 - Emits log: `INFO:lib.event_bus:Emitting '<event_type>' to N subscribers`
 - Warning if no subscribers: `WARNING:lib.event_bus:No subscribers for event '<event_type>'`
 
@@ -118,6 +123,7 @@ GraphQL API client for Linear workspace operations using OAuth authentication.
 ### Configuration
 
 **Environment Variables**:
+
 ```bash
 LINEAR_API_KEY=lin_oauth_...              # OAuth token (required)
 LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68        # Approval hub issue ID (required)
@@ -148,9 +154,11 @@ comment_id = await client.post_to_approval_hub(
 Constructor for Linear workspace client.
 
 **Parameters**:
+
 - `agent_name` (str): Name of calling agent (for logging)
 
 **Raises**:
+
 - `ValueError`: If LINEAR_API_KEY or LINEAR_APPROVAL_HUB_ISSUE_ID not set
 
 #### `post_to_approval_hub(...) -> str`
@@ -158,6 +166,7 @@ Constructor for Linear workspace client.
 Post formatted approval request comment to Linear workspace hub.
 
 **Parameters**:
+
 - `approval_id` (str): UUID of approval request
 - `task_description` (str): Human-readable task description
 - `risk_level` (str): "low", "medium", "high", or "critical"
@@ -167,6 +176,7 @@ Post formatted approval request comment to Linear workspace hub.
 **Returns**: Comment ID (UUID string)
 
 **Example**:
+
 ```python
 comment_id = await client.post_to_approval_hub(
     approval_id="e69e47dd-a8a8-4e18-8e1b-ab5bd58deb2e",
@@ -184,7 +194,8 @@ comment_id = await client.post_to_approval_hub(
 ```
 
 **Comment Format**:
-```markdown
+
+````markdown
 🟠 **HIGH Approval Required**
 
 **Project**: `phase-5-chat`
@@ -195,6 +206,7 @@ comment_id = await client.post_to_approval_hub(
 Execute database migration
 
 **Actions**:
+
 - ✅ Approve: `task workflow:approve REQUEST_ID=e69e47dd-a8a8-4e18-8e1b-ab5bd58deb2e`
 - ❌ Reject: `task workflow:reject REQUEST_ID=e69e47dd-a8a8-4e18-8e1b-ab5bd58deb2e REASON="<reason>"`
 
@@ -202,8 +214,9 @@ Execute database migration
 
 **Metadata**: ```json
 {'task_id': '7caa3e83-4ae9-4f9c-83f6-e944f38387ae', 'priority': 'critical', ...}
-```
-```
+````
+
+````
 
 **Risk Emoji Mapping**:
 - `low`: 🟢
@@ -230,7 +243,7 @@ mutation CreateComment($issueId: String!, $body: String!) {
     }
   }
 }
-```
+````
 
 ---
 
@@ -259,14 +272,17 @@ comment_id = await client.post_to_approval_hub(...)
 Create and configure a Linear workspace client.
 
 **Parameters**:
+
 - `agent_name` (str): Name of calling agent (for logging/telemetry)
 
 **Returns**: Configured LinearWorkspaceClient instance
 
 **Logging**:
+
 - `INFO:lib.linear_client_factory:Creating workspace-level Linear client for <agent_name>`
 
 **Example**:
+
 ```python
 # In orchestrator startup
 from shared.lib.linear_client_factory import create_linear_workspace_client
@@ -303,6 +319,7 @@ notifier = LinearWorkspaceNotifier()
 Constructor that creates Linear client and subscribes to events.
 
 **Side Effects**:
+
 - Creates LinearWorkspaceClient via factory
 - Subscribes to "approval_required" event
 - Logs initialization: `INFO:lib.notifiers.linear_workspace_notifier:Linear workspace notifier initialized`
@@ -312,6 +329,7 @@ Constructor that creates Linear client and subscribes to events.
 Event handler for approval_required events.
 
 **Parameters**:
+
 - `event_data` (dict): Event payload containing:
   - `approval_id` (str): Approval UUID
   - `task_description` (str): Task description
@@ -320,6 +338,7 @@ Event handler for approval_required events.
   - `metadata` (dict): Additional context
 
 **Example Event Data**:
+
 ```python
 {
     "approval_id": "e69e47dd-a8a8-4e18-8e1b-ab5bd58deb2e",
@@ -335,6 +354,7 @@ Event handler for approval_required events.
 ```
 
 **Logging**:
+
 - Start: `INFO:lib.notifiers.linear_workspace_notifier:Posting approval <id> to workspace hub (risk: <level>, project: <name>)`
 - Success: `INFO:lib.notifiers.linear_workspace_notifier:✅ Posted approval <id> to workspace hub: <comment_id>`
 - Error: `ERROR:lib.notifiers.linear_workspace_notifier:Failed to post approval <id>: <error>`
@@ -380,6 +400,7 @@ SMTP-based email notifications for approval requests (optional fallback).
 ### Configuration
 
 **Environment Variables**:
+
 ```bash
 SMTP_HOST=smtp.gmail.com                  # SMTP server hostname
 SMTP_PORT=587                             # SMTP port (587 for TLS)
@@ -407,11 +428,13 @@ notifier = EmailNotifier()
 Constructor that checks SMTP configuration and subscribes to events.
 
 **Side Effects**:
+
 - Checks for SMTP environment variables
 - If all present: subscribes to "approval_required" event
 - If missing: logs warning and disables notifier
 
 **Logging** (if disabled):
+
 ```
 WARNING:lib.notifiers.email_notifier:SMTP_HOST not configured, email notifier disabled
 WARNING:lib.notifiers.email_notifier:NOTIFICATION_EMAIL_TO not configured, email notifier disabled
@@ -425,17 +448,20 @@ Event handler for approval_required events. Sends HTML email with approval detai
 **Parameters**: Same as LinearWorkspaceNotifier
 
 **Email Format**:
+
 - **Subject**: "🚨 Approval Required: <task_description>"
 - **Body**: HTML with approval details, action buttons, CLI commands
 - **To**: NOTIFICATION_EMAIL_TO environment variable
 
 **Logging**:
+
 - Success: `INFO:lib.notifiers.email_notifier:Email sent for approval <id> to <email>`
 - Error: `ERROR:lib.notifiers.email_notifier:Failed to send email for approval <id>: <error>`
 
 ### Enabling Email Notifications
 
 1. Configure SMTP in `.env`:
+
 ```bash
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
@@ -445,12 +471,14 @@ NOTIFICATION_EMAIL_TO=ops-team@company.com
 ```
 
 2. Force-recreate orchestrator:
+
 ```bash
 cd deploy
 docker compose up -d orchestrator --force-recreate
 ```
 
 3. Verify initialization:
+
 ```bash
 docker logs deploy-orchestrator-1 --tail 20 | grep -i email
 ```
@@ -475,27 +503,27 @@ logger = logging.getLogger(__name__)
 
 class SlackNotifier:
     """Post approval notifications to Slack via webhook."""
-    
+
     def __init__(self):
         self.webhook_url = os.getenv("SLACK_WEBHOOK_URL")
-        
+
         if not self.webhook_url:
             logger.warning("SLACK_WEBHOOK_URL not configured, Slack notifier disabled")
             return
-        
+
         self.event_bus = get_event_bus()
         self.event_bus.subscribe("approval_required", self.on_approval_required)
         logger.info("Slack notifier initialized")
-    
+
     async def on_approval_required(self, event_data: dict):
         """Handle approval_required events."""
         if not self.webhook_url:
             return
-        
+
         approval_id = event_data.get("approval_id")
         risk_level = event_data.get("risk_level")
         task_description = event_data.get("task_description")
-        
+
         # Format Slack message
         message = {
             "text": f"🚨 Approval Required ({risk_level.upper()})",
@@ -520,7 +548,7 @@ class SlackNotifier:
                 }
             ]
         }
-        
+
         # Send to Slack
         async with httpx.AsyncClient() as client:
             try:
@@ -596,7 +624,7 @@ await event_bus.emit("approval_required", {...})
 class ConditionalNotifier:
     async def on_approval_required(self, event_data: dict):
         risk_level = event_data.get("risk_level")
-        
+
         # Only notify for high/critical risk
         if risk_level in ["high", "critical"]:
             await self.send_notification(event_data)
@@ -610,13 +638,13 @@ class AggregatingNotifier:
         self.pending = []
         self.event_bus = get_event_bus()
         self.event_bus.subscribe("approval_required", self.on_approval)
-        
+
         # Send batch every 5 minutes
         asyncio.create_task(self.send_batch_periodically())
-    
+
     async def on_approval(self, event_data: dict):
         self.pending.append(event_data)
-    
+
     async def send_batch_periodically(self):
         while True:
             await asyncio.sleep(300)  # 5 minutes
@@ -641,13 +669,13 @@ from shared.lib.event_bus import get_event_bus
 async def test_event_emission():
     bus = get_event_bus()
     received = []
-    
+
     async def handler(data):
         received.append(data)
-    
+
     await bus.subscribe("test_event", handler)
     await bus.emit("test_event", {"key": "value"}, "test", "corr-123")
-    
+
     assert len(received) == 1
     assert received[0]["key"] == "value"
 ```
@@ -677,6 +705,7 @@ curl -X POST http://localhost:8001/orchestrate \
 **Symptom**: `WARNING:lib.event_bus:No subscribers for event 'approval_approved'`
 
 **Solution**: Create and register subscriber:
+
 ```python
 class ApprovalDecisionNotifier:
     def __init__(self):
@@ -688,7 +717,8 @@ class ApprovalDecisionNotifier:
 
 **Symptom**: `ValueError: LINEAR_API_KEY or LINEAR_APPROVAL_HUB_ISSUE_ID not set`
 
-**Solution**: 
+**Solution**:
+
 1. Check `.env` file has both variables (no quotes)
 2. Force-recreate container: `docker compose up -d orchestrator --force-recreate`
 3. Verify: `docker exec deploy-orchestrator-1 printenv | grep LINEAR`
@@ -698,6 +728,7 @@ class ApprovalDecisionNotifier:
 **Symptom**: `WARNING:lib.notifiers.email_notifier:Email notifier is disabled`
 
 **Solution**: Configure all SMTP variables:
+
 ```bash
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
