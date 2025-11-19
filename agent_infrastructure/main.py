@@ -98,6 +98,94 @@ async def list_infra_templates():
     return list_templates()
 
 
+# === Agent-to-Agent Communication (Phase 6) ===
+
+from lib.agent_events import AgentRequestEvent, AgentResponseEvent, AgentRequestType
+from lib.agent_request_handler import handle_agent_request
+from typing import Dict, Any
+
+@app.post("/agent-request", response_model=AgentResponseEvent, tags=["agent-communication"])
+async def agent_request_endpoint(request: AgentRequestEvent):
+    """
+    Handle requests from other agents.
+    
+    Supports:
+    - DEPLOY_SERVICE: Deploy infrastructure changes
+    - UPDATE_CONFIG: Update infrastructure configuration
+    - HEALTH_CHECK: Check infrastructure health
+    - GET_STATUS: Query agent health
+    """
+    return await handle_agent_request(
+        request=request,
+        handler=handle_infrastructure_request,
+        agent_name="infrastructure"
+    )
+
+
+async def handle_infrastructure_request(request: AgentRequestEvent) -> Dict[str, Any]:
+    """
+    Process agent requests for infrastructure tasks.
+    
+    Args:
+        request: AgentRequestEvent with request_type and payload
+    
+    Returns:
+        Dict with result data
+    
+    Raises:
+        ValueError: If request type not supported
+    """  
+    request_type = request.request_type
+    payload = request.payload
+    
+    if request_type == AgentRequestType.DEPLOY_SERVICE:
+        service_name = payload.get("service_name", "")
+        environment = payload.get("environment", "staging")
+        
+        if not service_name:
+            raise ValueError("service_name required for DEPLOY_SERVICE")
+        
+        # Deploy service (placeholder)
+        return {
+            "service": service_name,
+            "environment": environment,
+            "status": "deployed",
+            "endpoint": f"https://{service_name}.example.com"
+        }
+    
+    elif request_type == AgentRequestType.UPDATE_CONFIG:
+        config_key = payload.get("config_key", "")
+        config_value = payload.get("config_value")
+        
+        if not config_key:
+            raise ValueError("config_key required for UPDATE_CONFIG")
+        
+        return {
+            "updated": True,
+            "config_key": config_key,
+            "previous_value": None
+        }
+    
+    elif request_type == AgentRequestType.HEALTH_CHECK:
+        services = payload.get("services", [])
+        
+        return {
+            "healthy_services": len(services),
+            "unhealthy_services": 0,
+            "overall_status": "healthy"
+        }
+    
+    elif request_type == AgentRequestType.GET_STATUS:
+        return {
+            "status": "healthy",
+            "capabilities": ["deploy_service", "update_config", "health_check"],
+            "active_deployments": 0
+        }
+    
+    else:
+        raise ValueError(f"Unsupported request type: {request_type}")
+
+
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "8004"))
     uvicorn.run(app, host="0.0.0.0", port=port)

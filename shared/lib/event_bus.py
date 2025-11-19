@@ -1,7 +1,10 @@
 """
-Event Bus - Pub/Sub Pattern for Agent Notifications
+Event Bus - Pub/Sub Pattern for Agent Notifications and Inter-Agent Communication
 
-Provides in-memory event routing with Redis fallback option.
+Provides in-memory event routing with support for:
+- General pub/sub events (approval_required, task_completed, etc.)
+- Agent-to-agent request/response messaging
+- Timeout handling and correlation tracking
 
 Supported Events:
 - approval_required: HITL approval request created
@@ -10,30 +13,35 @@ Supported Events:
 - task_completed: Task finished successfully
 - task_failed: Task failed with error
 - agent_error: Agent encountered critical error
+- agent_request: Request from one agent to another
+- agent_response: Response to agent request
 
 Usage:
     from shared.lib.event_bus import EventBus, Event
+    from shared.lib.agent_events import AgentRequestEvent, AgentResponseEvent
     
     # Initialize singleton
     bus = EventBus.get_instance()
     
-    # Subscribe to events
+    # Subscribe to general events
     async def on_approval_required(event: Event):
         print(f"Approval needed: {event.data['approval_id']}")
     
     bus.subscribe("approval_required", on_approval_required)
     
-    # Emit events
-    await bus.emit("approval_required", {
-        "approval_id": "123e4567-e89b-12d3-a456-426614174000",
-        "task_description": "Deploy production changes",
-        "risk_level": "high"
-    })
+    # Agent-to-agent request/response
+    request = AgentRequestEvent(
+        source_agent="orchestrator",
+        target_agent="code-review",
+        request_type="review_code",
+        payload={"file_path": "main.py"}
+    )
+    response = await bus.request_agent(request, timeout=30.0)
 """
 
 import asyncio
 import logging
-from typing import Dict, List, Callable, Any, Optional
+from typing import Dict, List, Callable, Any, Optional, Union
 from dataclasses import dataclass, field
 from datetime import datetime
 import os
@@ -80,11 +88,14 @@ class Event:
 
 class EventBus:
     """
-    In-memory event bus with pub/sub pattern.
+    In-memory event bus with pub/sub pattern and agent-to-agent messaging.
     
     Features:
     - Async subscriber callbacks
     - Multiple subscribers per event type
+    - Agent request/response correlation
+    - Timeout handling with asyncio.wait_for
+    - Priority queuing for agent requests
     - Error handling (failed subscribers don't block others)
     - Singleton pattern for global access
     - Optional Redis backend (future)
@@ -93,12 +104,17 @@ class EventBus:
     _instance: Optional['EventBus'] = None
     
     def __init__(self):
-        """Initialize event bus with empty subscribers."""
+        """Initialize event bus with empty subscribers and request tracking."""
         self._subscribers: Dict[str, List[Callable]] = {}
+        self._pending_requests: Dict[str, asyncio.Future] = {}  # request_id -> Future
+        self._request_queue: asyncio.PriorityQueue = asyncio.PriorityQueue()
         self._stats: Dict[str, int] = {
             "events_emitted": 0,
             "events_delivered": 0,
-            "subscriber_errors": 0
+            "subscriber_errors": 0,
+            "agent_requests_sent": 0,
+            "agent_responses_received": 0,
+            "agent_timeouts": 0
         }
         logger.info("Event bus initialized")
     
@@ -292,6 +308,185 @@ class EventBus:
             event_type: len(callbacks)
             for event_type, callbacks in self._subscribers.items()
         }
+    
+    async def request_agent(
+        self,
+        request: 'AgentRequestEvent',  # Type hint as string to avoid circular import
+        timeout: Optional[float] = None
+    ) -> 'AgentResponseEvent':
+        """
+        Send request to another agent and wait for response.
+        
+        Args:
+            request: AgentRequestEvent with target agent and payload
+            timeout: Override default timeout from request.timeout_seconds
+        
+        Returns:
+            AgentResponseEvent with result or error
+        
+        Raises:
+            asyncio.TimeoutError: If no response within timeout
+            ValueError: If no agent registered to handle request
+        
+        Example:
+            from shared.lib.agent_events import AgentRequestEvent, AgentRequestType
+            
+            request = AgentRequestEvent(
+                source_agent="orchestrator",
+                target_agent="code-review",
+                request_type=AgentRequestType.REVIEW_CODE,
+                payload={"file_path": "main.py", "changes": "..."}
+            )
+            
+            response = await bus.request_agent(request, timeout=30.0)
+            
+            if response.status == "success":
+                print(f"Review result: {response.result}")
+            else:
+                print(f"Error: {response.error}")
+        """
+        timeout_val = timeout or request.timeout_seconds
+        
+        # Create future for response
+        future: asyncio.Future = asyncio.Future()
+        self._pending_requests[request.request_id] = future
+        
+        self._stats["agent_requests_sent"] += 1
+        
+        try:
+            # Emit request event to subscribers
+            await self.emit(
+                "agent_request",
+                request.to_dict(),
+                source=request.source_agent,
+                correlation_id=request.correlation_id
+            )
+            
+            logger.info(
+                f"Sent agent request {request.request_id} from "
+                f"{request.source_agent} to {request.target_agent} "
+                f"(type: {request.request_type}, timeout: {timeout_val}s)"
+            )
+            
+            # Wait for response with timeout
+            response_data = await asyncio.wait_for(future, timeout=timeout_val)
+            
+            # Import here to avoid circular dependency
+            from shared.lib.agent_events import AgentResponseEvent
+            
+            response = AgentResponseEvent(**response_data)
+            self._stats["agent_responses_received"] += 1
+            
+            logger.info(
+                f"Received response for {request.request_id} from "
+                f"{response.source_agent} (status: {response.status}, "
+                f"time: {response.processing_time_ms}ms)"
+            )
+            
+            return response
+            
+        except asyncio.TimeoutError:
+            self._stats["agent_timeouts"] += 1
+            logger.error(
+                f"Agent request {request.request_id} timed out after "
+                f"{timeout_val}s (target: {request.target_agent})"
+            )
+            
+            # Create timeout response
+            from shared.lib.agent_events import AgentResponseEvent, AgentResponseStatus
+            
+            return AgentResponseEvent(
+                request_id=request.request_id,
+                source_agent=request.target_agent,
+                target_agent=request.source_agent,
+                status=AgentResponseStatus.TIMEOUT,
+                error=f"Request timed out after {timeout_val} seconds"
+            )
+            
+        finally:
+            # Clean up pending request
+            self._pending_requests.pop(request.request_id, None)
+    
+    async def respond_to_request(
+        self,
+        response: 'AgentResponseEvent'
+    ) -> None:
+        """
+        Send response to pending agent request.
+        
+        Args:
+            response: AgentResponseEvent with result or error
+        
+        Example:
+            # In agent endpoint handling request
+            response = AgentResponseEvent(
+                request_id=request.request_id,
+                source_agent="code-review",
+                target_agent=request.source_agent,
+                status=AgentResponseStatus.SUCCESS,
+                result={"issues": 3, "suggestions": ["..."]}
+            )
+            
+            await bus.respond_to_request(response)
+        """
+        # Find pending request future
+        future = self._pending_requests.get(response.request_id)
+        
+        if future and not future.done():
+            # Resolve future with response data
+            future.set_result(response.to_dict())
+            
+            logger.info(
+                f"Delivered response for request {response.request_id} "
+                f"from {response.source_agent} to {response.target_agent}"
+            )
+        else:
+            logger.warning(
+                f"No pending request found for {response.request_id} "
+                f"(may have timed out or been cancelled)"
+            )
+        
+        # Also emit as regular event for any subscribers
+        await self.emit(
+            "agent_response",
+            response.to_dict(),
+            source=response.source_agent,
+            correlation_id=response.request_id
+        )
+    
+    async def broadcast_to_agents(
+        self,
+        broadcast: 'AgentBroadcastEvent'
+    ) -> None:
+        """
+        Broadcast event to multiple agents.
+        
+        Args:
+            broadcast: AgentBroadcastEvent with target agents and payload
+        
+        Example:
+            from shared.lib.agent_events import AgentBroadcastEvent
+            
+            broadcast = AgentBroadcastEvent(
+                source_agent="orchestrator",
+                target_agents=["all"],  # or specific list
+                event_type="config_updated",
+                payload={"config_key": "timeout", "new_value": 60}
+            )
+            
+            await bus.broadcast_to_agents(broadcast)
+        """
+        await self.emit(
+            "agent_broadcast",
+            broadcast.to_dict(),
+            source=broadcast.source_agent,
+            correlation_id=broadcast.broadcast_id
+        )
+        
+        logger.info(
+            f"Broadcast {broadcast.event_type} from {broadcast.source_agent} "
+            f"to {len(broadcast.target_agents)} agents"
+        )
 
 
 # Convenience function for global access

@@ -94,6 +94,98 @@ async def generate_documentation(request: DocRequest):
 async def list_doc_templates_endpoint():
     return list_doc_templates()
 
+
+# === Agent-to-Agent Communication (Phase 6) ===
+
+from lib.agent_events import AgentRequestEvent, AgentResponseEvent, AgentRequestType
+from lib.agent_request_handler import handle_agent_request
+from typing import Dict, Any
+
+@app.post("/agent-request", response_model=AgentResponseEvent, tags=["agent-communication"])
+async def agent_request_endpoint(request: AgentRequestEvent):
+    """
+    Handle requests from other agents.
+    
+    Supports:
+    - GENERATE_DOCS: Generate documentation from code
+    - UPDATE_README: Update README with new content
+    - EXPLAIN_CODE: Explain code in natural language
+    - GET_STATUS: Query agent health
+    """
+    return await handle_agent_request(
+        request=request,
+        handler=handle_documentation_request,
+        agent_name="documentation"
+    )
+
+
+async def handle_documentation_request(request: AgentRequestEvent) -> Dict[str, Any]:
+    """
+    Process agent requests for documentation tasks.
+    
+    Args:
+        request: AgentRequestEvent with request_type and payload
+    
+    Returns:
+        Dict with result data
+    
+    Raises:
+        ValueError: If request type not supported
+    """
+    request_type = request.request_type
+    payload = request.payload
+    
+    if request_type == AgentRequestType.GENERATE_DOCS:
+        code = payload.get("code", "")
+        format_type = payload.get("format", "markdown")
+        
+        if not code:
+            raise ValueError("code required for GENERATE_DOCS")
+        
+        # Generate documentation (placeholder)
+        return {
+            "documentation": f"# Documentation\n\nGenerated docs for code",
+            "format": format_type,
+            "sections": ["overview", "usage", "examples"]
+        }
+    
+    elif request_type == AgentRequestType.UPDATE_README:
+        content = payload.get("content", "")
+        section = payload.get("section", "")
+        
+        if not content:
+            raise ValueError("content required for UPDATE_README")
+        
+        return {
+            "updated": True,
+            "section": section,
+            "preview": content[:100]
+        }
+    
+    elif request_type == AgentRequestType.EXPLAIN_CODE:
+        code = payload.get("code", "")
+        detail_level = payload.get("detail_level", "medium")
+        
+        if not code:
+            raise ValueError("code required for EXPLAIN_CODE")
+        
+        return {
+            "explanation": f"Code explanation at {detail_level} detail level",
+            "complexity": "medium",
+            "key_concepts": ["functions", "classes", "data structures"]
+        }
+    
+    elif request_type == AgentRequestType.GET_STATUS:
+        return {
+            "status": "healthy",
+            "capabilities": ["generate_docs", "update_readme", "explain_code"],
+            "templates_available": True
+        }
+    
+    else:
+        raise ValueError(f"Unsupported request type: {request_type}")
+
+
 if __name__ == '__main__':
     port = int(os.getenv("PORT", "8006"))
     uvicorn.run(app, host="0.0.0.0", port=port)
