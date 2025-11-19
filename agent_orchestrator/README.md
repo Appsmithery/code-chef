@@ -130,17 +130,20 @@ Rejections or expirations propagate back as HTTP errors (403/410) so the request
 The orchestrator emits real-time notifications for approval requests using an event-driven architecture:
 
 **Architecture:**
+
 - **Event Bus**: In-memory async pub/sub (singleton per agent)
 - **Linear Integration**: Posts formatted comments to workspace approval hub (PR-68)
 - **Email Fallback**: SMTP-based notifications (optional, requires SMTP config)
 
 **Notification Flow:**
+
 1. High/critical risk task submitted → Approval created in PostgreSQL
 2. `approval_required` event emitted → 2 subscribers (Linear + Email)
 3. Linear notifier posts comment to PR-68 with @mentions
 4. Operator receives Linear notification (email/mobile/desktop) in <1 second
 
 **Configuration** (`config/env/.env`):
+
 ```bash
 LINEAR_API_KEY=lin_oauth_...              # OAuth token for GraphQL API
 LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68        # Workspace approval hub issue
@@ -151,12 +154,14 @@ NOTIFICATION_EMAIL_TO=ops-team@company.com
 ```
 
 **API Endpoints:**
+
 - `POST /approve/{approval_id}?approver_id=...&approver_role=...&justification=...` — Approve request
 - `POST /reject/{approval_id}?approver_id=...&approver_role=...&reason=...` — Reject request
 - `GET /approvals/pending` — List pending approvals
 - `GET /approvals/{approval_id}` — Get approval details
 
 **Example Usage:**
+
 ```powershell
 # Approve via API
 Invoke-WebRequest -Uri "http://localhost:8001/approve/<approval-id>?approver_id=alex@example.com&approver_role=tech_lead&justification=Reviewed+and+approved" -Method POST
