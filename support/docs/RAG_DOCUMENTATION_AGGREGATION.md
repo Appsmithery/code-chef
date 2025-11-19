@@ -2,7 +2,7 @@
 
 **Status**: Planned  
 **Priority**: Medium  
-**Implementation Phase**: Future Enhancement  
+**Implementation Phase**: Future Enhancement
 
 ## Overview
 
@@ -11,6 +11,7 @@ Leverage existing RAG infrastructure (Qdrant Vector DB + embedding models) to ag
 ## Problem Statement
 
 Current challenges with vendor documentation:
+
 - **Scattered across multiple sources**: DigitalOcean, Linear, LangSmith, AWS, GitHub
 - **Manual lookup required**: Developers must context-switch to find API details
 - **Token-expensive**: Pasting full docs into LLM context wastes tokens
@@ -22,6 +23,7 @@ Current challenges with vendor documentation:
 ### Architecture: MCP Documentation Sync Server
 
 Create a dedicated MCP server that:
+
 1. **Fetches** vendor documentation via HTTP scraping/API calls
 2. **Chunks** content into semantic segments (1000 tokens with 200 overlap)
 3. **Embeds** using DigitalOcean's `text-embedding-ada-002` model
@@ -31,13 +33,13 @@ Create a dedicated MCP server that:
 
 ### Data Sources (Initial)
 
-| Vendor | Source Type | Update Frequency | Priority |
-|--------|-------------|------------------|----------|
-| DigitalOcean Gradient AI | Web scraping + GitHub | Daily | **High** |
-| Linear GraphQL API | GitHub schema file | Weekly | **High** |
-| LangSmith SDK | Docs site scraping | Weekly | Medium |
-| MCP Protocol Spec | GitHub markdown | As needed | Medium |
-| AWS SDK (Python) | Read the Docs API | Weekly | Low |
+| Vendor                   | Source Type           | Update Frequency | Priority |
+| ------------------------ | --------------------- | ---------------- | -------- |
+| DigitalOcean Gradient AI | Web scraping + GitHub | Daily            | **High** |
+| Linear GraphQL API       | GitHub schema file    | Weekly           | **High** |
+| LangSmith SDK            | Docs site scraping    | Weekly           | Medium   |
+| MCP Protocol Spec        | GitHub markdown       | As needed        | Medium   |
+| AWS SDK (Python)         | Read the Docs API     | Weekly           | Low      |
 
 ### Technical Implementation
 
@@ -59,7 +61,7 @@ from langchain.embeddings import OpenAIEmbeddings
 
 class DocumentationSyncServer:
     """Syncs external documentation into vector DB."""
-    
+
     SOURCES = {
         "digitalocean-gradient": {
             "base_url": "https://docs.digitalocean.com/products/gradient-ai-platform/",
@@ -96,7 +98,7 @@ class DocumentationSyncServer:
             "tags": ["mcp", "protocol", "tools", "context"]
         }
     }
-    
+
     def __init__(self, qdrant_url: str, qdrant_api_key: str):
         self.qdrant = QdrantClient(url=qdrant_url, api_key=qdrant_api_key)
         self.embeddings = OpenAIEmbeddings()  # or use Gradient embeddings
@@ -105,13 +107,13 @@ class DocumentationSyncServer:
             chunk_overlap=200,
             separators=["\n## ", "\n### ", "\n#### ", "\n\n", "\n", " "]
         )
-    
+
     async def sync_source(self, source_name: str) -> Dict:
         """Fetch and index documentation from a source."""
         source = self.SOURCES[source_name]
         docs_indexed = 0
         errors = []
-        
+
         async with httpx.AsyncClient(timeout=30.0) as client:
             for page in source.get("pages", []):
                 try:
@@ -119,15 +121,15 @@ class DocumentationSyncServer:
                     response = await client.get(url)
                     response.raise_for_status()
                     content = response.text
-                    
+
                     # Extract main content (strip HTML if needed)
                     from bs4 import BeautifulSoup
                     soup = BeautifulSoup(content, 'html.parser')
                     text = soup.get_text(separator="\n", strip=True)
-                    
+
                     # Split into chunks
                     chunks = self.text_splitter.split_text(text)
-                    
+
                     # Generate embeddings and upsert
                     for i, chunk in enumerate(chunks):
                         embedding = self.embeddings.embed_query(chunk)
@@ -147,39 +149,39 @@ class DocumentationSyncServer:
                             }]
                         )
                         docs_indexed += 1
-                
+
                 except Exception as e:
                     errors.append(f"{page}: {str(e)}")
-        
+
         return {
             "source": source_name,
             "chunks_indexed": docs_indexed,
             "errors": errors,
             "status": "success" if not errors else "partial"
         }
-    
+
     async def query_docs(
-        self, 
-        query: str, 
+        self,
+        query: str,
         source_filter: List[str] = None,
         limit: int = 5
     ) -> List[Dict]:
         """Query indexed documentation with semantic search."""
         query_embedding = self.embeddings.embed_query(query)
-        
+
         filter_conditions = None
         if source_filter:
             filter_conditions = {
                 "must": [{"key": "source", "match": {"any": source_filter}}]
             }
-        
+
         results = self.qdrant.search(
             collection_name="vendor-docs",
             query_vector=query_embedding,
             limit=limit,
             query_filter=filter_conditions
         )
-        
+
         return [
             {
                 "text": hit.payload["text"],
@@ -210,7 +212,7 @@ async def query_vendor_docs(query: str, sources: List[str] = None) -> str:
         qdrant_api_key=os.getenv("QDRANT_CLUSTER_KEY")
     )
     results = await server.query_docs(query, sources)
-    
+
     formatted = []
     for r in results:
         formatted.append(
@@ -220,7 +222,7 @@ async def query_vendor_docs(query: str, sources: List[str] = None) -> str:
             f"{r['text']}\n"
             f"{'='*80}"
         )
-    
+
     return "\n\n".join(formatted)
 ```
 
@@ -232,19 +234,19 @@ Inject vendor docs into LLM context when relevant:
 @app.post("/orchestrate")
 async def orchestrate_task(request: TaskRequest):
     """Enhanced orchestrator with RAG-powered vendor docs."""
-    
+
     # Detect if task requires vendor documentation
     vendor_keywords = {
         "gradient": ["gradient", "digitalocean", "llm", "model", "inference"],
         "linear": ["linear", "issue", "project", "roadmap", "graphql"],
         "langsmith": ["langsmith", "trace", "monitor", "evaluate"]
     }
-    
+
     relevant_sources = []
     for source, keywords in vendor_keywords.items():
         if any(kw in request.description.lower() for kw in keywords):
             relevant_sources.append(source)
-    
+
     # Query RAG if relevant sources detected
     docs_context = ""
     if relevant_sources:
@@ -257,11 +259,11 @@ async def orchestrate_task(request: TaskRequest):
                 "limit": 3
             }
         )
-    
+
     # Inject docs into LLM prompt
     system_prompt = """You are an expert DevOps orchestrator with access to vendor documentation.
 Use the provided documentation context to make accurate technical decisions."""
-    
+
     if docs_context:
         enhanced_prompt = f"""
 Task: {request.description}
@@ -273,37 +275,37 @@ Decompose this task considering the documentation above.
 """
     else:
         enhanced_prompt = request.description
-    
+
     response = await gradient_client.complete(
         prompt=enhanced_prompt,
         system_prompt=system_prompt,
         temperature=0.3
     )
-    
+
     # ...rest of orchestration logic...
 ```
 
 #### 3. Docker Compose Service
 
 ```yaml
-  documentation-sync:
-    build:
-      context: ..
-      dockerfile: shared/mcp/servers/documentation-sync/Dockerfile
-    container_name: documentation-sync
-    environment:
-      - QDRANT_CLUSTER_ENDPOINT=${QDRANT_CLUSTER_ENDPOINT}
-      - QDRANT_CLUSTER_KEY=${QDRANT_CLUSTER_KEY}
-      - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
-      - GRADIENT_MODEL=text-embedding-ada-002
-      - LOG_LEVEL=info
-    networks:
-      - devtools-network
-    restart: unless-stopped
-    volumes:
-      - ./cron.d/doc-sync:/etc/cron.d/doc-sync:ro
-    # Run sync daily at 2 AM UTC
-    entrypoint: ["crond", "-f", "-d", "8"]
+documentation-sync:
+  build:
+    context: ..
+    dockerfile: shared/mcp/servers/documentation-sync/Dockerfile
+  container_name: documentation-sync
+  environment:
+    - QDRANT_CLUSTER_ENDPOINT=${QDRANT_CLUSTER_ENDPOINT}
+    - QDRANT_CLUSTER_KEY=${QDRANT_CLUSTER_KEY}
+    - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY}
+    - GRADIENT_MODEL=text-embedding-ada-002
+    - LOG_LEVEL=info
+  networks:
+    - devtools-network
+  restart: unless-stopped
+  volumes:
+    - ./cron.d/doc-sync:/etc/cron.d/doc-sync:ro
+  # Run sync daily at 2 AM UTC
+  entrypoint: ["crond", "-f", "-d", "8"]
 ```
 
 #### 4. Cron Schedule
@@ -371,6 +373,7 @@ curl -X POST http://localhost:8000/tools/documentation-sync/query_vendor_docs \
 ## Implementation Roadmap
 
 ### Phase 1: Core Infrastructure (Week 1)
+
 - [ ] Create `documentation-sync` MCP server
 - [ ] Implement web scraping + GitHub fetching
 - [ ] Set up Qdrant `vendor-docs` collection
@@ -378,18 +381,21 @@ curl -X POST http://localhost:8000/tools/documentation-sync/query_vendor_docs \
 - [ ] Basic sync/query MCP tools
 
 ### Phase 2: Source Integration (Week 2)
+
 - [ ] DigitalOcean Gradient AI docs
 - [ ] Linear GraphQL schema + docs
 - [ ] LangSmith tracing docs
 - [ ] MCP protocol specification
 
 ### Phase 3: Orchestrator Integration (Week 3)
+
 - [ ] Auto-detect vendor mentions in tasks
 - [ ] Inject RAG results into LLM context
 - [ ] Add confidence scoring for doc relevance
 - [ ] Implement caching for frequent queries
 
 ### Phase 4: Automation & Monitoring (Week 4)
+
 - [ ] Cron-based scheduled syncs
 - [ ] Webhook triggers for doc updates
 - [ ] Sync status dashboard
