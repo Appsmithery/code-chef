@@ -1,4 +1,6 @@
 -- Dev-Tools State Database Schema
+-- This is the main schema file. Additional schemas:
+-- - workflow_state.sql: Multi-agent workflow state and checkpointing (Phase 6)
 
 CREATE TABLE IF NOT EXISTS tasks (
     id SERIAL PRIMARY KEY,

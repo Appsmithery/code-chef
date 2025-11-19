@@ -20,7 +20,7 @@ Usage:
     response = await event_bus.request_agent(request, timeout=30.0)
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
@@ -97,7 +97,7 @@ class AgentRequestEvent(BaseModel):
     timeout_seconds: float = 30.0
     correlation_id: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     @property
     def expires_at(self) -> datetime:
@@ -107,7 +107,7 @@ class AgentRequestEvent(BaseModel):
     @property
     def is_expired(self) -> bool:
         """Check if request has timed out."""
-        return datetime.utcnow() > self.expires_at
+        return datetime.now(timezone.utc) > self.expires_at
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -151,7 +151,7 @@ class AgentResponseEvent(BaseModel):
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     processing_time_ms: Optional[float] = None
     
     def to_dict(self) -> Dict[str, Any]:
@@ -186,7 +186,7 @@ class AgentBroadcastEvent(BaseModel):
     payload: Dict[str, Any] = Field(default_factory=dict)
     priority: AgentRequestPriority = AgentRequestPriority.NORMAL
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
