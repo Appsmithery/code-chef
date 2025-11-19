@@ -55,7 +55,7 @@ try:
 except ImportError:
     redis = None
     REDIS_AVAILABLE = False
-
+    
 logger = logging.getLogger(__name__)
 
 
