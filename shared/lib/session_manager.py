@@ -5,6 +5,7 @@ Manages chat sessions with persistent conversation history.
 Uses PostgreSQL for session storage and hybrid memory for context.
 """
 
+import json
 import logging
 import uuid
 from datetime import datetime, timedelta
@@ -104,11 +105,12 @@ class SessionManager:
         now = datetime.utcnow()
         
         async with self.db_pool.acquire() as conn:
+            metadata_json = json.dumps(metadata or {})
             await conn.execute("""
                 INSERT INTO chat_sessions (session_id, user_id, created_at, updated_at, metadata)
-                VALUES ($1, $2, $3, $4, $5)
+                VALUES ($1, $2, $3, $4, $5::jsonb)
                 ON CONFLICT (session_id) DO NOTHING
-            """, session_id, user_id, now, now, metadata or {})
+            """, session_id, user_id, now, now, metadata_json)
         
         logger.info(f"Created chat session: {session_id}")
         return session_id
@@ -160,10 +162,11 @@ class SessionManager:
         
         async with self.db_pool.acquire() as conn:
             # Insert message
+            metadata_json = json.dumps(metadata or {})
             await conn.execute("""
                 INSERT INTO chat_messages (message_id, session_id, role, content, created_at, metadata)
-                VALUES ($1, $2, $3, $4, $5, $6)
-            """, message_id, session_id, role, content, now, metadata or {})
+                VALUES ($1, $2, $3, $4, $5, $6::jsonb)
+            """, message_id, session_id, role, content, now, metadata_json)
             
             # Update session timestamp
             await conn.execute("""
