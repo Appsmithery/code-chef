@@ -1,13 +1,17 @@
 # Github Copilot Instructions for Dev-Tools
 
-## Architecture snapshot (Phase 8 Complete - Repository Reorganization)
+## Architecture snapshot (Phase 5 Complete - Copilot Integration Layer)
+
+**Current Phase**: Phase 5 Complete ✅ | **Next Phase**: Phase 6 - Multi-Agent Collaboration | **Overall Progress**: ~90% (4.5/5 phases)
 
 - **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md.
 - **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `shared/lib/mcp_client.py` for unified tool access. Gateway routes to servers in `shared/mcp/servers/`.
 - **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
 - **LLM Inference**: DigitalOcean Gradient AI integration via `shared/lib/gradient_client.py` with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
-- **Observability**: Langfuse automatic LLM tracing (langfuse.openai wrapper) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents.
+- **Observability**: LangSmith automatic LLM tracing (langchain.openai wrapper) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents.
 - **Notification System**: Event-driven approval notifications via `shared/lib/event_bus.py` (async pub/sub); Linear workspace client posts to PR-68 hub with @mentions; <1s latency; optional email fallback via SMTP. See `support/docs/NOTIFICATION_SYSTEM.md`.
+- **Copilot Integration (Phase 5 - COMPLETE)**: Natural language task submission via `/chat` endpoint; multi-turn conversations with PostgreSQL session management; real-time approval notifications (<1s latency); OAuth integration with Linear GraphQL API; production validated end-to-end.
+- **Multi-Agent Collaboration (Phase 6 - PLANNED)**: Agent registry for discovery; inter-agent event protocol; LangGraph shared state; resource locking; multi-agent workflow examples. See `support/docs/PHASE_6_PLAN.md`.
 - **Service Ports**: gateway-mcp:8000, orchestrator:8001, feature-dev:8002, code-review:8003, infrastructure:8004, cicd:8005, documentation:8006, rag:8007, state:8008, prometheus:9090.
 
 ## Repository structure
