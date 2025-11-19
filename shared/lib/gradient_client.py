@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Gradient Serverless Inference Configuration
 GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY")
-GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama-3.1-8b-instruct")
+GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "meta-llama-3.1-8b-instruct")
 
 # LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true
 # No manual configuration needed
