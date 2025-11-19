@@ -13,6 +13,7 @@ from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
 from contextlib import asynccontextmanager
 from lib.event_bus import get_event_bus
+from lib.registry_client import RegistryClient, AgentCapability
 
 from service import (
     FeatureRequest,
@@ -45,8 +46,51 @@ except Exception as e:
     hybrid_memory = None
 logger = logging.getLogger(__name__)
 
+# Agent registry client
+registry_client: RegistryClient | None = None
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Startup: Register with agent registry
+    registry_url = os.getenv("AGENT_REGISTRY_URL", "http://agent-registry:8009")
+    agent_id = "feature-dev"
+    agent_name = "Feature Development Agent"
+    base_url = f"http://feature-dev:{os.getenv('PORT', '8002')}"
+    
+    global registry_client
+    registry_client = RegistryClient(
+        registry_url=registry_url,
+        agent_id=agent_id,
+        agent_name=agent_name,
+        base_url=base_url
+    )
+    
+    # Define capabilities
+    capabilities = [
+        AgentCapability(
+            name="implement_feature",
+            description="Implement new feature from specification",
+            parameters={"spec": "str", "context": "dict"},
+            cost_estimate="~200-500 tokens",
+            tags=["development", "coding", "python", "javascript"]
+        ),
+        AgentCapability(
+            name="refactor_code",
+            description="Refactor existing code for quality and performance",
+            parameters={"code": "str", "goals": "list"},
+            cost_estimate="~100-300 tokens",
+            tags=["refactoring", "quality", "maintenance"]
+        )
+    ]
+    
+    # Register and start heartbeat
+    try:
+        await registry_client.register(capabilities)
+        await registry_client.start_heartbeat()
+        logger.info(f"✅ Registered {agent_id} with agent registry")
+    except Exception as e:
+        logger.warning(f"⚠️  Failed to register with agent registry: {e}")
+
     # Connect to Event Bus
     event_bus = get_event_bus()
     try:
@@ -54,7 +98,17 @@ async def lifespan(app: FastAPI):
         logger.info("✅ Connected to Event Bus")
     except Exception as e:
         logger.warning(f"⚠️  Failed to connect to Event Bus: {e}")
+    
     yield
+    
+    # Shutdown: Stop heartbeat
+    if registry_client:
+        try:
+            await registry_client.stop_heartbeat()
+            await registry_client.close()
+            logger.info(f"🛑 Unregistered {agent_id} from agent registry")
+        except Exception as e:
+            logger.warning(f"⚠️  Failed to unregister from agent registry: {e}")
 
 app = FastAPI(
     title="Feature Development Agent",
