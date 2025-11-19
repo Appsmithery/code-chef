@@ -41,10 +41,14 @@ class HITLManager:
                 "..", "..", "config", "hitl", "approval-policies.yaml"
             )
         
+        # Resolve to absolute path
+        policies_path = os.path.abspath(policies_path)
+        logger.info(f"[HITLManager] Attempting to load policies from: {policies_path}")
+        
         try:
             with open(policies_path) as f:
                 self.policies = yaml.safe_load(f)
-            logger.info(f"[HITLManager] Loaded policies from {policies_path}")
+            logger.info(f"[HITLManager] Successfully loaded policies from {policies_path}")
         except FileNotFoundError:
             logger.error(f"[HITLManager] Policies file not found: {policies_path}")
             # Default minimal policies
