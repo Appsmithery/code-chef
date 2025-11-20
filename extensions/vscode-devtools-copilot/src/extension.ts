@@ -9,26 +9,42 @@ let statusBarItem: vscode.StatusBarItem;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Dev-Tools extension activating...');
+    
+    try {
+        // Initialize status bar
+        statusBarItem = vscode.window.createStatusBarItem(
+            vscode.StatusBarAlignment.Right,
+            100
+        );
+        statusBarItem.text = '$(rocket) Dev-Tools';
+        statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to check status';
+        statusBarItem.command = 'devtools.checkStatus';
+        statusBarItem.show();
+        context.subscriptions.push(statusBarItem);
+        console.log('Dev-Tools: Status bar created');
 
-    // Initialize status bar
-    statusBarItem = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        100
-    );
-    statusBarItem.text = '$(rocket) Dev-Tools';
-    statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to check status';
-    statusBarItem.command = 'devtools.checkStatus';
-    statusBarItem.show();
-    context.subscriptions.push(statusBarItem);
-
-    // Register chat participant
-    chatParticipant = new DevToolsChatParticipant(context);
-    const participant = vscode.chat.createChatParticipant(
-        'devtools',
-        chatParticipant.handleChatRequest.bind(chatParticipant)
-    );
-    participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
-    context.subscriptions.push(participant);
+        // Initialize chat participant
+        chatParticipant = new DevToolsChatParticipant(context);
+        
+        // Register chat participant (may fail if Copilot Chat not available)
+        try {
+            const participant = vscode.chat.createChatParticipant(
+                'devtools',
+                chatParticipant.handleChatRequest.bind(chatParticipant)
+            );
+            context.subscriptions.push(participant);
+            console.log('Dev-Tools: Chat participant registered as @devtools');
+        } catch (chatError) {
+            console.warn('Dev-Tools: Could not register chat participant (Copilot Chat may not be available):', chatError);
+            vscode.window.showWarningMessage(
+                'Dev-Tools: Chat participant requires GitHub Copilot. Use Command Palette commands instead.',
+                'Open Commands'
+            ).then(selection => {
+                if (selection === 'Open Commands') {
+                    vscode.commands.executeCommand('workbench.action.showCommands');
+                }
+            });
+        }
 
     // Initialize Linear watcher for approval notifications
     linearWatcher = new LinearWatcher(context);
@@ -102,10 +118,14 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Check orchestrator health on startup
-    checkOrchestratorHealth(config.get('orchestratorUrl')!);
+        // Check orchestrator health on startup
+        checkOrchestratorHealth(config.get('orchestratorUrl')!);
 
-    console.log('Dev-Tools extension activated');
+        console.log('Dev-Tools extension activated');
+    } catch (error) {
+        console.error('Dev-Tools: Fatal activation error:', error);
+        vscode.window.showErrorMessage(`Dev-Tools extension failed to activate: ${error}`);
+    }
 }
 
 async function checkOrchestratorHealth(url: string) {
