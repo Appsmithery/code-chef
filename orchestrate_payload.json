@@ -1,0 +1,8 @@
+﻿{
+  "description": "Deploy new Gradient AI-powered GraphQL service to production with RAG awareness and secure postgresql schema updates",
+  "project_context": {
+    "project": "ai-devops-platform",
+    "environment": "production"
+  },
+  "priority": "high"
+}
