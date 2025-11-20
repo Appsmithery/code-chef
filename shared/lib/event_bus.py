@@ -48,6 +48,10 @@ import os
 from enum import Enum
 import json
 import uuid
+import time
+
+# Prometheus metrics
+from prometheus_client import Counter, Histogram, Gauge
 
 try:
     import redis.asyncio as redis
@@ -57,6 +61,56 @@ except ImportError:
     REDIS_AVAILABLE = False
     
 logger = logging.getLogger(__name__)
+
+# Prometheus Metrics
+event_bus_events_emitted_total = Counter(
+    'event_bus_events_emitted_total',
+    'Total number of events emitted to the event bus',
+    ['event_type', 'source']
+)
+
+event_bus_events_delivered_total = Counter(
+    'event_bus_events_delivered_total',
+    'Total number of events successfully delivered to subscribers',
+    ['event_type']
+)
+
+event_bus_subscriber_errors_total = Counter(
+    'event_bus_subscriber_errors_total',
+    'Total number of subscriber callback errors',
+    ['event_type', 'callback_name']
+)
+
+agent_request_latency_seconds = Histogram(
+    'agent_request_latency_seconds',
+    'Latency of agent-to-agent requests in seconds',
+    ['source_agent', 'target_agent', 'request_type'],
+    buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0)
+)
+
+agent_requests_active = Gauge(
+    'agent_requests_active',
+    'Number of active agent-to-agent requests',
+    ['source_agent', 'target_agent']
+)
+
+agent_requests_total = Counter(
+    'agent_requests_total',
+    'Total number of agent requests sent',
+    ['source_agent', 'target_agent', 'request_type']
+)
+
+agent_responses_total = Counter(
+    'agent_responses_total',
+    'Total number of agent responses received',
+    ['source_agent', 'target_agent', 'status']
+)
+
+agent_request_timeouts_total = Counter(
+    'agent_request_timeouts_total',
+    'Total number of agent request timeouts',
+    ['source_agent', 'target_agent']
+)
 
 
 class EventType(str, Enum):
@@ -363,6 +417,12 @@ class EventBus:
         
         self._stats["events_emitted"] += 1
         
+        # Prometheus: Increment events emitted counter
+        event_bus_events_emitted_total.labels(
+            event_type=event_type,
+            source=source
+        ).inc()
+        
         # Publish to Redis if enabled and connected
         if publish_to_redis and self.redis_client:
             try:
@@ -409,6 +469,11 @@ class EventBus:
         successful = sum(1 for r in results if not isinstance(r, Exception))
         self._stats["events_delivered"] += successful
         
+        # Prometheus: Increment delivered counter
+        event_bus_events_delivered_total.labels(
+            event_type=event_type
+        ).inc(successful)
+        
         if successful < len(subscribers):
             failed = len(subscribers) - successful
             logger.error(
@@ -440,6 +505,13 @@ class EventBus:
             
         except Exception as e:
             self._stats["subscriber_errors"] += 1
+            
+            # Prometheus: Increment subscriber error counter
+            event_bus_subscriber_errors_total.labels(
+                event_type=event.type,
+                callback_name=callback.__name__
+            ).inc()
+            
             logger.error(
                 f"Subscriber {callback.__name__} failed for {event.type}: {e}",
                 exc_info=True
@@ -510,6 +582,20 @@ class EventBus:
         
         self._stats["agent_requests_sent"] += 1
         
+        # Prometheus: Track request metrics
+        agent_requests_total.labels(
+            source_agent=request.source_agent,
+            target_agent=request.target_agent,
+            request_type=request.request_type
+        ).inc()
+        
+        agent_requests_active.labels(
+            source_agent=request.source_agent,
+            target_agent=request.target_agent
+        ).inc()
+        
+        request_start_time = time.time()
+        
         try:
             # Emit request event to subscribers
             await self.emit(
@@ -534,6 +620,20 @@ class EventBus:
             response = AgentResponseEvent(**response_data)
             self._stats["agent_responses_received"] += 1
             
+            # Prometheus: Track response and latency
+            request_duration = time.time() - request_start_time
+            agent_request_latency_seconds.labels(
+                source_agent=request.source_agent,
+                target_agent=request.target_agent,
+                request_type=request.request_type
+            ).observe(request_duration)
+            
+            agent_responses_total.labels(
+                source_agent=response.source_agent,
+                target_agent=response.target_agent,
+                status=response.status
+            ).inc()
+            
             logger.info(
                 f"Received response for {request.request_id} from "
                 f"{response.source_agent} (status: {response.status}, "
@@ -544,6 +644,13 @@ class EventBus:
             
         except asyncio.TimeoutError:
             self._stats["agent_timeouts"] += 1
+            
+            # Prometheus: Track timeout
+            agent_request_timeouts_total.labels(
+                source_agent=request.source_agent,
+                target_agent=request.target_agent
+            ).inc()
+            
             logger.error(
                 f"Agent request {request.request_id} timed out after "
                 f"{timeout_val}s (target: {request.target_agent})"
@@ -561,6 +668,12 @@ class EventBus:
             )
             
         finally:
+            # Prometheus: Decrement active requests
+            agent_requests_active.labels(
+                source_agent=request.source_agent,
+                target_agent=request.target_agent
+            ).dec()
+            
             # Clean up pending request
             self._pending_requests.pop(request.request_id, None)
     

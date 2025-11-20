@@ -88,6 +88,15 @@ scrape_configs:
           type: "persistence"
           role: "workflow-state"
 
+  - job_name: "agent-registry"
+    static_configs:
+      - targets: ["agent-registry:8009"]
+        labels:
+          service: "agent-registry"
+          type: "discovery"
+          role: "agent-coordination"
+    scrape_interval: 15s
+
   # ===== Data Stores =====
   # Note: Enable these if postgres_exporter and qdrant expose metrics
 

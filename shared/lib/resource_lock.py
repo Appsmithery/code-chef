@@ -25,13 +25,56 @@ Usage:
 import asyncio
 import logging
 import json
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
 from typing import Optional, Any, Dict
 
 import asyncpg
 
+# Prometheus metrics
+from prometheus_client import Counter, Histogram, Gauge
+
 logger = logging.getLogger(__name__)
+
+# Prometheus Metrics
+resource_lock_acquisitions_total = Counter(
+    'resource_lock_acquisitions_total',
+    'Total number of successful lock acquisitions',
+    ['resource_type', 'agent_id']
+)
+
+resource_lock_wait_time_seconds = Histogram(
+    'resource_lock_wait_time_seconds',
+    'Time spent waiting to acquire a lock in seconds',
+    ['resource_type', 'agent_id'],
+    buckets=(0.01, 0.05, 0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0)
+)
+
+resource_locks_active = Gauge(
+    'resource_locks_active',
+    'Number of currently active locks',
+    ['resource_type']
+)
+
+resource_lock_contentions_total = Counter(
+    'resource_lock_contentions_total',
+    'Total number of lock contention events (failed immediate acquisitions)',
+    ['resource_type', 'agent_id']
+)
+
+resource_lock_releases_total = Counter(
+    'resource_lock_releases_total',
+    'Total number of lock releases',
+    ['resource_type', 'agent_id']
+)
+
+resource_lock_timeouts_total = Counter(
+    'resource_lock_timeouts_total',
+    'Total number of lock acquisition timeouts',
+    ['resource_type', 'agent_id']
+)
+
 
 class ResourceLockError(Exception):
     """Raised when a lock cannot be acquired."""
@@ -95,7 +138,10 @@ class ResourceLockManager:
             await self.connect()
 
         start_time = datetime.utcnow()
+        lock_start_time = time.time()
         lock_acquired = False
+        resource_type = resource_id.split(':')[0] if ':' in resource_id else 'unknown'
+        contention_recorded = False
         
         try:
             # Try to acquire lock loop
@@ -116,6 +162,13 @@ class ResourceLockManager:
                     if row['success']:
                         lock_acquired = True
                         break
+                    elif not contention_recorded:
+                        # Prometheus: Track contention on first failure
+                        resource_lock_contentions_total.labels(
+                            resource_type=resource_type,
+                            agent_id=agent_id
+                        ).inc()
+                        contention_recorded = True
                 
                 # Check if we should keep waiting
                 elapsed = (datetime.utcnow() - start_time).total_seconds()
@@ -125,6 +178,13 @@ class ResourceLockManager:
                 await asyncio.sleep(0.5)
 
             if not lock_acquired:
+                # Prometheus: Track timeout if wait_timeout > 0
+                if wait_timeout > 0:
+                    resource_lock_timeouts_total.labels(
+                        resource_type=resource_type,
+                        agent_id=agent_id
+                    ).inc()
+                
                 # Get current owner info
                 owner_info = await self.get_lock_info(resource_id)
                 owner = owner_info.get('agent_id', 'unknown') if owner_info else 'unknown'
@@ -132,6 +192,22 @@ class ResourceLockManager:
                 logger.warning(f"Agent {agent_id} failed to acquire lock on {resource_id} (held by {owner})")
                 raise ResourceLockError(f"Resource {resource_id} is locked by {owner}")
 
+            # Prometheus: Track successful acquisition
+            lock_wait_duration = time.time() - lock_start_time
+            resource_lock_wait_time_seconds.labels(
+                resource_type=resource_type,
+                agent_id=agent_id
+            ).observe(lock_wait_duration)
+            
+            resource_lock_acquisitions_total.labels(
+                resource_type=resource_type,
+                agent_id=agent_id
+            ).inc()
+            
+            resource_locks_active.labels(
+                resource_type=resource_type
+            ).inc()
+            
             # Emit lock event
             if self.event_bus:
                 await self.event_bus.emit("resource.locked", {
@@ -146,6 +222,11 @@ class ResourceLockManager:
 
         finally:
             if lock_acquired:
+                # Prometheus: Decrement active locks before release
+                resource_locks_active.labels(
+                    resource_type=resource_type
+                ).dec()
+                
                 await self.release(resource_id, agent_id)
 
     async def release(self, resource_id: str, agent_id: str):
@@ -162,6 +243,13 @@ class ResourceLockManager:
                 )
                 
                 if row and row['success']:
+                    # Prometheus: Track release
+                    resource_type = resource_id.split(':')[0] if ':' in resource_id else 'unknown'
+                    resource_lock_releases_total.labels(
+                        resource_type=resource_type,
+                        agent_id=agent_id
+                    ).inc()
+                    
                     if self.event_bus:
                         await self.event_bus.emit("resource.unlocked", {
                             "resource_id": resource_id,
