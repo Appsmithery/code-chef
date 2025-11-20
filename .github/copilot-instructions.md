@@ -4,8 +4,8 @@
 
 **Production Status**: Multi-agent DevOps automation platform running on DigitalOcean (droplet: 45.55.173.72)
 
-- **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md.
-- **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `shared/lib/mcp_client.py` for unified tool access. Gateway routes to servers in `shared/mcp/servers/`.
+- **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md. Orchestrator uses LangChain tool binding for function calling.
+- **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; agents use `shared/lib/mcp_client.py` for tool access. Gateway routes to servers in `shared/mcp/servers/`. Orchestrator converts MCP tools to LangChain `BaseTool` instances for function calling via `to_langchain_tools()`.
 - **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
 - **LLM Inference**: DigitalOcean Gradient AI integration via LangChain wrappers (`shared/lib/gradient_client.py`, `shared/lib/langchain_gradient.py`) with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
 - **Observability**: LangSmith automatic LLM tracing (all 6 agents + workflows) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents. Complete observability: LLM traces → LangSmith, HTTP metrics → Prometheus, state → PostgreSQL, vectors → Qdrant.
@@ -290,21 +290,68 @@ ufw status                    # Verify rules
 - Documentation generators: `support/templates/docs/`
 - Keep generated artifacts out of version control unless curated.
 
-### Progressive MCP Tool Disclosure
+### Tool Binding Pattern (LangChain Integration)
 
-- **Implementation**: `shared/lib/progressive_mcp_loader.py` with 4 loading strategies
-- **Orchestrator Integration**: Automatic lazy loading in `/orchestrate` endpoint
+To enable LLM function calling with MCP tools:
+
+```python
+# Step 1: Discover relevant tools (progressive disclosure)
+from lib.progressive_mcp_loader import ToolLoadingStrategy
+relevant_toolsets = progressive_loader.get_tools_for_task(
+    task_description=user_request,
+    strategy=ToolLoadingStrategy.MINIMAL
+)
+
+# Step 2: Convert MCP tools to LangChain BaseTool instances
+langchain_tools = mcp_client.to_langchain_tools(relevant_toolsets)
+
+# Step 3: Bind tools to LLM for function calling
+llm_with_tools = gradient_client.get_llm_with_tools(
+    tools=langchain_tools,
+    temperature=0.7,
+    max_tokens=2000
+)
+
+# Step 4: LLM can now INVOKE tools
+from langchain_core.messages import HumanMessage, SystemMessage
+messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
+response = await llm_with_tools.ainvoke(messages)
+
+# Check for tool calls
+if hasattr(response, 'tool_calls') and response.tool_calls:
+    # LLM requested tool invocations
+    for tool_call in response.tool_calls:
+        # Tool execution happens automatically in full agent loop
+        pass
+```
+
+This pattern provides:
+- 80-90% token reduction via progressive disclosure
+- Actual tool execution via LangChain function calling
+- Seamless MCP gateway integration
+- Production-ready error handling
+
+### Progressive MCP Tool Disclosure with LangChain Integration
+
+- **Architecture**: LangChain-native tool binding inspired by `LLMToolSelectorMiddleware` pattern
+- **Implementation**: 3-layer approach:
+  1. **Discovery** (`shared/lib/progressive_mcp_loader.py`): Filter 150+ tools → 10-30 relevant tools
+  2. **Conversion** (`shared/lib/mcp_client.py:to_langchain_tools()`): MCP schemas → LangChain `BaseTool` instances
+  3. **Binding** (`shared/lib/gradient_client.py:get_llm_with_tools()`): Tools bound to LLM via `bind_tools()`
+- **Key Innovation**: LLM can now **INVOKE** tools via function calling, not just see documentation
+- **Orchestrator Integration**: Automatic in `decompose_with_llm()` during task decomposition
 - **Token Savings**: 80-90% reduction (150+ tools → 10-30 tools per task)
-- **Configuration**: Runtime strategy changes via `POST /config/tool-loading`
-- **Monitoring**: Token usage stats via `GET /config/tool-loading/stats`
 - **Strategies**:
   - `MINIMAL`: Keyword-based (80-95% savings, recommended for simple tasks)
   - `AGENT_PROFILE`: Agent manifest-based (60-80% savings)
   - `PROGRESSIVE`: Minimal + high-priority agent tools (70-85% savings, default)
   - `FULL`: All 150+ tools (0% savings, debugging only)
 - **Keyword Mappings**: 60+ keywords mapped to MCP servers in `keyword_to_servers` dict
-- **Extension**: Apply pattern to other agents by importing `get_progressive_loader()` and calling `get_tools_for_task()`
-- **Documentation**: `support/docs/_temp/progressive-mcp-disclosure-implementation.md`
+- **Benefits**:
+  - Reduced token costs (80-90% savings on tool context)
+  - Actual tool execution via LangChain function calling
+  - Seamless MCP gateway integration
+  - Production-ready LangChain patterns
 
 ## Quality bar
 
@@ -312,6 +359,7 @@ ufw status                    # Verify rules
 - **Health Endpoints**: Every agent must expose `GET /health` returning `{"status": "healthy", "mcp_gateway": "connected"/"disconnected"}`.
 - **Observability**: All agents must initialize MCP client, Gradient client (if using LLM), LangSmith tracing (via LangChain), Prometheus metrics.
 - **Error Handling**: Graceful fallback when API keys missing (use `gradient_client.is_enabled()` check before LLM calls).
+- **Tool Integration**: Use LangChain tool binding (`bind_tools()`) for function calling, not text-only documentation. Convert MCP tools via `mcp_client.to_langchain_tools()`.
 - **Shell Scripts**: POSIX-compliant bash, executable permissions, consistent logging format (echo + status lines).
 - **Container Hygiene**: Treat Docker resources as disposable—tear down stray containers, prune layers after failures, and leave compose stacks either fully running or fully stopped.
 - **Documentation Hygiene**:
