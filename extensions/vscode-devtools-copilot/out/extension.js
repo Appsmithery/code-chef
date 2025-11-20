@@ -1,0 +1,148 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.activate = activate;
+exports.deactivate = deactivate;
+const vscode = __importStar(require("vscode"));
+const chatParticipant_1 = require("./chatParticipant");
+const linearWatcher_1 = require("./linearWatcher");
+const orchestratorClient_1 = require("./orchestratorClient");
+let chatParticipant;
+let linearWatcher;
+let statusBarItem;
+function activate(context) {
+    console.log('Dev-Tools extension activating...');
+    // Initialize status bar
+    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.text = '$(rocket) Dev-Tools';
+    statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to check status';
+    statusBarItem.command = 'devtools.checkStatus';
+    statusBarItem.show();
+    context.subscriptions.push(statusBarItem);
+    // Register chat participant
+    chatParticipant = new chatParticipant_1.DevToolsChatParticipant(context);
+    const participant = vscode.chat.createChatParticipant('devtools', chatParticipant.handleChatRequest.bind(chatParticipant));
+    participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
+    context.subscriptions.push(participant);
+    // Initialize Linear watcher for approval notifications
+    linearWatcher = new linearWatcher_1.LinearWatcher(context);
+    const config = vscode.workspace.getConfiguration('devtools');
+    if (config.get('enableNotifications')) {
+        linearWatcher.start(config.get('linearHubIssue', 'PR-68'));
+    }
+    context.subscriptions.push(linearWatcher);
+    // Register commands
+    context.subscriptions.push(vscode.commands.registerCommand('devtools.orchestrate', async () => {
+        const task = await vscode.window.showInputBox({
+            prompt: 'Describe your development task',
+            placeHolder: 'e.g., Add JWT authentication to my Express API'
+        });
+        if (task) {
+            await chatParticipant.submitTask(task);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('devtools.checkStatus', async () => {
+        const taskId = await vscode.window.showInputBox({
+            prompt: 'Enter task ID',
+            placeHolder: 'e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+        });
+        if (taskId) {
+            await chatParticipant.checkTaskStatus(taskId);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('devtools.configure', async () => {
+        const url = await vscode.window.showInputBox({
+            prompt: 'Enter orchestrator URL',
+            value: config.get('orchestratorUrl'),
+            validateInput: (value) => {
+                try {
+                    new URL(value);
+                    return null;
+                }
+                catch {
+                    return 'Please enter a valid URL';
+                }
+            }
+        });
+        if (url) {
+            await config.update('orchestratorUrl', url, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(`Orchestrator URL updated to ${url}`);
+        }
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('devtools.showApprovals', async () => {
+        const linearHubIssue = config.get('linearHubIssue', 'PR-68');
+        const linearUrl = `https://linear.app/appsmithery/issue/${linearHubIssue}`;
+        vscode.env.openExternal(vscode.Uri.parse(linearUrl));
+    }));
+    context.subscriptions.push(vscode.commands.registerCommand('devtools.clearCache', () => {
+        chatParticipant.clearCache();
+        vscode.window.showInformationMessage('Dev-Tools cache cleared');
+    }));
+    // Check orchestrator health on startup
+    checkOrchestratorHealth(config.get('orchestratorUrl'));
+    console.log('Dev-Tools extension activated');
+}
+async function checkOrchestratorHealth(url) {
+    try {
+        const client = new orchestratorClient_1.OrchestratorClient(url);
+        const health = await client.health();
+        if (health.status === 'ok') {
+            statusBarItem.text = '$(check) Dev-Tools';
+            statusBarItem.tooltip = `Connected to ${url}`;
+        }
+        else {
+            statusBarItem.text = '$(warning) Dev-Tools';
+            statusBarItem.tooltip = 'Orchestrator unhealthy';
+        }
+    }
+    catch (error) {
+        statusBarItem.text = '$(error) Dev-Tools';
+        statusBarItem.tooltip = `Cannot reach orchestrator at ${url}`;
+        vscode.window.showErrorMessage('Cannot connect to Dev-Tools orchestrator. Check configuration.', 'Configure').then(selection => {
+            if (selection === 'Configure') {
+                vscode.commands.executeCommand('devtools.configure');
+            }
+        });
+    }
+}
+function deactivate() {
+    if (linearWatcher) {
+        linearWatcher.dispose();
+    }
+    if (statusBarItem) {
+        statusBarItem.dispose();
+    }
+}
+//# sourceMappingURL=extension.js.map
