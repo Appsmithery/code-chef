@@ -7,10 +7,12 @@
 ## 📊 Monitoring Endpoints
 
 ### Prometheus Dashboards
+
 - **Targets**: http://45.55.173.72:9090/targets
 - **Metrics Browser**: http://45.55.173.72:9090/graph
 
 ### Agent Health Endpoints
+
 ```bash
 # Orchestrator (EventBus + ResourceLock metrics)
 curl http://45.55.173.72:8001/health
@@ -47,6 +49,7 @@ curl http://45.55.173.72:8009/health
 ## 📈 Key Metrics to Monitor
 
 ### EventBus Metrics (Orchestrator)
+
 ```promql
 # Event throughput (events/sec)
 rate(event_bus_events_emitted_total[5m])
@@ -68,6 +71,7 @@ rate(agent_request_timeouts_total[5m])
 ```
 
 ### ResourceLock Metrics (When Workflows Execute)
+
 ```promql
 # Lock acquisition rate
 rate(resource_lock_acquisitions_total[5m])
@@ -91,12 +95,14 @@ rate(resource_lock_contentions_total[5m]) / rate(resource_lock_acquisitions_tota
 ### Alert Thresholds (Recommended)
 
 #### Critical Alerts
+
 - **Event Bus Down**: `up{job="orchestrator"} == 0` for 5 minutes
 - **High Error Rate**: `rate(event_bus_subscriber_errors_total[5m]) > 0.1`
 - **Request Timeout Spike**: `rate(agent_request_timeouts_total[5m]) > 0.05`
 - **Lock Timeout Spike**: `rate(resource_lock_timeouts_total[5m]) > 0.1`
 
 #### Warning Alerts
+
 - **High Latency**: `histogram_quantile(0.95, rate(agent_request_latency_seconds_bucket[5m])) > 2.0`
 - **High Contention**: `rate(resource_lock_contentions_total[5m]) / rate(resource_lock_acquisitions_total[5m]) > 0.3`
 - **Long Wait Times**: `histogram_quantile(0.95, rate(resource_lock_wait_time_seconds_bucket[5m])) > 5.0`
@@ -107,12 +113,14 @@ rate(resource_lock_contentions_total[5m]) / rate(resource_lock_acquisitions_tota
 **Project**: `dev-tools-agents`
 
 ### Key Traces to Monitor
+
 - **Session IDs**: Each workflow task has unique session_id
 - **User IDs**: Agent names (orchestrator, feature-dev, etc.)
 - **Costs**: Token usage per request
 - **Latency**: LLM response times
 
 ### Useful Filters
+
 ```
 tags:orchestrator
 tags:multi-agent
@@ -123,6 +131,7 @@ user_id:orchestrator
 ## 📋 48-Hour Monitoring Checklist
 
 ### Day 1 (First 24 Hours)
+
 - [ ] Verify all 10+ Prometheus targets are UP (check every 4 hours)
 - [ ] Monitor EventBus throughput baseline
 - [ ] Watch for subscriber errors
@@ -131,6 +140,7 @@ user_id:orchestrator
 - [ ] Review LangSmith traces for orchestrator workflows
 
 ### Day 2 (24-48 Hours)
+
 - [ ] Compare metrics against Day 1 baseline
 - [ ] Check for memory leaks (container stats)
 - [ ] Verify PostgreSQL connection pool health
@@ -139,6 +149,7 @@ user_id:orchestrator
 - [ ] Check disk usage on droplet
 
 ### Post-48 Hours
+
 - [ ] Document baseline metrics
 - [ ] Set up Prometheus alerts
 - [ ] Configure Slack/email notifications
@@ -148,6 +159,7 @@ user_id:orchestrator
 ## 🚨 Troubleshooting
 
 ### High Event Bus Errors
+
 ```bash
 ssh root@45.55.173.72
 cd /opt/Dev-Tools/deploy
@@ -155,22 +167,24 @@ docker compose logs orchestrator -n 200 | grep ERROR
 ```
 
 ### ResourceLock Deadlocks
+
 ```bash
 # Check PostgreSQL advisory locks
 docker compose exec postgres psql -U devtools -d devtools -c "
-SELECT 
-    locktype, 
-    database, 
-    classid, 
-    objid, 
-    pid, 
-    mode, 
-    granted 
-FROM pg_locks 
+SELECT
+    locktype,
+    database,
+    classid,
+    objid,
+    pid,
+    mode,
+    granted
+FROM pg_locks
 WHERE locktype = 'advisory';"
 ```
 
 ### Agent Unresponsive
+
 ```bash
 # Restart specific agent
 docker compose restart orchestrator
@@ -180,6 +194,7 @@ curl http://localhost:8001/health
 ```
 
 ### Memory Issues
+
 ```bash
 # Check container memory usage
 docker stats --no-stream
