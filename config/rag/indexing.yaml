@@ -27,6 +27,102 @@ sources:
       - "node_modules/**"
       - "*.lock"
 
+  # Vendor Documentation Sources (Phase 1 - High Priority)
+  # Added: 2025-11-19 for agent API context injection
+  - name: "gradient-ai"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://docs.digitalocean.com/products/gradient-ai-platform/"
+      - "https://docs.digitalocean.com/products/gradient-ai-platform/how-to/use-serverless-inference/"
+      - "https://raw.githubusercontent.com/digitalocean/gradient-python/main/README.md"
+    chunk_size: 1000
+    overlap: 200
+    tags: ["digitalocean", "gradient-ai", "llm", "inference"]
+    enabled: true
+
+  - name: "linear-api"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://linear.app/developers/graphql"
+      - "https://linear.app/developers/sdk"
+    chunk_size: 1500
+    overlap: 200
+    tags: ["linear", "graphql", "sdk", "project-management"]
+    enabled: true
+
+  - name: "langsmith-api"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://api.smith.langchain.com/redoc"
+    chunk_size: 1000
+    overlap: 200
+    tags: ["langsmith", "api", "observability", "tracing"]
+    enabled: true
+
+  - name: "langgraph-reference"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://reference.langchain.com/python/langgraph/"
+    chunk_size: 1200
+    overlap: 200
+    tags: ["langgraph", "langchain", "agents", "workflows"]
+    enabled: true
+
+  - name: "langchain-mcp"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://docs.langchain.com/mcp"
+    chunk_size: 1000
+    overlap: 200
+    tags: ["langchain", "mcp", "protocol", "tools"]
+    enabled: true
+
+  - name: "qdrant-api"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://api.qdrant.tech/api-reference"
+    chunk_size: 1200
+    overlap: 200
+    tags: ["qdrant", "vector-db", "api", "search"]
+    enabled: true
+
+  # Phase 2 - Medium Priority (enable after Phase 1 validation)
+  - name: "langchain-python"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://reference.langchain.com/python/langchain/"
+    chunk_size: 1200
+    overlap: 200
+    tags: ["langchain", "python", "reference"]
+    enabled: false
+
+  - name: "digitalocean-api"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://docs.digitalocean.com/reference/api/digitalocean/"
+    chunk_size: 1000
+    overlap: 200
+    tags: ["digitalocean", "api", "infrastructure"]
+    enabled: false
+
+  - name: "linear-oauth"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://linear.app/developers/oauth-2-0-authentication"
+    chunk_size: 1000
+    overlap: 200
+    tags: ["linear", "oauth", "authentication"]
+    enabled: false
+
 processing:
   chunk_size: 1000
   chunk_overlap: 200

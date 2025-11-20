@@ -35,17 +35,44 @@ Current challenges with vendor documentation:
 3. **Query via MCP tools** already exposed by gateway
 4. **Optional**: Schedule periodic re-indexing via cron/GitHub Actions
 
-### Data Sources (Priority Order)
+### Data Sources (Curated & Prioritized)
 
-| Vendor                   | Source URL                                                                            | Index Now? | Update Frequency |
-| ------------------------ | ------------------------------------------------------------------------------------- | ---------- | ---------------- |
-| DigitalOcean Gradient AI | `https://docs.digitalocean.com/products/gradient-ai-platform/`                        | ✅ **Yes** | Weekly           |
-| Gradient Python SDK      | `https://raw.githubusercontent.com/digitalocean/gradient-python/main/README.md`       | ✅ **Yes** | Weekly           |
-| Linear GraphQL Schema    | `https://developers.linear.app/docs/graphql/working-with-the-graphql-api`             | ✅ **Yes** | Monthly          |
-| LangSmith Tracing        | `https://docs.smith.langchain.com/tracing`                                            | ⏭️ Later   | Monthly          |
-| MCP Protocol Spec        | `https://raw.githubusercontent.com/modelcontextprotocol/specification/main/README.md` | ⏭️ Later   | As needed        |
+| Category                | Source                        | URL                                                                                            | Priority    | Update Frequency |
+| ----------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------- | ----------- | ---------------- |
+| **LLM Inference**       | Gradient AI Platform          | `https://docs.digitalocean.com/products/gradient-ai-platform/`                                 | ✅ **High** | Weekly           |
+|                         | Gradient Python SDK           | `https://raw.githubusercontent.com/digitalocean/gradient-python/main/README.md`                | ✅ **High** | Weekly           |
+|                         | Gradient Serverless Inference | `https://docs.digitalocean.com/products/gradient-ai-platform/how-to/use-serverless-inference/` | ✅ **High** | Weekly           |
+| **Project Management**  | Linear GraphQL API            | `https://linear.app/developers/graphql`                                                        | ✅ **High** | Monthly          |
+|                         | Linear SDK Docs               | `https://linear.app/developers/sdk`                                                            | ✅ **High** | Monthly          |
+|                         | Linear OAuth 2.0              | `https://linear.app/developers/oauth-2-0-authentication`                                       | ⏭️ Medium   | Monthly          |
+|                         | Linear Agents API             | `https://linear.app/developers/agents`                                                         | ⏭️ Low      | As needed        |
+| **Observability**       | LangSmith API Docs            | `https://api.smith.langchain.com/redoc`                                                        | ✅ **High** | Monthly          |
+|                         | LangSmith SDK Reference       | `https://reference.langchain.com/python/langsmith/deployment/sdk/`                             | ⏭️ Medium   | Monthly          |
+| **LangChain/LangGraph** | LangGraph Reference           | `https://reference.langchain.com/python/langgraph/`                                            | ✅ **High** | Weekly           |
+|                         | LangChain Python Reference    | `https://reference.langchain.com/python/langchain/`                                            | ⏭️ Medium   | Weekly           |
+|                         | LangChain MCP Docs            | `https://docs.langchain.com/mcp`                                                               | ✅ **High** | Weekly           |
+| **Vector DB**           | Qdrant API Reference          | `https://api.qdrant.tech/api-reference`                                                        | ✅ **High** | Monthly          |
+| **Infrastructure**      | DigitalOcean API              | `https://docs.digitalocean.com/reference/api/digitalocean/`                                    | ⏭️ Medium   | Monthly          |
+|                         | Docker MCP Toolkit            | `https://docs.docker.com/ai/mcp-catalog-and-toolkit/toolkit/`                                  | ⏭️ Low      | As needed        |
+|                         | Taskfile Schema               | `https://taskfile.dev/docs/reference/schema`                                                   | ⏭️ Low      | As needed        |
 
-**Focus on top 3 sources first** - they cover 80% of agent API questions.
+**Removed (Redundant/Low Value):**
+
+- ~~`reference.langchain.com/python/deepagents`~~ - Rarely used
+- ~~`github.com/langchain-ai/docs`~~ - GitHub repo, use official docs instead
+- ~~`github.com/hfyydd/langgraphv`~~ - Community repo, not official
+- ~~`docs.mermaidchart.com`~~ - Diagram syntax, not agent-relevant
+- ~~`github.com/postmanlabs/postman-mcp-server`~~ - Not currently integrated
+- ~~`docs.docker.com/ai/mcp-catalog-and-toolkit/hub-mcp/`~~ - Covered by main toolkit docs
+- ~~`taskfile.dev/docs/reference/environment`~~ - Already in schema docs
+- ~~`taskfile.dev/docs/reference/config`~~ - Already in schema docs
+- ~~`taskfile.dev/docs/reference/cli`~~ - Already in schema docs
+
+**Implementation Order:**
+
+1. **Phase 1 (High Priority)**: Gradient AI, Linear GraphQL/SDK, LangSmith API, LangGraph, Qdrant, LangChain MCP (~6 sources)
+2. **Phase 2 (Medium Priority)**: LangChain Python, LangSmith SDK, DigitalOcean API, Linear OAuth (~4 sources)
+3. **Phase 3 (Low Priority)**: Docker MCP, Taskfile, Linear Agents (~3 sources)
 
 ## Implementation Guide
 
@@ -58,37 +85,84 @@ Add vendor documentation sources to `config/rag/indexing.yaml`:
 sources:
   # Existing sources...
 
-  # NEW: Vendor Documentation Sources
-  - name: "gradient-api-docs"
+  # NEW: Vendor Documentation Sources (Phase 1 - High Priority)
+  - name: "gradient-ai"
     type: "web"
     collection: "vendor-docs"
     urls:
-      - "https://docs.digitalocean.com/products/gradient-ai-platform/details/models/"
+      - "https://docs.digitalocean.com/products/gradient-ai-platform/"
       - "https://docs.digitalocean.com/products/gradient-ai-platform/how-to/use-serverless-inference/"
       - "https://raw.githubusercontent.com/digitalocean/gradient-python/main/README.md"
     chunk_size: 1000
     overlap: 200
-    tags: ["digitalocean", "gradient-ai", "llm", "api"]
+    tags: ["digitalocean", "gradient-ai", "llm", "inference"]
 
-  - name: "linear-graphql"
+  - name: "linear-api"
     type: "web"
     collection: "vendor-docs"
     urls:
-      - "https://developers.linear.app/docs/graphql/working-with-the-graphql-api"
-      - "https://raw.githubusercontent.com/linear/linear/main/packages/sdk/src/schema.graphql"
+      - "https://linear.app/developers/graphql"
+      - "https://linear.app/developers/sdk"
     chunk_size: 1500
     overlap: 200
-    tags: ["linear", "graphql", "project-management"]
+    tags: ["linear", "graphql", "sdk", "project-management"]
 
-  - name: "langsmith-docs"
+  - name: "langsmith-api"
     type: "web"
     collection: "vendor-docs"
     urls:
-      - "https://docs.smith.langchain.com/tracing"
-      - "https://docs.smith.langchain.com/how_to_guides/tracing/trace_with_langchain"
+      - "https://api.smith.langchain.com/redoc"
     chunk_size: 1000
     overlap: 200
-    tags: ["langsmith", "observability", "tracing"]
+    tags: ["langsmith", "api", "observability", "tracing"]
+
+  - name: "langgraph-reference"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://reference.langchain.com/python/langgraph/"
+    chunk_size: 1200
+    overlap: 200
+    tags: ["langgraph", "langchain", "agents", "workflows"]
+
+  - name: "langchain-mcp"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://docs.langchain.com/mcp"
+    chunk_size: 1000
+    overlap: 200
+    tags: ["langchain", "mcp", "protocol", "tools"]
+
+  - name: "qdrant-api"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://api.qdrant.tech/api-reference"
+    chunk_size: 1200
+    overlap: 200
+    tags: ["qdrant", "vector-db", "api", "search"]
+
+  # Phase 2 - Medium Priority (add later)
+  - name: "langchain-python"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://reference.langchain.com/python/langchain/"
+    chunk_size: 1200
+    overlap: 200
+    tags: ["langchain", "python", "reference"]
+    enabled: false # Enable after Phase 1 validation
+
+  - name: "digitalocean-api"
+    type: "web"
+    collection: "vendor-docs"
+    urls:
+      - "https://docs.digitalocean.com/reference/api/digitalocean/"
+    chunk_size: 1000
+    overlap: 200
+    tags: ["digitalocean", "api", "infrastructure"]
+    enabled: false
 
 # Qdrant configuration
 qdrant:
@@ -105,20 +179,30 @@ qdrant:
 Trigger indexing via existing RAG service:
 
 ```bash
-# Index Gradient AI docs
+# Phase 1: Core APIs (High Priority - Index First)
 curl -X POST http://45.55.173.72:8007/index \
   -H "Content-Type: application/json" \
-  -d '{"source": "gradient-api-docs"}'
+  -d '{"source": "gradient-ai"}'
 
-# Index Linear GraphQL docs
 curl -X POST http://45.55.173.72:8007/index \
   -H "Content-Type: application/json" \
-  -d '{"source": "linear-graphql"}'
+  -d '{"source": "linear-api"}'
 
-# Index LangSmith docs
 curl -X POST http://45.55.173.72:8007/index \
   -H "Content-Type: application/json" \
-  -d '{"source": "langsmith-docs"}'
+  -d '{"source": "langsmith-api"}'
+
+curl -X POST http://45.55.173.72:8007/index \
+  -H "Content-Type: application/json" \
+  -d '{"source": "langgraph-reference"}'
+
+curl -X POST http://45.55.173.72:8007/index \
+  -H "Content-Type: application/json" \
+  -d '{"source": "langchain-mcp"}'
+
+curl -X POST http://45.55.173.72:8007/index \
+  -H "Content-Type: application/json" \
+  -d '{"source": "qdrant-api"}'
 ```
 
 **Expected Response:**
@@ -308,10 +392,14 @@ curl -X POST http://45.55.173.72:8007/index \
 
 ### Phase 2: Initial Indexing (30-60 minutes)
 
-- [ ] Index Gradient AI docs (highest priority)
-- [ ] Index Linear GraphQL docs
-- [ ] Index LangSmith docs (optional)
-- [ ] Verify Qdrant collection created: `curl http://localhost:6333/collections/vendor-docs`
+- [ ] Index Gradient AI docs (10 min)
+- [ ] Index Linear API docs (10 min)
+- [ ] Index LangSmith API docs (5 min)
+- [ ] Index LangGraph reference (10 min)
+- [ ] Index LangChain MCP docs (5 min)
+- [ ] Index Qdrant API docs (10 min)
+- [ ] Verify Qdrant collection created: `curl http://45.55.173.72:6333/collections/vendor-docs`
+- [ ] Test query: `curl -X POST http://45.55.173.72:8007/query -d '{"query":"gradient streaming"}'`
 
 ### Phase 3: Orchestrator Integration (15 minutes)
 
