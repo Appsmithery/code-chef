@@ -84,7 +84,7 @@ When task submitted successfully:
 ⚠️ **Approval Required**
 
 This task requires human approval (risk level: medium).
-Check Linear issue [PR-68](https://linear.app/appsmithery/issue/PR-68) for approval request.
+Check Linear issue [PR-68](https://linear.app/project-roadmaps/issue/PR-68) for approval request.
 
 [📋 View Approvals]
 

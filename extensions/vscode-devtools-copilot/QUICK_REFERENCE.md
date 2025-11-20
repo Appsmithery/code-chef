@@ -173,7 +173,7 @@ Agent performance metrics:
 ### Linear Approvals
 
 All approval requests posted to:
-https://linear.app/appsmithery/issue/PR-68
+https://linear.app/project-roadmaps/issue/PR-68
 
 ## Tips & Tricks
 
@@ -260,7 +260,7 @@ Ctrl+I
 
 - **Docs**: [README.md](./README.md), [DEPLOYMENT.md](./DEPLOYMENT.md)
 - **Issues**: https://github.com/Appsmithery/Dev-Tools/issues
-- **Linear**: https://linear.app/appsmithery/project/ai-devops-agent-platform-b21cbaa1-9f09
+- **Linear**: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
 
 ---
 

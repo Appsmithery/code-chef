@@ -145,7 +145,7 @@ curl http://45.55.173.72:8001/health
 
 ### No Approval Notifications
 
-1. Subscribe to Linear issue: https://linear.app/appsmithery/issue/PR-68
+1. Subscribe to Linear issue: https://linear.app/project-roadmaps/issue/PR-68
 2. Enable notifications: `F1` → "Preferences: Open Settings (JSON)"
    ```json
    {
@@ -210,7 +210,7 @@ orchestrator_active_tasks
 
 ### Linear Approvals
 
-https://linear.app/appsmithery/issue/PR-68
+https://linear.app/project-roadmaps/issue/PR-68
 
 All high-risk tasks post approval requests here with:
 
@@ -261,7 +261,7 @@ code --install-extension vscode-devtools-copilot-0.1.1.vsix
 ## Support
 
 - GitHub Issues: https://github.com/Appsmithery/Dev-Tools/issues
-- Linear Project: https://linear.app/appsmithery/project/ai-devops-agent-platform-b21cbaa1-9f09
+- Linear Project: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
 - Extension README: [README.md](./README.md)
 
 ## Next Steps

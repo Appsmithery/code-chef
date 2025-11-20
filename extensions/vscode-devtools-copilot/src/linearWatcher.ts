@@ -4,6 +4,7 @@ export class LinearWatcher {
     private statusBarItem: vscode.StatusBarItem;
     private pollInterval?: NodeJS.Timeout;
     private isWatching: boolean = false;
+    private workspaceSlug: string = 'project-roadmaps';
 
     constructor(private context: vscode.ExtensionContext) {
         this.statusBarItem = vscode.window.createStatusBarItem(
@@ -15,13 +16,14 @@ export class LinearWatcher {
         this.statusBarItem.command = 'devtools.showApprovals';
     }
 
-    start(linearHubIssue: string): void {
+    start(linearHubIssue: string, workspaceSlug: string): void {
         if (this.isWatching) {
             return;
         }
 
         this.isWatching = true;
         this.statusBarItem.show();
+        this.workspaceSlug = workspaceSlug || 'project-roadmaps';
 
         // Check for Linear extension
         const linearExtension = vscode.extensions.getExtension('linear.linear-vscode');
@@ -119,7 +121,7 @@ export class LinearWatcher {
             if (selection === 'View in Linear') {
                 const config = vscode.workspace.getConfiguration('devtools');
                 const linearHub = config.get('linearHubIssue', 'PR-68');
-                const url = `https://linear.app/appsmithery/issue/${linearHub}`;
+                const url = `https://linear.app/${this.workspaceSlug}/issue/${linearHub}`;
                 vscode.env.openExternal(vscode.Uri.parse(url));
             } else if (selection === 'Approve') {
                 // Open Copilot chat with pre-filled approval command

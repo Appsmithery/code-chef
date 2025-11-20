@@ -39,17 +39,19 @@ class LinearWatcher {
     constructor(context) {
         this.context = context;
         this.isWatching = false;
+        this.workspaceSlug = 'project-roadmaps';
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
         this.statusBarItem.text = '$(check) Dev-Tools';
         this.statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to view approvals';
         this.statusBarItem.command = 'devtools.showApprovals';
     }
-    start(linearHubIssue) {
+    start(linearHubIssue, workspaceSlug) {
         if (this.isWatching) {
             return;
         }
         this.isWatching = true;
         this.statusBarItem.show();
+        this.workspaceSlug = workspaceSlug || 'project-roadmaps';
         // Check for Linear extension
         const linearExtension = vscode.extensions.getExtension('linear.linear-vscode');
         if (linearExtension) {
@@ -128,7 +130,7 @@ class LinearWatcher {
             if (selection === 'View in Linear') {
                 const config = vscode.workspace.getConfiguration('devtools');
                 const linearHub = config.get('linearHubIssue', 'PR-68');
-                const url = `https://linear.app/appsmithery/issue/${linearHub}`;
+                const url = `https://linear.app/${this.workspaceSlug}/issue/${linearHub}`;
                 vscode.env.openExternal(vscode.Uri.parse(url));
             }
             else if (selection === 'Approve') {

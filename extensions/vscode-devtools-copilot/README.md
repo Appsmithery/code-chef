@@ -57,6 +57,7 @@ The orchestrator will decompose your task into subtasks and route them to approp
 - `devtools.orchestratorUrl` - Orchestrator endpoint (default: `http://45.55.173.72:8001`)
 - `devtools.mcpGatewayUrl` - MCP gateway endpoint (default: `http://45.55.173.72:8000`)
 - `devtools.linearHubIssue` - Linear approval hub issue (default: `PR-68`)
+- `devtools.linearWorkspaceSlug` - Linear workspace slug for approval links (default: `project-roadmaps`)
 - `devtools.autoApproveThreshold` - Auto-approve risk level (default: `low`)
 - `devtools.enableNotifications` - Show toast notifications (default: `true`)
 - `devtools.langsmithUrl` - LangSmith project URL for traces
@@ -141,7 +142,7 @@ All tasks are traced and monitored:
 
 - **LangSmith Traces**: [View Project](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
 - **Prometheus Metrics**: http://45.55.173.72:9090
-- **Linear Approvals**: https://linear.app/appsmithery/issue/PR-68
+- **Linear Approvals**: https://linear.app/project-roadmaps/issue/PR-68
 
 ## Troubleshooting
 
@@ -246,7 +247,7 @@ MIT License - see LICENSE file
 ## Support
 
 - GitHub Issues: https://github.com/Appsmithery/Dev-Tools/issues
-- Linear Project: https://linear.app/appsmithery/project/ai-devops-agent-platform-b21cbaa1-9f09
+- Linear Project: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
 - Discord: https://discord.gg/appsmithery
 
 ## Related
