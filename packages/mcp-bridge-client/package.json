@@ -36,6 +36,9 @@
     "url": "https://github.com/Appsmithery/Dev-Tools/issues"
   },
   "homepage": "https://github.com/Appsmithery/Dev-Tools/tree/main/packages/mcp-bridge-client#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {
     "axios": "^1.6.0"
   },
