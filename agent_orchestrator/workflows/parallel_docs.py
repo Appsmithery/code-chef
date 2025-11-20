@@ -111,3 +111,9 @@ workflow.add_edge("deployment_guide", "merge")
 workflow.add_edge("merge", END)
 
 parallel_docs_app = workflow.compile()
+
+
+def node1(state):
+    pass
+
+workflow.add_node("node_1", node1)  # Add node for node1
