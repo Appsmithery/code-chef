@@ -177,6 +177,22 @@ class GradientClient:
     def is_enabled(self) -> bool:
         return self._enabled
 
+    def get_llm_with_tools(self, tools: list, temperature: float = 0.7, max_tokens: int = 2000):
+        """Get LLM instance with tools bound for function calling.
+        
+        Args:
+            tools: List of LangChain BaseTool instances
+            temperature: Sampling temperature
+            max_tokens: Maximum completion tokens
+        
+        Returns:
+            LangChain LLM with tools bound via bind_tools()
+        """
+        llm = self._get_llm(temperature=temperature, max_tokens=max_tokens)
+        if not tools:
+            return llm
+        return llm.bind_tools(tools)
+
 
 _clients: Dict[str, GradientClient] = {}
 

@@ -261,3 +261,46 @@ class MCPClient:
             "capabilities": self.capabilities,
             "profile_source": self.profile_source,
         }
+
+    def to_langchain_tools(self, toolsets: Optional[List[Dict[str, Any]]] = None) -> List[Any]:
+        """Convert MCP tools to LangChain BaseTool instances.
+        
+        Args:
+            toolsets: Optional list of toolset dicts with 'server' and 'tools' keys.
+                     If None, uses recommended_tools from agent profile.
+        
+        Returns:
+            List of LangChain BaseTool instances that can be bound to LLMs.
+        """
+        from langchain_core.tools import StructuredTool
+        
+        if toolsets is None:
+            toolsets = self.recommended_tools
+        
+        langchain_tools = []
+        
+        for toolset in toolsets:
+            server = toolset.get("server")
+            tools = toolset.get("tools", [])
+            
+            for tool_name in tools:
+                # Create a closure to capture server and tool_name
+                def make_tool_func(srv: str, tname: str):
+                    async def tool_func(**kwargs) -> str:
+                        """Invoke MCP tool via gateway."""
+                        result = await self.invoke_tool(srv, tname, kwargs)
+                        if result.get("success"):
+                            return str(result.get("result", ""))
+                        return f"Error: {result.get('error', 'Unknown error')}"
+                    return tool_func
+                
+                # Create LangChain tool
+                langchain_tool = StructuredTool.from_function(
+                    func=make_tool_func(server, tool_name),
+                    name=f"{server}_{tool_name}",
+                    description=f"Tool {tool_name} from {server} server",
+                    coroutine=make_tool_func(server, tool_name),
+                )
+                langchain_tools.append(langchain_tool)
+        
+        return langchain_tools
