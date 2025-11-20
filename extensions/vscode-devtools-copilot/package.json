@@ -1,0 +1,155 @@
+{
+  "name": "vscode-devtools-copilot",
+  "displayName": "Dev-Tools Agent Integration",
+  "description": "Copilot Chat participant for Dev-Tools orchestrator - submit tasks to 6 specialized agents",
+  "version": "0.1.0",
+  "publisher": "appsmithery",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Appsmithery/Dev-Tools"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Other"
+  ],
+  "keywords": [
+    "copilot",
+    "ai",
+    "devtools",
+    "orchestrator",
+    "mcp",
+    "langsmith"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "devtools",
+        "name": "Dev-Tools Orchestrator",
+        "description": "Submit tasks to Dev-Tools agent platform (feature-dev, code-review, infrastructure, cicd, documentation)",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "orchestrate",
+            "description": "Submit a development task to the orchestrator"
+          },
+          {
+            "name": "status",
+            "description": "Check the status of a submitted task"
+          },
+          {
+            "name": "approve",
+            "description": "Approve a pending task"
+          },
+          {
+            "name": "tools",
+            "description": "List available MCP tools"
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "devtools.orchestrate",
+        "title": "Submit Task to Orchestrator",
+        "category": "Dev-Tools"
+      },
+      {
+        "command": "devtools.checkStatus",
+        "title": "Check Task Status",
+        "category": "Dev-Tools"
+      },
+      {
+        "command": "devtools.configure",
+        "title": "Configure Orchestrator URL",
+        "category": "Dev-Tools"
+      },
+      {
+        "command": "devtools.showApprovals",
+        "title": "Show Pending Approvals",
+        "category": "Dev-Tools"
+      },
+      {
+        "command": "devtools.clearCache",
+        "title": "Clear Tool Cache",
+        "category": "Dev-Tools"
+      }
+    ],
+    "configuration": {
+      "title": "Dev-Tools",
+      "properties": {
+        "devtools.orchestratorUrl": {
+          "type": "string",
+          "default": "http://45.55.173.72:8001",
+          "description": "Dev-Tools orchestrator endpoint",
+          "format": "uri"
+        },
+        "devtools.mcpGatewayUrl": {
+          "type": "string",
+          "default": "http://45.55.173.72:8000",
+          "description": "MCP gateway endpoint",
+          "format": "uri"
+        },
+        "devtools.linearHubIssue": {
+          "type": "string",
+          "default": "PR-68",
+          "description": "Linear issue ID for approval notifications"
+        },
+        "devtools.autoApproveThreshold": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical",
+            "never"
+          ],
+          "default": "low",
+          "description": "Auto-approve tasks at or below this risk level"
+        },
+        "devtools.enableNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show toast notifications for approval requests"
+        },
+        "devtools.langsmithUrl": {
+          "type": "string",
+          "default": "https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046",
+          "description": "LangSmith project URL for viewing traces",
+          "format": "uri"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "eventsource": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "@types/eventsource": "^1.1.15",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.50.0",
+    "typescript": "^5.3.0",
+    "@vscode/vsce": "^2.22.0"
+  }
+}
