@@ -65,8 +65,23 @@ PROJECT_REGISTRY = {
         "uuid": "b21cbaa1-9f09-40f4-b62a-73e0f86dd501",
         "name": "AI DevOps Agent Platform",
         "slug": "78b3b839d36b"
+    },
+    "twkr-agentic-resume-workflow": {
+        "uuid": "86f8cc40-de06-4e3d-b7c8-ed95193737bc",
+        "name": "TWKR Agentic Resume Workflow",
+        "slug": "30f6ea5be0a6"
     }
     # Add more projects here as needed
+}
+
+# Agent identification for workspace traceability
+AGENT_SIGNATURES = {
+    "orchestrator": {"tag": "@orchestrator-agent", "name": "🎯 Orchestrator", "signature": "[Orchestrator Agent]"},
+    "feature-dev": {"tag": "@feature-dev-agent", "name": "🚀 Feature Dev", "signature": "[Feature-Dev Agent]"},
+    "code-review": {"tag": "@code-review-agent", "name": "🔍 Code Review", "signature": "[Code-Review Agent]"},
+    "infrastructure": {"tag": "@infrastructure-agent", "name": "🏗️ Infrastructure", "signature": "[Infrastructure Agent]"},
+    "cicd": {"tag": "@cicd-agent", "name": "⚙️ CI/CD", "signature": "[CI/CD Agent]"},
+    "documentation": {"tag": "@documentation-agent", "name": "📚 Documentation", "signature": "[Documentation Agent]"}
 }
 
 # Workflow state IDs (fetched from Linear API on November 19, 2025)
@@ -139,7 +154,8 @@ def create_issue(
     status: str = "todo",
     priority: int = 2,
     parent_id: Optional[str] = None,
-    labels: Optional[List[str]] = None
+    labels: Optional[List[str]] = None,
+    agent_name: Optional[str] = None
 ) -> Optional[Dict]:
     """
     Create a new Linear issue in a specific project.
@@ -153,10 +169,16 @@ def create_issue(
         priority: 0 (no priority), 1 (urgent), 2 (high), 3 (normal), 4 (low)
         parent_id: Parent issue ID if creating a sub-issue
         labels: List of label names to apply
+        agent_name: Agent identifier for workspace traceability (e.g., 'orchestrator', 'feature-dev')
     
     Returns:
         Created issue data or None if failed
     """
+    # Add agent signature to description for traceability
+    if agent_name and agent_name in AGENT_SIGNATURES:
+        agent_info = AGENT_SIGNATURES[agent_name]
+        signature = f"\n\n---\n*Created by {agent_info['name']} {agent_info['signature']}*\n*Agent Tag: {agent_info['tag']}*"
+        description = description + signature
     # Get the correct state ID
     if status not in WORKFLOW_STATES:
         print(f"⚠️  Unknown status '{status}', using 'todo'")
@@ -369,7 +391,8 @@ def create_phase_with_subtasks(
     subtasks: List[str],
     project_id: str = DEFAULT_PROJECT_UUID,
     team_id: str = DEFAULT_TEAM_ID,
-    status: str = "todo"
+    status: str = "todo",
+    agent_name: Optional[str] = None
 ) -> Optional[str]:
     """
     Create a phase issue with sub-tasks in a specific project.
@@ -382,6 +405,7 @@ def create_phase_with_subtasks(
         project_id: Linear project UUID (default: AI DevOps Agent Platform)
         team_id: Linear team ID (default: Project Roadmaps)
         status: Initial status (default: todo)
+        agent_name: Agent identifier for workspace traceability
     
     Returns:
         Parent issue ID if successful, None otherwise
@@ -394,7 +418,8 @@ def create_phase_with_subtasks(
         project_id=project_id,
         team_id=team_id,
         status=status,
-        priority=1  # High priority for phases
+        priority=1,  # High priority for phases
+        agent_name=agent_name
     )
     
     if not parent:
@@ -413,7 +438,8 @@ def create_phase_with_subtasks(
             team_id=team_id,
             status="todo",
             priority=2,
-            parent_id=parent_id
+            parent_id=parent_id,
+            agent_name=agent_name
         )
         
         if subissue:
@@ -441,6 +467,7 @@ def main():
     parser_create.add_argument("--status", default="todo", choices=["backlog", "todo", "in_progress", "done", "cancelled"])
     parser_create.add_argument("--priority", type=int, default=2, choices=[0, 1, 2, 3, 4])
     parser_create.add_argument("--parent-id", help="Parent issue ID for sub-issues")
+    parser_create.add_argument("--agent-name", help="Agent identifier for traceability (orchestrator, feature-dev, etc.)")
     
     # Create phase command
     parser_phase = subparsers.add_parser("create-phase", help="Create a phase with sub-tasks")
@@ -451,6 +478,7 @@ def main():
     parser_phase.add_argument("--project-id", help="Linear project UUID (default: AI DevOps Agent Platform)")
     parser_phase.add_argument("--team-id", help="Linear team ID (default: Project Roadmaps)")
     parser_phase.add_argument("--status", default="todo", choices=["backlog", "todo", "in_progress", "done", "cancelled"])
+    parser_phase.add_argument("--agent-name", help="Agent identifier for traceability (orchestrator, feature-dev, etc.)")
     
     # Update status command
     parser_update = subparsers.add_parser("update-status", help="Update issue status")
@@ -472,6 +500,7 @@ def main():
     elif args.command == "create-issue":
         project_id = args.project_id if args.project_id else DEFAULT_PROJECT_UUID
         team_id = args.team_id if args.team_id else DEFAULT_TEAM_ID
+        agent_name = args.agent_name if hasattr(args, 'agent_name') and args.agent_name else None
         create_issue(
             title=args.title,
             description=args.description,
@@ -479,12 +508,14 @@ def main():
             team_id=team_id,
             status=args.status,
             priority=args.priority,
-            parent_id=args.parent_id
+            parent_id=args.parent_id,
+            agent_name=agent_name
         )
     
     elif args.command == "create-phase":
         project_id = args.project_id if args.project_id else DEFAULT_PROJECT_UUID
         team_id = args.team_id if args.team_id else DEFAULT_TEAM_ID
+        agent_name = args.agent_name if hasattr(args, 'agent_name') and args.agent_name else None
         subtasks = [s.strip() for s in args.subtasks.split(",")]
         if len(subtasks) < 3:
             print("⚠️  Recommendation: Create at least 3 sub-tasks for better context")
@@ -495,7 +526,8 @@ def main():
             subtasks=subtasks,
             project_id=project_id,
             team_id=team_id,
-            status=args.status
+            status=args.status,
+            agent_name=agent_name
         )
     
     elif args.command == "update-status":

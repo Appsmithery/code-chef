@@ -19,6 +19,13 @@ This project uses Linear for **two completely separate workflows**:
   - **Team**: Project Roadmaps (PR)
   - **Team ID**: `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
 
+- **TWKR Agentic Resume Workflow**
+  - **URL**: https://linear.app/project-roadmaps/project/twkr-agentic-resume-workflow-30f6ea5be0a6
+  - **Project UUID**: `86f8cc40-de06-4e3d-b7c8-ed95193737bc`
+  - **Project ID (Slug)**: `30f6ea5be0a6`
+  - **Team**: Project Roadmaps (PR)
+  - **Team ID**: `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
+
 **Use Cases:**
 
 - Phase completion reports
@@ -71,6 +78,40 @@ This project uses Linear for **two completely separate workflows**:
 
 - **Roadmap updates** → Use `agent-linear-update.py` with `--project-id`
 - **Approval requests** → Use orchestrator event bus (automatic) or `update-linear-pr68.py` (manual)
+
+---
+
+## Agent Identification & Traceability
+
+Each agent has a unique workspace identifier for tracking comments and edits:
+
+| Agent | Workspace Tag | Display Name | Signature |
+|-------|---------------|--------------|-----------|
+| Orchestrator | `@orchestrator-agent` | 🎯 Orchestrator | [Orchestrator Agent] |
+| Feature-Dev | `@feature-dev-agent` | 🚀 Feature Dev | [Feature-Dev Agent] |
+| Code-Review | `@code-review-agent` | 🔍 Code Review | [Code-Review Agent] |
+| Infrastructure | `@infrastructure-agent` | 🏗️ Infrastructure | [Infrastructure Agent] |
+| CI/CD | `@cicd-agent` | ⚙️ CI/CD | [CI/CD Agent] |
+| Documentation | `@documentation-agent` | 📚 Documentation | [Documentation Agent] |
+
+**Automatic Tagging:**
+
+When creating issues with `--agent-name`, the script automatically appends:
+```markdown
+---
+*Created by 🚀 Feature Dev [Feature-Dev Agent]*
+*Agent Tag: @feature-dev-agent*
+```
+
+**Usage:**
+```powershell
+# Sub-agent creating an issue with traceability
+python support/scripts/agent-linear-update.py create-issue `
+    --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
+    --title "Implement caching layer" `
+    --description "Add Redis caching for API responses" `
+    --agent-name "feature-dev"  # Adds signature to description
+```
 
 ---
 
