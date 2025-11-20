@@ -32,7 +32,8 @@
         "denoland.vscode-deno",
         "vscjava.vscode-java-debug",
         "task.vscode-task",
-        "hfloveyy.langgraphv"
+        "hfloveyy.langgraphv",
+        "appsmithery.vscode-devtools-copilot"
       ]
     }
   }
