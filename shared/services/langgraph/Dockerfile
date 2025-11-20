@@ -15,8 +15,8 @@ COPY shared/lib /app/shared/lib
 COPY agent_feature-dev /app/agents/feature-dev
 COPY agent_code-review /app/agents/code-review
 COPY agent_infrastructure /app/agents/infrastructure
-COPY agent_cicd /app/agents/cicd
-COPY agent_documentation /app/agents/documentation
+COPY agent_cicd /app/agents/agent_cicd
+COPY agent_documentation /app/agents/agent_documentation
 COPY agent_orchestrator /app/agents/orchestrator
 
 # Ensure agent packages are discoverable by Python
