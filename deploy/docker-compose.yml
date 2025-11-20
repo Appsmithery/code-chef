@@ -267,8 +267,8 @@ services:
       - SERVICE_NAME=rag-context
       - QDRANT_HOST=${QDRANT_HOST:-qdrant}
       - QDRANT_PORT=${QDRANT_PORT:-6333}
-      - QDRANT_URL=${QDRANT_URL:-}
-      - QDRANT_API_KEY=${QDRANT_API_KEY:-}
+      - QDRANT_URL=https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io
+      - QDRANT_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhY2Nlc3MiOiJtIn0.et1YNe6_k9mcf7B47VN63WpQYvhaOk74ZQnP-zdgV0E
       - QDRANT_COLLECTION=${QDRANT_COLLECTION:-the-shop}
       - QDRANT_VECTOR_SIZE=${QDRANT_VECTOR_SIZE:-1536}
       - QDRANT_DISTANCE=${QDRANT_DISTANCE:-cosine}
