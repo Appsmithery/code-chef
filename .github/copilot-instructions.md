@@ -1,17 +1,16 @@
 # Github Copilot Instructions for Dev-Tools
 
-## Architecture snapshot (Phase 5 Complete - LangSmith Integration Complete)
+## Architecture snapshot
 
-**Current Phase**: Phase 5 Complete ✅ (LangSmith + HITL + Copilot Integration) | **Next Phase**: Phase 6 - Multi-Agent Collaboration | **Overall Progress**: ~95% (Phase 6 ready)
+**Production Status**: Multi-agent DevOps automation platform running on DigitalOcean (droplet: 45.55.173.72)
 
 - **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md.
 - **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `shared/lib/mcp_client.py` for unified tool access. Gateway routes to servers in `shared/mcp/servers/`.
 - **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
-- **LLM Inference**: DigitalOcean Gradient AI integration via `shared/lib/gradient_client.py` with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
+- **LLM Inference**: DigitalOcean Gradient AI integration via LangChain wrappers (`shared/lib/gradient_client.py`, `shared/lib/langchain_gradient.py`) with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
 - **Observability**: LangSmith automatic LLM tracing (all 6 agents + workflows) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents. Complete observability: LLM traces → LangSmith, HTTP metrics → Prometheus, state → PostgreSQL, vectors → Qdrant.
-- **Notification System**: Event-driven approval notifications via `shared/lib/event_bus.py` (async pub/sub); Linear workspace client posts to PR-68 hub with @mentions; <1s latency; optional email fallback via SMTP. See `support/docs/NOTIFICATION_SYSTEM.md`.
-- **Copilot Integration (Phase 5 - COMPLETE)**: Natural language task submission via `/chat` endpoint; multi-turn conversations with PostgreSQL session management; real-time approval notifications (<1s latency); OAuth integration with Linear GraphQL API; production validated end-to-end.
-- **Multi-Agent Collaboration (Phase 6 - PLANNED)**: Agent registry for discovery; inter-agent event protocol; LangGraph shared state; resource locking; multi-agent workflow examples. See `support/docs/PHASE_6_PLAN.md`.
+- **Notification System**: Event-driven approval notifications via `shared/lib/event_bus.py` (async pub/sub); Linear workspace client posts to PR-68 hub with @mentions; <1s latency; optional email fallback via SMTP.
+- **Copilot Integration**: Natural language task submission via `/chat` endpoint; multi-turn conversations with PostgreSQL session management; real-time approval notifications (<1s latency); OAuth integration with Linear GraphQL API.
 - **Service Ports**: gateway-mcp:8000, orchestrator:8001, feature-dev:8002, code-review:8003, infrastructure:8004, cicd:8005, documentation:8006, rag:8007, state:8008, prometheus:9090.
 
 ## Repository structure
@@ -76,13 +75,13 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 
 ## Configuration sources
 
-- **Environment**: `config/env/.env` contains all production credentials (Langfuse keys, Gradient API key, Linear OAuth, DO PAT, database creds). Copy from `config/env/.env.template` and populate secrets.
+- **Environment**: `config/env/.env` contains all production credentials (LangSmith API key, Gradient model access key, Linear OAuth, DO PAT, database creds). Copy from `config/env/.env.template` and populate secrets.
 - **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `support/scripts/setup_secrets.sh` to create.
 - **Agent Models**: Per-agent Gradient model configured in `deploy/docker-compose.yml` via `GRADIENT_MODEL` env var; models optimized for task complexity and cost.
 - **Task Routing**: Rules in `config/routing/task-router.rules.yaml` (if used); orchestrator uses LLM-powered decomposition when `gradient_client.is_enabled()`.
 - **RAG Config**: `config/rag/indexing.yaml` + `config/rag/vectordb.config.yaml` define Qdrant vector DB sources and embedding targets.
 - **State Schema**: PostgreSQL-backed workflow state using `config/state/schema.sql`; migrate by extending schema and rebuilding stack.
-- **Observability**: `config/prometheus/prometheus.yml` defines scrape targets for all agents; Langfuse keys in `.env` enable automatic tracing.
+- **Observability**: `config/prometheus/prometheus.yml` defines scrape targets for all agents; LangSmith keys in `.env` enable automatic tracing.
 
 ## Integrations
 
@@ -211,7 +210,8 @@ ufw status                    # Verify rules
 5. Add service to `deploy/docker-compose.yml` with env vars (`GRADIENT_MODEL`, `PORT`, `MCP_GATEWAY_URL`)
 6. Update `config/mcp-agent-tool-mapping.yaml` with tool access
 7. Document endpoints in `support/docs/AGENT_ENDPOINTS.md`
-8. Add requirements.txt with: `fastapi`, `uvicorn`, `pydantic`, `httpx`, `langchain>=0.1.0`, `prometheus-fastapi-instrumentator>=6.1.0`
+
+- Add requirements.txt with: `fastapi`, `uvicorn`, `pydantic`, `httpx`, `langchain>=0.1.0`, `langchain-openai>=0.1.0`, `langsmith>=0.1.0`, `prometheus-fastapi-instrumentator>=6.1.0`
 
 ### MCP Servers
 
@@ -244,7 +244,7 @@ ufw status                    # Verify rules
 
 - **Typing**: Use Pydantic models, FastAPI dependency injection, type hints on all functions.
 - **Health Endpoints**: Every agent must expose `GET /health` returning `{"status": "healthy", "mcp_gateway": "connected"/"disconnected"}`.
-- **Observability**: All agents must initialize MCP client, Gradient client (if using LLM), Langfuse tracing, Prometheus metrics.
+- **Observability**: All agents must initialize MCP client, Gradient client (if using LLM), LangSmith tracing (via LangChain), Prometheus metrics.
 - **Error Handling**: Graceful fallback when API keys missing (use `gradient_client.is_enabled()` check before LLM calls).
 - **Shell Scripts**: POSIX-compliant bash, executable permissions, consistent logging format (echo + status lines).
 - **Container Hygiene**: Treat Docker resources as disposable—tear down stray containers, prune layers after failures, and leave compose stacks either fully running or fully stopped.
