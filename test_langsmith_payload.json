@@ -1,0 +1,8 @@
+{
+  "description": "Build a GraphQL API for querying Gradient AI models with LangSmith tracing integration",
+  "priority": "high",
+  "project_context": {
+    "project": "test-langsmith-traces",
+    "technologies": ["GraphQL", "Gradient AI", "LangSmith"]
+  }
+}
