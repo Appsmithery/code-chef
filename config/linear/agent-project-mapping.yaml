@@ -1,0 +1,115 @@
+# Linear Project Assignment for Sub-Agents
+#
+# This file defines which Linear projects each agent can update.
+# Used by agent-linear-update.py to enforce access control.
+#
+# Access Rules:
+# - Sub-agents: Can ONLY update issues in their assigned project(s)
+# - Orchestrator: Can update ANY project in Project Roadmaps workspace
+#
+# HITL Approvals (PR-68):
+# - All agents can request approvals via orchestrator event bus
+# - PR-68 is workspace-level, NOT project-specific
+
+# Default project for orchestrator (when --project-id not specified)
+default_project: "ai-devops-agent-platform"
+
+# Team ID for Project Roadmaps workspace
+team_id: "f5b610be-ac34-4983-918b-2c9d00aa9b7a"
+
+# Known projects in workspace
+projects:
+  ai-devops-agent-platform:
+    uuid: "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"
+    name: "AI DevOps Agent Platform"
+    slug: "78b3b839d36b"
+    url: "https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b"
+    description: "Multi-agent AI DevOps automation platform"
+
+  # Add more projects here as they are created
+  # example-project:
+  #   uuid: "uuid-here"
+  #   name: "Example Project"
+  #   slug: "short-slug"
+  #   url: "https://linear.app/project-roadmaps/project/example-project-..."
+  #   description: "Project description"
+
+# Agent to project assignment
+agent_assignments:
+  orchestrator:
+    role: "workspace-admin"
+    projects:
+      - "*"  # Can update ANY project
+    permissions:
+      - "create_issues"
+      - "update_issues"
+      - "create_projects"
+      - "manage_hitl"  # Can post to PR-68
+
+  feature-dev:
+    role: "project-contributor"
+    projects:
+      - "ai-devops-agent-platform"  # Currently assigned to this project
+    permissions:
+      - "create_issues"
+      - "update_issues"
+      - "request_approval"  # Can emit approval events (orchestrator posts to PR-68)
+
+  code-review:
+    role: "project-contributor"
+    projects:
+      - "ai-devops-agent-platform"
+    permissions:
+      - "create_issues"
+      - "update_issues"
+      - "request_approval"
+
+  infrastructure:
+    role: "project-contributor"
+    projects:
+      - "ai-devops-agent-platform"
+    permissions:
+      - "create_issues"
+      - "update_issues"
+      - "request_approval"
+
+  cicd:
+    role: "project-contributor"
+    projects:
+      - "ai-devops-agent-platform"
+    permissions:
+      - "create_issues"
+      - "update_issues"
+      - "request_approval"
+
+  documentation:
+    role: "project-contributor"
+    projects:
+      - "ai-devops-agent-platform"
+    permissions:
+      - "create_issues"
+      - "update_issues"
+      - "request_approval"
+
+# HITL Approval Hub (workspace-level, not project-specific)
+hitl_approval_hub:
+  issue_id: "PR-68"
+  url: "https://linear.app/project-roadmaps/issue/PR-68/agent-approvals-hub"
+  access: "all-agents-via-event-bus"
+  managed_by: "orchestrator"
+  description: "Workspace-level approval notification hub for HITL workflows"
+
+# Workflow separation
+workflows:
+  roadmap_management:
+    description: "Project-specific issue tracking and roadmap updates"
+    script: "support/scripts/agent-linear-update.py"
+    requires_project_id: true  # Sub-agents must specify --project-id
+    access: "per-agent-assignment"
+
+  hitl_approvals:
+    description: "Workspace-level approval requests and notifications"
+    integration: "orchestrator-event-bus"
+    target: "PR-68"
+    access: "all-agents"
+    note: "Sub-agents emit events; orchestrator posts to PR-68"

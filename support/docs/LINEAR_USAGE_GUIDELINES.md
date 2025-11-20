@@ -2,95 +2,166 @@
 
 ## Overview
 
-This project uses Linear for two distinct purposes:
+This project uses Linear for **two completely separate workflows**:
 
-### 1. **AI DevOps Agent Platform Project** (Primary)
+### 1. **📋 PROJECT ROADMAP MANAGEMENT** (Project-Specific)
 
-- **URL**: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
-- **Project ID**: `78b3b839d36b`
-- **Team**: Project Roadmaps (PR)
-- **Purpose**: Track project phases, milestones, and feature delivery
-- **Update Frequency**: After each phase completion
+**Purpose**: Track project phases, milestones, and feature delivery  
+**Access**: Sub-agents update their assigned project; Orchestrator can update any project  
+**Update Pattern**: Manual/agent-initiated via `agent-linear-update.py`
+
+**Projects in Project Roadmaps Workspace:**
+
+- **AI DevOps Agent Platform**
+  - **URL**: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
+  - **Project UUID**: `b21cbaa1-9f09-40f4-b62a-73e0f86dd501`
+  - **Project ID (Slug)**: `78b3b839d36b`
+  - **Team**: Project Roadmaps (PR)
+  - **Team ID**: `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
 
 **Use Cases:**
 
 - Phase completion reports
 - Milestone tracking
 - Feature documentation
-- Roadmap updates
+- Sprint planning
+- Technical debt tracking
 
-**Scripts:**
+**Primary Script:**
 
-- `support/scripts/update-linear-phase6.py` - Update Phase 6 completion
-- `support/scripts/update-linear-graphql.py` - Generic issue updates
-- `support/scripts/create-hitl-subtasks.py` - Create subtasks for phases
+- `support/scripts/agent-linear-update.py` - **PROJECT ROADMAP UPDATES**
+  - Accepts `--project-id` and `--team-id` parameters
+  - Sub-agents: Must pass their project UUID
+  - Orchestrator: Can update any project (defaults to AI DevOps Agent Platform)
+
+**Legacy Scripts:**
+
+- `support/scripts/update-linear-phase6.py` - Phase 6 specific (deprecated)
+- `support/scripts/update-linear-graphql.py` - Generic updates (use agent-linear-update.py instead)
+- `support/scripts/create-hitl-subtasks.py` - Create subtasks (use agent-linear-update.py instead)
 
 ---
 
-### 2. **PR-68: Agent Approvals Hub** (Specific Use Case)
+### 2. **🚨 HITL APPROVAL NOTIFICATIONS** (Workspace-Level)
 
+**Purpose**: Real-time approval notifications for human-in-the-loop workflows  
+**Access**: ALL agents can post to PR-68 via orchestrator event bus  
+**Update Pattern**: Automatic via event bus (orchestrator mediates)
+
+- **Issue**: PR-68 (Agent Approvals Hub)
 - **URL**: https://linear.app/project-roadmaps/issue/PR-68/agent-approvals-hub
 - **Issue ID**: `PR-68`
-- **Purpose**: Workspace-level approval notification hub for HITL workflows
-- **Update Frequency**: Real-time (when approval requests are created)
+- **Scope**: Workspace-wide (not project-specific)
 
 **Use Cases:**
 
-- HITL approval notifications
-- Agent coordination alerts
-- Workflow approval tracking
+- HITL approval requests
 - Critical action notifications
+- High-risk operation alerts
+- Deployment approvals
+- Configuration change approvals
 
-**Scripts:**
+**Integration Method:**
 
-- `support/scripts/update-linear-pr68.py` - Update PR-68 with approval notifications
-- Orchestrator event bus integration (automatic)
+- **Orchestrator Event Bus**: `shared/lib/event_bus.py` + `linear_workspace_client.py`
+- **Sub-agents**: Emit approval events → Orchestrator posts to PR-68
+- **Direct Script**: `support/scripts/update-linear-pr68.py` (manual use only)
+
+**⚠️ CRITICAL: DO NOT confuse these two workflows!**
+
+- **Roadmap updates** → Use `agent-linear-update.py` with `--project-id`
+- **Approval requests** → Use orchestrator event bus (automatic) or `update-linear-pr68.py` (manual)
 
 ---
 
 ## When to Use Which
 
-### Update the Project (78b3b839d36b) When:
+### 📋 Use `agent-linear-update.py` (Roadmap Management) When:
 
-- ✅ Completing a phase (Phase 6, Phase 7, etc.)
-- ✅ Adding new features to the roadmap
+**Agent Type: Sub-Agent (Feature-Dev, Code-Review, Infrastructure, CI/CD, Documentation)**
+
+- ✅ Creating issues/tasks for your assigned project
+- ✅ Updating status of issues in your project
+- ✅ Breaking down features into sub-tasks
+- ✅ Marking tasks complete after implementation
+- ⚠️ **MUST** pass `--project-id` for your assigned project
+
+**Agent Type: Orchestrator**
+
+- ✅ Creating phase completion reports
+- ✅ Adding features to any project roadmap
 - ✅ Documenting major milestones
-- ✅ Recording deployment status
-- ✅ Updating architecture documentation
+- ✅ Coordinating cross-project initiatives
+- ✅ Can update any project (defaults to AI DevOps Agent Platform)
 
-**Example:**
+**Example (Sub-Agent - Feature-Dev):**
 
 ```powershell
-$env:LINEAR_API_KEY="your_key_here"
-python support/scripts/update-linear-phase6.py
+$env:LINEAR_API_KEY = "lin_oauth_..."
+
+# Feature-dev agent creating a feature with sub-tasks
+python support/scripts/agent-linear-update.py create-issue `
+    --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
+    --title "Implement Auto-Scaling Logic" `
+    --description "Add dynamic scaling based on load metrics" `
+    --status "in_progress"
+
+# Breaking down complex feature
+python support/scripts/agent-linear-update.py create-phase `
+    --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
+    --phase-number 7 `
+    --title "Autonomous Operations" `
+    --subtasks "Decision Engine,Learning Module,Self-Healing"
+```
+
+**Example (Orchestrator):**
+
+```powershell
+$env:LINEAR_API_KEY = "lin_oauth_..."
+
+# Orchestrator creating phase completion (uses default project)
+python support/scripts/agent-linear-update.py create-issue `
+    --title "Phase 6 Complete: Multi-Agent Collaboration" `
+    --description "All Phase 6 features deployed and validated" `
+    --status "done" `
+    --priority 1
 ```
 
 ---
 
-### Update PR-68 When:
+### 🚨 Use Orchestrator Event Bus (HITL Approvals) When:
 
-- ✅ Agent requests HITL approval
-- ✅ Critical action needs human review
-- ✅ Workflow requires approval gate
-- ✅ Posting approval notifications
+**Agent Type: ANY (All agents have access)**
 
-**Example:**
+- ✅ Requesting HITL approval for high-risk actions
+- ✅ Notifying humans of critical decisions
+- ✅ Requiring human confirmation before deployment
+- ✅ Escalating blocked workflows
 
-```powershell
-$env:LINEAR_API_KEY="your_key_here"
-python support/scripts/update-linear-pr68.py
-```
-
-**Automatic Integration:**
+**Integration Method (Automatic):**
 
 ```python
-# In orchestrator event bus
-await linear_workspace_client.post_approval_notification(
-    issue_id="PR-68",
-    request_id=approval_request_id,
-    risk_level="high",
-    action_type="deploy_production"
-)
+# In any agent (orchestrator mediates)
+from shared.lib.event_bus import EventBus
+
+event_bus = EventBus()
+await event_bus.emit("approval_request", {
+    "request_id": "approve-deploy-prod-123",
+    "agent_name": "feature-dev",
+    "action_type": "deploy_production",
+    "risk_level": "high",
+    "description": "Deploy v2.0.0 to production",
+    "approval_hub_issue": "PR-68"
+})
+
+# Orchestrator automatically posts to PR-68
+```
+
+**Manual Method (Orchestrator Only):**
+
+```powershell
+$env:LINEAR_API_KEY = "lin_oauth_..."
+python support/scripts/update-linear-pr68.py
 ```
 
 ---
@@ -166,17 +237,30 @@ Project Roadmaps (PR) Team
 
 ## Common Mistakes to Avoid
 
-❌ **DON'T** post phase completions to PR-68  
-✅ **DO** post phase completions to the project (78b3b839d36b)
+### ❌ Workflow Confusion
 
-❌ **DON'T** post approval requests to the project  
-✅ **DO** post approval requests to PR-68
+| Mistake | Correct Approach |
+|---------|------------------|
+| ❌ Post phase completions to PR-68 | ✅ Use `agent-linear-update.py` with project ID |
+| ❌ Use `agent-linear-update.py` for approvals | ✅ Use orchestrator event bus → PR-68 |
+| ❌ Sub-agent updates orchestrator's project | ✅ Sub-agent passes `--project-id` for their project |
+| ❌ Direct PR-68 updates from sub-agents | ✅ Sub-agents emit events → Orchestrator posts to PR-68 |
 
-❌ **DON'T** overwrite existing issue descriptions  
-✅ **DO** append updates with timestamps
+### ❌ Access Control Violations
 
-❌ **DON'T** create duplicate issues for phases  
-✅ **DO** search for existing phase issues first
+| Agent Type | ✅ Allowed | ❌ Forbidden |
+|------------|-----------|-------------|
+| Sub-Agents | Update their assigned project via `agent-linear-update.py` | Update other projects; Direct PR-68 updates |
+| Orchestrator | Update any project; Post to PR-68 via event bus | Bypass HITL approval process |
+
+### ❌ Data Management
+
+| Mistake | Correct Approach |
+|---------|------------------|
+| ❌ Overwrite existing issue descriptions | ✅ Append updates with timestamps |
+| ❌ Create duplicate phase issues | ✅ Search for existing issues first |
+| ❌ Forget `--project-id` as sub-agent | ✅ Always pass project UUID |
+| ❌ Mix roadmap and HITL in same script | ✅ Keep workflows separate |
 
 ---
 
@@ -335,40 +419,75 @@ python support/scripts/agent-linear-update.py update-status `
 
 ## Script Reference
 
-| Script                     | Purpose                       | Target                 | Supports Sub-Issues | Supports Status |
-| -------------------------- | ----------------------------- | ---------------------- | ------------------- | --------------- |
-| `agent-linear-update.py`   | **PRIMARY SCRIPT** for agents | Project/Any issue      | ✅ Yes              | ✅ Yes          |
-| `update-linear-phase6.py`  | Phase 6 completion            | Project (78b3b839d36b) | ❌ No               | ❌ No           |
-| `update-linear-pr68.py`    | Approval hub updates          | PR-68                  | ❌ No               | ❌ No           |
-| `update-linear-graphql.py` | Generic updates               | Any issue              | ❌ No               | ❌ No           |
-| `create-hitl-subtasks.py`  | Create subtasks               | Any parent issue       | ✅ Yes              | ❌ No           |
-| `mark-hitl-complete.py`    | Mark tasks done               | Any issue              | ❌ No               | ✅ Limited      |
+### 📋 Roadmap Management Scripts
+
+| Script | Purpose | Access Control | Supports Sub-Issues | Supports Status | Project-Agnostic |
+|--------|---------|----------------|---------------------|-----------------|------------------|
+| `agent-linear-update.py` | **PRIMARY SCRIPT** for roadmap updates | Sub-agents (with `--project-id`), Orchestrator (any project) | ✅ Yes | ✅ Yes | ✅ Yes |
+| `update-linear-phase6.py` | Phase 6 specific (DEPRECATED) | Orchestrator only | ❌ No | ❌ No | ❌ No |
+| `update-linear-graphql.py` | Generic updates (DEPRECATED) | Orchestrator only | ❌ No | ❌ No | ❌ No |
+| `create-hitl-subtasks.py` | Create subtasks (DEPRECATED) | Orchestrator only | ✅ Yes | ❌ No | ❌ No |
+| `mark-hitl-complete.py` | Mark tasks done (DEPRECATED) | Orchestrator only | ❌ No | ✅ Limited | ❌ No |
+
+### 🚨 HITL Approval Scripts
+
+| Script | Purpose | Access Control | Integration Method |
+|--------|---------|----------------|-------------------|
+| `update-linear-pr68.py` | Manual PR-68 updates | Orchestrator only | Direct GraphQL |
+| Orchestrator Event Bus | Automatic PR-68 updates | All agents (via events) | Event-driven (recommended) |
 
 ### agent-linear-update.py Commands
 
-```powershell
-# Get workflow state IDs (run once to populate script)
-python support/scripts/agent-linear-update.py get-states
+**Project-Agnostic Commands (works with any project):**
 
-# Create standalone issue
+```powershell
+$env:LINEAR_API_KEY = "lin_oauth_..."
+
+# Get workflow state IDs for a team
+python support/scripts/agent-linear-update.py get-states `
+    --team-id "f5b610be-ac34-4983-918b-2c9d00aa9b7a"
+
+# Create standalone issue (sub-agent MUST pass --project-id)
 python support/scripts/agent-linear-update.py create-issue `
+    --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
     --title "Add Prometheus dashboard" `
     --description "Create Grafana dashboard for agent metrics" `
     --status "todo" `
     --priority 2
 
-# Create phase with sub-tasks (RECOMMENDED for complex features)
+# Create phase with sub-tasks (orchestrator can omit --project-id for default)
 python support/scripts/agent-linear-update.py create-phase `
+    --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
     --phase-number 7 `
     --title "Autonomous Operations" `
     --description "Self-learning and adaptive agent behaviors" `
     --subtasks "Decision Engine,Learning Module,Self-Healing" `
     --status "todo"
 
-# Update issue status
+# Update issue status (works across all projects)
 python support/scripts/agent-linear-update.py update-status `
     --issue-id "PR-85" `
     --status "done"
+```
+
+**Access Control Examples:**
+
+```powershell
+# ✅ SUB-AGENT (Feature-Dev): Must specify project
+python support/scripts/agent-linear-update.py create-issue `
+    --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
+    --title "Feature X" `
+    --description "..." `
+    --status "in_progress"
+
+# ✅ ORCHESTRATOR: Can use default project or specify any project
+python support/scripts/agent-linear-update.py create-issue `
+    --title "Phase 6 Complete" `
+    --description "..." `
+    --status "done"  # Uses DEFAULT_PROJECT_UUID
+
+# ❌ SUB-AGENT: DO NOT use for HITL approvals
+# Use orchestrator event bus instead!
 ```
 
 ---
