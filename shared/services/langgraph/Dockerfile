@@ -19,6 +19,9 @@ COPY agent_cicd /app/agents/cicd
 COPY agent_documentation /app/agents/documentation
 COPY agent_orchestrator /app/agents/orchestrator
 
+# Ensure agent packages are discoverable by Python
+ENV PYTHONPATH=/app/agents:/app/shared/lib
+
 # Copy LangGraph service
 COPY shared/services/langgraph /app/services/langgraph
 
