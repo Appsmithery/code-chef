@@ -366,13 +366,24 @@ async def query_context(request: QueryRequest):
             raise HTTPException(status_code=500, detail="Embedding provider returned no vectors")
 
         search_filter = build_metadata_filter(request.metadata_filter)
-        search_results = qdrant_client.search(
-            collection_name=request.collection,
-            query_vector=embeddings[0],
-            limit=request.n_results,
-            with_payload=True,
-            filter=search_filter
-        )
+        
+        # Call search without filter parameter to avoid API issues
+        # Qdrant client API has changed - filter parameter causes errors
+        if search_filter is not None:
+            search_results = qdrant_client.search(
+                collection_name=request.collection,
+                query_vector=embeddings[0],
+                limit=request.n_results,
+                with_payload=True,
+                query_filter=search_filter
+            )
+        else:
+            search_results = qdrant_client.search(
+                collection_name=request.collection,
+                query_vector=embeddings[0],
+                limit=request.n_results,
+                with_payload=True
+            )
 
         context_items: List[ContextItem] = []
         for point in search_results:
