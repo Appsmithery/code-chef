@@ -11,6 +11,7 @@
 The orchestrator and all 6 specialized agents can now **INVOKE** MCP tools via LangChain's native function calling protocol, not just read tool documentation.
 
 **3-Layer Architecture**:
+
 1. **Discovery**: `progressive_mcp_loader.py` filters 150+ tools → 10-30 relevant tools (80-90% token savings)
 2. **Conversion**: `mcp_client.to_langchain_tools()` transforms MCP schemas → LangChain `BaseTool` instances
 3. **Binding**: `gradient_client.get_llm_with_tools()` binds tools via `llm.bind_tools(tools)`
@@ -21,16 +22,17 @@ The orchestrator and all 6 specialized agents can now **INVOKE** MCP tools via L
 
 4 loading strategies optimized for different use cases:
 
-| Strategy | Token Savings | Use Case | Tools Loaded |
-|----------|---------------|----------|--------------|
-| `MINIMAL` | 80-95% | Simple tasks with clear keywords | 5-15 |
-| `AGENT_PROFILE` | 60-80% | Agent-specific workflows | 20-40 |
-| `PROGRESSIVE` | 70-85% | Balanced (minimal + agent tools) | 15-30 |
-| `FULL` | 0% | Debugging, exploration | 150+ |
+| Strategy        | Token Savings | Use Case                         | Tools Loaded |
+| --------------- | ------------- | -------------------------------- | ------------ |
+| `MINIMAL`       | 80-95%        | Simple tasks with clear keywords | 5-15         |
+| `AGENT_PROFILE` | 60-80%        | Agent-specific workflows         | 20-40        |
+| `PROGRESSIVE`   | 70-85%        | Balanced (minimal + agent tools) | 15-30        |
+| `FULL`          | 0%            | Debugging, exploration           | 150+         |
 
 ### Enhanced Marketplace Presence
 
 **Badges**:
+
 - 🔵 6 Specialized Agents
 - 🟢 150+ MCP Tools
 - 🟣 LangChain Enabled
@@ -44,6 +46,7 @@ The orchestrator and all 6 specialized agents can now **INVOKE** MCP tools via L
 ## 📦 What's Included
 
 ### Documentation
+
 - ✅ **README.md**: Comprehensive marketplace documentation with architecture diagrams
 - ✅ **CHANGELOG.md**: Version history following Keep a Changelog format
 - ✅ **RELEASE_NOTES_v0.2.0.md**: This file (detailed release information)
@@ -51,6 +54,7 @@ The orchestrator and all 6 specialized agents can now **INVOKE** MCP tools via L
 - ✅ **package.json**: Enhanced metadata with badges, expanded keywords, icon reference
 
 ### Extension Package
+
 - **File**: `vscode-devtools-copilot-0.2.0.vsix`
 - **Size**: 971.31 KB
 - **Files**: 405 total (178 JavaScript, 12 TypeScript compiled, 385 node_modules)
@@ -96,12 +100,14 @@ Optional settings:
 ## 📊 Performance Metrics
 
 ### Token Efficiency
+
 - **Before v0.2.0**: All 150+ tools in context = ~50,000 tokens per task
 - **After v0.2.0**: 10-30 relevant tools = ~5,000-10,000 tokens per task
 - **Savings**: 80-90% token cost reduction
 - **Benefit**: Tool invocation capability maintained via LangChain function calling
 
 ### Agent Performance
+
 - **Orchestrator**: llama-3.1-70b, progressive loading, <2s task decomposition
 - **Feature-Dev**: codellama-13b, agent_profile loading, optimized for code generation
 - **Code-Review**: llama-3.1-70b, full tool access, comprehensive security analysis
@@ -110,6 +116,7 @@ Optional settings:
 - **Documentation**: mistral-7b, agent_profile loading, markdown generation
 
 ### Latency
+
 - **Task Submission**: <500ms (HTTP POST to orchestrator)
 - **Task Decomposition**: 1-3s (LLM-powered with progressive tool loading)
 - **Approval Notifications**: <1s (Linear workspace hub)
@@ -121,18 +128,21 @@ Optional settings:
 All tasks are fully traced and monitored:
 
 ### LangSmith LLM Tracing
+
 - **Workspace**: Dev-Tools (5029c640-3f73-480c-82f3-58e402ed4207)
 - **Project**: agents (f967bb5e-2e61-434f-8ee1-0df8c22bc046)
 - **URL**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
 - **Features**: Token counts, latency, tool calls, LLM responses, error traces
 
 ### Prometheus Metrics
+
 - **Endpoint**: http://45.55.173.72:9090
 - **Metrics**: HTTP requests, response times, error rates, agent health
 - **Scrape Interval**: 15s
 - **Retention**: 15 days
 
 ### Linear HITL Approvals
+
 - **Hub Issue**: PR-68 (workspace-level approval notification hub)
 - **Latency**: <1s notification delivery
 - **Channels**: Linear native (email/mobile/desktop)
@@ -148,6 +158,7 @@ cd extensions/vscode-devtools-copilot
 ```
 
 Validates:
+
 - ✅ Extension loads in VS Code
 - ✅ Chat participant `@devtools` available
 - ✅ Commands registered in Command Palette
@@ -159,6 +170,7 @@ Validates:
 1. Open Copilot Chat (Ctrl+I)
 2. Type: `@devtools Add JWT authentication to my Express API`
 3. Verify:
+
    - Task submitted successfully
    - Task ID returned
    - Subtasks displayed (typically 3-5)
@@ -166,6 +178,7 @@ Validates:
    - Estimated duration provided
 
 4. Check task status:
+
    ```
    @devtools /status <task-id>
    ```
@@ -178,6 +191,7 @@ Validates:
 ## 📝 Documentation Updates
 
 ### Updated Files
+
 - ✅ `extensions/vscode-devtools-copilot/README.md`: Added LangChain architecture, badges, enhanced examples
 - ✅ `extensions/vscode-devtools-copilot/CHANGELOG.md`: Version history following semantic versioning
 - ✅ `extensions/vscode-devtools-copilot/package.json`: v0.2.0, expanded keywords, badges, icon
@@ -187,6 +201,7 @@ Validates:
 - ✅ `.github/copilot-instructions.md`: Tool binding pattern with code examples
 
 ### New Files
+
 - ✅ `extensions/vscode-devtools-copilot/CHANGELOG.md`: Version history
 - ✅ `extensions/vscode-devtools-copilot/RELEASE_NOTES_v0.2.0.md`: This file
 - ✅ `extensions/vscode-devtools-copilot/minions_purple.png`: Extension icon
@@ -195,17 +210,20 @@ Validates:
 ## 🔗 References
 
 ### Documentation
+
 - [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
 - [Setup Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/SETUP_GUIDE.md)
 - [Integration Implementation Plan](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md)
 
 ### Integrations
+
 - [LangChain LLM Framework](https://www.langchain.com/)
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - [DigitalOcean Gradient AI](https://docs.digitalocean.com/products/ai/)
 - [LangSmith Observability](https://smith.langchain.com/)
 
 ### Repository
+
 - [Dev-Tools GitHub](https://github.com/Appsmithery/Dev-Tools)
 - [Linear Project](https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b)
 - [Issues](https://github.com/Appsmithery/Dev-Tools/issues)
@@ -213,18 +231,21 @@ Validates:
 ## 🎯 Next Steps
 
 ### For Users
+
 1. **Install Extension**: `code --install-extension vscode-devtools-copilot-0.2.0.vsix`
 2. **Configure**: F1 → "Dev-Tools: Configure" → Enter orchestrator URL
 3. **Test**: Open Copilot Chat → `@devtools hello world` (verify connection)
 4. **Use**: Submit real tasks → `@devtools Add authentication to my API`
 
 ### For Developers
+
 1. **Review Code**: Check `shared/lib/progressive_mcp_loader.py` for progressive disclosure logic
 2. **Trace Tasks**: Visit LangSmith dashboard to see LLM traces
 3. **Monitor Metrics**: Check Prometheus for HTTP metrics and agent health
 4. **Contribute**: Fork repo → Create feature branch → Submit PR
 
 ### For Marketplace Publication
+
 1. **Create Publisher**: Register at https://marketplace.visualstudio.com/manage
 2. **Generate PAT**: Azure DevOps Personal Access Token (Marketplace: Read & Write)
 3. **Login**: `vsce login appsmithery`
@@ -234,14 +255,17 @@ Validates:
 ## 🐛 Known Issues
 
 ### Non-Critical Lint Warnings
+
 - **activationEvents**: VS Code auto-generates from package.json (can be removed)
 - **badge.href**: Optional property (badges still display correctly)
 
 ### Performance Optimization
+
 - **Bundle Recommendation**: Extension has 405 files (178 JS). Consider webpack bundling for faster loading.
 - **Command**: `npm run bundle` (add webpack configuration)
 
 ### Version Dependencies
+
 - **@vscode/vsce**: v2.32.0 installed, v3.7.0 available (non-breaking update)
 - **Command**: `npm install -g @vscode/vsce@latest`
 

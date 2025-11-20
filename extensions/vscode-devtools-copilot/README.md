@@ -289,16 +289,19 @@ MIT License - see LICENSE file
 ## Related
 
 ### Documentation
+
 - [Dev-Tools Repository](https://github.com/Appsmithery/Dev-Tools)
 - [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
 - [Integration Implementation Plan](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md)
 - [Setup Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/SETUP_GUIDE.md)
 
 ### Integrations
+
 - [LangChain LLM Framework](https://www.langchain.com/)
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - [DigitalOcean Gradient AI](https://docs.digitalocean.com/products/ai/)
 - [LangSmith LLM Observability](https://smith.langchain.com/)
 
 ### Packages
+
 - [MCP Bridge Client](https://www.npmjs.com/package/@appsmithery/mcp-bridge-client)
