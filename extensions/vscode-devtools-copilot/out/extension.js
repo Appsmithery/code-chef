@@ -44,75 +44,93 @@ let linearWatcher;
 let statusBarItem;
 function activate(context) {
     console.log('Dev-Tools extension activating...');
-    // Initialize status bar
-    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    statusBarItem.text = '$(rocket) Dev-Tools';
-    statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to check status';
-    statusBarItem.command = 'devtools.checkStatus';
-    statusBarItem.show();
-    context.subscriptions.push(statusBarItem);
-    // Register chat participant
-    chatParticipant = new chatParticipant_1.DevToolsChatParticipant(context);
-    const participant = vscode.chat.createChatParticipant('devtools', chatParticipant.handleChatRequest.bind(chatParticipant));
-    participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
-    context.subscriptions.push(participant);
-    // Initialize Linear watcher for approval notifications
-    linearWatcher = new linearWatcher_1.LinearWatcher(context);
-    const config = vscode.workspace.getConfiguration('devtools');
-    if (config.get('enableNotifications')) {
-        linearWatcher.start(config.get('linearHubIssue', 'PR-68'));
-    }
-    context.subscriptions.push(linearWatcher);
-    // Register commands
-    context.subscriptions.push(vscode.commands.registerCommand('devtools.orchestrate', async () => {
-        const task = await vscode.window.showInputBox({
-            prompt: 'Describe your development task',
-            placeHolder: 'e.g., Add JWT authentication to my Express API'
-        });
-        if (task) {
-            await chatParticipant.submitTask(task);
+    try {
+        // Initialize status bar
+        statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+        statusBarItem.text = '$(rocket) Dev-Tools';
+        statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to check status';
+        statusBarItem.command = 'devtools.checkStatus';
+        statusBarItem.show();
+        context.subscriptions.push(statusBarItem);
+        console.log('Dev-Tools: Status bar created');
+        // Initialize chat participant
+        chatParticipant = new chatParticipant_1.DevToolsChatParticipant(context);
+        // Register chat participant (may fail if Copilot Chat not available)
+        try {
+            const participant = vscode.chat.createChatParticipant('devtools', chatParticipant.handleChatRequest.bind(chatParticipant));
+            context.subscriptions.push(participant);
+            console.log('Dev-Tools: Chat participant registered as @devtools');
         }
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand('devtools.checkStatus', async () => {
-        const taskId = await vscode.window.showInputBox({
-            prompt: 'Enter task ID',
-            placeHolder: 'e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-        });
-        if (taskId) {
-            await chatParticipant.checkTaskStatus(taskId);
+        catch (chatError) {
+            console.warn('Dev-Tools: Could not register chat participant (Copilot Chat may not be available):', chatError);
+            vscode.window.showWarningMessage('Dev-Tools: Chat participant requires GitHub Copilot. Use Command Palette commands instead.', 'Open Commands').then(selection => {
+                if (selection === 'Open Commands') {
+                    vscode.commands.executeCommand('workbench.action.showCommands');
+                }
+            });
         }
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand('devtools.configure', async () => {
-        const url = await vscode.window.showInputBox({
-            prompt: 'Enter orchestrator URL',
-            value: config.get('orchestratorUrl'),
-            validateInput: (value) => {
-                try {
-                    new URL(value);
-                    return null;
-                }
-                catch {
-                    return 'Please enter a valid URL';
-                }
+        // Initialize Linear watcher for approval notifications
+        linearWatcher = new linearWatcher_1.LinearWatcher(context);
+        const config = vscode.workspace.getConfiguration('devtools');
+        if (config.get('enableNotifications')) {
+            linearWatcher.start(config.get('linearHubIssue', 'PR-68'));
+        }
+        context.subscriptions.push(linearWatcher);
+        // Register commands
+        context.subscriptions.push(vscode.commands.registerCommand('devtools.orchestrate', async () => {
+            const task = await vscode.window.showInputBox({
+                prompt: 'Describe your development task',
+                placeHolder: 'e.g., Add JWT authentication to my Express API'
+            });
+            if (task) {
+                await chatParticipant.submitTask(task);
             }
-        });
-        if (url) {
-            await config.update('orchestratorUrl', url, vscode.ConfigurationTarget.Global);
-            vscode.window.showInformationMessage(`Orchestrator URL updated to ${url}`);
-        }
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand('devtools.showApprovals', async () => {
-        const linearHubIssue = config.get('linearHubIssue', 'PR-68');
-        const linearUrl = `https://linear.app/appsmithery/issue/${linearHubIssue}`;
-        vscode.env.openExternal(vscode.Uri.parse(linearUrl));
-    }));
-    context.subscriptions.push(vscode.commands.registerCommand('devtools.clearCache', () => {
-        chatParticipant.clearCache();
-        vscode.window.showInformationMessage('Dev-Tools cache cleared');
-    }));
-    // Check orchestrator health on startup
-    checkOrchestratorHealth(config.get('orchestratorUrl'));
-    console.log('Dev-Tools extension activated');
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('devtools.checkStatus', async () => {
+            const taskId = await vscode.window.showInputBox({
+                prompt: 'Enter task ID',
+                placeHolder: 'e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+            });
+            if (taskId) {
+                await chatParticipant.checkTaskStatus(taskId);
+            }
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('devtools.configure', async () => {
+            const url = await vscode.window.showInputBox({
+                prompt: 'Enter orchestrator URL',
+                value: config.get('orchestratorUrl'),
+                validateInput: (value) => {
+                    try {
+                        new URL(value);
+                        return null;
+                    }
+                    catch {
+                        return 'Please enter a valid URL';
+                    }
+                }
+            });
+            if (url) {
+                await config.update('orchestratorUrl', url, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage(`Orchestrator URL updated to ${url}`);
+            }
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('devtools.showApprovals', async () => {
+            const linearHubIssue = config.get('linearHubIssue', 'PR-68');
+            const linearUrl = `https://linear.app/appsmithery/issue/${linearHubIssue}`;
+            vscode.env.openExternal(vscode.Uri.parse(linearUrl));
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('devtools.clearCache', () => {
+            chatParticipant.clearCache();
+            vscode.window.showInformationMessage('Dev-Tools cache cleared');
+        }));
+        // Check orchestrator health on startup
+        checkOrchestratorHealth(config.get('orchestratorUrl'));
+        console.log('Dev-Tools extension activated');
+    }
+    catch (error) {
+        console.error('Dev-Tools: Fatal activation error:', error);
+        vscode.window.showErrorMessage(`Dev-Tools extension failed to activate: ${error}`);
+    }
 }
 async function checkOrchestratorHealth(url) {
     try {
