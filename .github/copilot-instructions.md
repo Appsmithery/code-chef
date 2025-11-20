@@ -94,9 +94,10 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the repository a
 - **Linear GraphQL API Scripts**: Use `support/scripts/update-linear-graphql.py`, `support/scripts/create-hitl-subtasks.py`, `support/scripts/mark-hitl-complete.py` for programmatic updates.
 - **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use GraphQL scripts with `LINEAR_API_KEY` env var (OAuth token from `.env`: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
 - **Approval Notifications**: Orchestrator posts approval requests to Linear workspace hub (PR-68) via `linear_workspace_client.py`; events emitted via `event_bus.py`; <1s latency; native Linear notifications (email/mobile/desktop). Configure: `LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68` in `.env`.
-- **Project ID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` (short ID: `78b3b839d36b`)
+- **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` (slug: `78b3b839d36b`)
 - **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
-- **Approval Hub Issue**: PR-68 (workspace-level approval notification hub)
+- **Approval Hub Issue**: PR-68 (workspace-level approval notification hub - for HITL only)
+- **Phase 6 Issue**: PR-85 (Multi-Agent Collaboration completion)
 
 ## Deployment workflows
 
