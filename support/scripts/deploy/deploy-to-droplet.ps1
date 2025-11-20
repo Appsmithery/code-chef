@@ -160,14 +160,8 @@ function Deploy-FullRebuild {
     
     # Pull and rebuild on droplet
     Write-Info "Pulling code, rebuilding, and deploying..."
-    ssh $DROPLET @"
-cd $DEPLOY_PATH && \
-git pull origin main && \
-cd deploy && \
-docker compose down --remove-orphans && \
-docker compose build --no-cache && \
-docker compose up -d
-"@
+    $rebuildCmd = 'cd ' + $DEPLOY_PATH + ' && git pull origin main && cd deploy && docker compose down --remove-orphans && docker compose build --no-cache && docker compose up -d'
+    ssh $DROPLET $rebuildCmd
     
     if ($LASTEXITCODE -ne 0) {
         Write-Failure "Rebuild and deployment failed"
@@ -212,10 +206,10 @@ function Test-HealthEndpoints {
         $health = ssh $DROPLET "curl -s http://localhost:$($ep.Port)/health 2>/dev/null"
         
         if ($health -match '"status"\s*:\s*"ok"') {
-            Write-Host "  ✓ $($ep.Name) (port $($ep.Port))" -ForegroundColor Green
+            Write-Host "  [OK] $($ep.Name) (port $($ep.Port))" -ForegroundColor Green
             $healthyCount++
         } else {
-            Write-Host "  ✗ $($ep.Name) (port $($ep.Port))" -ForegroundColor Red
+            Write-Host "  [FAIL] $($ep.Name) (port $($ep.Port))" -ForegroundColor Red
         }
     }
     
@@ -232,13 +226,8 @@ function Test-HealthEndpoints {
 function Invoke-Rollback {
     Write-Step "Rolling back to previous commit"
     
-    ssh $DROPLET @"
-cd $DEPLOY_PATH && \
-git reset --hard HEAD~1 && \
-cd deploy && \
-docker compose down && \
-docker compose up -d
-"@
+    $rollbackCmd = 'cd ' + $DEPLOY_PATH + ' && git reset --hard HEAD~1 && cd deploy && docker compose down && docker compose up -d'
+    ssh $DROPLET $rollbackCmd
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Rollback completed"
@@ -332,7 +321,7 @@ if (-not $SkipTests -and $strategy -in @('full', 'config')) {
     if (Test-Path "support/scripts/validation/validate-tracing.sh") {
         Write-Step "Running validate-tracing.sh on droplet"
         scp -q support/scripts/validation/validate-tracing.sh ${DROPLET}:/tmp/validate-tracing.sh
-        ssh $DROPLET "chmod +x /tmp/validate-tracing.sh && /tmp/validate-tracing.sh"
+        ssh $DROPLET 'chmod +x /tmp/validate-tracing.sh && /tmp/validate-tracing.sh'
         
         if ($LASTEXITCODE -ne 0) {
             Write-Failure "Validation tests failed (non-blocking)"
@@ -355,15 +344,15 @@ Write-Host "Droplet: $DROPLET_IP ($DEPLOY_PATH)" -ForegroundColor Cyan
 Write-Host ""
 
 Write-Host "Quick Checks:" -ForegroundColor Yellow
-Write-Host "  • LangSmith Traces: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046" -ForegroundColor Cyan
-Write-Host "  • Test Orchestrator: ssh $DROPLET 'curl -X POST http://localhost:8001/orchestrate -H Content-Type:application/json -d \"{\\\"description\\\":\\\"test\\\",\\\"priority\\\":\\\"high\\\"}\"'" -ForegroundColor Gray
-Write-Host "  • View Logs: ssh $DROPLET 'cd $DEPLOY_PATH/deploy && docker compose logs -f orchestrator'" -ForegroundColor Gray
+Write-Host "  - LangSmith Traces: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046" -ForegroundColor Cyan
+Write-Host "  - Test Orchestrator: ssh $DROPLET" -ForegroundColor Gray
+Write-Host "  - View Logs: ssh $DROPLET 'cd $DEPLOY_PATH/deploy && docker compose logs -f orchestrator'" -ForegroundColor Gray
 Write-Host ""
 
 if ($strategy -eq 'config') {
     Write-Host "Config Deployment Notes:" -ForegroundColor Yellow
-    Write-Host "  ✓ Environment variables reloaded (down+up cycle)" -ForegroundColor Green
-    Write-Host "  ✓ No rebuild required (30s deployment)" -ForegroundColor Green
+    Write-Host "  [OK] Environment variables reloaded (down+up cycle)" -ForegroundColor Green
+    Write-Host "  [OK] No rebuild required (30s deployment)" -ForegroundColor Green
     Write-Host ""
 }
 
