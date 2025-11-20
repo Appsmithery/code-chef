@@ -17,12 +17,14 @@ code --list-extensions | grep devtools
 ```
 
 **Windows PowerShell:**
+
 ```powershell
 cd D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot
 code --install-extension .\vscode-devtools-copilot-0.1.0.vsix
 ```
 
 After installation:
+
 1. Reload VS Code (`Ctrl+Shift+P` → "Reload Window")
 2. Open Copilot Chat (`Ctrl+I`)
 3. Type `@devtools Add JWT authentication to my API`
@@ -33,13 +35,12 @@ Add to `.vscode/extensions.json` in your project:
 
 ```json
 {
-  "recommendations": [
-    "appsmithery.vscode-devtools-copilot"
-  ]
+  "recommendations": ["appsmithery.vscode-devtools-copilot"]
 }
 ```
 
 Share the VSIX file with teammates via:
+
 - Internal file share
 - GitHub release (private repository)
 - Azure DevOps artifacts
@@ -47,17 +48,20 @@ Share the VSIX file with teammates via:
 ### Option 3: VS Code Marketplace (Future)
 
 **Prerequisites:**
+
 1. Create Azure DevOps organization: https://aka.ms/SignupAzureDevOps
 2. Generate Personal Access Token (scope: Marketplace → Manage)
 3. Create publisher: `vsce create-publisher appsmithery`
 
 **Publish:**
+
 ```bash
 vsce login appsmithery
 vsce publish
 ```
 
 **Note**: Publishing to public marketplace requires:
+
 - Real icon (128x128 PNG)
 - Screenshot/video of extension in action
 - Detailed description (minimum 50 words)
@@ -72,6 +76,7 @@ For now, distribute via VSIX for internal testing.
 Press `F1` → "Dev-Tools: Configure Orchestrator URL"
 
 Default configuration:
+
 ```json
 {
   "devtools.orchestratorUrl": "http://45.55.173.72:8001",
@@ -85,11 +90,13 @@ Default configuration:
 ### Network Requirements
 
 Ensure firewall allows outbound connections:
+
 - `45.55.173.72:8001` - Orchestrator API
 - `45.55.173.72:8000` - MCP Gateway (for `/tools` command)
 - `linear.app` - Approval notifications
 
 Test connectivity:
+
 ```bash
 curl http://45.55.173.72:8001/health
 # Expected: {"status": "ok", "mcp_gateway": "connected"}
@@ -174,18 +181,22 @@ Linear PR-68
 ## Observability
 
 ### LangSmith Traces
+
 https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
 
 All tasks automatically traced:
+
 - Prompts sent to agents
 - Tool invocations
 - Token usage
 - Latency metrics
 
 ### Prometheus Metrics
+
 http://45.55.173.72:9090
 
 Query examples:
+
 ```promql
 # Request rate per agent
 rate(http_requests_total[5m])
@@ -198,9 +209,11 @@ orchestrator_active_tasks
 ```
 
 ### Linear Approvals
+
 https://linear.app/appsmithery/issue/PR-68
 
 All high-risk tasks post approval requests here with:
+
 - Task description
 - Risk assessment
 - Estimated impact
