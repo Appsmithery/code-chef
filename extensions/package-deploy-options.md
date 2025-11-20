@@ -81,17 +81,20 @@ Pick one backbone, wire your MCPs into it, and you'll have a unified keyboard-sh
 **Status**: **COMPLETE** (PR-113) - Extension built, packaged, and installed
 
 **Implementation**: `extensions/vscode-devtools-copilot/`
+
 - **VSIX**: `vscode-devtools-copilot-0.1.0.vsix` (28.6 KB, 19 files)
 - **Chat Participant**: `@devtools` in Copilot Chat
 - **Commands**: `/orchestrate`, `/status`, `/approve`, `/tools`
 - **Features**: Context extraction, session management, Linear approvals, LangSmith tracing
 
 **Installation**:
+
 ```bash
 code --install-extension extensions/vscode-devtools-copilot/vscode-devtools-copilot-0.1.0.vsix
 ```
 
 **Usage**:
+
 ```
 # Open Copilot Chat (Ctrl+I)
 @devtools Add JWT authentication to my Express API
@@ -100,6 +103,7 @@ code --install-extension extensions/vscode-devtools-copilot/vscode-devtools-copi
 **Deployment Guide**: [extensions/vscode-devtools-copilot/DEPLOYMENT.md](./vscode-devtools-copilot/DEPLOYMENT.md)
 
 **Why Option 4?**
+
 - ✅ Already built (0 hours vs. 16-20 hours for Option 5)
 - ✅ Native Copilot integration (no custom UI needed)
 - ✅ Enterprise-ready (target audience already has Copilot)
@@ -108,13 +112,14 @@ code --install-extension extensions/vscode-devtools-copilot/vscode-devtools-copi
 - ✅ Streaming responses (built-in markdown rendering)
 
 **Next Steps**:
+
 1. ✅ Package and install extension locally
 2. Test `@devtools` in Copilot Chat with real tasks
 3. Collect user feedback on routing quality
 4. Complete PR-118 (MCP Gateway `/tools` endpoints)
 5. Add extension icon and publish to marketplace (optional)
 6. Consider Option 5 (standalone extension) if non-Copilot users emerge
-User: Below are three battle-tested ways to turn your "suite of AI coding-agents + MCPs + custom workflows" into something you can actually summon from inside VS Code / JetBrains / terminal without losing your mind. Pick one as the backbone, then bolt the others on as needed.
+   User: Below are three battle-tested ways to turn your "suite of AI coding-agents + MCPs + custom workflows" into something you can actually summon from inside VS Code / JetBrains / terminal without losing your mind. Pick one as the backbone, then bolt the others on as needed.
 
 ---
 
