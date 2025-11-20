@@ -11,9 +11,12 @@ Operational scripts for deployment, development, and maintenance.
 - **deploy/** - Deployment and infrastructure setup
 - **dev/** - Development utilities (up/down/rebuild/logs)
 - **docker/** - Docker operations and maintenance
+- **init/** - Initialization scripts (resource locks, workflow state)
 - **linear/** - Linear project management scripts
-- **validation/** - Testing and health check scripts
-- **workflow/** - Workflow orchestration scripts
+- **maintenance/** - Code maintenance and migration scripts
+- **testing/** - Test scripts and validation utilities
+- **validation/** - Health checks and environment validation
+- **workflow/** - Workflow examples and executors
 
 ## 🚀 Quick Commands
 
@@ -92,6 +95,49 @@ python support/scripts/workflow/workflow_pr_deploy.py
 
 # Self-healing workflow
 python support/scripts/workflow/workflow_self_healing.py
+
+# Example workflows
+python support/scripts/workflow/example_workflow_code_review_dev.py
+python support/scripts/workflow/example_workflow_parallel_docs.py
+```
+
+### Testing & Validation
+
+```powershell
+# Test chat endpoint
+python support/scripts/testing/test-chat-endpoint.py
+
+# Test inter-agent communication
+python support/scripts/testing/test_inter_agent_communication.py
+
+# Test resource locks
+python support/scripts/testing/test_resource_locks.py
+
+# List available Gradient models
+python support/scripts/testing/list-gradient-models.py
+```
+
+### Initialization
+
+```powershell
+# Initialize resource locks in database
+./support/scripts/init/init-resource-locks.ps1
+
+# Initialize workflow state schema
+./support/scripts/init/init-workflow-state.ps1
+```
+
+### Maintenance
+
+```powershell
+# Analyze Python imports
+python support/scripts/maintenance/analyze_imports.py
+
+# Fix deprecated imports
+python support/scripts/maintenance/fix_deprecated_imports.py
+
+# Generate registry integration code
+python support/scripts/maintenance/generate-registry-integration.py
 ```
 
 ## 📋 Script Categories
@@ -128,6 +174,33 @@ python support/scripts/workflow/workflow_self_healing.py
 - `docker-cleanup.ps1` - Clean dangling resources
 - `docker-prune.sh` - Prune unused Docker objects
 - `dockerhub-image-prune.ps1` - Clean DockerHub registry
+- `prune-dockerhub-manual.ps1` - Manual DockerHub pruning
+
+### Workflow Scripts (`workflow/`)
+
+- `workflow_monitor.py` - Monitor workflow execution
+- `workflow_pr_deploy.py` - PR deployment workflow
+- `workflow_self_healing.py` - Self-healing workflow
+- `example_workflow_*.py` - Example workflow implementations
+
+### Testing Scripts (`testing/`)
+
+- `test-chat-endpoint.py` - Test chat API
+- `test_inter_agent_communication.py` - Test agent communication
+- `test_resource_locks.py` - Test resource locking
+- `test_workflow_state.py` - Test workflow state
+- `list-gradient-models.py` - List available LLM models
+
+### Initialization Scripts (`init/`)
+
+- `init-resource-locks.ps1` - Initialize resource locks
+- `init-workflow-state.ps1` - Initialize workflow state
+
+### Maintenance Scripts (`maintenance/`)
+
+- `analyze_imports.py` - Analyze Python imports
+- `fix_deprecated_imports.py` - Fix deprecated imports
+- `generate-registry-integration.py` - Generate registry code
 
 ## 🔧 Script Conventions
 

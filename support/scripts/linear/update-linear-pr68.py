@@ -67,7 +67,7 @@ UPDATE_TEXT = """
 
 ### 📚 Documentation
 
-- Implementation Report: `PHASE_6_COMPLETE.md`
+- Implementation Report: `_archive/docs-historical/PHASE_6_COMPLETE.md`
 - Monitoring Guide: `PHASE_6_MONITORING_GUIDE.md`
 - Event Protocol: `EVENT_PROTOCOL.md` (enhanced with examples)
 - Agent Registry: `AGENT_REGISTRY.md` (enhanced with integration patterns)
