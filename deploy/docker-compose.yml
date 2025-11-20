@@ -25,7 +25,6 @@ services:
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
       - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-dev-tools-agents}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
     env_file:
       - ../config/env/.env
     networks:
@@ -72,7 +71,6 @@ services:
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
       - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-dev-tools-agents}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
     env_file:
       - ../config/env/.env
     networks:
@@ -112,7 +110,6 @@ services:
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
       - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-dev-tools-agents}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
     env_file:
       - ../config/env/.env
     networks:
@@ -152,7 +149,6 @@ services:
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
       - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-dev-tools-agents}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
     env_file:
       - ../config/env/.env
     networks:
@@ -192,7 +188,6 @@ services:
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
       - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-dev-tools-agents}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
     env_file:
       - ../config/env/.env
     networks:
@@ -232,7 +227,6 @@ services:
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
       - LANGCHAIN_ENDPOINT=${LANGCHAIN_ENDPOINT:-https://api.smith.langchain.com}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-dev-tools-agents}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
     env_file:
       - ../config/env/.env
     networks:
