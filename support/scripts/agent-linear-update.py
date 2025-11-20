@@ -1,31 +1,44 @@
 #!/usr/bin/env python3
 """
-Agent-accessible Linear integration script for creating and updating issues.
+Agent-accessible Linear integration script for ROADMAP UPDATES.
 
-This script should be used by agents for ALL Linear updates to ensure:
+⚠️  IMPORTANT: This script is for PROJECT ROADMAP updates ONLY.
+    For HITL approval notifications, use the orchestrator's event bus integration.
+
+ACCESS CONTROL:
+- Sub-agents: Update issues in their assigned project only (pass --project-id)
+- Orchestrator: Can update any project in Project Roadmaps workspace
+
+This script should be used by agents for roadmap updates to ensure:
 1. Proper status management (Todo, In Progress, Done, Cancelled)
 2. Sub-issue creation for complex features (break down into 3-5 sub-tasks)
 3. Correct project/team association
 4. Appropriate metadata and labels
 
 Usage Examples:
-    # Create a new phase issue with sub-tasks
+    # Create a new phase issue with sub-tasks (AI DevOps Agent Platform)
     python support/scripts/agent-linear-update.py create-phase \
-        --title "Phase 7: Autonomous Operations" \
-        --status "todo" \
+        --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" \
+        --phase-number 7 \
+        --title "Autonomous Operations" \
         --subtasks "Autonomous Decision Making,Learning from Outcomes,Predictive Task Routing"
 
     # Update existing issue to mark complete
-    python support/scripts/agent-linear-update.py update-issue \
+    python support/scripts/agent-linear-update.py update-status \
         --issue-id "PR-85" \
-        --status "done" \
-        --add-completion-notes
+        --status "done"
 
     # Create a sub-issue for a feature
-    python support/scripts/agent-linear-update.py create-subissue \
-        --parent-id "PR-85" \
+    python support/scripts/agent-linear-update.py create-issue \
+        --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" \
         --title "Integration Tests Implementation" \
+        --parent-id "PR-85-parent-uuid" \
         --status "done"
+
+⚠️  DO NOT USE THIS SCRIPT FOR:
+    - HITL approval notifications (use orchestrator event bus → PR-68)
+    - Workspace-level approval tracking
+    - Cross-project coordination
 """
 
 import os
@@ -42,9 +55,19 @@ if not LINEAR_API_KEY:
 
 GRAPHQL_ENDPOINT = "https://api.linear.app/graphql"
 
-# Project configuration
-PROJECT_UUID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
-TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # Project Roadmaps (PR)
+# Default project configuration (can be overridden via CLI args)
+DEFAULT_PROJECT_UUID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
+DEFAULT_TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # Project Roadmaps (PR)
+
+# Known projects in Project Roadmaps workspace
+PROJECT_REGISTRY = {
+    "ai-devops-agent-platform": {
+        "uuid": "b21cbaa1-9f09-40f4-b62a-73e0f86dd501",
+        "name": "AI DevOps Agent Platform",
+        "slug": "78b3b839d36b"
+    }
+    # Add more projects here as needed
+}
 
 # Workflow state IDs (fetched from Linear API on November 19, 2025)
 WORKFLOW_STATES = {
@@ -55,8 +78,12 @@ WORKFLOW_STATES = {
     "cancelled": "4d5a61b0-c8a4-449c-91bf-571483a3626f"
 }
 
-def get_workflow_states() -> Dict[str, str]:
-    """Fetch workflow state IDs for the team."""
+def get_workflow_states(team_id: str = DEFAULT_TEAM_ID) -> Dict[str, str]:
+    """Fetch workflow state IDs for the team.
+    
+    Args:
+        team_id: Linear team ID (default: Project Roadmaps team)
+    """
     query = """
     query GetWorkflowStates($teamId: String!) {
         team(id: $teamId) {
@@ -81,7 +108,7 @@ def get_workflow_states() -> Dict[str, str]:
         },
         json={
             "query": query,
-            "variables": {"teamId": TEAM_ID}
+            "variables": {"teamId": team_id}
         }
     )
     
@@ -107,17 +134,21 @@ def get_workflow_states() -> Dict[str, str]:
 def create_issue(
     title: str,
     description: str,
+    project_id: str = DEFAULT_PROJECT_UUID,
+    team_id: str = DEFAULT_TEAM_ID,
     status: str = "todo",
     priority: int = 2,
     parent_id: Optional[str] = None,
     labels: Optional[List[str]] = None
 ) -> Optional[Dict]:
     """
-    Create a new Linear issue.
+    Create a new Linear issue in a specific project.
     
     Args:
         title: Issue title
         description: Issue description (Markdown supported)
+        project_id: Linear project UUID (default: AI DevOps Agent Platform)
+        team_id: Linear team ID (default: Project Roadmaps)
         status: One of: backlog, todo, in_progress, done, cancelled
         priority: 0 (no priority), 1 (urgent), 2 (high), 3 (normal), 4 (low)
         parent_id: Parent issue ID if creating a sub-issue
@@ -177,8 +208,8 @@ def create_issue(
     """
     
     variables = {
-        "teamId": TEAM_ID,
-        "projectId": PROJECT_UUID,
+        "teamId": team_id,
+        "projectId": project_id,
         "title": title,
         "description": description,
         "stateId": state_id,
@@ -336,16 +367,20 @@ def create_phase_with_subtasks(
     title: str,
     description: str,
     subtasks: List[str],
+    project_id: str = DEFAULT_PROJECT_UUID,
+    team_id: str = DEFAULT_TEAM_ID,
     status: str = "todo"
 ) -> Optional[str]:
     """
-    Create a phase issue with sub-tasks.
+    Create a phase issue with sub-tasks in a specific project.
     
     Args:
         phase_number: Phase number (e.g., 7)
         title: Phase title (e.g., "Autonomous Operations")
         description: Phase description
         subtasks: List of subtask titles (3-5 recommended)
+        project_id: Linear project UUID (default: AI DevOps Agent Platform)
+        team_id: Linear team ID (default: Project Roadmaps)
         status: Initial status (default: todo)
     
     Returns:
@@ -356,6 +391,8 @@ def create_phase_with_subtasks(
     parent = create_issue(
         title=full_title,
         description=description,
+        project_id=project_id,
+        team_id=team_id,
         status=status,
         priority=1  # High priority for phases
     )
@@ -372,6 +409,8 @@ def create_phase_with_subtasks(
         subissue = create_issue(
             title=f"Task {phase_number}.{i}: {subtask_title}",
             description=subtask_desc,
+            project_id=project_id,
+            team_id=team_id,
             status="todo",
             priority=2,
             parent_id=parent_id
@@ -391,11 +430,14 @@ def main():
     
     # Get workflow states command
     parser_states = subparsers.add_parser("get-states", help="Fetch workflow state IDs")
+    parser_states.add_argument("--team-id", help="Linear team ID (default: Project Roadmaps)")
     
     # Create issue command
     parser_create = subparsers.add_parser("create-issue", help="Create a new issue")
     parser_create.add_argument("--title", required=True, help="Issue title")
     parser_create.add_argument("--description", required=True, help="Issue description")
+    parser_create.add_argument("--project-id", help="Linear project UUID (default: AI DevOps Agent Platform)")
+    parser_create.add_argument("--team-id", help="Linear team ID (default: Project Roadmaps)")
     parser_create.add_argument("--status", default="todo", choices=["backlog", "todo", "in_progress", "done", "cancelled"])
     parser_create.add_argument("--priority", type=int, default=2, choices=[0, 1, 2, 3, 4])
     parser_create.add_argument("--parent-id", help="Parent issue ID for sub-issues")
@@ -406,6 +448,8 @@ def main():
     parser_phase.add_argument("--title", required=True, help="Phase title")
     parser_phase.add_argument("--description", required=True, help="Phase description")
     parser_phase.add_argument("--subtasks", required=True, help="Comma-separated subtask titles")
+    parser_phase.add_argument("--project-id", help="Linear project UUID (default: AI DevOps Agent Platform)")
+    parser_phase.add_argument("--team-id", help="Linear team ID (default: Project Roadmaps)")
     parser_phase.add_argument("--status", default="todo", choices=["backlog", "todo", "in_progress", "done", "cancelled"])
     
     # Update status command
@@ -417,7 +461,8 @@ def main():
     
     if args.command == "get-states":
         print("\n📊 Fetching workflow states...\n")
-        states = get_workflow_states()
+        team_id = args.team_id if args.team_id else DEFAULT_TEAM_ID
+        states = get_workflow_states(team_id)
         if states:
             print("\n✅ Workflow states fetched successfully")
             print("\nUpdate WORKFLOW_STATES in this script with these IDs:")
@@ -425,15 +470,21 @@ def main():
                 print(f'    "{status}": "{state_id}",')
     
     elif args.command == "create-issue":
+        project_id = args.project_id if args.project_id else DEFAULT_PROJECT_UUID
+        team_id = args.team_id if args.team_id else DEFAULT_TEAM_ID
         create_issue(
             title=args.title,
             description=args.description,
+            project_id=project_id,
+            team_id=team_id,
             status=args.status,
             priority=args.priority,
             parent_id=args.parent_id
         )
     
     elif args.command == "create-phase":
+        project_id = args.project_id if args.project_id else DEFAULT_PROJECT_UUID
+        team_id = args.team_id if args.team_id else DEFAULT_TEAM_ID
         subtasks = [s.strip() for s in args.subtasks.split(",")]
         if len(subtasks) < 3:
             print("⚠️  Recommendation: Create at least 3 sub-tasks for better context")
@@ -442,6 +493,8 @@ def main():
             title=args.title,
             description=args.description,
             subtasks=subtasks,
+            project_id=project_id,
+            team_id=team_id,
             status=args.status
         )
     
