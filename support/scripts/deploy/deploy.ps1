@@ -153,12 +153,12 @@ if (-not $SkipValidation) {
 if ($Target -eq 'local') {
     Write-Step "Deploying locally..."
     
-    Set-Location "compose"
+    Set-Location "deploy"
     
     # Build containers
     if (-not $SkipBuild) {
         Write-Info "Building containers (this may take 5-10 minutes)..."
-        docker-compose build
+        docker compose build
         if ($LASTEXITCODE -ne 0) {
             Write-Error-Custom "Build failed!"
             exit 1
@@ -170,7 +170,7 @@ if ($Target -eq 'local') {
     
     # Start services
     Write-Info "Starting services..."
-    docker-compose up -d
+    docker compose up -d
     if ($LASTEXITCODE -ne 0) {
         Write-Error-Custom "Deployment failed!"
         exit 1
@@ -183,7 +183,7 @@ if ($Target -eq 'local') {
     
     # Check status
     Write-Step "Verifying deployment..."
-    $status = docker-compose ps
+    $status = docker compose ps
     Write-Host $status
     
     # Health checks
@@ -208,12 +208,12 @@ if ($Target -eq 'local') {
     if ($failed.Count -eq 0) {
         Write-Host "`n✨ Deployment successful!" -ForegroundColor Green
         Write-Info "All services are healthy"
-        Write-Info "View logs: docker-compose logs -f"
-        Write-Info "Stop services: docker-compose down"
+        Write-Info "View logs: docker compose logs -f"
+        Write-Info "Stop services: docker compose down"
     } else {
         Write-Host "`n⚠️  Some services failed health checks" -ForegroundColor Yellow
         Write-Info "Failed ports: $($failed -join ', ')"
-        Write-Info "Check logs: docker-compose logs <service-name>"
+        Write-Info "Check logs: docker compose logs <service-name>"
     }
     
     Set-Location ..
@@ -296,9 +296,9 @@ git remote set-url origin https://github.com/Appsmithery/Dev-Tools.git
     # Execute commands directly via SSH (avoiding multiline script issues)
     ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH && git pull origin main"
     Write-Info "Pulling latest images from Docker Hub..."
-    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose pull"
-    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/compose && docker compose up -d --remove-orphans"
-    ssh "$DROPLET_USER@$DROPLET_IP" "sleep 15 && cd $DEPLOY_PATH/compose && docker compose ps"
+    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/deploy && docker compose pull"
+    ssh "$DROPLET_USER@$DROPLET_IP" "cd $DEPLOY_PATH/deploy && docker compose up -d --remove-orphans"
+    ssh "$DROPLET_USER@$DROPLET_IP" "sleep 15 && cd $DEPLOY_PATH/deploy && docker compose ps"
     
     if ($LASTEXITCODE -eq 0) {
         Write-Success "Remote deployment completed"
