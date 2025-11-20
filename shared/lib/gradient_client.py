@@ -1,160 +1,127 @@
+"""LangChain-backed client wrapper used across agents.
+
+Historically this module talked to the DigitalOcean Gradient SDK directly,
+but we now route every LLM call through LangChain so LangSmith tracing works
+out-of-the-box whenever ``LANGCHAIN_TRACING_V2=true``.
+
+The public surface area of :class:`GradientClient` stays the same (``complete``
+and ``complete_structured``) which keeps all existing agents untouched while
+shifting the implementation to LangChain's ``ChatOpenAI`` wrapper that already
+handles the DigitalOcean Serverless Inference endpoint.
 """
-DigitalOcean Gradient AI Serverless Inference Client
 
-Uses official Gradient SDK for serverless model inference with automatic LangSmith tracing.
-https://gradient-sdk.digitalocean.com/getting-started/serverless-inference
+from __future__ import annotations
 
-LangSmith Tracing:
-    Set LANGCHAIN_TRACING_V2=true for automatic tracing (no code changes needed)
-    Configure via LANGCHAIN_API_KEY and LANGCHAIN_PROJECT environment variables
-"""
-
-import os
 import json
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, Optional
+
+from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.output_parsers import JsonOutputParser, OutputParserException
+
+from shared.lib.langchain_gradient import get_llm
 
 logger = logging.getLogger(__name__)
 
-# Gradient Serverless Inference Configuration
-# Reference: https://gradient-sdk.digitalocean.com/getting-started/serverless-inference
-# Model IDs: llama3.3-70b-instruct, llama3.1-70b-instruct, llama3.1-8b-instruct, codellama-13b-instruct
-GRADIENT_MODEL_ACCESS_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY") or os.getenv("DO_SERVERLESS_INFERENCE_KEY")
-GRADIENT_MODEL = os.getenv("GRADIENT_MODEL", "llama3.3-70b-instruct")
 
-# LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true
-# No manual configuration needed
+def _coerce_text(content: Any) -> str:
+    """Normalize LangChain message content into a plain string."""
 
-# Validate configuration
-GRADIENT_ENABLED = bool(GRADIENT_MODEL_ACCESS_KEY)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for chunk in content:
+            if isinstance(chunk, str):
+                parts.append(chunk)
+            elif isinstance(chunk, dict):
+                parts.append(chunk.get("text", ""))
+        return "".join(parts)
+    return str(content)
+
+
+def _strip_code_fences(text: str) -> str:
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+
+    lines = stripped.split("\n")
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
 
 
 class GradientClient:
-    """
-    Gradient AI Serverless Inference client with automatic LangSmith tracing.
-    
-    Uses the official Gradient SDK (not OpenAI SDK) for serverless model inference.
-    LangSmith tracing is automatically enabled when LANGCHAIN_TRACING_V2=true.
-    
-    Authentication:
-        - GRADIENT_MODEL_ACCESS_KEY: For serverless inference (sk-do-* format)
-    
-    LangSmith Tracing (automatic when configured):
-        - LANGCHAIN_TRACING_V2=true
-        - LANGCHAIN_API_KEY: Get from https://smith.langchain.com
-        - LANGCHAIN_PROJECT: Project name for organizing traces
-        - LANGCHAIN_ENDPOINT: https://api.smith.langchain.com (default)
-    """
-    
-    def __init__(
-        self,
-        agent_name: str,
-        model: Optional[str] = None,
-        model_access_key: Optional[str] = None
-    ):
-        """
-        Initialize Gradient serverless inference client.
-        
-        Args:
-            agent_name: Name of the calling agent (for logging/metadata)
-            model: Model override (defaults to GRADIENT_MODEL env var)
-            model_access_key: API key override (defaults to GRADIENT_MODEL_ACCESS_KEY)
-        """
+    """Compatibility wrapper that now delegates to LangChain's ChatOpenAI."""
+
+    def __init__(self, agent_name: str, model: Optional[str] = None):
         self.agent_name = agent_name
-        self.model = model or GRADIENT_MODEL
-        self.model_access_key = model_access_key or GRADIENT_MODEL_ACCESS_KEY
-        
-        # LangSmith tracing is automatic via environment variables
-        # No callback handlers needed when LANGCHAIN_TRACING_V2=true
-
-        if not self.model_access_key:
-            logger.warning(f"[{agent_name}] GRADIENT_MODEL_ACCESS_KEY not set, LLM calls will fail")
-            self.client = None
+        self.model = model
+        self._default_llm = get_llm(agent_name, model=model)
+        self._enabled = self._default_llm is not None
+        if self._enabled:
+            logger.info(
+                "[%s] LangChain client initialized for model=%s", agent_name, self._default_llm.model_name
+            )
         else:
-            try:
-                # Import Gradient SDK
-                from gradient import Gradient
+            logger.warning(
+                "[%s] LangChain client unavailable (missing provider credentials)", agent_name
+            )
 
-                # Initialize client for serverless inference
-                # Reference: https://gradient-sdk.digitalocean.com/api/python/
-                self.client = Gradient(
-                    access_token=self.model_access_key
-                )
+    def _usage_from_response(self, response) -> Dict[str, int]:
+        metadata = getattr(response, "response_metadata", {}) or {}
+        usage = metadata.get("token_usage") or metadata.get("usage") or {}
+        return {
+            "tokens": usage.get("total_tokens", 0),
+            "prompt_tokens": usage.get("prompt_tokens", 0),
+            "completion_tokens": usage.get("completion_tokens", 0),
+        }
 
-                logger.info(f"[{agent_name}] Gradient SDK initialized for serverless inference")
-                logger.info(f"[{agent_name}] Model: {self.model}")
-                logger.info(f"[{agent_name}] Model access key: {self.model_access_key[:20]}...")
+    def _get_llm(self, temperature: float, max_tokens: int):
+        llm = get_llm(
+            self.agent_name,
+            model=self.model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        if not llm:
+            raise RuntimeError(
+                f"{self.agent_name}: LangChain LLM not configured (check GRADIENT_MODEL_ACCESS_KEY / provider keys)"
+            )
+        return llm
 
-                langsmith_enabled = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
-                if langsmith_enabled:
-                    project = os.getenv("LANGCHAIN_PROJECT", "default")
-                    logger.info(f"[{agent_name}] LangSmith tracing ENABLED (project: {project})")
-                else:
-                    logger.info(f"[{agent_name}] LangSmith tracing DISABLED (set LANGCHAIN_TRACING_V2=true to enable)")
-
-            except ImportError:
-                logger.error(f"[{agent_name}] Gradient SDK not installed. Run: pip install gradient")
-                self.client = None
-            except Exception as e:
-                logger.error(f"[{agent_name}] Failed to initialize Gradient client: {e}")
-                self.client = None
-    
     async def complete(
         self,
         prompt: str,
         system_prompt: Optional[str] = None,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """
-        Generate completion using Gradient serverless inference.
-        
-        LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true.
-        
-        Args:
-            prompt: User prompt
-            system_prompt: System prompt (optional)
-            temperature: Sampling temperature (0-2)
-            max_tokens: Maximum tokens to generate
-            metadata: Additional metadata for logging (not passed to API)
-            
-        Returns:
-            Dict with 'content', 'model', 'tokens', 'finish_reason'
-        """
-        if not self.client:
-            raise RuntimeError(f"{self.agent_name}: Gradient client not initialized (missing API key)")
-        
-        # Build messages
+        if metadata:
+            logger.debug("[%s] Metadata for completion: %s", self.agent_name, metadata)
+
+        llm = self._get_llm(temperature=temperature, max_tokens=max_tokens)
         messages = []
         if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-        
-        try:
-            # Call Gradient serverless inference via chat.completions API
-            # Reference: https://gradient-sdk.digitalocean.com/getting-started/serverless-inference
-            # SDK automatically traces with LangSmith if LANGCHAIN_TRACING_V2=true
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
-            
-            return {
-                "content": response.choices[0].message.content,
-                "model": self.model,
-                "tokens": response.usage.total_tokens if hasattr(response, 'usage') else 0,
-                "prompt_tokens": response.usage.prompt_tokens if hasattr(response, 'usage') else 0,
-                "completion_tokens": response.usage.completion_tokens if hasattr(response, 'usage') else 0,
-                "finish_reason": response.choices[0].finish_reason if response.choices else "unknown"
-            }
-            
-        except Exception as e:
-            logger.error(f"[{self.agent_name}] Gradient API error: {e}")
-            raise
-    
+            messages.append(SystemMessage(content=system_prompt))
+        messages.append(HumanMessage(content=prompt))
+
+        response = await llm.ainvoke(messages)
+        content = _coerce_text(response.content)
+        usage = self._usage_from_response(response)
+
+        return {
+            "content": content,
+            "model": llm.model_name,
+            "tokens": usage["tokens"],
+            "prompt_tokens": usage["prompt_tokens"],
+            "completion_tokens": usage["completion_tokens"],
+            "finish_reason": response.response_metadata.get("finish_reason", "stop"),
+        }
+
     async def complete_structured(
         self,
         prompt: str,
@@ -162,113 +129,59 @@ class GradientClient:
         response_format: Optional[Dict[str, Any]] = None,
         temperature: float = 0.7,
         max_tokens: int = 2000,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """
-        Generate structured JSON completion using Gradient serverless inference.
-        
-        Args:
-            prompt: User prompt
-            system_prompt: System prompt (optional)
-            response_format: JSON schema for structured output (defaults to json_object)
-            temperature: Sampling temperature
-            max_tokens: Maximum tokens
-            metadata: Metadata for logging (stored but not passed to API)
-            
-        Returns:
-            Dict with 'content' (parsed JSON), 'model', 'tokens'
-        """
-        if not self.client:
-            raise RuntimeError(f"{self.agent_name}: Gradient client not initialized")
-        
-        # Log metadata for debugging (don't pass to API)
         if metadata:
-            logger.debug(f"[{self.agent_name}] Request metadata: {json.dumps(metadata)}")
-        
-        # Enhance system prompt to request JSON output (Gradient SDK doesn't support response_format)
-        json_instruction = "\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include any text before or after the JSON object."
-        enhanced_system = (system_prompt or "") + json_instruction
-        
-        messages = []
-        messages.append({"role": "system", "content": enhanced_system})
-        messages.append({"role": "user", "content": prompt})
-        
+            logger.debug("[%s] Structured metadata: %s", self.agent_name, metadata)
+
+        llm = self._get_llm(temperature=temperature, max_tokens=max_tokens)
+        parser = JsonOutputParser()
+        format_instructions = parser.get_format_instructions()
+        combined_system = (system_prompt or "").strip()
+        if combined_system:
+            combined_system += "\n\n"
+        combined_system += format_instructions
+
+        messages = [SystemMessage(content=combined_system), HumanMessage(content=prompt)]
+        response = await llm.ainvoke(messages)
+        raw_content = _strip_code_fences(_coerce_text(response.content))
+
         try:
-            # Call Gradient inference without response_format parameter
-            # Gradient SDK doesn't support OpenAI's response_format parameter
-            # Instead, rely on prompt engineering to request JSON output
-            logger.debug(f"[{self.agent_name}] Calling Gradient API with model={self.model}")
-            
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
+            parsed = parser.parse(raw_content)
+        except OutputParserException:
+            logger.warning(
+                "[%s] JsonOutputParser failed, attempting manual json.loads", self.agent_name
             )
-            
-            content = response.choices[0].message.content
-            logger.debug(f"[{self.agent_name}] Received response, parsing JSON...")
-            
-            # Strip markdown code fences if present
-            if content and content.strip().startswith("```"):
-                lines = content.strip().split("\n")
-                # Remove first line if it's ```json or ```
-                if lines[0].startswith("```"):
-                    lines = lines[1:]
-                # Remove last line if it's ```
-                if lines and lines[-1].strip() == "```":
-                    lines = lines[:-1]
-                content = "\n".join(lines)
-            
-            parsed = json.loads(content) if content else {}
-            
-            result = {
-                "content": parsed,
-                "raw_content": content,
-                "model": self.model,
-                "tokens": response.usage.total_tokens if hasattr(response, 'usage') else 0
-            }
-            
-            logger.info(f"[{self.agent_name}] Structured completion successful ({result['tokens']} tokens)")
-            return result
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"[{self.agent_name}] Failed to parse JSON response: {e}")
-            logger.error(f"[{self.agent_name}] Raw response content: {content}")
-            raise
-        except Exception as e:
-            logger.error(f"[{self.agent_name}] Gradient structured completion error: {e}", exc_info=True)
-            raise
-    
+            try:
+                parsed = json.loads(raw_content)
+            except json.JSONDecodeError as exc:
+                logger.error(
+                    "[%s] Failed to parse structured response: %s", self.agent_name, exc, exc_info=True
+                )
+                raise
+
+        usage = self._usage_from_response(response)
+        result = {
+            "content": parsed,
+            "raw_content": raw_content,
+            "model": llm.model_name,
+            "tokens": usage["tokens"],
+        }
+
+        logger.info(
+            "[%s] Structured completion successful (%s tokens)", self.agent_name, usage["tokens"]
+        )
+        return result
+
     def is_enabled(self) -> bool:
-        """Check if Gradient is properly configured."""
-        return bool(self.client)
+        return self._enabled
 
 
-# Global client instances per agent (lazy-initialized)
 _clients: Dict[str, GradientClient] = {}
 
 
-def get_gradient_client(
-    agent_name: str,
-    model: Optional[str] = None
-) -> GradientClient:
-    """
-    Get or create Gradient client for agent.
-    
-    Args:
-        agent_name: Name of the calling agent
-        model: Optional model override
-        
-    Returns:
-        GradientClient instance
-    """
+def get_gradient_client(agent_name: str, model: Optional[str] = None) -> GradientClient:
     cache_key = f"{agent_name}:{model or 'default'}"
-    
     if cache_key not in _clients:
-        _clients[cache_key] = GradientClient(
-            agent_name=agent_name,
-            model=model
-        )
-    
+        _clients[cache_key] = GradientClient(agent_name=agent_name, model=model)
     return _clients[cache_key]
