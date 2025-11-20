@@ -1,0 +1,178 @@
+{
+  "dashboard": {
+    "title": "Dev-Tools Agent Performance",
+    "tags": ["agents", "performance", "devtools"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+        "type": "graph",
+        "title": "Request Rate by Agent",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=~\"orchestrator|feature-dev|code-review|infrastructure|cicd|documentation\"}[5m])",
+            "legendFormat": "{{job}} - {{method}} {{handler}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [{ "label": "Requests/sec", "show": true }, { "show": true }],
+        "xaxis": { "show": true, "mode": "time" },
+        "lines": true,
+        "linewidth": 2,
+        "fill": 1,
+        "legend": { "show": true, "alignAsTable": true, "rightSide": false }
+      },
+      {
+        "id": 2,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+        "type": "graph",
+        "title": "Response Time (p95)",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job=~\"orchestrator|feature-dev|code-review|infrastructure|cicd|documentation\"}[5m]))",
+            "legendFormat": "{{job}} - p95",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "label": "Seconds", "show": true, "format": "s" },
+          { "show": true }
+        ],
+        "xaxis": { "show": true, "mode": "time" },
+        "lines": true,
+        "linewidth": 2,
+        "fill": 1
+      },
+      {
+        "id": 3,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+        "type": "graph",
+        "title": "Error Rate by Agent",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{job=~\"orchestrator|feature-dev|code-review|infrastructure|cicd|documentation\", status=~\"5..\"}[5m])",
+            "legendFormat": "{{job}} - {{status}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [{ "label": "Errors/sec", "show": true }, { "show": true }],
+        "xaxis": { "show": true, "mode": "time" },
+        "lines": true,
+        "linewidth": 2,
+        "fill": 1,
+        "alert": {
+          "name": "High Error Rate",
+          "conditions": [
+            {
+              "evaluator": { "params": [0.1], "type": "gt" },
+              "operator": { "type": "and" },
+              "query": { "params": ["A", "5m", "now"] },
+              "reducer": { "params": [], "type": "avg" },
+              "type": "query"
+            }
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+        "type": "graph",
+        "title": "MCP Gateway Connection Status",
+        "targets": [
+          {
+            "expr": "up{job=\"gateway-mcp\"}",
+            "legendFormat": "Gateway Status",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {
+            "label": "Status (1=up, 0=down)",
+            "show": true,
+            "min": 0,
+            "max": 1
+          },
+          { "show": true }
+        ],
+        "xaxis": { "show": true, "mode": "time" },
+        "lines": true,
+        "linewidth": 2,
+        "fill": 1
+      },
+      {
+        "id": 5,
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+        "type": "graph",
+        "title": "Memory Usage by Service",
+        "targets": [
+          {
+            "expr": "container_memory_usage_bytes{name=~\".*orchestrator.*|.*feature-dev.*|.*code-review.*|.*infrastructure.*|.*cicd.*|.*documentation.*\"} / 1024 / 1024",
+            "legendFormat": "{{name}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "label": "MB", "show": true, "format": "short" },
+          { "show": true }
+        ],
+        "xaxis": { "show": true, "mode": "time" },
+        "lines": true,
+        "linewidth": 2,
+        "fill": 1
+      },
+      {
+        "id": 6,
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+        "type": "graph",
+        "title": "CPU Usage by Service",
+        "targets": [
+          {
+            "expr": "rate(container_cpu_usage_seconds_total{name=~\".*orchestrator.*|.*feature-dev.*|.*code-review.*|.*infrastructure.*|.*cicd.*|.*documentation.*\"}[5m]) * 100",
+            "legendFormat": "{{name}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          { "label": "CPU %", "show": true, "format": "percent" },
+          { "show": true }
+        ],
+        "xaxis": { "show": true, "mode": "time" },
+        "lines": true,
+        "linewidth": 2,
+        "fill": 1
+      },
+      {
+        "id": 7,
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 24 },
+        "type": "table",
+        "title": "Agent Health Status",
+        "targets": [
+          {
+            "expr": "up{job=~\"orchestrator|feature-dev|code-review|infrastructure|cicd|documentation|gateway-mcp\"}",
+            "instant": true,
+            "format": "table",
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "Time": true, "__name__": true },
+              "indexByName": {},
+              "renameByName": {
+                "job": "Service",
+                "instance": "Instance",
+                "Value": "Status"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

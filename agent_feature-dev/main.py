@@ -122,11 +122,23 @@ Instrumentator().instrument(app).expose(app)
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-
-    gateway_health = await mcp_client.get_gateway_health()
+    """Health check endpoint - basic liveness."""
     return {
         "status": "ok",
+        "service": "feature-dev",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check endpoint - service ready for traffic."""
+    gateway_health = await mcp_client.get_gateway_health()
+    gradient_ready = gradient_client.is_enabled()
+    is_ready = gateway_health.get("status") == "ok" and gradient_ready
+    
+    return {
+        "ready": is_ready,
         "service": "feature-dev",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
@@ -136,6 +148,9 @@ async def health_check():
             "shared_tool_servers": mcp_client.shared_tools,
             "capabilities": mcp_client.capabilities,
         },
+        "integrations": {
+            "gradient_ai": gradient_ready
+        }
     }
 
 
