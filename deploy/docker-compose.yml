@@ -272,9 +272,9 @@ services:
       - QDRANT_COLLECTION=${QDRANT_COLLECTION:-the-shop}
       - QDRANT_VECTOR_SIZE=${QDRANT_VECTOR_SIZE:-1536}
       - QDRANT_DISTANCE=${QDRANT_DISTANCE:-cosine}
-      - GRADIENT_API_KEY=${GRADIENT_API_KEY:-}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://api.digitalocean.com/v2/ai}
-      - GRADIENT_EMBEDDING_MODEL=${GRADIENT_EMBEDDING_MODEL:-text-embedding-3-large}
+      - GRADIENT_API_KEY=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
+      - GRADIENT_BASE_URL=https://api.openai.com
+      - GRADIENT_EMBEDDING_MODEL=text-embedding-3-small
       - EMBEDDING_TIMEOUT=${EMBEDDING_TIMEOUT:-60}
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - MCP_TIMEOUT=30
