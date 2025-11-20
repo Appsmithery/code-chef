@@ -91,8 +91,10 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the repository a
 
 - Gateway exposes `/oauth/linear/install` (OAuth) and `/oauth/linear/status` (token check); issues via `/api/linear-issues`, projects via `/api/linear-project/:projectId`.
 - Tokens from `LINEAR_*` envs or `*_FILE` Docker secrets; maintain `config/env/secrets/linear_oauth_token.txt` (never commit `.env` secrets).
-- **Linear GraphQL API Scripts**: Use `support/scripts/update-linear-graphql.py`, `support/scripts/create-hitl-subtasks.py`, `support/scripts/mark-hitl-complete.py` for programmatic updates.
-- **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use GraphQL scripts with `LINEAR_API_KEY` env var (OAuth token from `.env`: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
+- **Linear GraphQL API Scripts**: Use `support/scripts/agent-linear-update.py` as primary script for all agent-initiated Linear updates (supports sub-issues and status management). Legacy scripts: `update-linear-graphql.py`, `create-hitl-subtasks.py`, `mark-hitl-complete.py`.
+- **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use `agent-linear-update.py` with `LINEAR_API_KEY` env var (OAuth token from `.env`: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
+- **Sub-Issue Requirements**: Break down complex features into 3-5 sub-tasks using `agent-linear-update.py create-phase`. Always set appropriate status (todo/in_progress/done) when creating/updating issues.
+- **Status Management**: Retrospective updates should be marked "done". Use `agent-linear-update.py update-status --issue-id "PR-XX" --status "done"` for completed work.
 - **Approval Notifications**: Orchestrator posts approval requests to Linear workspace hub (PR-68) via `linear_workspace_client.py`; events emitted via `event_bus.py`; <1s latency; native Linear notifications (email/mobile/desktop). Configure: `LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68` in `.env`.
 - **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` (slug: `78b3b839d36b`)
 - **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`

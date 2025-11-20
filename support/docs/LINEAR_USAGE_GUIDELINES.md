@@ -222,17 +222,151 @@ After running any Linear update script:
 
 ---
 
-## Script Reference
+## Status Management
 
-| Script                     | Purpose              | Target                 | Frequency      |
-| -------------------------- | -------------------- | ---------------------- | -------------- |
-| `update-linear-phase6.py`  | Phase 6 completion   | Project (78b3b839d36b) | Once per phase |
-| `update-linear-pr68.py`    | Approval hub updates | PR-68                  | Real-time      |
-| `update-linear-graphql.py` | Generic updates      | Any issue              | As needed      |
-| `create-hitl-subtasks.py`  | Create subtasks      | Any parent issue       | As needed      |
-| `mark-hitl-complete.py`    | Mark tasks done      | Any issue              | As needed      |
+**IMPORTANT**: Always set appropriate status when creating or updating issues.
+
+### Workflow States
+
+| State | When to Use | Example |
+|-------|-------------|---------|
+| `backlog` | Future work without commitment | "Phase 8 ideas we might tackle later" |
+| `todo` | Committed work not yet started | "Phase 7 planned for next sprint" |
+| `in_progress` | Currently being worked on | "Implementing Phase 6 multi-agent collaboration" |
+| `done` | Completed work | "Phase 6 deployed and validated" |
+| `cancelled` | Abandoned or deprioritized | "Feature X no longer needed" |
+
+### Retrospective Updates
+
+When creating issues for **already-completed work**, always set status to `done`:
+
+```powershell
+# PR-85 was created retrospectively to document Phase 6 completion
+# It should have been marked as "done" immediately
+python support/scripts/agent-linear-update.py update-status `
+    --issue-id "PR-85" `
+    --status "done"
+```
 
 ---
 
-**Last Updated**: November 19, 2025  
-**Project Status**: Phase 6 Complete ✅
+## Sub-Issue Best Practices
+
+**Break down complex features into 3-5 sub-tasks** for better context and tracking.
+
+### When to Create Sub-Issues
+
+✅ **DO create sub-issues for:**
+- Phase implementations (3-5 sub-tasks per phase)
+- Complex features requiring multiple PRs
+- Work spanning multiple agents or services
+- Long-running initiatives (>1 week)
+
+❌ **DON'T create sub-issues for:**
+- Simple bug fixes
+- Documentation updates
+- Single-file changes
+- Quick configuration tweaks
+
+### Example: Phase 7 with Sub-Tasks
+
+```powershell
+$env:LINEAR_API_KEY = "lin_oauth_..."
+
+python support/scripts/agent-linear-update.py create-phase `
+    --phase-number 7 `
+    --title "Autonomous Operations" `
+    --description "Implement autonomous decision-making and learning capabilities" `
+    --subtasks "Autonomous Decision Making,Learning from Outcomes,Predictive Task Routing,Self-Optimization Engine,Advanced Failure Recovery" `
+    --status "todo"
+```
+
+**Result Structure:**
+```
+Phase 7: Autonomous Operations (Priority 1, Status: Todo)
+├── Task 7.1: Autonomous Decision Making (Priority 2, Status: Todo)
+├── Task 7.2: Learning from Outcomes (Priority 2, Status: Todo)
+├── Task 7.3: Predictive Task Routing (Priority 2, Status: Todo)
+├── Task 7.4: Self-Optimization Engine (Priority 2, Status: Todo)
+└── Task 7.5: Advanced Failure Recovery (Priority 2, Status: Todo)
+```
+
+### Sub-Issue Workflow
+
+**1. Planning Phase:**
+```powershell
+# Create parent issue with sub-tasks
+python support/scripts/agent-linear-update.py create-phase `
+    --phase-number 8 `
+    --title "Advanced Monitoring" `
+    --description "Comprehensive observability and alerting" `
+    --subtasks "Distributed Tracing,Custom Metrics,Alerting Rules" `
+    --status "todo"
+```
+
+**2. During Implementation:**
+```powershell
+# Mark parent as in-progress when starting work
+python support/scripts/agent-linear-update.py update-status `
+    --issue-id "PR-XX" `
+    --status "in_progress"
+
+# Update sub-tasks as you complete them
+python support/scripts/agent-linear-update.py update-status `
+    --issue-id "PR-XX" `  # Sub-task ID
+    --status "done"
+```
+
+**3. After Completion:**
+```powershell
+# Mark parent as done after all sub-tasks complete
+python support/scripts/agent-linear-update.py update-status `
+    --issue-id "PR-XX" `  # Parent ID
+    --status "done"
+```
+
+---
+
+## Script Reference
+
+| Script | Purpose | Target | Supports Sub-Issues | Supports Status |
+|--------|---------|--------|---------------------|-----------------|
+| `agent-linear-update.py` | **PRIMARY SCRIPT** for agents | Project/Any issue | ✅ Yes | ✅ Yes |
+| `update-linear-phase6.py` | Phase 6 completion | Project (78b3b839d36b) | ❌ No | ❌ No |
+| `update-linear-pr68.py` | Approval hub updates | PR-68 | ❌ No | ❌ No |
+| `update-linear-graphql.py` | Generic updates | Any issue | ❌ No | ❌ No |
+| `create-hitl-subtasks.py` | Create subtasks | Any parent issue | ✅ Yes | ❌ No |
+| `mark-hitl-complete.py` | Mark tasks done | Any issue | ❌ No | ✅ Limited |
+
+### agent-linear-update.py Commands
+
+```powershell
+# Get workflow state IDs (run once to populate script)
+python support/scripts/agent-linear-update.py get-states
+
+# Create standalone issue
+python support/scripts/agent-linear-update.py create-issue `
+    --title "Add Prometheus dashboard" `
+    --description "Create Grafana dashboard for agent metrics" `
+    --status "todo" `
+    --priority 2
+
+# Create phase with sub-tasks (RECOMMENDED for complex features)
+python support/scripts/agent-linear-update.py create-phase `
+    --phase-number 7 `
+    --title "Autonomous Operations" `
+    --description "Self-learning and adaptive agent behaviors" `
+    --subtasks "Decision Engine,Learning Module,Self-Healing" `
+    --status "todo"
+
+# Update issue status
+python support/scripts/agent-linear-update.py update-status `
+    --issue-id "PR-85" `
+    --status "done"
+```
+
+---
+
+**Last Updated**: November 19, 2025 (Added sub-issue and status management guidelines)  
+**Project Status**: Phase 6 Complete ✅  
+**Next Phase**: Phase 7 - Autonomous Operations
