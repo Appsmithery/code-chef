@@ -43,21 +43,23 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose logs -f orches
 
 ## When to Use Each Strategy
 
-| Change Type | Strategy | Duration | Command |
-|------------|----------|----------|---------|
-| `.env` or config YAML | `config` | 30s | `...\deploy-to-droplet.ps1 -DeployType config` |
-| Python code, Dockerfile | `full` | 10min | `...\deploy-to-droplet.ps1 -DeployType full` |
-| Documentation, README | `quick` | 15s | `...\deploy-to-droplet.ps1 -DeployType quick` |
-| Not sure | `auto` | varies | `...\deploy-to-droplet.ps1 -DeployType auto` |
+| Change Type             | Strategy | Duration | Command                                        |
+| ----------------------- | -------- | -------- | ---------------------------------------------- |
+| `.env` or config YAML   | `config` | 30s      | `...\deploy-to-droplet.ps1 -DeployType config` |
+| Python code, Dockerfile | `full`   | 10min    | `...\deploy-to-droplet.ps1 -DeployType full`   |
+| Documentation, README   | `quick`  | 15s      | `...\deploy-to-droplet.ps1 -DeployType quick`  |
+| Not sure                | `auto`   | varies   | `...\deploy-to-droplet.ps1 -DeployType auto`   |
 
 ## GitHub Actions
 
 **Automatic deployment:**
+
 - Push to `main` branch → GitHub Action runs automatically
 - Detects changes and selects optimal strategy
 - View: https://github.com/Appsmithery/Dev-Tools/actions
 
 **Manual trigger:**
+
 1. Go to: https://github.com/Appsmithery/Dev-Tools/actions/workflows/deploy-intelligent.yml
 2. Click "Run workflow"
 3. Select strategy (auto/config/full/quick)
@@ -127,14 +129,17 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose restart orches
 ## Verification
 
 ### LangSmith Traces
+
 https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
 
 ### Test Orchestrator
+
 ```bash
 ssh root@45.55.173.72 'curl -X POST http://localhost:8001/orchestrate -H "Content-Type: application/json" -d "{\"description\":\"test task\",\"priority\":\"high\"}"'
 ```
 
 ### View All Services
+
 ```bash
 ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose ps"
 ```
