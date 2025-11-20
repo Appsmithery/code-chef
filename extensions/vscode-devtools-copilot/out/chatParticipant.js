@@ -190,7 +190,8 @@ class DevToolsChatParticipant {
             stream.markdown(`\n⚠️ **Approval Required**\n\n`);
             stream.markdown(`This task requires human approval before execution.\n\n`);
             const linearHub = vscode.workspace.getConfiguration('devtools').get('linearHubIssue', 'PR-68');
-            stream.markdown(`Check Linear issue [${linearHub}](https://linear.app/appsmithery/issue/${linearHub}) for approval request.\n\n`);
+            const linearUrl = this.getLinearIssueUrl(linearHub);
+            stream.markdown(`Check Linear issue [${linearHub}](${linearUrl}) for approval request.\n\n`);
             stream.button({
                 command: 'devtools.showApprovals',
                 title: '📋 View Approvals',
@@ -213,6 +214,11 @@ class DevToolsChatParticipant {
                 requiresApproval: !!response.approval_request_id
             }
         };
+    }
+    getLinearIssueUrl(issueId) {
+        const config = vscode.workspace.getConfiguration('devtools');
+        const workspaceSlug = config.get('linearWorkspaceSlug', 'project-roadmaps');
+        return `https://linear.app/${workspaceSlug}/issue/${issueId}`;
     }
     getAgentEmoji(agentType) {
         const emojiMap = {

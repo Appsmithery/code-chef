@@ -235,7 +235,7 @@ export class DevToolsChatParticipant implements vscode.ChatParticipant {
       if (response.approval_request_id) {
         stream.markdown(`\n\n⚠️ **Approval Required**\n\n`);
         stream.markdown(
-          `Task requires approval. Check Linear issue [${this.getLinearHubIssue()}](https://linear.app/appsmithery/issue/${this.getLinearHubIssue()})\n\n`
+          `Task requires approval. Check Linear issue [${this.getLinearHubIssue()}](https://linear.app/project-roadmaps/issue/${this.getLinearHubIssue()})\n\n`
         );
 
         stream.button({
@@ -585,7 +585,7 @@ If orchestrator is unreachable:
 
 ⚠️ **Approval Required**
 
-Task requires approval (risk level: medium). Check Linear issue [PR-68](https://linear.app/appsmithery/issue/PR-68)
+Task requires approval (risk level: medium). Check Linear issue [PR-68](https://linear.app/project-roadmaps/issue/PR-68)
 
 [Approve Task]
 

@@ -7,6 +7,11 @@ let chatParticipant: DevToolsChatParticipant;
 let linearWatcher: LinearWatcher;
 let statusBarItem: vscode.StatusBarItem;
 
+function buildLinearIssueUrl(issueId: string, workspaceSlug?: string): string {
+    const slug = workspaceSlug ?? vscode.workspace.getConfiguration('devtools').get('linearWorkspaceSlug', 'project-roadmaps');
+    return `https://linear.app/${slug}/issue/${issueId}`;
+}
+
 export function activate(context: vscode.ExtensionContext) {
     console.log('Dev-Tools extension activating...');
     
@@ -49,8 +54,9 @@ export function activate(context: vscode.ExtensionContext) {
     // Initialize Linear watcher for approval notifications
     linearWatcher = new LinearWatcher(context);
     const config = vscode.workspace.getConfiguration('devtools');
+    const workspaceSlug = config.get('linearWorkspaceSlug', 'project-roadmaps');
     if (config.get('enableNotifications')) {
-        linearWatcher.start(config.get('linearHubIssue', 'PR-68'));
+        linearWatcher.start(config.get('linearHubIssue', 'PR-68'), workspaceSlug);
     }
     context.subscriptions.push(linearWatcher);
 
@@ -106,7 +112,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('devtools.showApprovals', async () => {
             const linearHubIssue = config.get('linearHubIssue', 'PR-68');
-            const linearUrl = `https://linear.app/appsmithery/issue/${linearHubIssue}`;
+            const linearUrl = buildLinearIssueUrl(linearHubIssue, workspaceSlug);
             vscode.env.openExternal(vscode.Uri.parse(linearUrl));
         })
     );

@@ -347,8 +347,8 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 - **Source Code**: `D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot`
 - **Implementation Plan**: `support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md`
 - **Quick Start**: `extensions/vscode-devtools-copilot/QUICKSTART.md`
-- **Linear Parent**: [PR-112](https://linear.app/appsmithery/issue/PR-112)
-- **Linear Issue**: [PR-113](https://linear.app/appsmithery/issue/PR-113) ✅ DONE
+- **Linear Parent**: [PR-112](https://linear.app/project-roadmaps/issue/PR-112)
+- **Linear Issue**: [PR-113](https://linear.app/project-roadmaps/issue/PR-113) ✅ DONE
 - **LangSmith**: [agents project](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
 
 ## Lessons Learned
