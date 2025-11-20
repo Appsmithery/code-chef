@@ -112,13 +112,15 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 2. **Update Template** (if applicable): Sync changes to `config/env/.env.template` if adding new variables
 3. **Commit Template**: `git add config/env/.env.template && git commit && git push` (`.env` is gitignored)
 4. **Deploy to Droplet** (choose one method):
-   
+
    **Method A - Automated PowerShell script (recommended):**
+
    ```powershell
    .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
    ```
-   
+
    **Method B - Manual commands:**
+
    ```bash
    scp config/env/.env root@45.55.173.72:/opt/Dev-Tools/config/env/.env
    ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull origin main && cd deploy && docker compose down && docker compose up -d"
@@ -133,11 +135,13 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 **PowerShell Script:** `support/scripts/deploy/deploy-to-droplet.ps1`
 
 - **Auto-detect changes:** `.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType auto`
+
   - Detects config-only changes → fast deployment (30s)
   - Detects code changes → full rebuild (10min)
   - Detects docs-only → quick restart (15s)
 
 - **Explicit strategies:**
+
   - `config`: Fast env-only deployment with down+up cycle
   - `full`: Complete rebuild for code/dependency changes
   - `quick`: Simple restart for non-critical changes
