@@ -2,22 +2,22 @@
 
 ## Your Agent Identity
 
-| Agent | Tag | When to Pass `--agent-name` |
-|-------|-----|----------------------------|
-| 🎯 Orchestrator | `@orchestrator-agent` | `--agent-name orchestrator` |
-| 🚀 Feature-Dev | `@feature-dev-agent` | `--agent-name feature-dev` |
-| 🔍 Code-Review | `@code-review-agent` | `--agent-name code-review` |
+| Agent             | Tag                     | When to Pass `--agent-name`   |
+| ----------------- | ----------------------- | ----------------------------- |
+| 🎯 Orchestrator   | `@orchestrator-agent`   | `--agent-name orchestrator`   |
+| 🚀 Feature-Dev    | `@feature-dev-agent`    | `--agent-name feature-dev`    |
+| 🔍 Code-Review    | `@code-review-agent`    | `--agent-name code-review`    |
 | 🏗️ Infrastructure | `@infrastructure-agent` | `--agent-name infrastructure` |
-| ⚙️ CI/CD | `@cicd-agent` | `--agent-name cicd` |
-| 📚 Documentation | `@documentation-agent` | `--agent-name documentation` |
+| ⚙️ CI/CD          | `@cicd-agent`           | `--agent-name cicd`           |
+| 📚 Documentation  | `@documentation-agent`  | `--agent-name documentation`  |
 
 ---
 
 ## Project IDs (REQUIRED for Sub-Agents)
 
-| Project | UUID | When to Use |
-|---------|------|-------------|
-| AI DevOps Agent Platform | `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` | DevOps automation features |
+| Project                      | UUID                                   | When to Use                     |
+| ---------------------------- | -------------------------------------- | ------------------------------- |
+| AI DevOps Agent Platform     | `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` | DevOps automation features      |
 | TWKR Agentic Resume Workflow | `86f8cc40-de06-4e3d-b7c8-ed95193737bc` | Resume/job application features |
 
 ---
@@ -39,12 +39,14 @@ python support/scripts/agent-linear-update.py create-issue `
 ```
 
 **Result**: Issue created with automatic signature:
+
 ```markdown
 Your description here
 
 ---
-*Created by 🚀 Feature Dev [Feature-Dev Agent]*
-*Agent Tag: @feature-dev-agent*
+
+_Created by 🚀 Feature Dev [Feature-Dev Agent]_
+_Agent Tag: @feature-dev-agent_
 ```
 
 ---
@@ -72,7 +74,7 @@ python support/scripts/agent-linear-update.py update-status `
     --status "done"
 ```
 
-*Note*: Status updates don't require `--agent-name` (status is factual, not attributed)
+_Note_: Status updates don't require `--agent-name` (status is factual, not attributed)
 
 ---
 
@@ -102,17 +104,20 @@ Orchestrator automatically posts to PR-68 with your agent tag.
 ## Access Control Rules
 
 ### ✅ Sub-Agents CAN:
+
 - Create issues in their assigned project (with `--project-id`)
 - Update issues in their assigned project
 - Request approvals via event bus
 - Use `--agent-name` for attribution
 
 ### ❌ Sub-Agents CANNOT:
+
 - Update other projects (will be rejected)
 - Post directly to PR-68 (use event bus)
 - Omit `--project-id` parameter
 
 ### ✅ Orchestrator CAN:
+
 - Create issues in ANY project
 - Omit `--project-id` (defaults to AI DevOps Agent Platform)
 - Post directly to PR-68 via event bus
@@ -175,18 +180,22 @@ await event_bus.emit("approval_request", {
 ## Troubleshooting
 
 ### Error: "Permission denied"
+
 - **Cause**: Sub-agent trying to update wrong project
 - **Fix**: Verify `--project-id` matches your assigned project
 
 ### Error: "LINEAR_API_KEY not set"
+
 - **Cause**: Missing environment variable
 - **Fix**: `$env:LINEAR_API_KEY = "lin_oauth_..."`
 
 ### Issue created without signature
+
 - **Cause**: Forgot `--agent-name` parameter
 - **Fix**: Always include `--agent-name "your-agent"` for attribution
 
 ### Approval request not appearing in PR-68
+
 - **Cause**: Using wrong script or bypassing event bus
 - **Fix**: Use event bus, not `agent-linear-update.py` for approvals
 

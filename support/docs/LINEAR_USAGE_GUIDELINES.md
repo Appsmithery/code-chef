@@ -13,6 +13,7 @@ This project uses Linear for **two completely separate workflows**:
 **Projects in Project Roadmaps Workspace:**
 
 - **AI DevOps Agent Platform**
+
   - **URL**: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
   - **Project UUID**: `b21cbaa1-9f09-40f4-b62a-73e0f86dd501`
   - **Project ID (Slug)**: `78b3b839d36b`
@@ -85,25 +86,28 @@ This project uses Linear for **two completely separate workflows**:
 
 Each agent has a unique workspace identifier for tracking comments and edits:
 
-| Agent | Workspace Tag | Display Name | Signature |
-|-------|---------------|--------------|-----------|
-| Orchestrator | `@orchestrator-agent` | 🎯 Orchestrator | [Orchestrator Agent] |
-| Feature-Dev | `@feature-dev-agent` | 🚀 Feature Dev | [Feature-Dev Agent] |
-| Code-Review | `@code-review-agent` | 🔍 Code Review | [Code-Review Agent] |
+| Agent          | Workspace Tag           | Display Name      | Signature              |
+| -------------- | ----------------------- | ----------------- | ---------------------- |
+| Orchestrator   | `@orchestrator-agent`   | 🎯 Orchestrator   | [Orchestrator Agent]   |
+| Feature-Dev    | `@feature-dev-agent`    | 🚀 Feature Dev    | [Feature-Dev Agent]    |
+| Code-Review    | `@code-review-agent`    | 🔍 Code Review    | [Code-Review Agent]    |
 | Infrastructure | `@infrastructure-agent` | 🏗️ Infrastructure | [Infrastructure Agent] |
-| CI/CD | `@cicd-agent` | ⚙️ CI/CD | [CI/CD Agent] |
-| Documentation | `@documentation-agent` | 📚 Documentation | [Documentation Agent] |
+| CI/CD          | `@cicd-agent`           | ⚙️ CI/CD          | [CI/CD Agent]          |
+| Documentation  | `@documentation-agent`  | 📚 Documentation  | [Documentation Agent]  |
 
 **Automatic Tagging:**
 
 When creating issues with `--agent-name`, the script automatically appends:
+
 ```markdown
 ---
-*Created by 🚀 Feature Dev [Feature-Dev Agent]*
-*Agent Tag: @feature-dev-agent*
+
+_Created by 🚀 Feature Dev [Feature-Dev Agent]_
+_Agent Tag: @feature-dev-agent_
 ```
 
 **Usage:**
+
 ```powershell
 # Sub-agent creating an issue with traceability
 python support/scripts/agent-linear-update.py create-issue `
