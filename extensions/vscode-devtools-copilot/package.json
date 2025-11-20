@@ -24,7 +24,12 @@
     "langsmith"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onCommand:devtools.orchestrate",
+    "onCommand:devtools.checkStatus",
+    "onCommand:devtools.configure",
+    "onCommand:devtools.showApprovals",
+    "onCommand:devtools.clearCache"
   ],
   "main": "./out/extension.js",
   "contributes": {
