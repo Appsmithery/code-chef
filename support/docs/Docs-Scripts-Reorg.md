@@ -30,7 +30,7 @@ support/docs/
 ├── architecture/           # System design and architecture
 │   ├── AGENT_REGISTRY.md
 │   ├── EVENT_PROTOCOL.md
-│   ├── PHASE_6_PLAN.md
+│   ├── PHASE_6_PLAN.md # ---> if we're keeping this, rename to something more descriptive
 │   ├── RESOURCE_LOCKING.md
 │   └── MCP_ARCHITECTURE.md (if exists)
 │
@@ -52,7 +52,7 @@ support/docs/
 ├── operations/            # Deployment, monitoring, maintenance
 │   ├── DEPLOY.md
 │   ├── MONITORING.md
-│   ├── PHASE_6_MONITORING_GUIDE.md
+│   ├── PHASE_6_MONITORING_GUIDE.md  # ---> if we're keeping this, rename to something more descriptive
 │   └── TROUBLESHOOTING.md (if exists)
 │
 ├── testing/               # Test documentation and strategies
@@ -70,7 +70,7 @@ support/docs/
 support/scripts/
 ├── deploy/                # Deployment and infrastructure (already exists)
 │   ├── deploy.ps1
-│   ├── deploy-to-droplet.sh
+│   ├── deploy-to-droplet.sh # Do we need both deploy scripts? if yes, rename for clarity
 │   └── setup_secrets.sh
 │
 ├── docker/                # Docker operations and cleanup
@@ -79,10 +79,10 @@ support/scripts/
 │   ├── backup_volumes.sh
 │   └── restore_volumes.sh (if exists)
 │
-├── linear/                # Linear integration scripts
+├── linear/                # Linear integration scripts ---> review for redundancy
 │   ├── agent-linear-update.py
 │   ├── get-linear-project-uuid.py
-│   └── update-linear-pr68.py
+│   └── update-linear-pr68.py # ---> rename for clarity
 │
 ├── validation/            # Testing and validation scripts
 │   ├── validate-env.sh
