@@ -26,6 +26,13 @@ projects:
     url: "https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b"
     description: "Multi-agent AI DevOps automation platform"
 
+  twkr-agentic-resume-workflow:
+    uuid: "86f8cc40-de06-4e3d-b7c8-ed95193737bc"
+    name: "TWKR Agentic Resume Workflow"
+    slug: "30f6ea5be0a6"
+    url: "https://linear.app/project-roadmaps/project/twkr-agentic-resume-workflow-30f6ea5be0a6"
+    description: "AI-powered resume optimization and job application workflow automation"
+
   # Add more projects here as they are created
   # example-project:
   #   uuid: "uuid-here"
@@ -38,6 +45,9 @@ projects:
 agent_assignments:
   orchestrator:
     role: "workspace-admin"
+    workspace_tag: "@orchestrator-agent"
+    display_name: "🎯 Orchestrator"
+    signature: "[Orchestrator Agent]"
     projects:
       - "*" # Can update ANY project
     permissions:
@@ -48,6 +58,9 @@ agent_assignments:
 
   feature-dev:
     role: "project-contributor"
+    workspace_tag: "@feature-dev-agent"
+    display_name: "🚀 Feature Dev"
+    signature: "[Feature-Dev Agent]"
     projects:
       - "ai-devops-agent-platform" # Currently assigned to this project
     permissions:
@@ -57,6 +70,9 @@ agent_assignments:
 
   code-review:
     role: "project-contributor"
+    workspace_tag: "@code-review-agent"
+    display_name: "🔍 Code Review"
+    signature: "[Code-Review Agent]"
     projects:
       - "ai-devops-agent-platform"
     permissions:
@@ -66,6 +82,9 @@ agent_assignments:
 
   infrastructure:
     role: "project-contributor"
+    workspace_tag: "@infrastructure-agent"
+    display_name: "🏗️ Infrastructure"
+    signature: "[Infrastructure Agent]"
     projects:
       - "ai-devops-agent-platform"
     permissions:
@@ -75,6 +94,9 @@ agent_assignments:
 
   cicd:
     role: "project-contributor"
+    workspace_tag: "@cicd-agent"
+    display_name: "⚙️ CI/CD"
+    signature: "[CI/CD Agent]"
     projects:
       - "ai-devops-agent-platform"
     permissions:
@@ -84,6 +106,9 @@ agent_assignments:
 
   documentation:
     role: "project-contributor"
+    workspace_tag: "@documentation-agent"
+    display_name: "📚 Documentation"
+    signature: "[Documentation Agent]"
     projects:
       - "ai-devops-agent-platform"
     permissions:
