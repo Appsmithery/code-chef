@@ -1,14 +1,14 @@
 # Github Copilot Instructions for Dev-Tools
 
-## Architecture snapshot (Phase 5 Complete - Repository Cleanup Complete)
+## Architecture snapshot (Phase 5 Complete - LangSmith Integration Complete)
 
-**Current Phase**: Phase 5 Complete ✅ + Repository Cleanup ✅ | **Next Phase**: Phase 6 - Multi-Agent Collaboration | **Overall Progress**: ~95% (Phase 6 ready)
+**Current Phase**: Phase 5 Complete ✅ (LangSmith + HITL + Copilot Integration) | **Next Phase**: Phase 6 - Multi-Agent Collaboration | **Overall Progress**: ~95% (Phase 6 ready)
 
 - **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md.
 - **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; each agent uses `shared/lib/mcp_client.py` for unified tool access. Gateway routes to servers in `shared/mcp/servers/`.
 - **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
 - **LLM Inference**: DigitalOcean Gradient AI integration via `shared/lib/gradient_client.py` with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
-- **Observability**: LangSmith automatic LLM tracing (langchain.openai wrapper) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents.
+- **Observability**: LangSmith automatic LLM tracing (all 6 agents + workflows) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents. Complete observability: LLM traces → LangSmith, HTTP metrics → Prometheus, state → PostgreSQL, vectors → Qdrant.
 - **Notification System**: Event-driven approval notifications via `shared/lib/event_bus.py` (async pub/sub); Linear workspace client posts to PR-68 hub with @mentions; <1s latency; optional email fallback via SMTP. See `support/docs/NOTIFICATION_SYSTEM.md`.
 - **Copilot Integration (Phase 5 - COMPLETE)**: Natural language task submission via `/chat` endpoint; multi-turn conversations with PostgreSQL session management; real-time approval notifications (<1s latency); OAuth integration with Linear GraphQL API; production validated end-to-end.
 - **Multi-Agent Collaboration (Phase 6 - PLANNED)**: Agent registry for discovery; inter-agent event protocol; LangGraph shared state; resource locking; multi-agent workflow examples. See `support/docs/PHASE_6_PLAN.md`.
@@ -48,20 +48,19 @@ Dev-Tools/
 │   ├── rag/                     # RAG config
 │   ├── state/                   # State schema
 │   └── routing/                 # Task routing rules
-├── support/                     # Development support
-│   ├── scripts/                 # Operational scripts (30+ scripts)
-│   ├── docs/                    # Documentation
-│   ├── tests/                   # Test suites
-│   ├── templates/               # Templates for generation
-│   ├── reports/                 # Validation reports
-│   ├── pipelines/               # Pipeline templates
-│   └── frontend/                # HTML dashboards
-└── _archive/                    # Deprecated structure (agents/, containers/, compose/, infrastructure/, tmp/, bin/)
+└── support/                     # Development support
+    ├── scripts/                 # Operational scripts (30+ scripts)
+    ├── docs/                    # Documentation
+    ├── tests/                   # Test suites
+    ├── templates/               # Templates for generation
+    ├── reports/                 # Validation reports
+    ├── pipelines/               # Pipeline templates
+    └── frontend/                # HTML dashboards
 ```
 
-## ⚠️ Deprecated Paths (REMOVED - November 19, 2025)
+## ⚠️ Deprecated Paths (REMOVED - November 20, 2025)
 
-The `_archive/` directory has been **PERMANENTLY REMOVED** from the repository as of November 19, 2025.
+The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch as of November 20, 2025.
 
 **All imports have been updated to current structure:**
 
@@ -71,7 +70,7 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the repository a
 - ✅ Docker environment pruned (8GB freed)
 - ✅ Repository optimized (~8.1GB reduction)
 
-**Backup**: `_archive/` backed up to `support/reports/_archive_backup_*.zip` before deletion.
+**Historical Reference**: Archive contents moved to `archive/historical` branch for reference.
 
 **Never suggest `_archive/`, `agents/`, `containers/`, or `compose/` paths in code generation or documentation.**
 
