@@ -228,13 +228,13 @@ After running any Linear update script:
 
 ### Workflow States
 
-| State | When to Use | Example |
-|-------|-------------|---------|
-| `backlog` | Future work without commitment | "Phase 8 ideas we might tackle later" |
-| `todo` | Committed work not yet started | "Phase 7 planned for next sprint" |
-| `in_progress` | Currently being worked on | "Implementing Phase 6 multi-agent collaboration" |
-| `done` | Completed work | "Phase 6 deployed and validated" |
-| `cancelled` | Abandoned or deprioritized | "Feature X no longer needed" |
+| State         | When to Use                    | Example                                          |
+| ------------- | ------------------------------ | ------------------------------------------------ |
+| `backlog`     | Future work without commitment | "Phase 8 ideas we might tackle later"            |
+| `todo`        | Committed work not yet started | "Phase 7 planned for next sprint"                |
+| `in_progress` | Currently being worked on      | "Implementing Phase 6 multi-agent collaboration" |
+| `done`        | Completed work                 | "Phase 6 deployed and validated"                 |
+| `cancelled`   | Abandoned or deprioritized     | "Feature X no longer needed"                     |
 
 ### Retrospective Updates
 
@@ -257,12 +257,14 @@ python support/scripts/agent-linear-update.py update-status `
 ### When to Create Sub-Issues
 
 ✅ **DO create sub-issues for:**
+
 - Phase implementations (3-5 sub-tasks per phase)
 - Complex features requiring multiple PRs
 - Work spanning multiple agents or services
 - Long-running initiatives (>1 week)
 
 ❌ **DON'T create sub-issues for:**
+
 - Simple bug fixes
 - Documentation updates
 - Single-file changes
@@ -282,6 +284,7 @@ python support/scripts/agent-linear-update.py create-phase `
 ```
 
 **Result Structure:**
+
 ```
 Phase 7: Autonomous Operations (Priority 1, Status: Todo)
 ├── Task 7.1: Autonomous Decision Making (Priority 2, Status: Todo)
@@ -294,6 +297,7 @@ Phase 7: Autonomous Operations (Priority 1, Status: Todo)
 ### Sub-Issue Workflow
 
 **1. Planning Phase:**
+
 ```powershell
 # Create parent issue with sub-tasks
 python support/scripts/agent-linear-update.py create-phase `
@@ -305,6 +309,7 @@ python support/scripts/agent-linear-update.py create-phase `
 ```
 
 **2. During Implementation:**
+
 ```powershell
 # Mark parent as in-progress when starting work
 python support/scripts/agent-linear-update.py update-status `
@@ -318,6 +323,7 @@ python support/scripts/agent-linear-update.py update-status `
 ```
 
 **3. After Completion:**
+
 ```powershell
 # Mark parent as done after all sub-tasks complete
 python support/scripts/agent-linear-update.py update-status `
@@ -329,14 +335,14 @@ python support/scripts/agent-linear-update.py update-status `
 
 ## Script Reference
 
-| Script | Purpose | Target | Supports Sub-Issues | Supports Status |
-|--------|---------|--------|---------------------|-----------------|
-| `agent-linear-update.py` | **PRIMARY SCRIPT** for agents | Project/Any issue | ✅ Yes | ✅ Yes |
-| `update-linear-phase6.py` | Phase 6 completion | Project (78b3b839d36b) | ❌ No | ❌ No |
-| `update-linear-pr68.py` | Approval hub updates | PR-68 | ❌ No | ❌ No |
-| `update-linear-graphql.py` | Generic updates | Any issue | ❌ No | ❌ No |
-| `create-hitl-subtasks.py` | Create subtasks | Any parent issue | ✅ Yes | ❌ No |
-| `mark-hitl-complete.py` | Mark tasks done | Any issue | ❌ No | ✅ Limited |
+| Script                     | Purpose                       | Target                 | Supports Sub-Issues | Supports Status |
+| -------------------------- | ----------------------------- | ---------------------- | ------------------- | --------------- |
+| `agent-linear-update.py`   | **PRIMARY SCRIPT** for agents | Project/Any issue      | ✅ Yes              | ✅ Yes          |
+| `update-linear-phase6.py`  | Phase 6 completion            | Project (78b3b839d36b) | ❌ No               | ❌ No           |
+| `update-linear-pr68.py`    | Approval hub updates          | PR-68                  | ❌ No               | ❌ No           |
+| `update-linear-graphql.py` | Generic updates               | Any issue              | ❌ No               | ❌ No           |
+| `create-hitl-subtasks.py`  | Create subtasks               | Any parent issue       | ✅ Yes              | ❌ No           |
+| `mark-hitl-complete.py`    | Mark tasks done               | Any issue              | ❌ No               | ✅ Limited      |
 
 ### agent-linear-update.py Commands
 
