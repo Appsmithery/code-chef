@@ -104,6 +104,22 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 
 ## Deployment workflows
 
+### ⚠️ Configuration Changes Deployment (CRITICAL)
+
+**The droplet is connected to the main repo branch.** Configuration changes in `config/env/.env` require a specific workflow:
+
+1. **Update Local `.env`**: Edit `config/env/.env` with new configuration
+2. **Update Template** (if applicable): Sync changes to `config/env/.env.template` if adding new variables
+3. **Commit Template**: `git add config/env/.env.template && git commit && git push` (`.env` is gitignored)
+4. **Deploy to Droplet**:
+   ```bash
+   scp config/env/.env root@45.55.173.72:/opt/Dev-Tools/config/env/.env
+   ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull origin main && cd deploy && docker compose down && docker compose up -d"
+   ```
+5. **Verify**: Check health endpoints and verify environment variables loaded correctly
+
+**Why This Matters**: Docker Compose reads `.env` at startup. Simple `docker compose restart` does NOT reload environment variables from disk. You must use `down && up` to pick up `.env` changes.
+
 ### Quick Deploy
 
 - **Automated**: `./support/scripts/deploy.ps1` (validates env, builds, deploys, health checks); use `-Target remote` for droplet deployment.
@@ -193,10 +209,23 @@ ufw status                    # Verify rules
 
 ### LangSmith (LLM Tracing)
 
-- Automatic tracing via LangChain's native `langchain.openai` wrapper in gradient_client; no explicit tracing code needed in agents.
-- Captures prompts, completions, token counts, costs, latencies; grouped by session_id (task_id) and user_id (agent_name).
-- Dashboard: https://smith.langchain.com; keys in `.env` as `LANGCHAIN_API_KEY` or `LANGCHAIN_SERVICE_KEY`.
-- Configuration: Set `LANGCHAIN_TRACING_V2=true`, `LANGCHAIN_PROJECT=dev-tools-prod`, `LANGCHAIN_ENDPOINT=https://api.smith.langchain.com`.
+- **Automatic tracing** via LangChain's native integration in `gradient_client`; no explicit tracing code needed in agents.
+- **Dashboard**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
+- **Configuration** (in `config/env/.env`):
+  ```bash
+  LANGSMITH_TRACING=true                                              # Enable LangSmith SDK tracing
+  LANGCHAIN_TRACING_V2=true                                           # Enable LangChain tracing
+  LANGCHAIN_ENDPOINT=https://api.smith.langchain.com                  # LangSmith API endpoint
+  LANGCHAIN_PROJECT=agents                                            # Project name (auto-created if missing)
+  LANGCHAIN_API_KEY=lsv2_sk_***                                       # Service key (full org access)
+  LANGSMITH_API_KEY=lsv2_sk_***                                       # Same key (both vars supported)
+  LANGSMITH_WORKSPACE_ID=5029c640-3f73-480c-82f3-58e402ed4207        # Workspace/Org ID from URL
+  ```
+- **Key Requirements**:
+  - Use **service key** (`lsv2_sk_*`) not personal token (`lsv2_pt_*`) for production
+  - **Workspace ID** is REQUIRED for org-scoped service keys (extract from URL: `/o/{workspace-id}/`)
+  - Both `LANGCHAIN_API_KEY` and `LANGSMITH_API_KEY` must be set (SDK compatibility)
+- **Deployment**: After changing tracing config, must run `docker compose down && docker compose up -d` (restart alone won't reload `.env`)
 - **Deprecation Note**: Langfuse has been replaced by LangSmith for all tracing functionality. Remove any `LANGFUSE_*` environment variables.
 
 ## Extension points
