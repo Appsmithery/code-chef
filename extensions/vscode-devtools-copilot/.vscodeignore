@@ -1,5 +1,5 @@
 # Build outputs
-out/
+# out/ is needed for extension runtime
 dist/
 *.vsix
 

@@ -4,7 +4,6 @@
   "description": "Copilot Chat participant for Dev-Tools orchestrator - submit tasks to 6 specialized agents",
   "version": "0.1.0",
   "publisher": "appsmithery",
-  "icon": "icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/Appsmithery/Dev-Tools"
