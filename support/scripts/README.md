@@ -106,7 +106,7 @@ python support/scripts/workflow/workflow_self_healing.py
 
 - `validate-env.sh` - Environment variable validation
 - `validate-phase6.ps1` - Phase 6 integration validation
-- `validate-tracing.sh` - LangSmith tracing validation  
+- `validate-tracing.sh` - LangSmith tracing validation
 - `health-check.sh` - Service health checks
 
 ### Linear Scripts (`linear/`)
@@ -158,6 +158,7 @@ See `config/env/README.md` for full environment variable documentation.
 ## 🆘 Troubleshooting
 
 **Script not found:**
+
 ```powershell
 # Ensure you're in repository root
 cd d:\INFRA\Dev-Tools\Dev-Tools
@@ -167,11 +168,13 @@ cd d:\INFRA\Dev-Tools\Dev-Tools
 ```
 
 **Permission denied (Linux/macOS):**
+
 ```bash
 chmod +x support/scripts/dev/up.sh
 ```
 
 **Python import errors:**
+
 ```powershell
 # Install dependencies
 pip install -r requirements.txt
@@ -181,6 +184,7 @@ $env:PYTHONPATH = "d:\INFRA\Dev-Tools\Dev-Tools"
 ```
 
 **Docker compose not found:**
+
 ```powershell
 # Use docker compose (not docker-compose)
 cd deploy
