@@ -111,16 +111,49 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 1. **Update Local `.env`**: Edit `config/env/.env` with new configuration
 2. **Update Template** (if applicable): Sync changes to `config/env/.env.template` if adding new variables
 3. **Commit Template**: `git add config/env/.env.template && git commit && git push` (`.env` is gitignored)
-4. **Deploy to Droplet**:
+4. **Deploy to Droplet** (choose one method):
+   
+   **Method A - Automated PowerShell script (recommended):**
+   ```powershell
+   .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
+   ```
+   
+   **Method B - Manual commands:**
    ```bash
    scp config/env/.env root@45.55.173.72:/opt/Dev-Tools/config/env/.env
    ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull origin main && cd deploy && docker compose down && docker compose up -d"
    ```
+
 5. **Verify**: Check health endpoints and verify environment variables loaded correctly
 
 **Why This Matters**: Docker Compose reads `.env` at startup. Simple `docker compose restart` does NOT reload environment variables from disk. You must use `down && up` to pick up `.env` changes.
 
-### Quick Deploy
+### Automated Deployment (NEW)
+
+**PowerShell Script:** `support/scripts/deploy/deploy-to-droplet.ps1`
+
+- **Auto-detect changes:** `.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType auto`
+  - Detects config-only changes → fast deployment (30s)
+  - Detects code changes → full rebuild (10min)
+  - Detects docs-only → quick restart (15s)
+
+- **Explicit strategies:**
+  - `config`: Fast env-only deployment with down+up cycle
+  - `full`: Complete rebuild for code/dependency changes
+  - `quick`: Simple restart for non-critical changes
+
+- **Rollback:** `.\support\scripts\deploy\deploy-to-droplet.ps1 -Rollback`
+
+**GitHub Action:** `.github/workflows/deploy-intelligent.yml`
+
+- Automatic on push to `main` branch
+- Detects file changes and selects optimal strategy
+- Manual trigger with strategy override via workflow_dispatch
+- Health validation and automatic cleanup on failure
+
+**Documentation:** See `support/docs/DEPLOYMENT_AUTOMATION.md` for complete guide
+
+### Quick Deploy (Legacy)
 
 - **Automated**: `./support/scripts/deploy.ps1` (validates env, builds, deploys, health checks); use `-Target remote` for droplet deployment.
 - **Manual**: `cd deploy && docker-compose build && docker-compose up -d && docker-compose ps`

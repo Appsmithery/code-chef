@@ -1,0 +1,272 @@
+name: Intelligent Deploy to Droplet
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agent_*/**"
+      - "shared/**"
+      - "config/**"
+      - "deploy/docker-compose.yml"
+      - ".github/workflows/deploy-intelligent.yml"
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        description: 'Deployment type'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - config
+          - full
+          - quick
+
+env:
+  DROPLET_HOST: root@45.55.173.72
+  DEPLOY_PATH: /opt/Dev-Tools
+  DROPLET_IP: 45.55.173.72
+
+jobs:
+  detect-changes:
+    name: Detect Change Type
+    runs-on: ubuntu-latest
+    outputs:
+      deploy_strategy: ${{ steps.strategy.outputs.strategy }}
+      has_code_changes: ${{ steps.classify.outputs.has_code_changes }}
+      has_config_changes: ${{ steps.classify.outputs.has_config_changes }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v40
+        with:
+          files_yaml: |
+            code:
+              - 'agent_*/**/*.py'
+              - 'shared/**/*.py'
+              - '**/Dockerfile'
+              - '**/requirements.txt'
+              - 'deploy/docker-compose.yml'
+            config:
+              - 'config/env/*.env'
+              - 'config/**/*.yaml'
+              - 'config/**/*.yml'
+      
+      - name: Classify changes
+        id: classify
+        run: |
+          if [ "${{ steps.changed-files.outputs.code_any_changed }}" == "true" ]; then
+            echo "has_code_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_code_changes=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if [ "${{ steps.changed-files.outputs.config_any_changed }}" == "true" ]; then
+            echo "has_config_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_config_changes=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Determine strategy
+        id: strategy
+        run: |
+          # Manual override from workflow_dispatch
+          if [ "${{ github.event.inputs.deploy_type }}" != "" ]; then
+            echo "strategy=${{ github.event.inputs.deploy_type }}" >> $GITHUB_OUTPUT
+            echo "Manual override: ${{ github.event.inputs.deploy_type }}"
+            exit 0
+          fi
+          
+          # Auto-detect based on changes
+          if [ "${{ steps.classify.outputs.has_code_changes }}" == "true" ]; then
+            echo "strategy=full" >> $GITHUB_OUTPUT
+            echo "Code changes detected → FULL rebuild"
+          elif [ "${{ steps.classify.outputs.has_config_changes }}" == "true" ]; then
+            echo "strategy=config" >> $GITHUB_OUTPUT
+            echo "Config-only changes → FAST deployment"
+          else
+            echo "strategy=quick" >> $GITHUB_OUTPUT
+            echo "No critical changes → QUICK restart"
+          fi
+
+  deploy-config:
+    name: Deploy Config Changes
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy_strategy == 'config'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.DROPLET_IP }} >> ~/.ssh/known_hosts
+      
+      - name: Prepare .env file
+        run: |
+          cp config/env/.env.template config/env/.env
+          echo "GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}" >> config/env/.env
+          echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+          echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+          echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+          echo "LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
+      
+      - name: Upload .env to droplet
+        run: |
+          scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
+      
+      - name: Pull latest code on droplet
+        run: |
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }} && git stash && git pull origin main"
+      
+      - name: Restart services (down+up to reload env)
+        run: |
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose down && docker compose up -d"
+      
+      - name: Wait for services
+        run: sleep 20
+      
+      - name: Health checks
+        run: |
+          for port in 8001 8002 8003 8004 8005 8006; do
+            status=$(ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:${port}/health" | jq -r '.status // empty')
+            if [ "$status" == "ok" ]; then
+              echo "✓ Port ${port} is healthy"
+            else
+              echo "✗ Port ${port} is unhealthy"
+              exit 1
+            fi
+          done
+
+  deploy-full:
+    name: Deploy with Full Rebuild
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy_strategy == 'full'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.DROPLET_IP }} >> ~/.ssh/known_hosts
+      
+      - name: Prepare .env file
+        run: |
+          cp config/env/.env.template config/env/.env
+          echo "GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}" >> config/env/.env
+          echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+          echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+          echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+          echo "LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
+      
+      - name: Upload .env to droplet
+        run: |
+          scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
+      
+      - name: Pull and rebuild on droplet
+        run: |
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }} && \
+            git pull origin main && \
+            cd deploy && \
+            docker compose down --remove-orphans && \
+            docker compose build --no-cache && \
+            docker compose up -d"
+      
+      - name: Wait for services
+        run: sleep 30
+      
+      - name: Health checks
+        run: |
+          for port in 8001 8002 8003 8004 8005 8006; do
+            status=$(ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:${port}/health" | jq -r '.status // empty')
+            if [ "$status" == "ok" ]; then
+              echo "✓ Port ${port} is healthy"
+            else
+              echo "✗ Port ${port} is unhealthy"
+              exit 1
+            fi
+          done
+      
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          ssh ${{ env.DROPLET_HOST }} "docker system prune --volumes --force"
+
+  deploy-quick:
+    name: Quick Restart
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.deploy_strategy == 'quick'
+    
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ env.DROPLET_IP }} >> ~/.ssh/known_hosts
+      
+      - name: Pull latest code
+        run: |
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }} && git pull origin main"
+      
+      - name: Quick restart
+        run: |
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose restart"
+      
+      - name: Wait for services
+        run: sleep 15
+      
+      - name: Health checks
+        run: |
+          for port in 8001 8002 8003 8004 8005 8006; do
+            status=$(ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:${port}/health" | jq -r '.status // empty')
+            if [ "$status" == "ok" ]; then
+              echo "✓ Port ${port} is healthy"
+            else
+              echo "✗ Port ${port} is unhealthy"
+              exit 1
+            fi
+          done
+
+  notify:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [detect-changes, deploy-config, deploy-full, deploy-quick]
+    if: always()
+    
+    steps:
+      - name: Summary
+        run: |
+          echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Strategy:** ${{ needs.detect-changes.outputs.deploy_strategy }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Code Changes:** ${{ needs.detect-changes.outputs.has_code_changes }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Config Changes:** ${{ needs.detect-changes.outputs.has_config_changes }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.deploy-config.result }}" == "success" ] || \
+             [ "${{ needs.deploy-full.result }}" == "success" ] || \
+             [ "${{ needs.deploy-quick.result }}" == "success" ]; then
+            echo "✅ **Deployment successful**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Deployment failed**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**LangSmith:** [View Traces](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)" >> $GITHUB_STEP_SUMMARY
