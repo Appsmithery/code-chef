@@ -326,6 +326,7 @@ if hasattr(response, 'tool_calls') and response.tool_calls:
 ```
 
 This pattern provides:
+
 - 80-90% token reduction via progressive disclosure
 - Actual tool execution via LangChain function calling
 - Seamless MCP gateway integration
