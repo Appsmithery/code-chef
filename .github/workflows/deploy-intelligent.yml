@@ -230,7 +230,7 @@ jobs:
                   ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose restart"
 
             - name: Wait for services
-              run: sleep 15
+              run: sleep 25
 
             - name: Health checks
               run: |
