@@ -1,13 +1,33 @@
 {
   "name": "vscode-devtools-copilot",
-  "displayName": "Dev-Tools Agent Integration",
-  "description": "Copilot Chat participant for Dev-Tools orchestrator - submit tasks to 6 specialized agents",
-  "version": "0.1.0",
+  "displayName": "Dev-Tools Multi-Agent Orchestrator",
+  "description": "AI-powered task orchestration with 6 specialized agents, 150+ MCP tools, and LangChain function calling. Submit development tasks via Copilot Chat.",
+  "version": "0.2.0",
   "publisher": "appsmithery",
+  "license": "MIT",
+  "icon": "minions_purple.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/Appsmithery/Dev-Tools"
   },
+  "bugs": {
+    "url": "https://github.com/Appsmithery/Dev-Tools/issues"
+  },
+  "homepage": "https://github.com/Appsmithery/Dev-Tools#readme",
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/agents-6-blue",
+      "description": "6 Specialized Agents"
+    },
+    {
+      "url": "https://img.shields.io/badge/MCP_tools-150+-green",
+      "description": "150+ MCP Tools"
+    },
+    {
+      "url": "https://img.shields.io/badge/LangChain-enabled-orange",
+      "description": "LangChain Function Calling"
+    }
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -21,7 +41,17 @@
     "devtools",
     "orchestrator",
     "mcp",
-    "langsmith"
+    "langsmith",
+    "langchain",
+    "multi-agent",
+    "automation",
+    "code-generation",
+    "code-review",
+    "infrastructure",
+    "cicd",
+    "documentation",
+    "function-calling",
+    "progressive-disclosure"
   ],
   "activationEvents": [
     "onStartupFinished",
@@ -37,7 +67,7 @@
       {
         "id": "devtools",
         "name": "devtools-orchestrator",
-        "description": "Submit tasks to Dev-Tools agent platform (feature-dev, code-review, infrastructure, cicd, documentation)",
+        "description": "Multi-agent orchestrator with LangChain function calling. Access 150+ tools across 6 specialized agents (feature-dev, code-review, infrastructure, cicd, documentation). 80-90% token cost reduction via progressive disclosure.",
         "isSticky": true,
         "commands": [
           {

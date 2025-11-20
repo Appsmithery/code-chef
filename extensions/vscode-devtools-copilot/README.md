@@ -1,15 +1,21 @@
-# Dev-Tools Copilot Extension
+# Dev-Tools Multi-Agent Orchestrator
 
-VS Code extension that integrates Dev-Tools orchestrator into Copilot Chat, enabling you to submit development tasks to specialized AI agents from any workspace.
+[![Agents](https://img.shields.io/badge/agents-6-blue)](https://github.com/Appsmithery/Dev-Tools)
+[![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/Dev-Tools/tree/main/shared/mcp/servers)
+[![LangChain](https://img.shields.io/badge/LangChain-enabled-purple)](https://www.langchain.com/)
+
+VS Code extension that integrates Dev-Tools orchestrator into Copilot Chat, enabling you to submit development tasks to specialized AI agents with LangChain-powered function calling and progressive tool disclosure from any workspace.
 
 ## Features
 
-- **@devtools Chat Participant**: Submit tasks directly from Copilot Chat
-- **Workspace Context Extraction**: Automatically gathers git branch, open files, project type
+- **@devtools Chat Participant**: Submit tasks directly from Copilot Chat with natural language
+- **LangChain Function Calling**: Agents can INVOKE 150+ MCP tools via LangChain's native tool binding
+- **Progressive Tool Disclosure**: 80-90% token reduction through intelligent tool filtering (minimal/agent_profile/progressive/full strategies)
 - **Multi-Agent Orchestration**: Routes tasks to 6 specialized agents (feature-dev, code-review, infrastructure, cicd, documentation)
-- **Real-Time Approvals**: Linear integration for HITL approval workflow
-- **Observability**: LangSmith traces and Prometheus metrics integration
-- **Session Management**: Multi-turn conversations with context retention
+- **Workspace Context Extraction**: Automatically gathers git branch, open files, project type
+- **Real-Time Approvals**: Linear integration for HITL approval workflow (<1s notification latency)
+- **Observability**: LangSmith LLM tracing + Prometheus HTTP metrics across all agents
+- **Session Management**: PostgreSQL-backed multi-turn conversations with context retention
 
 ## Quick Start
 
@@ -124,7 +130,17 @@ Progress: 2/4 subtasks
 @devtools /tools
 ```
 
-Response shows 150+ tools across 18 MCP servers (memory, context7, notion, linear, terraform, etc.)
+Response shows 150+ tools across 17 MCP servers:
+
+- **Development**: filesystem, github, gitlab, sequential-thinking
+- **Infrastructure**: docker (containaier), terraform, kubernetes, prometheus
+- **Documentation**: notion, context7, docs-langchain
+- **Memory**: mcp-memory, everything
+- **Database**: postgres, sqlite
+- **Productivity**: linear, slack, gmail
+- **AI**: fetch (web scraping)
+
+**Progressive Disclosure**: Only relevant tools (10-30) are loaded per task for 80-90% token savings while maintaining full tool invocation capability via LangChain function calling.
 
 ## Approval Workflow
 
@@ -215,21 +231,41 @@ task install-local
 └─────────────┼───────────────────────┘
               │ HTTP POST
               ▼
-┌─────────────────────────────────────┐
-│ Dev-Tools Droplet (45.55.173.72)   │
-│                                      │
-│  ┌────────────────────────────────┐ │
-│  │ Orchestrator (:8001)           │ │
-│  │ - Task decomposition           │ │
-│  │ - Agent routing                │ │
-│  │ - Approval workflow            │ │
-│  └──────────┬─────────────────────┘ │
-│             │                        │
-│  ┌──────────▼─────────────────────┐ │
-│  │ 6 Specialized Agents           │ │
-│  │ feature-dev, code-review, ...  │ │
-│  └────────────────────────────────┘ │
-└─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ Dev-Tools Droplet (45.55.173.72)                        │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐ │
+│  │ Orchestrator (:8001)                               │ │
+│  │ ┌────────────────────────────────────────────────┐ │ │
+│  │ │ LangChain Tool Binding (3-Layer Architecture)  │ │ │
+│  │ │ 1. Discovery: progressive_mcp_loader.py        │ │ │
+│  │ │    (150+ tools → 10-30 relevant, 80-90% saved) │ │ │
+│  │ │ 2. Conversion: mcp_client.to_langchain_tools() │ │ │
+│  │ │    (MCP schemas → LangChain BaseTool instances)│ │ │
+│  │ │ 3. Binding: llm.bind_tools(tools)              │ │ │
+│  │ │    (LLM can INVOKE tools via function calling) │ │ │
+│  │ └────────────────────────────────────────────────┘ │ │
+│  │ - Task decomposition                               │ │
+│  │ - Agent routing                                    │ │
+│  │ - Approval workflow                                │ │
+│  └──────────┬─────────────────────────────────────────┘ │
+│             │                                            │
+│  ┌──────────▼───────────────────────────────────────┐   │
+│  │ MCP Gateway (:8000)                              │   │
+│  │ - 17 MCP servers, 150+ tools                     │   │
+│  │ - Stdio communication                            │   │
+│  └──────────┬───────────────────────────────────────┘   │
+│             │                                            │
+│  ┌──────────▼───────────────────────────────────────┐   │
+│  │ 6 Specialized Agents (:8002-:8006)               │   │
+│  │ - feature-dev (codellama-13b)                    │   │
+│  │ - code-review (llama-3.1-70b)                    │   │
+│  │ - infrastructure (llama-3.1-8b)                  │   │
+│  │ - cicd (llama-3.1-8b)                            │   │
+│  │ - documentation (mistral-7b)                     │   │
+│  │ Each with MCP client + LangChain tool binding    │   │
+│  └──────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ## Contributing
@@ -252,6 +288,17 @@ MIT License - see LICENSE file
 
 ## Related
 
+### Documentation
 - [Dev-Tools Repository](https://github.com/Appsmithery/Dev-Tools)
-- [MCP Bridge Client](https://www.npmjs.com/package/@appsmithery/mcp-bridge-client)
+- [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
 - [Integration Implementation Plan](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md)
+- [Setup Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/SETUP_GUIDE.md)
+
+### Integrations
+- [LangChain LLM Framework](https://www.langchain.com/)
+- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
+- [DigitalOcean Gradient AI](https://docs.digitalocean.com/products/ai/)
+- [LangSmith LLM Observability](https://smith.langchain.com/)
+
+### Packages
+- [MCP Bridge Client](https://www.npmjs.com/package/@appsmithery/mcp-bridge-client)
