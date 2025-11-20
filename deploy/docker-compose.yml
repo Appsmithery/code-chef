@@ -35,6 +35,14 @@ services:
       - orchestrator-data:/app/data
       - ../config/hitl:/app/config/hitl:ro
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   # Feature Development Agent - Code generation
   feature-dev:
@@ -62,6 +70,14 @@ services:
       - agent-registry
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1.5G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   # Code Review Agent - PR analysis and security review
   code-review:
@@ -89,6 +105,14 @@ services:
       - agent-registry
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
 
   # Infrastructure Agent - Docker, Kubernetes, Terraform
   infrastructure:
@@ -116,6 +140,14 @@ services:
       - agent-registry
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   # CI/CD Agent - Pipeline automation
   cicd:
@@ -143,6 +175,14 @@ services:
       - agent-registry
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   # Documentation Agent - Docs generation and updates
   documentation:
@@ -170,6 +210,14 @@ services:
       - agent-registry
       - redis
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 768M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   # ============================================================================
   # INFRASTRUCTURE SERVICES
@@ -197,6 +245,15 @@ services:
     secrets:
       - linear_oauth_token
       - linear_webhook_secret
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   # RAG Context Manager
   rag-context:
@@ -225,6 +282,15 @@ services:
       - devtools-network
     depends_on:
       - gateway-mcp
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   # State Persistence Layer
   state-persistence:
@@ -247,6 +313,15 @@ services:
       - postgres
     secrets:
       - db_password
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
 
   # Agent Registry Service (Phase 6 - Multi-Agent Collaboration)
   agent-registry:
@@ -262,7 +337,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=devtools
       - POSTGRES_USER=devtools
-      - POSTGRES_PASSWORD=changeme
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
       - HEARTBEAT_TIMEOUT_SECONDS=60
       - REDIS_URL=redis://redis:6379
       - EVENT_BUS_URL=redis://redis:6379
@@ -276,6 +351,14 @@ services:
     secrets:
       - db_password
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8009/health || exit 1"]
       interval: 30s
@@ -298,6 +381,15 @@ services:
       - ../config/state:/docker-entrypoint-initdb.d
     secrets:
       - db_password
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.5"
+          memory: 256M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devtools -d devtools"]
       interval: 10s
@@ -309,16 +401,25 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000
     networks:
       - devtools-network
     volumes:
       - redis-data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
 
   # LangGraph Workflow Service
   langgraph:
@@ -335,7 +436,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=devtools
       - DB_USER=devtools
-      - DB_PASSWORD=${DB_PASSWORD:-changeme}
+      - DB_PASSWORD_FILE=/run/secrets/db_password
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY:-}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-meta-llama-3.1-8b-instruct}
@@ -346,7 +447,17 @@ services:
     depends_on:
       - postgres
       - gateway-mcp
+    secrets:
+      - db_password
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   prometheus:
     image: prom/prometheus:latest
@@ -355,6 +466,7 @@ services:
       - "9090:9090"
     volumes:
       - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../config/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -365,6 +477,14 @@ services:
     networks:
       - devtools-network
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
 
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
@@ -385,6 +505,15 @@ services:
       - devtools-network
     depends_on:
       - prometheus
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
 
   caddy:
     image: caddy:2.8.4-alpine
@@ -404,6 +533,15 @@ services:
     depends_on:
       - gateway-mcp
       - oauth2-proxy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
 
 volumes:
   orchestrator-data:

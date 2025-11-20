@@ -1,0 +1,114 @@
+groups:
+  - name: agent_alerts
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "{{ $labels.job }} has error rate of {{ $value }} errors/sec (threshold: 0.1)"
+
+      - alert: CriticalErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 1.0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical error rate on {{ $labels.job }}"
+          description: "{{ $labels.job }} has error rate of {{ $value }} errors/sec (threshold: 1.0)"
+
+      - alert: SlowResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow response time on {{ $labels.job }}"
+          description: "{{ $labels.job }} has p95 response time of {{ $value }}s (threshold: 5s)"
+
+      - alert: AgentDown
+        expr: up{job=~"orchestrator|feature-dev|code-review|infrastructure|cicd|documentation"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Agent {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute"
+
+      - alert: MCPGatewayDown
+        expr: up{job="gateway-mcp"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "MCP Gateway is down"
+          description: "MCP Gateway has been down for more than 1 minute - all agent communication affected"
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.name }}"
+          description: "{{ $labels.name }} is using {{ $value | humanizePercentage }} of allocated memory"
+
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total[5m]) > 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.name }}"
+          description: "{{ $labels.name }} is using {{ $value | humanizePercentage }} CPU"
+
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "PostgreSQL has been down for more than 1 minute - state persistence affected"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis event bus is down"
+          description: "Redis has been down for more than 1 minute - event bus and caching affected"
+
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low disk space on host"
+          description: "Disk space is below 10% ({{ $value | humanizePercentage }} remaining)"
+
+  - name: langsmith_alerts
+    interval: 60s
+    rules:
+      - alert: HighTokenUsage
+        expr: rate(langsmith_tokens_total[1h]) > 1000000
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "High LLM token usage"
+          description: "Token usage rate is {{ $value }}/hour (threshold: 1M tokens/hour)"
+
+      - alert: LLMInferenceFailures
+        expr: rate(langsmith_errors_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High LLM inference failure rate"
+          description: "LLM inference failure rate is {{ $value }} errors/sec"

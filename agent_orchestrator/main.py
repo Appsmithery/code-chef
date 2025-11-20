@@ -521,15 +521,32 @@ async def check_agent_tool_availability(agent_type: AgentType, required_tools: L
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
+    """Health check endpoint - basic liveness check"""
+    return {
+        "status": "ok",
+        "service": "orchestrator",
+        "timestamp": datetime.utcnow().isoformat(),
+        "version": "1.0.0"
+    }
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness check endpoint - indicates if service is ready to handle traffic"""
     # Check if MCP toolkit is available
     mcp_available = mcp_tool_client._check_mcp_available()
     
     # Get list of available MCP servers
     available_servers = await mcp_tool_client.list_servers()
     
+    # Check critical dependencies
+    gradient_ready = gradient_client.is_enabled()
+    linear_ready = linear_client.is_enabled()
+    
+    # Service is ready if MCP is available and at least basic integrations work
+    is_ready = mcp_available and (gradient_ready or not os.getenv("GRADIENT_API_KEY"))
+    
     return {
-        "status": "ok",
+        "ready": is_ready,
         "service": "orchestrator",
         "timestamp": datetime.utcnow().isoformat(),
         "version": "1.0.0",
@@ -543,8 +560,8 @@ async def health_check():
             "capabilities": mcp_client.capabilities,
         },
         "integrations": {
-            "linear": linear_client.is_enabled(),
-            "gradient_ai": gradient_client.is_enabled()
+            "linear": linear_ready,
+            "gradient_ai": gradient_ready
         },
         "chat": {
             "enabled": True,

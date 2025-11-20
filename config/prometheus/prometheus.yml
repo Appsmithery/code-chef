@@ -122,10 +122,10 @@ scrape_configs:
         labels:
           service: "prometheus"
           type: "monitoring"
-# Alerting rules (optional - for future use)
-# rule_files:
-#   - "alerts.yml"
 
+# Alerting rules
+rule_files:
+  - "alerts.yml"
 # Remote write configuration (optional - for long-term storage)
 # remote_write:
 #   - url: "http://remote-storage:9009/api/v1/write"
