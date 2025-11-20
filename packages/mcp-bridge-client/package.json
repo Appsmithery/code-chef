@@ -1,0 +1,54 @@
+{
+  "name": "@appsmithery/mcp-bridge-client",
+  "version": "0.1.0",
+  "description": "Lightweight client for accessing Dev-Tools MCP gateway (150+ tools) from any workspace",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "prepublishOnly": "npm run build",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai-agents",
+    "devtools",
+    "orchestrator",
+    "llm-tools"
+  ],
+  "author": "Appsmithery <alex@appsmithery.co>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Appsmithery/Dev-Tools.git",
+    "directory": "packages/mcp-bridge-client"
+  },
+  "bugs": {
+    "url": "https://github.com/Appsmithery/Dev-Tools/issues"
+  },
+  "homepage": "https://github.com/Appsmithery/Dev-Tools/tree/main/packages/mcp-bridge-client#readme",
+  "dependencies": {
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.57.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
