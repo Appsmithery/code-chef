@@ -39,21 +39,21 @@ agent_assignments:
   orchestrator:
     role: "workspace-admin"
     projects:
-      - "*"  # Can update ANY project
+      - "*" # Can update ANY project
     permissions:
       - "create_issues"
       - "update_issues"
       - "create_projects"
-      - "manage_hitl"  # Can post to PR-68
+      - "manage_hitl" # Can post to PR-68
 
   feature-dev:
     role: "project-contributor"
     projects:
-      - "ai-devops-agent-platform"  # Currently assigned to this project
+      - "ai-devops-agent-platform" # Currently assigned to this project
     permissions:
       - "create_issues"
       - "update_issues"
-      - "request_approval"  # Can emit approval events (orchestrator posts to PR-68)
+      - "request_approval" # Can emit approval events (orchestrator posts to PR-68)
 
   code-review:
     role: "project-contributor"
@@ -104,7 +104,7 @@ workflows:
   roadmap_management:
     description: "Project-specific issue tracking and roadmap updates"
     script: "support/scripts/agent-linear-update.py"
-    requires_project_id: true  # Sub-agents must specify --project-id
+    requires_project_id: true # Sub-agents must specify --project-id
     access: "per-agent-assignment"
 
   hitl_approvals:

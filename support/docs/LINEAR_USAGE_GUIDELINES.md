@@ -239,28 +239,28 @@ Project Roadmaps (PR) Team
 
 ### ❌ Workflow Confusion
 
-| Mistake | Correct Approach |
-|---------|------------------|
-| ❌ Post phase completions to PR-68 | ✅ Use `agent-linear-update.py` with project ID |
-| ❌ Use `agent-linear-update.py` for approvals | ✅ Use orchestrator event bus → PR-68 |
-| ❌ Sub-agent updates orchestrator's project | ✅ Sub-agent passes `--project-id` for their project |
-| ❌ Direct PR-68 updates from sub-agents | ✅ Sub-agents emit events → Orchestrator posts to PR-68 |
+| Mistake                                       | Correct Approach                                        |
+| --------------------------------------------- | ------------------------------------------------------- |
+| ❌ Post phase completions to PR-68            | ✅ Use `agent-linear-update.py` with project ID         |
+| ❌ Use `agent-linear-update.py` for approvals | ✅ Use orchestrator event bus → PR-68                   |
+| ❌ Sub-agent updates orchestrator's project   | ✅ Sub-agent passes `--project-id` for their project    |
+| ❌ Direct PR-68 updates from sub-agents       | ✅ Sub-agents emit events → Orchestrator posts to PR-68 |
 
 ### ❌ Access Control Violations
 
-| Agent Type | ✅ Allowed | ❌ Forbidden |
-|------------|-----------|-------------|
-| Sub-Agents | Update their assigned project via `agent-linear-update.py` | Update other projects; Direct PR-68 updates |
-| Orchestrator | Update any project; Post to PR-68 via event bus | Bypass HITL approval process |
+| Agent Type   | ✅ Allowed                                                 | ❌ Forbidden                                |
+| ------------ | ---------------------------------------------------------- | ------------------------------------------- |
+| Sub-Agents   | Update their assigned project via `agent-linear-update.py` | Update other projects; Direct PR-68 updates |
+| Orchestrator | Update any project; Post to PR-68 via event bus            | Bypass HITL approval process                |
 
 ### ❌ Data Management
 
-| Mistake | Correct Approach |
-|---------|------------------|
-| ❌ Overwrite existing issue descriptions | ✅ Append updates with timestamps |
-| ❌ Create duplicate phase issues | ✅ Search for existing issues first |
-| ❌ Forget `--project-id` as sub-agent | ✅ Always pass project UUID |
-| ❌ Mix roadmap and HITL in same script | ✅ Keep workflows separate |
+| Mistake                                  | Correct Approach                    |
+| ---------------------------------------- | ----------------------------------- |
+| ❌ Overwrite existing issue descriptions | ✅ Append updates with timestamps   |
+| ❌ Create duplicate phase issues         | ✅ Search for existing issues first |
+| ❌ Forget `--project-id` as sub-agent    | ✅ Always pass project UUID         |
+| ❌ Mix roadmap and HITL in same script   | ✅ Keep workflows separate          |
 
 ---
 
@@ -421,20 +421,20 @@ python support/scripts/agent-linear-update.py update-status `
 
 ### 📋 Roadmap Management Scripts
 
-| Script | Purpose | Access Control | Supports Sub-Issues | Supports Status | Project-Agnostic |
-|--------|---------|----------------|---------------------|-----------------|------------------|
-| `agent-linear-update.py` | **PRIMARY SCRIPT** for roadmap updates | Sub-agents (with `--project-id`), Orchestrator (any project) | ✅ Yes | ✅ Yes | ✅ Yes |
-| `update-linear-phase6.py` | Phase 6 specific (DEPRECATED) | Orchestrator only | ❌ No | ❌ No | ❌ No |
-| `update-linear-graphql.py` | Generic updates (DEPRECATED) | Orchestrator only | ❌ No | ❌ No | ❌ No |
-| `create-hitl-subtasks.py` | Create subtasks (DEPRECATED) | Orchestrator only | ✅ Yes | ❌ No | ❌ No |
-| `mark-hitl-complete.py` | Mark tasks done (DEPRECATED) | Orchestrator only | ❌ No | ✅ Limited | ❌ No |
+| Script                     | Purpose                                | Access Control                                               | Supports Sub-Issues | Supports Status | Project-Agnostic |
+| -------------------------- | -------------------------------------- | ------------------------------------------------------------ | ------------------- | --------------- | ---------------- |
+| `agent-linear-update.py`   | **PRIMARY SCRIPT** for roadmap updates | Sub-agents (with `--project-id`), Orchestrator (any project) | ✅ Yes              | ✅ Yes          | ✅ Yes           |
+| `update-linear-phase6.py`  | Phase 6 specific (DEPRECATED)          | Orchestrator only                                            | ❌ No               | ❌ No           | ❌ No            |
+| `update-linear-graphql.py` | Generic updates (DEPRECATED)           | Orchestrator only                                            | ❌ No               | ❌ No           | ❌ No            |
+| `create-hitl-subtasks.py`  | Create subtasks (DEPRECATED)           | Orchestrator only                                            | ✅ Yes              | ❌ No           | ❌ No            |
+| `mark-hitl-complete.py`    | Mark tasks done (DEPRECATED)           | Orchestrator only                                            | ❌ No               | ✅ Limited      | ❌ No            |
 
 ### 🚨 HITL Approval Scripts
 
-| Script | Purpose | Access Control | Integration Method |
-|--------|---------|----------------|-------------------|
-| `update-linear-pr68.py` | Manual PR-68 updates | Orchestrator only | Direct GraphQL |
-| Orchestrator Event Bus | Automatic PR-68 updates | All agents (via events) | Event-driven (recommended) |
+| Script                  | Purpose                 | Access Control          | Integration Method         |
+| ----------------------- | ----------------------- | ----------------------- | -------------------------- |
+| `update-linear-pr68.py` | Manual PR-68 updates    | Orchestrator only       | Direct GraphQL             |
+| Orchestrator Event Bus  | Automatic PR-68 updates | All agents (via events) | Event-driven (recommended) |
 
 ### agent-linear-update.py Commands
 
