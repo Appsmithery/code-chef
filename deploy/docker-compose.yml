@@ -542,6 +542,55 @@ services:
         reservations:
           cpus: "0.1"
           memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        tag: "{{.Name}}"
+
+  # ============================================================================
+  # LOG AGGREGATION (Loki + Promtail)
+  # ============================================================================
+
+  loki:
+    image: grafana/loki:2.9.3
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - ../config/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    networks:
+      - devtools-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  promtail:
+    image: grafana/promtail:2.9.3
+    volumes:
+      - ../config/loki/promtail-config.yaml:/etc/promtail/config.yaml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yaml
+    networks:
+      - devtools-network
+    depends_on:
+      - loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
 
 volumes:
   orchestrator-data:
@@ -551,6 +600,7 @@ volumes:
   prometheus-data:
   caddy-data:
   caddy-config:
+  loki-data:
 
 secrets:
   db_password:

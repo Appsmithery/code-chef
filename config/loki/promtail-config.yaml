@@ -1,0 +1,76 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Scrape all Docker container logs
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+    relabel_configs:
+      # Extract container name
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: "container"
+
+      # Extract container ID
+      - source_labels: ["__meta_docker_container_id"]
+        target_label: "container_id"
+
+      # Add service labels for agents
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(orchestrator|feature-dev|code-review|infrastructure|cicd|documentation).*"
+        target_label: "service_type"
+        replacement: "agent"
+
+      # Add service labels for infrastructure
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(postgres|redis|prometheus|loki|promtail).*"
+        target_label: "service_type"
+        replacement: "infrastructure"
+
+      # Add service labels for gateway/services
+      - source_labels: ["__meta_docker_container_name"]
+        regex: ".*(gateway|rag|state|agent-registry|langgraph).*"
+        target_label: "service_type"
+        replacement: "backend"
+
+      # Extract compose project
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_project"]
+        target_label: "compose_project"
+
+      # Extract compose service
+      - source_labels:
+          ["__meta_docker_container_label_com_docker_compose_service"]
+        target_label: "compose_service"
+
+    # Pipeline stages for parsing and filtering
+    pipeline_stages:
+      # Parse JSON logs
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+
+      # Extract log level
+      - labels:
+          level:
+
+      # Drop healthcheck logs (too noisy)
+      - drop:
+          source: "message"
+          expression: ".*healthcheck.*"
+
+      # Drop Prometheus scrape logs
+      - drop:
+          source: "message"
+          expression: ".*GET /metrics.*"
