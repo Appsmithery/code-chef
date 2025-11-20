@@ -1,5 +1,18 @@
 # Dev-Tools Documentation Index
 
+## 📁 Directory Structure
+
+Documentation is organized into logical categories:
+
+- **architecture/** - System design, agent architecture, event protocols
+- **api/** - API endpoints and reference documentation  
+- **guides/** - Implementation and integration guides
+  - **integration/** - External service setup (Linear, LangSmith, etc.)
+  - **implementation/** - Feature implementation guides (HITL, etc.)
+- **operations/** - Deployment, monitoring, maintenance
+- **testing/** - Testing strategies and chaos engineering
+- **_temp/** - Temporary working files (excluded from Git)
+
 ## 📚 Quick Navigation
 
 ### Getting Started

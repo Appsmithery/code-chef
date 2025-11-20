@@ -92,7 +92,7 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the repository a
 - Gateway exposes `/oauth/linear/install` (OAuth) and `/oauth/linear/status` (token check); issues via `/api/linear-issues`, projects via `/api/linear-project/:projectId`.
 - Tokens from `LINEAR_*` envs or `*_FILE` Docker secrets; maintain `config/env/secrets/linear_oauth_token.txt` (never commit `.env` secrets).
 - **Linear Integration - Two Separate Workflows**:
-  1. **Roadmap Management (Project-Specific)**: Use `support/scripts/agent-linear-update.py` with `--project-id` parameter. Sub-agents update their assigned project only; Orchestrator can update any project.
+  1. **Roadmap Management (Project-Specific)**: Use `support/scripts/linear/agent-linear-update.py` with `--project-id` parameter. Sub-agents update their assigned project only; Orchestrator can update any project.
   2. **HITL Approvals (Workspace-Wide)**: Use orchestrator event bus → PR-68. All agents can request approvals via events.
 - **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use `agent-linear-update.py` with `--project-id` and `LINEAR_API_KEY` env var (OAuth token: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
 - **Sub-Issue Requirements**: Break down complex features into 3-5 sub-tasks using `agent-linear-update.py create-phase --project-id "UUID"`. Always set appropriate status (todo/in_progress/done) when creating/updating issues.
@@ -114,10 +114,10 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the repository a
 
 ### Local Development
 
-- Use `make up|down|rebuild|logs` (wraps `support/scripts/*.sh`) or direct `docker-compose` commands; scripts assume bash and run from repo root.
-- `./support/scripts/up.sh` brings stack online, waits 10s, prints health; `make logs-agent AGENT=<service>` for troubleshooting.
-- Rebuild when Python deps change: `support/scripts/rebuild.sh` or `docker-compose build <service>`.
-- Backups: `support/scripts/backup_volumes.sh` creates tarballs of `orchestrator-data`, `mcp-config`, `qdrant-data`, `postgres-data` under `./backups/<timestamp>`.
+- Use `make up|down|rebuild|logs` (wraps `support/scripts/dev/*.sh`) or direct `docker-compose` commands; scripts assume bash and run from repo root.
+- `./support/scripts/dev/up.sh` brings stack online, waits 10s, prints health; `make logs-agent AGENT=<service>` for troubleshooting.
+- Rebuild when Python deps change: `support/scripts/dev/rebuild.sh` or `docker-compose build <service>`.
+- Backups: `support/scripts/docker/backup_volumes.sh` creates tarballs of `orchestrator-data`, `mcp-config`, `qdrant-data`, `postgres-data` under `./backups/<timestamp>`.
 - Local overrides: `deploy/docker-compose.override.yml` (gitignored sample sets DEBUG/LOG_LEVEL).
 
 ### Remote Deployment (DigitalOcean)
@@ -190,7 +190,7 @@ ufw status                    # Verify rules
 
 - **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
 - **Prune on errors.** If a compose build/push/deploy fails, follow up with `docker builder prune -f`, `docker image prune -f`, and (when on the droplet) `docker system prune --volumes --force` unless the user explicitly says otherwise.
-- **Verify health after cleanup.** Re-run `support/scripts/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
+- **Verify health after cleanup.** Re-run `support/scripts/validation/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
 - **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
 
 ### LangSmith (LLM Tracing)

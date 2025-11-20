@@ -29,7 +29,7 @@
 ```powershell
 $env:LINEAR_API_KEY = "lin_oauth_..."
 
-python support/scripts/agent-linear-update.py create-issue `
+python support/scripts/linear/agent-linear-update.py create-issue `
     --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `  # REQUIRED
     --title "Your Issue Title" `
     --description "Your description here" `
@@ -54,7 +54,7 @@ _Agent Tag: @feature-dev-agent_
 ### 📋 Create Phase with Sub-Tasks (Orchestrator Only)
 
 ```powershell
-python support/scripts/agent-linear-update.py create-phase `
+python support/scripts/linear/agent-linear-update.py create-phase `
     --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `  # Optional for orchestrator
     --phase-number 7 `
     --title "Autonomous Operations" `
@@ -69,7 +69,7 @@ python support/scripts/agent-linear-update.py create-phase `
 ### 🔄 Update Issue Status (Any Agent)
 
 ```powershell
-python support/scripts/agent-linear-update.py update-status `
+python support/scripts/linear/agent-linear-update.py update-status `
     --issue-id "PR-85" `
     --status "done"
 ```
@@ -131,7 +131,7 @@ Orchestrator automatically posts to PR-68 with your agent tag.
 
 ```powershell
 # Feature-Dev creating a new feature
-python support/scripts/agent-linear-update.py create-issue `
+python support/scripts/linear/agent-linear-update.py create-issue `
     --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
     --title "Add Redis caching layer" `
     --description "Implement Redis for API response caching to improve performance" `
@@ -144,7 +144,7 @@ python support/scripts/agent-linear-update.py create-issue `
 
 ```powershell
 # Infrastructure creating infrastructure tasks
-python support/scripts/agent-linear-update.py create-issue `
+python support/scripts/linear/agent-linear-update.py create-issue `
     --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" `
     --title "Task 1: Provision Redis cluster" `
     --parent-id "parent-issue-uuid" `
@@ -156,7 +156,7 @@ python support/scripts/agent-linear-update.py create-issue `
 
 ```powershell
 # Any agent marking their task done
-python support/scripts/agent-linear-update.py update-status `
+python support/scripts/linear/agent-linear-update.py update-status `
     --issue-id "PR-XX" `
     --status "done"
 ```
