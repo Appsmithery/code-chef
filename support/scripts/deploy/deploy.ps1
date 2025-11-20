@@ -104,8 +104,7 @@ if (-not $SkipValidation) {
     # Check required env vars
     $env_content = Get-Content "config/env/.env" -Raw
     $required_vars = @(
-        "LANGFUSE_SECRET_KEY",
-        "LANGFUSE_PUBLIC_KEY",
+        "LANGCHAIN_PAT",
         "GRADIENT_API_KEY"
     )
     
