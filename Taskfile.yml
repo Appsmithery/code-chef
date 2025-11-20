@@ -116,7 +116,7 @@ tasks:
       Checks /health endpoints for all 9 services on localhost. Reports
       status with check indicators. Use after 'up' or 'rebuild'.
     cmds:
-      - '{{if eq OS "windows"}}pwsh -File ./support/scripts/validation/health-check-local.ps1{{else}}bash ./support/scripts/validation/health-check-local.sh{{end}}'
+      - '{{if eq OS "windows"}}powershell -NoProfile -ExecutionPolicy Bypass -File ./support/scripts/validation/health-check-local.ps1{{else}}bash ./support/scripts/validation/health-check-local.sh{{end}}'
 
   health:remote:
     desc: Check health of droplet services
