@@ -94,6 +94,3 @@ yarn.lock
 # Reports and generated content
 support/reports/*.json
 !support/reports/.gitkeep
-
-# Archive directory (deprecated structure)
-_archive/
