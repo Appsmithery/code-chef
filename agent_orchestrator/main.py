@@ -178,6 +178,10 @@ event_bus = get_event_bus()
 # Agent registry client (Phase 6)
 registry_client: Optional[RegistryClient] = None
 
+# RAG service for vendor documentation context (Phase 7)
+RAG_SERVICE_URL = os.getenv("RAG_SERVICE_URL", "http://rag-context:8007")
+RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "10"))
+
 # Initialize notifiers
 linear_notifier = LinearWorkspaceNotifier(agent_name="orchestrator")
 email_notifier = EmailNotifier()
@@ -211,6 +215,25 @@ approval_expirations_total = Counter(
     "orchestrator_approval_expirations_total",
     "Total approval requests that expired without decision",
     ["risk_level"]
+)
+
+# RAG context metrics
+rag_context_injected_total = Counter(
+    "orchestrator_rag_context_injected_total",
+    "Total tasks with RAG vendor context injected into LLM prompts",
+    ["source"]
+)
+
+rag_vendor_keywords_detected = Counter(
+    "orchestrator_rag_vendor_keywords_detected_total",
+    "Total vendor keywords detected in task descriptions",
+    ["keyword"]
+)
+
+rag_query_latency = Histogram(
+    "orchestrator_rag_query_seconds",
+    "RAG service query latency in seconds",
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0]
 )
 
 # Track approval-pending tasks awaiting resumption
@@ -407,6 +430,102 @@ def build_risk_context(request: TaskRequest) -> Dict[str, Any]:
             "project_context": request.project_context or {}
         }
     }
+
+
+async def query_vendor_context(task_description: str, n_results: int = 2) -> Optional[str]:
+    """
+    Query RAG service for relevant vendor documentation context.
+    Detects vendor keywords and retrieves relevant documentation chunks.
+    
+    Args:
+        task_description: Task description to analyze
+        n_results: Number of results to retrieve (default: 2)
+        
+    Returns:
+        Formatted context string or None if no relevant context found
+    """
+    # Vendor keywords that trigger RAG lookup
+    vendor_keywords = [
+        "gradient", "gradient ai", "digitalocean",
+        "linear", "graphql", "linear api",
+        "langsmith", "langchain", "langgraph",
+        "qdrant", "vector", "embedding",
+        "streaming", "serverless inference"
+    ]
+    
+    # Check if task mentions any vendor keywords
+    description_lower = task_description.lower()
+    detected_keywords = [kw for kw in vendor_keywords if kw in description_lower]
+    
+    if not detected_keywords:
+        return None
+    
+    # Track keyword detection
+    for keyword in detected_keywords:
+        rag_vendor_keywords_detected.labels(keyword=keyword).inc()
+    
+    try:
+        import time
+        start_time = time.time()
+        
+        async with httpx.AsyncClient(timeout=RAG_TIMEOUT) as client:
+            response = await client.post(
+                f"{RAG_SERVICE_URL}/query",
+                json={
+                    "query": task_description,
+                    "collection": "vendor-docs",
+                    "n_results": n_results
+                }
+            )
+            response.raise_for_status()
+            result = response.json()
+            
+            # Record query latency
+            query_time = time.time() - start_time
+            rag_query_latency.observe(query_time)
+            
+            if not result.get("results"):
+                return None
+            
+            # Format context for LLM
+            context_parts = ["\n--- Relevant Vendor Documentation ---"]
+            sources_used = set()
+            
+            for i, item in enumerate(result["results"], 1):
+                source = item.get("metadata", {}).get("source", "unknown")
+                sources_used.add(source)
+                score = item.get("relevance_score", 0)
+                content = item.get("content", "")[:500]  # Limit to 500 chars per result
+                
+                context_parts.append(f"\n[Source {i}: {source} | Relevance: {score:.2f}]")
+                context_parts.append(content)
+            
+            context_parts.append("\n--- End Vendor Documentation ---\n")
+            
+            # Track RAG context injection
+            for source in sources_used:
+                rag_context_injected_total.labels(source=source).inc()
+            
+            logger.info(f"[RAG] Retrieved {len(result['results'])} vendor docs (latency: {result.get('retrieval_time_ms', 0):.0f}ms)")
+            
+            # Track RAG usage
+            await mcp_tool_client.create_memory_entity(
+                name=f"rag_context_used_{uuid.uuid4().hex[:8]}",
+                entity_type="rag_query",
+                observations=[
+                    f"Query: {task_description[:100]}",
+                    f"Results: {len(result['results'])}",
+                    f"Latency: {result.get('retrieval_time_ms', 0):.0f}ms",
+                    f"Collection: vendor-docs"
+                ]
+            )
+            
+            return "".join(context_parts)
+            
+    except Exception as e:
+        logger.warning(f"[RAG] Failed to query vendor context: {e}")
+        return None
+
 
 # ============================================================================
 # Agent service endpoints (from docker-compose)
@@ -1786,10 +1905,15 @@ Return JSON with this structure:
   ]
 }"""
     
+    # Query RAG for vendor documentation context
+    vendor_context = await query_vendor_context(request.description)
+    
     user_prompt = f"""Task: {request.description}
 
 Project Context: {json.dumps(request.project_context) if request.project_context else "General project"}
 Priority: {request.priority}
+
+{vendor_context if vendor_context else ""}
 
 {available_tools if available_tools else ""}
 
@@ -1859,6 +1983,7 @@ IMPORTANT: Only suggest using tools that are listed in the "Available MCP Tools"
     except Exception as e:
         logger.error(f"[Orchestrator] LLM decomposition failed: {e}", exc_info=True)
         print(f"[ERROR] LLM decomposition failed: {type(e).__name__}: {e}, falling back to rule-based")
+        return []  # Return empty list to allow fallback to rule-based decomposition
 
 
 # ============================================================================

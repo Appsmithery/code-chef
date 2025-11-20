@@ -58,7 +58,7 @@ SOURCES = {
     },
     "langchain-mcp": {
         "urls": [
-            "https://docs.langchain.com/mcp",
+            "https://python.langchain.com/docs/concepts/mcp/",
         ],
         "tags": ["langchain", "mcp", "protocol", "tools"],
         "chunk_size": 1000,
@@ -90,9 +90,29 @@ def extract_text_from_html(html: str) -> str:
 
 
 def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[str]:
-    """Split text into overlapping chunks."""
+    """
+    Split text into overlapping chunks with semantic awareness.
+    
+    Improvements:
+    - Preserves code blocks (```...```) as complete units
+    - Respects heading boundaries (##, ###)
+    - Prioritizes paragraph breaks over sentence breaks
+    - Maintains context through intelligent overlap
+    """
     if len(text) <= chunk_size:
         return [text]
+    
+    # Extract code blocks to preserve them
+    code_blocks = []
+    code_placeholder_pattern = "<<<CODE_BLOCK_{}>>>"
+    
+    # Find and replace code blocks with placeholders
+    import re
+    code_block_regex = r'```[\s\S]*?```'
+    for i, match in enumerate(re.finditer(code_block_regex, text)):
+        placeholder = code_placeholder_pattern.format(i)
+        code_blocks.append(match.group())
+        text = text[:match.start()] + placeholder + text[match.end():]
     
     chunks = []
     start = 0
@@ -100,28 +120,43 @@ def chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> List[st
     while start < len(text):
         end = start + chunk_size
         
-        # Try to break at sentence or paragraph boundary
+        # Try to break at semantic boundaries
         if end < len(text):
-            # Look for paragraph break
-            para_break = text.rfind('\n\n', start, end)
-            if para_break > start + chunk_size // 2:
-                end = para_break
+            # Priority 1: Heading boundary (## or ###)
+            heading_break = max(
+                text.rfind('\n## ', start, end),
+                text.rfind('\n### ', start, end),
+            )
+            if heading_break > start + chunk_size // 3:
+                end = heading_break + 1
             else:
-                # Look for sentence break
-                sentence_break = max(
-                    text.rfind('. ', start, end),
-                    text.rfind('.\n', start, end),
-                    text.rfind('! ', start, end),
-                    text.rfind('? ', start, end),
-                )
-                if sentence_break > start + chunk_size // 2:
-                    end = sentence_break + 1
+                # Priority 2: Paragraph break (double newline)
+                para_break = text.rfind('\n\n', start, end)
+                if para_break > start + chunk_size // 2:
+                    end = para_break + 2
+                else:
+                    # Priority 3: Sentence break
+                    sentence_break = max(
+                        text.rfind('. ', start, end),
+                        text.rfind('.\n', start, end),
+                        text.rfind('! ', start, end),
+                        text.rfind('? ', start, end),
+                    )
+                    if sentence_break > start + chunk_size // 2:
+                        end = sentence_break + 1
         
         chunk = text[start:end].strip()
+        
+        # Restore code blocks in this chunk
+        for i, code_block in enumerate(code_blocks):
+            placeholder = code_placeholder_pattern.format(i)
+            if placeholder in chunk:
+                chunk = chunk.replace(placeholder, code_block)
+        
         if chunk:
             chunks.append(chunk)
         
-        # Move start position with overlap
+        # Move start position with overlap (ensure context continuity)
         start = end - overlap
         if start >= len(text):
             break
