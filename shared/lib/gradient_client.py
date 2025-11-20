@@ -20,7 +20,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 from langchain_core.exceptions import OutputParserException
 
-from shared.lib.langchain_gradient import get_llm
+from lib.langchain_gradient import get_llm
 
 logger = logging.getLogger(__name__)
 
