@@ -36,7 +36,7 @@
     "chatParticipants": [
       {
         "id": "devtools",
-        "name": "Dev-Tools Orchestrator",
+        "name": "devtools-orchestrator",
         "description": "Submit tasks to Dev-Tools agent platform (feature-dev, code-review, infrastructure, cicd, documentation)",
         "isSticky": true,
         "commands": [

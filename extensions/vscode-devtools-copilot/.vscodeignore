@@ -3,9 +3,6 @@
 dist/
 *.vsix
 
-# Node modules
-node_modules/
-
 # Source files (exclude from package)
 src/
 tsconfig.json
