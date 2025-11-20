@@ -209,6 +209,17 @@ class GradientClient:
             content = response.choices[0].message.content
             logger.debug(f"[{self.agent_name}] Received response, parsing JSON...")
             
+            # Strip markdown code fences if present
+            if content and content.strip().startswith("```"):
+                lines = content.strip().split("\n")
+                # Remove first line if it's ```json or ```
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                # Remove last line if it's ```
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                content = "\n".join(lines)
+            
             parsed = json.loads(content) if content else {}
             
             result = {
