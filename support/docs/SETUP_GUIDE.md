@@ -18,6 +18,7 @@ Complete guide for setting up and using the Dev-Tools diagnostics and automation
 - **Node.js**: >= 20.0.0
 - **npm**: >= 10.0.0
 - **Git**: >= 2.30.0
+- **Python**: >= 3.11 (for agent stack with LangChain integration)
 
 ### Optional
 
@@ -292,6 +293,51 @@ Logs are automatically archived to:
 ```
 workspace/archive/mcp-logs-<timestamp>/
 ```
+
+## LangChain Tool Binding
+
+The orchestrator implements **progressive tool disclosure with LangChain function calling** to efficiently manage 150+ MCP tools.
+
+### How It Works
+
+**3-Layer Architecture:**
+
+1. **Discovery**: Filter 150+ tools → 10-30 relevant tools (80-90% token reduction)
+2. **Conversion**: MCP schemas → LangChain `BaseTool` instances
+3. **Binding**: Tools bound to LLM via `bind_tools()` for function calling
+
+**Result:** LLM can **INVOKE** tools via function calling, not just read documentation.
+
+### Verification
+
+Check orchestrator logs for progressive disclosure:
+
+```bash
+# View tool loading stats
+docker compose logs orchestrator | grep "Progressive"
+
+# Expected output:
+# INFO:lib.progressive_mcp_loader:[ProgressiveMCP] Progressive strategy: loaded 4 servers
+# INFO:lib.progressive_mcp_loader:[ProgressiveMCP] Minimal strategy: loaded 0 servers
+```
+
+### Configuration
+
+Tool loading strategy can be configured per request:
+
+```python
+from lib.progressive_mcp_loader import ToolLoadingStrategy
+
+# Options:
+# - MINIMAL: Keyword-based (80-95% savings, default)
+# - AGENT_PROFILE: Agent manifest-based (60-80% savings)
+# - PROGRESSIVE: Minimal + high-priority (70-85% savings)
+# - FULL: All 150+ tools (0% savings, debugging)
+```
+
+**Documentation:** See `.github/copilot-instructions.md` for tool binding pattern examples.
+
+---
 
 ## Context Operations
 

@@ -32,6 +32,7 @@ Documentation is organized into logical categories:
 ### Architecture & Design
 
 - **[MCP Integration](architecture/MCP_INTEGRATION.md)** - Model Context Protocol (150+ tools)
+- **[Progressive Tool Disclosure](architecture/PROGRESSIVE_TOOL_DISCLOSURE.md)** - LangChain tool binding (80-90% token savings)
 - **[LangGraph Integration](architecture/LANGGRAPH_INTEGRATION.md)** - Workflow orchestration
 - **[Multi-Agent Workflows](architecture/MULTI_AGENT_WORKFLOWS.md)** - Collaboration patterns
 - **[Task Orchestration](architecture/TASK_ORCHESTRATION.md)** - Workflow engine details
@@ -73,7 +74,8 @@ Documentation is organized into logical categories:
 
 - ✅ All 6 agents operational with MCP integration
 - ✅ 150+ MCP tools available (filesystem, memory, git, sequential-thinking, etc.)
-- ✅ Langfuse LLM tracing infrastructure configured
+- ✅ **LangChain tool binding** - Progressive disclosure with function calling (80-90% token savings)
+- ✅ LangSmith LLM tracing infrastructure configured
 - ✅ Prometheus HTTP metrics collection active
 - ✅ DigitalOcean Gradient AI integration complete (llama3-8b-instruct operational)
 - ✅ LLM-powered task decomposition in production (150x cheaper than GPT-4)

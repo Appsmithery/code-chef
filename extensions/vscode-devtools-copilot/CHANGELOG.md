@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2025-01-XX
 
 ### Added
+
 - **LangChain Function Calling**: Agents can now INVOKE 150+ MCP tools via LangChain's native tool binding (not just read documentation)
 - **Progressive Tool Disclosure**: 80-90% token reduction through intelligent tool filtering with 4 strategies (minimal/agent_profile/progressive/full)
 - **3-Layer Tool Architecture**: Discovery (progressive_mcp_loader) → Conversion (to_langchain_tools) → Binding (llm.bind_tools)
@@ -16,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Documentation links to PROGRESSIVE_TOOL_DISCLOSURE.md and SETUP_GUIDE.md
 
 ### Changed
+
 - Extension display name: "Dev-Tools Copilot Extension" → "Dev-Tools Multi-Agent Orchestrator"
 - Extension description now highlights LangChain function calling and progressive disclosure
 - Keywords expanded from 6 to 16 (added: langchain, multi-agent, function-calling, progressive-disclosure, automation, code-generation, hitl, observability, digitalocean, gradient-ai)
@@ -23,12 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - MCP tools section now lists all 17 servers by category
 
 ### Fixed
+
 - Tool invocation capability: LLM can now execute tools via LangChain protocol instead of only reading tool documentation
 - Token efficiency: Progressive disclosure maintained while adding function calling capability
 
 ## [0.1.0] - 2024-XX-XX
 
 ### Added
+
 - Initial release
 - `@devtools` chat participant for natural language task submission
 - Multi-agent orchestration (6 specialized agents)
@@ -41,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Real-time approval notifications (<1s latency)
 
 ### Infrastructure
+
 - DigitalOcean droplet deployment (45.55.173.72)
 - 6 specialized agents on ports 8001-8006
 - MCP gateway with 17 servers, 150+ tools
