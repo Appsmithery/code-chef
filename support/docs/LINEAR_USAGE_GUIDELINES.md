@@ -5,6 +5,7 @@
 This project uses Linear for two distinct purposes:
 
 ### 1. **AI DevOps Agent Platform Project** (Primary)
+
 - **URL**: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
 - **Project ID**: `78b3b839d36b`
 - **Team**: Project Roadmaps (PR)
@@ -12,12 +13,14 @@ This project uses Linear for two distinct purposes:
 - **Update Frequency**: After each phase completion
 
 **Use Cases:**
+
 - Phase completion reports
 - Milestone tracking
 - Feature documentation
 - Roadmap updates
 
 **Scripts:**
+
 - `support/scripts/update-linear-phase6.py` - Update Phase 6 completion
 - `support/scripts/update-linear-graphql.py` - Generic issue updates
 - `support/scripts/create-hitl-subtasks.py` - Create subtasks for phases
@@ -25,18 +28,21 @@ This project uses Linear for two distinct purposes:
 ---
 
 ### 2. **PR-68: Agent Approvals Hub** (Specific Use Case)
+
 - **URL**: https://linear.app/project-roadmaps/issue/PR-68/agent-approvals-hub
 - **Issue ID**: `PR-68`
 - **Purpose**: Workspace-level approval notification hub for HITL workflows
 - **Update Frequency**: Real-time (when approval requests are created)
 
 **Use Cases:**
+
 - HITL approval notifications
 - Agent coordination alerts
 - Workflow approval tracking
 - Critical action notifications
 
 **Scripts:**
+
 - `support/scripts/update-linear-pr68.py` - Update PR-68 with approval notifications
 - Orchestrator event bus integration (automatic)
 
@@ -45,6 +51,7 @@ This project uses Linear for two distinct purposes:
 ## When to Use Which
 
 ### Update the Project (78b3b839d36b) When:
+
 - ✅ Completing a phase (Phase 6, Phase 7, etc.)
 - ✅ Adding new features to the roadmap
 - ✅ Documenting major milestones
@@ -52,6 +59,7 @@ This project uses Linear for two distinct purposes:
 - ✅ Updating architecture documentation
 
 **Example:**
+
 ```powershell
 $env:LINEAR_API_KEY="your_key_here"
 python support/scripts/update-linear-phase6.py
@@ -60,18 +68,21 @@ python support/scripts/update-linear-phase6.py
 ---
 
 ### Update PR-68 When:
+
 - ✅ Agent requests HITL approval
 - ✅ Critical action needs human review
 - ✅ Workflow requires approval gate
 - ✅ Posting approval notifications
 
 **Example:**
+
 ```powershell
 $env:LINEAR_API_KEY="your_key_here"
 python support/scripts/update-linear-pr68.py
 ```
 
 **Automatic Integration:**
+
 ```python
 # In orchestrator event bus
 await linear_workspace_client.post_approval_notification(
@@ -131,18 +142,21 @@ Project Roadmaps (PR) Team
 ## Best Practices
 
 ### For Phase Completions:
+
 1. Run the phase-specific update script: `update-linear-phase6.py`
 2. Include completion metrics and validation results
 3. Link to relevant documentation in GitHub
 4. Mark issue state as "Done" or "Complete"
 
 ### For Approval Notifications:
+
 1. Let the event bus handle automatic posting to PR-68
 2. Include approval request ID for traceability
 3. Add risk level and action type labels
 4. @mention relevant team members
 
 ### For General Updates:
+
 1. Use the generic GraphQL script: `update-linear-graphql.py`
 2. Target specific issue IDs or titles
 3. Append to existing descriptions (don't overwrite)
@@ -180,16 +194,19 @@ After running any Linear update script:
 ## Troubleshooting
 
 ### "Issue not found" error:
+
 - Verify the issue ID or project ID is correct
 - Check your LINEAR_API_KEY has access to the workspace
 - Try searching by title first
 
 ### "Permission denied" error:
-- Ensure LINEAR_API_KEY is an OAuth token (starts with `lin_oauth_`)
+
+- Ensure LINEAR*API_KEY is an OAuth token (starts with `lin_oauth*`)
 - Personal API keys (`lin_api_`) may have limited permissions
 - Verify team membership in Linear
 
 ### Updates not appearing:
+
 - Check if description was appended (not overwritten)
 - Verify GraphQL mutation succeeded in script output
 - Check Linear UI for rate limiting messages
@@ -207,13 +224,13 @@ After running any Linear update script:
 
 ## Script Reference
 
-| Script | Purpose | Target | Frequency |
-|--------|---------|--------|-----------|
-| `update-linear-phase6.py` | Phase 6 completion | Project (78b3b839d36b) | Once per phase |
-| `update-linear-pr68.py` | Approval hub updates | PR-68 | Real-time |
-| `update-linear-graphql.py` | Generic updates | Any issue | As needed |
-| `create-hitl-subtasks.py` | Create subtasks | Any parent issue | As needed |
-| `mark-hitl-complete.py` | Mark tasks done | Any issue | As needed |
+| Script                     | Purpose              | Target                 | Frequency      |
+| -------------------------- | -------------------- | ---------------------- | -------------- |
+| `update-linear-phase6.py`  | Phase 6 completion   | Project (78b3b839d36b) | Once per phase |
+| `update-linear-pr68.py`    | Approval hub updates | PR-68                  | Real-time      |
+| `update-linear-graphql.py` | Generic updates      | Any issue              | As needed      |
+| `create-hitl-subtasks.py`  | Create subtasks      | Any parent issue       | As needed      |
+| `mark-hitl-complete.py`    | Mark tasks done      | Any issue              | As needed      |
 
 ---
 
