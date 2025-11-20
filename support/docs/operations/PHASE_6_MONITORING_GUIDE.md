@@ -212,7 +212,7 @@ docker compose restart
 
 ## 🔗 Related Documentation
 
-- `PHASE_6_COMPLETE.md` - Implementation details
+- `../../_archive/docs-historical/PHASE_6_COMPLETE.md` - Implementation details (archived)
 - `EVENT_PROTOCOL.md` - Event bus usage patterns
 - `RESOURCE_LOCKING.md` - Locking best practices
 - `AGENT_REGISTRY.md` - Agent discovery system

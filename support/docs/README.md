@@ -19,29 +19,35 @@ Documentation is organized into logical categories:
 
 - **[Setup Guide](SETUP_GUIDE.md)** - First-time setup instructions
 - **[Architecture Overview](ARCHITECTURE.md)** - System design and components
-- **[Agent Endpoints](AGENT_ENDPOINTS.md)** - API reference for all agents
+- **[Agent Endpoints](api/AGENT_ENDPOINTS.md)** - API reference for all agents
 
-### Deployment
+### Deployment & Operations
 
-- **[Docker Hub Deployment](DOCKER_HUB_DEPLOYMENT.md)** - v2.0 architecture with Docker Hub registry
-- **[DigitalOcean Quick Deploy](DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
-- **[Deployment Overview](DEPLOYMENT.md)** - General deployment concepts
-- **[Secrets Management](SECRETS_MANAGEMENT.md)** - Security and configuration
+- **[Docker Hub Deployment](operations/DOCKER_HUB_DEPLOYMENT.md)** - v2.0 architecture with Docker Hub registry
+- **[DigitalOcean Quick Deploy](operations/DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
+- **[Deployment Overview](operations/DEPLOYMENT.md)** - General deployment concepts
+- **[Secrets Management](operations/SECRETS_MANAGEMENT.md)** - Security and configuration
+- **[Prometheus Metrics](operations/PROMETHEUS_METRICS.md)** - HTTP metrics and monitoring
 
-### Integrations
+### Architecture & Design
 
-- **[MCP Integration](MCP_INTEGRATION.md)** - Model Context Protocol (150+ tools)
-- **[Gradient Quick Start](GRADIENT_QUICK_START.md)** - DigitalOcean AI inference setup
-- **[Gradient Troubleshooting](GRADIENT_TROUBLESHOOTING.md)** - LLM integration debugging guide
-- **[Langfuse Tracing](LANGFUSE_TRACING.md)** - LLM observability setup
-- **[Langfuse Examples](LANGFUSE_EXAMPLES.md)** - Tracing patterns and queries
-- **[Prometheus Metrics](PROMETHEUS_METRICS.md)** - HTTP metrics and monitoring
+- **[MCP Integration](architecture/MCP_INTEGRATION.md)** - Model Context Protocol (150+ tools)
+- **[LangGraph Integration](architecture/LANGGRAPH_INTEGRATION.md)** - Workflow orchestration
+- **[Multi-Agent Workflows](architecture/MULTI_AGENT_WORKFLOWS.md)** - Collaboration patterns
+- **[Task Orchestration](architecture/TASK_ORCHESTRATION.md)** - Workflow engine details
 
-### Development
+### Integration Guides
 
-- **[Task Orchestration](TASK_ORCHESTRATION.md)** - Workflow engine details
-- **[Frontend Integration](FRONTEND_INTEGRATION.md)** - UI/API integration guide
-- **[Handbook](HANDBOOK.md)** - Development practices and patterns
+- **[Gradient Quick Start](guides/integration/GRADIENT_AI_QUICK_START.md)** - DigitalOcean AI inference setup
+- **[LangSmith Tracing](guides/integration/LANGSMITH_TRACING.md)** - LLM observability setup
+- **[LangSmith Examples](guides/integration/LANGSMITH_EXAMPLES.md)** - Tracing patterns and queries
+- **[Linear Setup](guides/integration/LINEAR_SETUP.md)** - Linear project management
+
+### Development Guides
+
+- **[Frontend Integration](guides/FRONTEND_INTEGRATION.md)** - UI/API integration guide
+- **[Handbook](guides/HANDBOOK.md)** - Development practices and patterns
+- **[Configure Agents UI](guides/CONFIGURE_AGENTS_UI.md)** - Agent UI configuration
 
 ---
 
@@ -49,16 +55,15 @@ Documentation is organized into logical categories:
 
 ### I want to...
 
-- **Deploy to production** → [Docker Hub Deployment](DOCKER_HUB_DEPLOYMENT.md) (v2.0 recommended)
+- **Deploy to production** → [Docker Hub Deployment](operations/DOCKER_HUB_DEPLOYMENT.md) (v2.0 recommended)
 - **Set up locally** → [Setup Guide](SETUP_GUIDE.md)
 - **Understand the system** → [Architecture Overview](ARCHITECTURE.md)
-- **Call an agent API** → [Agent Endpoints](AGENT_ENDPOINTS.md)
-- **Configure secrets** → [Secrets Management](SECRETS_MANAGEMENT.md)
-- **Add LLM inference** → [Gradient Quick Start](GRADIENT_QUICK_START.md)
-- **Debug LLM issues** → [Gradient Troubleshooting](GRADIENT_TROUBLESHOOTING.md)
-- **Monitor LLM calls** → [Langfuse Tracing](LANGFUSE_TRACING.md)
-- **Track HTTP metrics** → [Prometheus Metrics](PROMETHEUS_METRICS.md)
-- **Access 150+ tools** → [MCP Integration](MCP_INTEGRATION.md)
+- **Call an agent API** → [Agent Endpoints](api/AGENT_ENDPOINTS.md)
+- **Configure secrets** → [Secrets Management](operations/SECRETS_MANAGEMENT.md)
+- **Add LLM inference** → [Gradient Quick Start](guides/integration/GRADIENT_AI_QUICK_START.md)
+- **Monitor LLM calls** → [LangSmith Tracing](guides/integration/LANGSMITH_TRACING.md)
+- **Track HTTP metrics** → [Prometheus Metrics](operations/PROMETHEUS_METRICS.md)
+- **Access 150+ tools** → [MCP Integration](architecture/MCP_INTEGRATION.md)
 
 ---
 

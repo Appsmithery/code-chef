@@ -30,18 +30,34 @@
     "github.copilot.chat.scopeSelection": true,
     "github.copilot.chat.tools.memory.enabled": true,
     "mcp": {
-      "servers": {
-        "Docs by LangChain": {
-          "url": "https://docs.langchain.com/mcp",
-          "type": "http"
-        }
-      },
-      "inputs": []
+      "inputs": [],
+      "servers": {}
     },
     "github.copilot.nextEditSuggestions.enabled": true,
     "github.copilot.chat.responsesApiReasoningSummary": "off",
     "github.copilot.chat.summarizeAgentConversationHistory.enabled": true,
-    "editor.aiStats.enabled": true
+    "editor.aiStats.enabled": true,
+    "github-actions.workflows.pinned.workflows": [],
+    "chat.mcp.serverSampling": {
+      "dev-tools.code-workspace: Docs by LangChain": {
+        "allowedModels": [
+          "copilot/claude-sonnet-4.5",
+          "copilot/auto",
+          "copilot/claude-haiku-4.5",
+          "copilot/claude-sonnet-4",
+          "copilot/gemini-2.5-pro",
+          "copilot/gemini-3-pro-preview",
+          "copilot/gpt-4.1",
+          "copilot/gpt-5",
+          "copilot/gpt-5-codex",
+          "copilot/gpt-5.1",
+          "copilot/gpt-5.1-codex",
+          "copilot/gpt-5.1-codex-mini",
+          "copilot/grok-code-fast-1",
+          "copilot/oswe-vscode-prime"
+        ]
+      }
+    }
   },
   "extensions": {
     "recommendations": [
