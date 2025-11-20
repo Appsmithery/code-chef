@@ -17,7 +17,8 @@ import logging
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_core.output_parsers import JsonOutputParser, OutputParserException
+from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.exceptions import OutputParserException
 
 from shared.lib.langchain_gradient import get_llm
 
