@@ -40,6 +40,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
+    "@appsmithery/mcp-bridge-client": "^0.1.0",
     "axios": "^1.6.0"
   },
   "devDependencies": {
