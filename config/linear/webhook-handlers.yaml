@@ -1,0 +1,193 @@
+# Linear Webhook Handler Configuration
+# Configure webhook responses for HITL approval workflow
+#
+# Documentation: https://developers.linear.app/docs/graphql/webhooks
+# Setup: Linear Settings → API → Webhooks → Create webhook
+#   - URL: https://theshop.appsmithery.co/webhooks/linear
+#   - Events: Issue updated, Comment created
+#   - Signing secret: Store in LINEAR_WEBHOOK_SIGNING_SECRET
+
+webhooks:
+  # HITL Approval Status Change Handler
+  - name: hitl_approval_status_change
+    event: Issue
+    action: update
+    filters:
+      - field: labels
+        contains: HITL # Only process HITL-labeled issues
+      - field: customFields.request_status
+        changed: true # Trigger on Request Status field changes
+
+    handlers:
+      # When Request Status changes to "Approved"
+      - when:
+          customFields.request_status: approved
+        actions:
+          - type: resume_workflow
+            description: Resume LangGraph workflow from checkpoint
+            endpoint: /api/workflows/{workflow_id}/resume
+            payload:
+              approval_status: approved
+              approved_by: "{{updatedBy.email}}"
+              approved_at: "{{updatedAt}}"
+              issue_id: "{{issue.id}}"
+              issue_identifier: "{{issue.identifier}}"
+
+          - type: add_comment
+            description: Acknowledge approval
+            message: |
+              ✅ **Approval confirmed**
+
+              Workflow resuming with approved actions...
+              Approved by: @{{updatedBy.displayName}}
+
+          - type: update_status
+            description: Move to "In Progress" state
+            status: in_progress
+
+      # When Request Status changes to "Denied"
+      - when:
+          customFields.request_status: denied
+        actions:
+          - type: cancel_workflow
+            description: Cancel LangGraph workflow
+            endpoint: /api/workflows/{workflow_id}/cancel
+            payload:
+              approval_status: denied
+              denied_by: "{{updatedBy.email}}"
+              denied_at: "{{updatedAt}}"
+              reason: "{{issue.description}}"
+
+          - type: add_comment
+            description: Acknowledge denial
+            message: |
+              ❌ **Request denied**
+
+              Workflow canceled. No actions will be taken.
+              Denied by: @{{updatedBy.displayName}}
+
+          - type: update_status
+            description: Move to "Canceled" state
+            status: canceled
+
+      # When Request Status changes to "More information required"
+      - when:
+          customFields.request_status: more_information_required
+        actions:
+          - type: pause_workflow
+            description: Keep workflow paused, await clarification
+            endpoint: /api/workflows/{workflow_id}/pause
+            payload:
+              status: awaiting_info
+              requested_by: "{{updatedBy.email}}"
+
+          - type: add_comment
+            description: Acknowledge info request
+            message: |
+              ℹ️ **More information required**
+
+              Workflow paused. Please provide additional context in comments.
+              Requested by: @{{updatedBy.displayName}}
+
+              To resume, update Request Status to "Approved" when ready.
+
+  # Required Action Checkboxes Handler
+  - name: hitl_required_actions_updated
+    event: Issue
+    action: update
+    filters:
+      - field: labels
+        contains: HITL
+      - field: customFields.required_action
+        changed: true
+
+    handlers:
+      - when:
+          customFields.required_action:
+            all_checked: true # All required actions completed
+        actions:
+          - type: add_comment
+            description: Notify all actions completed
+            message: |
+              ✅ **All required actions completed**
+
+              Ready for final approval. Update Request Status when ready.
+
+  # Comment-Based Override Handler
+  - name: hitl_comment_commands
+    event: Comment
+    action: create
+    filters:
+      - field: issue.labels
+        contains: HITL
+      - field: body
+        matches: ^/approve|^/deny|^/request-info
+
+    handlers:
+      # /approve command in comments
+      - when:
+          body: ^/approve
+        actions:
+          - type: update_custom_field
+            field: request_status
+            value: approved
+          - type: add_reaction
+            emoji: "✅"
+
+      # /deny command in comments
+      - when:
+          body: ^/deny
+        actions:
+          - type: update_custom_field
+            field: request_status
+            value: denied
+          - type: add_reaction
+            emoji: "❌"
+
+      # /request-info command in comments
+      - when:
+          body: ^/request-info
+        actions:
+          - type: update_custom_field
+            field: request_status
+            value: more_information_required
+          - type: add_reaction
+            emoji: "ℹ️"
+
+# Event Processing Configuration
+processing:
+  # Webhook signature verification
+  verify_signature: true
+  signing_secret_env: LINEAR_WEBHOOK_SIGNING_SECRET
+
+  # Rate limiting
+  rate_limit:
+    max_requests_per_minute: 60
+    max_concurrent_handlers: 10
+
+  # Retry policy for failed handlers
+  retry:
+    max_attempts: 3
+    backoff_multiplier: 2
+    initial_delay_ms: 1000
+
+# Logging & Monitoring
+monitoring:
+  log_all_events: true
+  log_level: info
+  metrics_enabled: true
+
+  # LangSmith tracing for webhook handlers
+  langsmith_tracing: true
+  langsmith_project: webhooks-linear
+
+  # Alert on failures
+  alert_on_failure: true
+  alert_channels:
+    - type: linear_comment
+      issue_id: "{{issue.id}}"
+      message: "⚠️ Webhook handler failed: {{error.message}}"
+
+    - type: email
+      to: "{{env.NOTIFICATION_EMAIL_TO}}"
+      subject: "Linear Webhook Handler Failure"
