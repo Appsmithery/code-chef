@@ -27,19 +27,22 @@ from typing import Dict, Any, Optional
 from fastapi import FastAPI, Request, Header, HTTPException, status
 from pydantic import BaseModel
 
-# Assume event_bus is available from shared lib
-# from shared.lib.event_bus import event_bus
+from shared.lib.event_bus import get_event_bus
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Linear Webhook Handler")
 
+# Initialize event bus
+event_bus = get_event_bus()
+
 # Configuration
-WEBHOOK_SECRET = os.getenv("LINEAR_WEBHOOK_SIGNING_SECRET")
+# Use orchestrator-specific webhook secret
+WEBHOOK_SECRET = os.getenv("LINEAR_ORCHESTRATOR_WEBHOOK_SECRET") or os.getenv("LINEAR_WEBHOOK_SIGNING_SECRET")
 APPROVAL_HUB_ID = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "PR-68")
 
 if not WEBHOOK_SECRET:
-    logger.warning("LINEAR_WEBHOOK_SIGNING_SECRET not configured - webhook verification disabled")
+    logger.warning("LINEAR_ORCHESTRATOR_WEBHOOK_SECRET not configured - webhook verification disabled")
 
 
 class LinearWebhookPayload(BaseModel):
@@ -195,11 +198,15 @@ async def handle_linear_webhook(
                     
                     logger.info(f"Approval decision: {decision} for task {task_id}")
                     
-                    # TODO: Publish to event bus
-                    # await event_bus.publish("approval_decision", event)
+                    # Publish to event bus
+                    await event_bus.emit(
+                        event_type="approval_decision",
+                        data=event,
+                        source="linear_webhook",
+                        correlation_id=task_id
+                    )
                     
-                    # For now, log event (implement event bus integration later)
-                    logger.info(f"Event (to be published): approval_decision - {event}")
+                    logger.info(f"Published approval_decision event: {event}")
                 else:
                     logger.warning(f"No task ID found in approval issue {issue_identifier}")
             else:
@@ -243,9 +250,14 @@ async def handle_linear_webhook(
                 
                 logger.info(f"Approval via comment: approved task {task_id}")
                 
-                # TODO: Publish to event bus
-                # await event_bus.publish("approval_decision", event)
-                logger.info(f"Event (to be published): approval_decision - {event}")
+                # Publish to event bus
+                await event_bus.emit(
+                    event_type="approval_decision",
+                    data=event,
+                    source="linear_webhook",
+                    correlation_id=task_id
+                )
+                logger.info(f"Published approval_decision event: {event}")
             
             elif reject_match:
                 task_id = reject_match.group(1)
@@ -265,9 +277,14 @@ async def handle_linear_webhook(
                 
                 logger.info(f"Rejection via comment: rejected task {task_id} - {reason}")
                 
-                # TODO: Publish to event bus
-                # await event_bus.publish("approval_decision", event)
-                logger.info(f"Event (to be published): approval_decision - {event}")
+                # Publish to event bus
+                await event_bus.emit(
+                    event_type="approval_decision",
+                    data=event,
+                    source="linear_webhook",
+                    correlation_id=task_id
+                )
+                logger.info(f"Published approval_decision event: {event}")
     
     # ========================================
     # Other Events (Ignore)
