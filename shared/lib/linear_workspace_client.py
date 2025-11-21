@@ -25,66 +25,65 @@ logger = logging.getLogger(__name__)
 class LinearWorkspaceClient:
     """
     Linear client with workspace-level permissions.
-    
+
     Use cases:
     - Posting approval requests to workspace hub
     - Creating new projects
     - Listing all projects for routing
-    
+
     Security: Only the orchestrator should instantiate this.
     """
-    
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize workspace-level Linear client.
-        
+
         Args:
             api_key: Linear OAuth token with workspace scope
         """
         self.api_key = api_key or os.getenv("LINEAR_API_KEY")
-        
+
         if not self.api_key:
             raise ValueError("LINEAR_API_KEY not configured")
-        
+
         # Initialize GraphQL client
         transport = RequestsHTTPTransport(
             url="https://api.linear.app/graphql",
             headers={"Authorization": self.api_key},
-            use_json=True
+            use_json=True,
         )
-        
-        self.client = Client(
-            transport=transport,
-            fetch_schema_from_transport=True
-        )
-        
+
+        self.client = Client(transport=transport, fetch_schema_from_transport=True)
+
         logger.info("Linear workspace client initialized")
-    
-    async def _execute_query(self, query_string: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+
+    async def _execute_query(
+        self, query_string: str, variables: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Execute raw GraphQL query (for testing/debugging).
-        
+
         Args:
             query_string: GraphQL query string
             variables: Optional query variables
-        
+
         Returns:
             Query result
         """
         query = gql(query_string)
         return self.client.execute(query, variable_values=variables or {})
-    
+
     async def post_to_approval_hub(
         self,
         approval_id: str,
         task_description: str,
         risk_level: str,
         project_name: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Post approval request to workspace-level approval hub.
-        
+
         Args:
             approval_id: UUID of approval request
             task_description: Human-readable task description
@@ -92,33 +91,28 @@ class LinearWorkspaceClient:
             project_name: Which project this approval is for
             approver_mention: Linear @mention for approver (e.g., "@ops-lead")
             metadata: Additional context (risk factors, action details)
-        
+
         Returns:
             Comment ID if successful
         """
         # Get approval hub issue identifier from config (e.g., "DEV-68")
         hub_issue_identifier = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
-        
+
         if not hub_issue_identifier:
             logger.error("LINEAR_APPROVAL_HUB_ISSUE_ID not configured")
             raise ValueError("Approval hub not configured")
-        
+
         # Resolve identifier to UUID
         hub_issue = await self.get_issue_by_identifier(hub_issue_identifier)
         if not hub_issue:
             logger.error(f"Approval hub issue {hub_issue_identifier} not found")
             raise ValueError(f"Approval hub issue {hub_issue_identifier} not found")
-        
+
         hub_issue_id = hub_issue["id"]
-        
+
         # Format comment body
-        risk_emoji = {
-            "critical": "🔴",
-            "high": "🟠",
-            "medium": "🟡",
-            "low": "🟢"
-        }
-        
+        risk_emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
+
         body = f"""
 {risk_emoji.get(risk_level, "⚪")} **{risk_level.upper()} Approval Required**
 
@@ -136,12 +130,13 @@ class LinearWorkspaceClient:
 
 **Details**: [View in dashboard](http://45.55.173.72:8001/approvals/{approval_id})
 """
-        
+
         if metadata:
             body += f"\n**Metadata**: ```json\n{metadata}\n```"
-        
+
         # Create comment via GraphQL
-        mutation = gql("""
+        mutation = gql(
+            """
             mutation CreateComment($issueId: String!, $body: String!) {
                 commentCreate(input: {
                     issueId: $issueId
@@ -154,34 +149,32 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         try:
             result = self.client.execute(
-                mutation,
-                variable_values={
-                    "issueId": hub_issue_id,
-                    "body": body
-                }
+                mutation, variable_values={"issueId": hub_issue_id, "body": body}
             )
-            
+
             comment_id = result["commentCreate"]["comment"]["id"]
             logger.info(f"Posted approval {approval_id} to workspace hub: {comment_id}")
-            
+
             return comment_id
-            
+
         except Exception as e:
             logger.error(f"Failed to post to approval hub: {e}")
             raise
-    
+
     async def list_projects(self) -> List[Dict[str, Any]]:
         """
         List all projects in workspace for routing decisions.
-        
+
         Returns:
             List of projects with id, name, slug
         """
-        query = gql("""
+        query = gql(
+            """
             query ListProjects {
                 projects {
                     nodes {
@@ -192,37 +185,36 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         try:
             result = self.client.execute(query)
             projects = result["projects"]["nodes"]
-            
+
             logger.info(f"Listed {len(projects)} projects in workspace")
             return projects
-            
+
         except Exception as e:
             logger.error(f"Failed to list projects: {e}")
             raise
-    
+
     async def create_project(
-        self,
-        name: str,
-        team_id: str,
-        description: Optional[str] = None
+        self, name: str, team_id: str, description: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create new project in workspace.
-        
+
         Args:
             name: Project name
             team_id: Team UUID
             description: Optional project description
-        
+
         Returns:
             Project object with id, name, url
         """
-        mutation = gql("""
+        mutation = gql(
+            """
             mutation CreateProject($input: ProjectCreateInput!) {
                 projectCreate(input: $input) {
                     success
@@ -233,8 +225,9 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         try:
             result = self.client.execute(
                 mutation,
@@ -242,45 +235,45 @@ class LinearWorkspaceClient:
                     "input": {
                         "name": name,
                         "teamIds": [team_id],
-                        "description": description or ""
+                        "description": description or "",
                     }
-                }
+                },
             )
-            
+
             project = result["projectCreate"]["project"]
             logger.info(f"Created project: {project['name']} ({project['id']})")
-            
+
             return project
-            
+
         except Exception as e:
             logger.error(f"Failed to create project: {e}")
             raise
-    
+
     # ========================================
     # Phase 3: GitHub Permalinks
     # ========================================
-    
+
     @staticmethod
     def generate_github_permalink(
         repo: str,
         file_path: str,
         line_start: int,
         line_end: Optional[int] = None,
-        commit_sha: Optional[str] = None
+        commit_sha: Optional[str] = None,
     ) -> str:
         """
         Generate GitHub permalink for code reference.
-        
+
         Args:
             repo: Repository in format "owner/repo" (e.g., "Appsmithery/Dev-Tools")
             file_path: Path to file relative to repo root (e.g., "agent_orchestrator/main.py")
             line_start: Starting line number (1-indexed)
             line_end: Ending line number (optional, for ranges)
             commit_sha: Specific commit SHA (optional, defaults to "main")
-        
+
         Returns:
             Full GitHub permalink URL
-        
+
         Example:
             >>> LinearWorkspaceClient.generate_github_permalink(
             ...     "Appsmithery/Dev-Tools",
@@ -292,28 +285,28 @@ class LinearWorkspaceClient:
         """
         # Ensure file_path doesn't start with /
         file_path = file_path.lstrip("/")
-        
+
         # Default to main branch if no commit specified
         ref = commit_sha or "main"
-        
+
         # Build base URL
         base_url = f"https://github.com/{repo}/blob/{ref}/{file_path}"
-        
+
         # Add line anchors
         if line_end and line_end != line_start:
             line_fragment = f"#L{line_start}-L{line_end}"
         else:
             line_fragment = f"#L{line_start}"
-        
+
         permalink = f"{base_url}{line_fragment}"
         logger.debug(f"Generated GitHub permalink: {permalink}")
-        
+
         return permalink
-    
+
     # ========================================
     # Phase 4: Issue Documents
     # ========================================
-    
+
     async def create_issue_with_document(
         self,
         title: str,
@@ -323,11 +316,11 @@ class LinearWorkspaceClient:
         labels: Optional[List[str]] = None,
         parent_id: Optional[str] = None,
         priority: Optional[int] = None,
-        assignee_id: Optional[str] = None
+        assignee_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create Linear issue with attached rich markdown document.
-        
+
         Args:
             title: Issue title
             description: Brief description (shown in issue list)
@@ -337,17 +330,18 @@ class LinearWorkspaceClient:
             parent_id: Parent issue ID (for sub-issues)
             priority: Priority level (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
             assignee_id: User UUID to assign
-        
+
         Returns:
             Created issue with id, identifier, url, and document
-        
+
         Use Cases:
             - HITL approvals with detailed context
             - Task decomposition analysis
             - Post-mortem documentation
             - Architecture decision records (ADRs)
         """
-        mutation = gql("""
+        mutation = gql(
+            """
             mutation CreateIssueWithDoc($input: IssueCreateInput!) {
                 issueCreate(input: $input) {
                     success
@@ -360,48 +354,48 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         input_data = {
             "title": title,
             "description": description,
             "projectId": project_id,
-            "document": {
-                "content": document_markdown
-            }
+            "document": {"content": document_markdown},
         }
-        
+
         if labels:
             input_data["labelIds"] = labels
-        
+
         if parent_id:
             input_data["parentId"] = parent_id
-        
+
         if priority is not None:
             input_data["priority"] = priority
-        
+
         if assignee_id:
             input_data["assigneeId"] = assignee_id
-        
+
         try:
             result = self.client.execute(
-                mutation,
-                variable_values={"input": input_data}
+                mutation, variable_values={"input": input_data}
             )
-            
+
             issue = result["issueCreate"]["issue"]
-            logger.info(f"Created issue with document: {issue['identifier']} - {issue['title']}")
-            
+            logger.info(
+                f"Created issue with document: {issue['identifier']} - {issue['title']}"
+            )
+
             return issue
-            
+
         except Exception as e:
             logger.error(f"Failed to create issue with document: {e}")
             raise
-    
+
     # ========================================
     # Phase 2: Template-Based Issue Creation
     # ========================================
-    
+
     async def create_approval_subissue(
         self,
         approval_id: str,
@@ -409,11 +403,11 @@ class LinearWorkspaceClient:
         risk_level: str,
         project_name: str,
         agent_name: str = "orchestrator",
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Create HITL approval sub-issue using agent-specific template.
-        
+
         Args:
             approval_id: UUID of approval request
             task_description: Task description requiring approval
@@ -421,25 +415,25 @@ class LinearWorkspaceClient:
             project_name: Project name for context
             agent_name: Agent requesting approval (for template selection)
             metadata: Additional context (task_id, priority, timestamp, etc.)
-        
+
         Returns:
             Created sub-issue with id, identifier, url
         """
         # Get parent approval hub issue
         hub_identifier = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
-        
+
         # Resolve parent issue ID from identifier
         parent_issue = await self.get_issue_by_identifier(hub_identifier)
         if not parent_issue:
             raise ValueError(f"Approval hub issue {hub_identifier} not found")
-        
+
         parent_id = parent_issue["id"]
-        
+
         # Select HITL template based on agent
         agent_upper = agent_name.upper().replace("-", "_")
         template_env_var = f"HITL_{agent_upper}_TEMPLATE_UUID"
         template_id = os.getenv(template_env_var)
-        
+
         if not template_id:
             # Fallback to generic orchestrator template
             template_id = os.getenv("HITL_ORCHESTRATOR_TEMPLATE_UUID")
@@ -447,13 +441,13 @@ class LinearWorkspaceClient:
                 f"HITL template not found for {agent_name} ({template_env_var}), "
                 f"using orchestrator template"
             )
-        
+
         if not template_id:
             raise ValueError(
                 f"HITL approval template not configured. "
                 f"Set {template_env_var} or HITL_ORCHESTRATOR_TEMPLATE_UUID in .env"
             )
-        
+
         # Prepare template variables
         template_vars = {
             "agent": agent_name,
@@ -463,40 +457,43 @@ class LinearWorkspaceClient:
             "reasoning": f"Risk level: {risk_level}",
             "risks": metadata.get("risk_factors", []) if metadata else [],
             "deadline": "30 minutes",
-            "estimated_tokens": metadata.get("estimated_cost", 150) if metadata else 150
+            "estimated_tokens": (
+                metadata.get("estimated_cost", 150) if metadata else 150
+            ),
         }
-        
+
         # Add metadata as JSON
         if metadata:
             template_vars["metadata"] = str(metadata)
-        
+
         # Generate title with risk emoji
-        risk_emoji = {
-            "critical": "🔴",
-            "high": "🟠",
-            "medium": "🟡",
-            "low": "🟢"
-        }
+        risk_emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
         title = f"{risk_emoji.get(risk_level, '⚪')} [{risk_level.upper()}] HITL Approval: {task_description[:50]}"
-        
+
         # Map risk levels to Linear priorities (1=urgent, 2=high, 3=medium, 4=low)
         priority_map = {
             "critical": 1,  # Urgent
-            "high": 1,      # Urgent
-            "medium": 2,    # High
-            "low": 3        # Medium
+            "high": 1,  # Urgent
+            "medium": 2,  # High
+            "low": 3,  # Medium
         }
-        
+
         # Get label IDs for HITL and agent
         label_ids = [
-            os.getenv("LINEAR_HITL_LABEL_ID", "f6157a00-f2d8-4417-a927-ba832733da90"),  # HITL label
-            os.getenv("LINEAR_ORCHESTRATOR_LABEL_ID", "0bc7a4c8-ece0-4778-9f21-eac54a7c469b")  # orchestrator label
+            os.getenv(
+                "LINEAR_HITL_LABEL_ID", "f6157a00-f2d8-4417-a927-ba832733da90"
+            ),  # HITL label
+            os.getenv(
+                "LINEAR_ORCHESTRATOR_LABEL_ID", "0bc7a4c8-ece0-4778-9f21-eac54a7c469b"
+            ),  # orchestrator label
         ]
-        
+
         # Create sub-issue from template (inherit parent's team)
         team_id = parent_issue.get("team", {}).get("id")
-        assignee_id = os.getenv("LINEAR_DEFAULT_ASSIGNEE_ID", "12b01869-730b-4898-9ca3-88c463764071")  # alex@appsmithery.co
-        
+        assignee_id = os.getenv(
+            "LINEAR_DEFAULT_ASSIGNEE_ID", "12b01869-730b-4898-9ca3-88c463764071"
+        )  # alex@appsmithery.co
+
         return await self.create_issue_from_template(
             template_id=template_id,
             template_variables=template_vars,
@@ -505,9 +502,9 @@ class LinearWorkspaceClient:
             team_id=team_id,
             assignee_id=assignee_id,
             label_ids=label_ids,
-            priority=priority_map.get(risk_level, 2)
+            priority=priority_map.get(risk_level, 2),
         )
-    
+
     async def create_issue_from_template(
         self,
         template_id: str,
@@ -519,21 +516,21 @@ class LinearWorkspaceClient:
         assignee_id: Optional[str] = None,
         label_ids: Optional[List[str]] = None,
         priority: Optional[int] = None,
-        state_id: Optional[str] = None
+        state_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Create issue from Linear template with variable substitution.
-        
+
         Args:
             template_id: Linear template UUID
             template_variables: Dict of template variables to substitute
             title_override: Override template title
             project_id: Override template project
             parent_id: Set parent issue (for sub-issues)
-        
+
         Returns:
             Created issue with id, identifier, url
-        
+
         Example:
             >>> await client.create_issue_from_template(
             ...     template_id="hitl-approval-template-uuid",
@@ -548,7 +545,8 @@ class LinearWorkspaceClient:
         # Note: Linear doesn't support templateId in issueCreate.
         # Templates in Linear SDK work via template.instantiate() which requires
         # SDK access, not pure GraphQL. For now, create issue with template structure.
-        mutation = gql("""
+        mutation = gql(
+            """
             mutation CreateIssue($input: IssueCreateInput!) {
                 issueCreate(input: $input) {
                     success
@@ -560,78 +558,76 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         input_data = {}
-        
+
         if title_override:
             input_data["title"] = title_override
-        
+
         if project_id:
             input_data["projectId"] = project_id
-        
+
         if parent_id:
             input_data["parentId"] = parent_id
-        
+
         if team_id:
             input_data["teamId"] = team_id
-        
+
         if assignee_id:
             input_data["assigneeId"] = assignee_id
-        
+
         if label_ids:
             input_data["labelIds"] = label_ids
-        
+
         if priority:
             input_data["priority"] = priority
-        
+
         if state_id:
             input_data["stateId"] = state_id
-        
+
         # Build description from template variables (manual template expansion)
         if template_variables:
             description_parts = []
             for key, value in template_variables.items():
                 if isinstance(value, list):
                     value = "\n".join([f"- {item}" for item in value])
-                description_parts.append(f"**{key.replace('_', ' ').title()}:** {value}")
-            
+                description_parts.append(
+                    f"**{key.replace('_', ' ').title()}:** {value}"
+                )
+
             input_data["description"] = "\n\n".join(description_parts)
-        
+
         try:
             result = self.client.execute(
-                mutation,
-                variable_values={"input": input_data}
+                mutation, variable_values={"input": input_data}
             )
-            
+
             issue = result["issueCreate"]["issue"]
             logger.info(f"Created issue: {issue['identifier']} - {issue['title']}")
-            
+
             return issue
-            
+
         except Exception as e:
             logger.error(f"Failed to create issue: {e}")
             raise
-    
+
     # ========================================
     # Phase 5: Issue Updates (Status & Comments)
     # ========================================
-    
-    async def update_issue_status(
-        self,
-        issue_id: str,
-        status: str
-    ) -> Dict[str, Any]:
+
+    async def update_issue_status(self, issue_id: str, status: str) -> Dict[str, Any]:
         """
         Update Linear issue status.
-        
+
         Args:
             issue_id: Issue UUID
             status: Status name (e.g., "todo", "in_progress", "done", "approved", "rejected")
-        
+
         Returns:
             Updated issue with id, identifier, state
-        
+
         Usage:
             >>> await client.update_issue_status(
             ...     issue_id="issue-uuid",
@@ -639,7 +635,8 @@ class LinearWorkspaceClient:
             ... )
         """
         # First, get the workflow state ID for this status
-        query = gql("""
+        query = gql(
+            """
             query GetWorkflowStates($teamId: String!) {
                 team(id: $teamId) {
                     states {
@@ -651,40 +648,42 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         try:
             # Get team ID
             team_id = os.getenv("LINEAR_TEAM_ID")
             if not team_id:
                 raise ValueError("LINEAR_TEAM_ID not configured")
-            
+
             # Fetch workflow states
             result = self.client.execute(query, variable_values={"teamId": team_id})
             states = result["team"]["states"]["nodes"]
-            
+
             # Find matching state (case-insensitive)
             state_id = None
             status_lower = status.lower().replace("_", " ")
-            
+
             for state in states:
                 if state["name"].lower() == status_lower:
                     state_id = state["id"]
                     break
-            
+
             if not state_id:
                 # Try partial match
                 for state in states:
                     if status_lower in state["name"].lower():
                         state_id = state["id"]
                         break
-            
+
             if not state_id:
                 logger.error(f"Status '{status}' not found in workflow states")
                 raise ValueError(f"Invalid status: {status}")
-            
+
             # Update issue
-            mutation = gql("""
+            mutation = gql(
+                """
                 mutation UpdateIssue($issueId: String!, $stateId: String!) {
                     issueUpdate(id: $issueId, input: {stateId: $stateId}) {
                         success
@@ -697,47 +696,43 @@ class LinearWorkspaceClient:
                         }
                     }
                 }
-            """)
-            
-            result = self.client.execute(
-                mutation,
-                variable_values={
-                    "issueId": issue_id,
-                    "stateId": state_id
-                }
+            """
             )
-            
+
+            result = self.client.execute(
+                mutation, variable_values={"issueId": issue_id, "stateId": state_id}
+            )
+
             issue = result["issueUpdate"]["issue"]
-            logger.info(f"Updated issue {issue['identifier']} to status: {issue['state']['name']}")
-            
+            logger.info(
+                f"Updated issue {issue['identifier']} to status: {issue['state']['name']}"
+            )
+
             return issue
-            
+
         except Exception as e:
             logger.error(f"Failed to update issue status: {e}")
             raise
-    
-    async def add_comment(
-        self,
-        issue_id: str,
-        body: str
-    ) -> Dict[str, Any]:
+
+    async def add_comment(self, issue_id: str, body: str) -> Dict[str, Any]:
         """
         Add comment to Linear issue.
-        
+
         Args:
             issue_id: Issue UUID
             body: Comment markdown content
-        
+
         Returns:
             Created comment with id, createdAt
-        
+
         Usage:
             >>> await client.add_comment(
             ...     issue_id="issue-uuid",
             ...     body="Code generation complete. 3 files created, all tests passing."
             ... )
         """
-        mutation = gql("""
+        mutation = gql(
+            """
             mutation CreateComment($issueId: String!, $body: String!) {
                 commentCreate(input: {
                     issueId: $issueId
@@ -751,57 +746,54 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         try:
             result = self.client.execute(
-                mutation,
-                variable_values={
-                    "issueId": issue_id,
-                    "body": body
-                }
+                mutation, variable_values={"issueId": issue_id, "body": body}
             )
-            
+
             comment = result["commentCreate"]["comment"]
             logger.info(f"Added comment to issue: {comment['id']}")
-            
+
             return comment
-            
+
         except Exception as e:
             logger.error(f"Failed to add comment: {e}")
             raise
-    
+
     async def get_issue_by_identifier(
-        self,
-        identifier: str
+        self, identifier: str
     ) -> Optional[Dict[str, Any]]:
         """
         Get issue by identifier (e.g., "PR-68").
-        
+
         Args:
             identifier: Issue identifier (team prefix + number)
-        
+
         Returns:
             Issue with id, identifier, title, description, state, parent
-        
+
         Usage:
             >>> issue = await client.get_issue_by_identifier("PR-68")
             >>> print(issue['id'])  # Use for parentId in sub-issues
         """
         # Split identifier into team key and number (e.g., "DEV-68" -> "DEV", 68)
-        parts = identifier.split('-')
+        parts = identifier.split("-")
         if len(parts) != 2:
             logger.error(f"Invalid identifier format: {identifier}")
             return None
-        
+
         team_key = parts[0]
         try:
             issue_number = int(parts[1])
         except ValueError:
             logger.error(f"Invalid issue number in identifier: {identifier}")
             return None
-        
-        query = gql("""
+
+        query = gql(
+            """
             query GetIssueByIdentifier($teamKey: String!, $number: Float!) {
                 issues(filter: {team: {key: {eq: $teamKey}}, number: {eq: $number}}, first: 1) {
                     nodes {
@@ -825,24 +817,24 @@ class LinearWorkspaceClient:
                     }
                 }
             }
-        """)
-        
+        """
+        )
+
         try:
             result = self.client.execute(
-                query,
-                variable_values={"teamKey": team_key, "number": issue_number}
+                query, variable_values={"teamKey": team_key, "number": issue_number}
             )
-            
+
             nodes = result.get("issues", {}).get("nodes", [])
             issue = nodes[0] if nodes else None
-            
+
             if issue:
                 logger.info(f"Found issue: {issue['identifier']} - `{issue['title']}`")
             else:
                 logger.warning(f"Issue not found: {identifier}")
-            
+
             return issue
-            
+
         except Exception as e:
             logger.error(f"Failed to get issue: {e}")
             return None
