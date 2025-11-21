@@ -2,8 +2,12 @@
 """
 Test LangGraph multi-agent workflow locally.
 
+NOTE: This is a test file for the current LangGraph architecture where all
+agents are internal nodes within the orchestrator service, not separate
+microservices.
+
 Tests:
-1. Agent node initialization (all 6 agents + supervisor)
+1. Agent node initialization (5 specialized agents + supervisor)
 2. LangGraph workflow compilation
 3. Task routing through supervisor
 4. HITL approval node creation
@@ -17,7 +21,7 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Add agent_orchestrator to path
+# Add agent_orchestrator to path (all agents are in this directory)
 sys.path.insert(0, str(Path(__file__).parent / "agent_orchestrator"))
 sys.path.insert(0, str(Path(__file__).parent / "shared"))
 

@@ -341,7 +341,7 @@ from lib.progressive_mcp_loader import ToolLoadingStrategy
 
 ## Context Operations
 
-Dev-Tools provides robust multi-agent context management. You can validate agent context files for schema correctness and compact scratchpads to keep working memory efficient.
+Dev-Tools provides robust context management for LangGraph agent nodes. You can validate agent context files for schema correctness and compact scratchpads to keep working memory efficient.
 
 ### Validate Agent Context Files
 

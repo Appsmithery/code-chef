@@ -53,38 +53,31 @@ Dev-Tools/
 **Purpose:** FastAPI-based agent implementations with specialized development capabilities.
 
 ```
-agents/
- agents-manifest.json       # Agent registry with tool allocations
- orchestrator/              # Task routing and coordination
+agent_orchestrator/        # LangGraph orchestrator with all agent nodes
     main.py                # FastAPI app (port 8001)
+    graph.py               # LangGraph workflow definition
+    workflows.py           # Workflow state and routing
+    agents/                # Agent node implementations
+        supervisor.py      # Supervisor routing agent
+        feature_dev.py     # Code generation agent node
+        code_review.py     # Quality/security agent node
+        infrastructure.py  # IaC/deployment agent node
+        cicd.py            # Pipeline automation agent node
+        documentation.py   # Documentation agent node
+    tools/                 # Agent-specific tool definitions
     README.md              # API documentation
     requirements.txt       # Python dependencies
-    Taskfile.yml           # Agent-specific workflows
- feature-dev/               # Code generation and implementation
-    main.py                # FastAPI app (port 8002)
-    ...
- code-review/               # Quality, security, standards enforcement
-    main.py                # FastAPI app (port 8003)
-    ...
- infrastructure/            # IaC authoring and deployment
-    main.py                # FastAPI app (port 8004)
-    ...
- cicd/                      # Pipeline generation and automation
-    main.py                # FastAPI app (port 8005)
-    ...
- documentation/             # Documentation synthesis
-     main.py                # FastAPI app (port 8006)
-     ...
 ```
 
 **Key Components:**
 
-- **Orchestrator Agent:** Task decomposition, agent routing, workflow coordination
-- **Feature-Dev Agent:** Code generation, scaffolding, test creation
-- **Code-Review Agent:** Automated quality, security, and standards enforcement
-- **Infrastructure Agent:** IaC authoring, deployment automation, drift detection
-- **CI/CD Agent:** Pipeline synthesis, workflow execution, policy enforcement
-- **Documentation Agent:** Technical documentation generation and maintenance
+- **Orchestrator Service:** LangGraph workflow with supervisor routing and agent nodes
+- **Supervisor Agent:** Task decomposition, agent routing, workflow coordination (LangGraph node)
+- **Feature-Dev Agent:** Code generation, scaffolding, test creation (LangGraph node)
+- **Code-Review Agent:** Automated quality, security, and standards enforcement (LangGraph node)
+- **Infrastructure Agent:** IaC authoring, deployment automation, drift detection (LangGraph node)
+- **CI/CD Agent:** Pipeline synthesis, workflow execution, policy enforcement (LangGraph node)
+- **Documentation Agent:** Technical documentation generation and maintenance (LangGraph node)
 
 **Shared Modules (`shared/lib/`):**
 
@@ -108,6 +101,7 @@ agents/
 - **RAG Context:** Semantic search via `rag-context:8007`
 - **State Persistence:** Workflow state via `state-persistence:8008`
 - **LLM Inference:** DigitalOcean Gradient AI via `gradient_client.py`
+- **LangGraph:** PostgreSQL checkpointer for workflow state, conditional edges for agent routing
 
 ---
 

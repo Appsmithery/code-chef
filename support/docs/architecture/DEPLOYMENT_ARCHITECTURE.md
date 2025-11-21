@@ -64,42 +64,40 @@
 
 - **Orchestrator** (port 8001)
 
-  - Routes tasks to appropriate agents
-  - Manages workflow state
+  - LangGraph workflow engine with all agent nodes
+  - Supervisor routing with conditional edges
+  - PostgreSQL checkpointing for workflow state
   - Model: llama-3.1-70b-instruct (complex reasoning)
 
-- **Feature Development** (port 8002)
+**Agent Nodes (internal to orchestrator, not separate services):**
 
-  - Implements new features
-  - Code generation
-  - Model: codellama-13b-instruct (code-specialized)
+- **Feature Development**
+  - Implements new features, code generation
+  - Model config: codellama-13b-instruct (code-specialized)
 
-- **Code Review** (port 8003)
+- **Code Review**
+  - Reviews pull requests, security analysis
+  - Model config: llama-3.1-70b-instruct (thorough analysis)
 
-  - Reviews pull requests
-  - Security analysis
-  - Model: llama-3.1-70b-instruct (thorough analysis)
-
-- **Infrastructure** (port 8004)
-
+- **Infrastructure**
   - Docker, Kubernetes, Terraform
-  - Model: llama-3.1-8b-instruct (efficient for structured tasks)
+  - Model config: llama-3.1-8b-instruct (efficient for structured tasks)
 
-- **CI/CD** (port 8005)
-
+- **CI/CD**
   - Pipeline configuration
-  - Model: llama-3.1-8b-instruct
+  - Model config: llama-3.1-8b-instruct
 
-- **Documentation** (port 8006)
+- **Documentation**
   - Generate/update docs
-  - Model: mistral-7b-instruct (fast, cost-effective)
+  - Model config: mistral-7b-instruct (fast, cost-effective)
 
-**All agents:**
+**Orchestrator Integration:**
 
-- Use `shared/lib/gradient_client.py` for LLM inference
-- Connect to MCP Gateway at `http://gateway-mcp:8000` (Docker network)
-- Connect to RAG service at `http://rag-context:8007`
-- Connect to State service at `http://state-persistence:8008`
+- Uses `shared/lib/gradient_client.py` for LLM inference
+- Connects to MCP Gateway at `http://gateway-mcp:8000` (Docker network)
+- Connects to RAG service at `http://rag-context:8007`
+- Connects to State service at `http://state-persistence:8008`
+- All agent nodes share orchestrator's service connections
 
 ### 2. Infrastructure Services (Docker Containers)
 

@@ -1,10 +1,14 @@
 # 🤖 Agent Phase 6 Audit Report and Wiring Plan
 
+**⚠️ HISTORICAL DOCUMENT - Pre-LangGraph Architecture**
+
+This document describes the legacy multi-agent microservices architecture that was replaced by LangGraph in November 2025. All references to "6 agents" now refer to internal LangGraph agent nodes within the single orchestrator service.
+
 ## ✅ COMPLETION STATUS - November 19, 2025
 
-**Phase 6 Integration: 100% COMPLETE**
+**Phase 6 Integration: 100% COMPLETE (Legacy Architecture)**
 
-All 6 agents have been successfully validated with full Phase 6 integration:
+All 6 agents were successfully validated with full Phase 6 integration before migration to LangGraph:
 
 - ✅ orchestrator: 14/14 checks (100%)
 - ✅ feature-dev: 14/14 checks (100%)

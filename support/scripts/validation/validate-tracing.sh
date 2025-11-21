@@ -147,46 +147,36 @@ echo -e "${BLUE}========================================${NC}"
 echo ""
 
 # Test 1: Orchestrator (Task Decomposition with Langfuse)
+# LangGraph Orchestrator (all agent nodes internal)
 test_endpoint \
-    "Orchestrator" \
-    "http://localhost:8001/orchestrate" \
+    "Orchestrator (LangGraph)" \
+    "http://localhost:8001/orchestrate/langgraph" \
     '{"description":"Build a REST API with user authentication and rate limiting","priority":"high"}' \
-    "task_id"
+    "workflow_id"
 
-# Test 2: Feature-Dev (Code Generation)
+# Test 2: Gateway MCP
 test_endpoint \
-    "Feature-Dev" \
-    "http://localhost:8002/generate" \
-    '{"feature":"user login endpoint with JWT tokens","framework":"FastAPI"}' \
-    "code"
+    "Gateway MCP" \
+    "http://localhost:8000/health" \
+    '{}' \
+    "status"
 
-# Test 3: Code-Review (Static Analysis)
+# Test 3: RAG Context
 test_endpoint \
-    "Code-Review" \
-    "http://localhost:8003/review" \
-    '{"code":"def authenticate(username, password):\n    if username == \"admin\" and password == \"admin\":\n        return True\n    return False","language":"python"}' \
-    "issues"
+    "RAG Context" \
+    "http://localhost:8007/health" \
+    '{}' \
+    "status"
 
-# Test 4: Infrastructure (IaC Generation)
+# Test 4: State Persistence
 test_endpoint \
-    "Infrastructure" \
-    "http://localhost:8004/generate-iac" \
-    '{"service":"PostgreSQL database","platform":"docker-compose"}' \
-    "iac"
+    "State Persistence" \
+    "http://localhost:8008/health" \
+    '{}' \
+    "status"
 
-# Test 5: CI/CD Pipeline Generation
-test_endpoint \
-    "CI/CD" \
-    "http://localhost:8005/generate-pipeline" \
-    '{"platform":"github-actions","language":"python"}' \
-    "pipeline"
-
-# Test 6: Documentation Generation
-test_endpoint \
-    "Documentation" \
-    "http://localhost:8006/generate-docs" \
-    '{"code":"def add(a, b):\n    return a + b","format":"markdown"}' \
-    "documentation"
+# Note: Individual agent endpoints (8002-8006) removed - agents are now
+# internal LangGraph nodes within the orchestrator (port 8001)
 
 # ============================================================================
 # PHASE 4: Summary
