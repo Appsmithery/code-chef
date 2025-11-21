@@ -153,6 +153,7 @@ High-risk tasks require human approval:
 5. **Agents Proceed** → Execution continues after approval
 
 **Linear Integration:**
+
 - Parent Hub: [DEV-68](https://linear.app/dev-ops/issue/DEV-68)
 - Sub-issues include: Risk level emoji, task description, metadata, timestamp
 - Templates: `HITL_ORCHESTRATOR_TEMPLATE_UUID` (and per-agent variants)

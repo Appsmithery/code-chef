@@ -241,6 +241,7 @@ High-risk operations (production deploys, destructive database work, secrets han
 4. **Waits** for approval via Linear issue status change (e.g., "Done" = approved, "Canceled" = rejected)
 
 **Linear Integration:**
+
 - Approval Hub: [DEV-68](https://linear.app/dev-ops/issue/DEV-68)
 - Sub-issues use HITL templates: `HITL_ORCHESTRATOR_TEMPLATE_UUID`, `HITL_FEATURE_DEV_TEMPLATE_UUID`, etc.
 - Each sub-issue includes risk emoji (🔴 critical, 🟠 high, 🟡 medium, 🟢 low)
