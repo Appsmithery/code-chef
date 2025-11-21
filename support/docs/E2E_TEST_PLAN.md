@@ -53,12 +53,12 @@ Layer 4: Production Validation
 
 ### Test Environment Matrix
 
-| Environment | LLM Provider | MCP Gateway | Linear API | State DB | Purpose |
-|-------------|--------------|-------------|------------|----------|---------|
-| **Local Mock** | Mocked | Mocked | Mocked | SQLite | Fast unit tests |
-| **Local Integration** | Gradient Dev | Docker Compose | OAuth Token | PostgreSQL | Integration tests |
-| **Staging** | Gradient Prod | Droplet Gateway | OAuth Token | Droplet PG | Pre-prod validation |
-| **Production** | Gradient Prod | Droplet Gateway | OAuth Token | Droplet PG | Real workflow execution |
+| Environment           | LLM Provider  | MCP Gateway     | Linear API  | State DB   | Purpose                 |
+| --------------------- | ------------- | --------------- | ----------- | ---------- | ----------------------- |
+| **Local Mock**        | Mocked        | Mocked          | Mocked      | SQLite     | Fast unit tests         |
+| **Local Integration** | Gradient Dev  | Docker Compose  | OAuth Token | PostgreSQL | Integration tests       |
+| **Staging**           | Gradient Prod | Droplet Gateway | OAuth Token | Droplet PG | Pre-prod validation     |
+| **Production**        | Gradient Prod | Droplet Gateway | OAuth Token | Droplet PG | Real workflow execution |
 
 ---
 
@@ -73,12 +73,14 @@ Layer 4: Production Validation
 **File**: `test_langgraph_workflow.py::test_agent_initialization()`
 
 Validates:
+
 - All 6 agents (supervisor, feature-dev, code-review, infrastructure, cicd, documentation) instantiate correctly
 - Agent names match expected values
 - LLM clients initialized (Gradient AI)
 - Configuration loaded from `config/mcp-agent-tool-mapping.yaml`
 
 **Expected Output**:
+
 ```
 ✅ supervisor: SupervisorAgent(agent_name='supervisor')
 ✅ feature-dev: FeatureDevAgent(agent_name='feature-dev')
@@ -89,6 +91,7 @@ Validates:
 ```
 
 **Run Command**:
+
 ```powershell
 python test_langgraph_workflow.py
 ```
@@ -100,12 +103,14 @@ python test_langgraph_workflow.py
 **File**: `test_langgraph_workflow.py::test_tool_binding()`
 
 Validates:
+
 - Each agent has access to its configured MCP tools
 - Progressive tool loading strategy configured
 - Tool manifests loaded from `config/mcp-agent-tool-mapping.yaml`
 - Agent executors initialized with tool chains
 
 **Example Assertions**:
+
 ```python
 feature_dev = get_agent("feature-dev")
 assert "rust-mcp-filesystem" in feature_dev.config["tools"]["allowed_servers"]
@@ -114,6 +119,7 @@ assert feature_dev.config["tools"]["progressive_strategy"] == "MINIMAL"
 ```
 
 **Expected Tools Per Agent** (from `mcp-agent-tool-mapping.yaml`):
+
 - **Supervisor**: memory, context7, notion, sequentialthinking (orchestration focus)
 - **Feature-Dev**: rust-mcp-filesystem, gitmcp, playwright, hugging-face (code generation)
 - **Code-Review**: gitmcp, rust-mcp-filesystem, hugging-face, context7 (analysis focus)
@@ -128,12 +134,14 @@ assert feature_dev.config["tools"]["progressive_strategy"] == "MINIMAL"
 **File**: `test_langgraph_workflow.py::test_workflow_compilation()`
 
 Validates:
+
 - LangGraph app compiles without errors
 - All 7 nodes registered (6 agents + approval node)
 - Entry point set to supervisor
 - Conditional edges configured for routing
 
 **Expected Graph Structure**:
+
 ```
 START → supervisor_node
 supervisor_node → {feature-dev, code-review, infrastructure, cicd, documentation}
@@ -155,6 +163,7 @@ approval_node → __interrupt__ (if pending)
 **File**: `test_langgraph_workflow.py::test_supervisor_routing()`
 
 Validates:
+
 - Supervisor analyzes task description
 - Routes to correct specialist agent
 - Sets requires_approval flag for high-risk tasks
@@ -162,15 +171,16 @@ Validates:
 
 **Test Cases**:
 
-| Task Description | Expected Route | Requires Approval |
-|------------------|----------------|-------------------|
-| "Implement OAuth2 authentication" | feature-dev | Yes (production code) |
-| "Review PR-42 for security issues" | code-review | No (read-only) |
-| "Deploy to production" | infrastructure | Yes (production change) |
-| "Update CI pipeline to run E2E tests" | cicd | No (pipeline config) |
-| "Generate API documentation" | documentation | No (docs only) |
+| Task Description                      | Expected Route | Requires Approval       |
+| ------------------------------------- | -------------- | ----------------------- |
+| "Implement OAuth2 authentication"     | feature-dev    | Yes (production code)   |
+| "Review PR-42 for security issues"    | code-review    | No (read-only)          |
+| "Deploy to production"                | infrastructure | Yes (production change) |
+| "Update CI pipeline to run E2E tests" | cicd           | No (pipeline config)    |
+| "Generate API documentation"          | documentation  | No (docs only)          |
 
 **Run Command**:
+
 ```bash
 pytest test_langgraph_workflow.py::test_supervisor_routing -v
 ```
@@ -182,12 +192,14 @@ pytest test_langgraph_workflow.py::test_supervisor_routing -v
 **New Test Required**: `support/tests/workflows/test_agent_handoff.py`
 
 Validates:
+
 - Feature-dev completes implementation → code-review agent receives PR context
 - Code-review approves → cicd agent triggers tests
 - CI/CD passes tests → infrastructure agent deploys
 - Documentation agent updates docs after deployment
 
 **Workflow**:
+
 ```
 supervisor → feature-dev (implement)
   ↓ (state: code_url, pr_number)
@@ -203,6 +215,7 @@ END
 ```
 
 **Key Validations**:
+
 - State carries forward correctly between agents
 - Each agent receives necessary context from previous agent
 - Messages array accumulates all agent outputs
@@ -215,17 +228,20 @@ END
 **File**: `support/tests/workflows/test_multi_agent_workflows.py::TestParallelDocsWorkflow::test_parallel_docs_workflow()`
 
 Validates:
+
 - Supervisor can route to multiple agents simultaneously
 - Parallel tasks execute concurrently (not sequentially)
 - Results aggregated correctly
 - No race conditions in shared state
 
 **Test Scenario**: Generate 3 documentation types in parallel
+
 - API reference docs
 - User guide
 - Deployment guide
 
 **Expected Behavior**:
+
 - Total execution time < 1s (not 3s)
 - All 3 docs generated successfully
 - No state corruption
@@ -240,12 +256,14 @@ Validates:
 **New Test Required**: `support/tests/integration/test_mcp_gateway.py`
 
 Validates:
+
 - MCP gateway reachable at `http://gateway-mcp:8000`
 - All 17 servers discoverable
 - 150+ tools enumerated correctly
 - Progressive tool loader filters correctly
 
 **Test Steps**:
+
 1. Query gateway `/mcp/servers` endpoint
 2. Verify 17 servers returned (see `mcp-agent-tool-mapping.yaml`)
 3. Query `/mcp/tools` for each server
@@ -255,6 +273,7 @@ Validates:
    - "Write README.md" → should load: rust-mcp-filesystem, context7, notion
 
 **Expected Tool Counts** (from manifest):
+
 ```yaml
 context7: 2
 dockerhub: 13
@@ -290,6 +309,7 @@ youtube_transcript: 3
 **Scenario**: "Add JWT authentication middleware to API"
 
 **Expected Flow**:
+
 ```
 1. POST /orchestrate/langgraph {"task": "Add JWT authentication..."}
 2. Supervisor analyzes → routes to feature-dev
@@ -312,6 +332,7 @@ youtube_transcript: 3
 ```
 
 **Validations**:
+
 - ✅ Feature branch created in git
 - ✅ Implementation files written with correct structure
 - ✅ PR created with descriptive title/body
@@ -322,6 +343,7 @@ youtube_transcript: 3
 - ✅ LangSmith trace shows complete workflow
 
 **Mock Points** (for faster testing):
+
 - Hugging-face code generation → pre-generated template
 - Linear API → mock server returning DEV-133
 - Git operations → local test repo (not main)
@@ -335,6 +357,7 @@ youtube_transcript: 3
 **Scenario**: "Review PR-85 for code quality"
 
 **Expected Flow**:
+
 ```
 1. POST /orchestrate/langgraph {"task": "Review PR-85 for code quality"}
 2. Supervisor → code-review agent
@@ -350,6 +373,7 @@ youtube_transcript: 3
 ```
 
 **Validations**:
+
 - ✅ PR-85 diff fetched correctly
 - ✅ All modified files analyzed
 - ✅ Review comments posted to PR
@@ -366,6 +390,7 @@ youtube_transcript: 3
 **Scenario**: "Deploy feature/jwt-auth branch to production"
 
 **Expected Flow**:
+
 ```
 1. POST /orchestrate/langgraph {"task": "Deploy feature/jwt-auth to production"}
 2. Supervisor → infrastructure agent
@@ -390,6 +415,7 @@ youtube_transcript: 3
 ```
 
 **Validations**:
+
 - ✅ Linear sub-issue created with 🔴 emoji (critical risk)
 - ✅ Approval includes detailed deployment plan
 - ✅ Workflow interrupts before deployment
@@ -409,6 +435,7 @@ youtube_transcript: 3
 **Scenario**: Service health check detects issue → diagnose → fix → verify
 
 **Expected Flow**:
+
 ```
 Loop (max 3 attempts):
 1. Infrastructure agent runs health check (dockerhub inspect_container)
@@ -421,6 +448,7 @@ Loop (max 3 attempts):
 ```
 
 **Validations**:
+
 - ✅ Detects simulated service failure
 - ✅ Diagnoses correct root cause
 - ✅ Applies appropriate fix
@@ -443,12 +471,14 @@ Loop (max 3 attempts):
 **New Test**: `support/tests/integration/test_postgres_checkpointing.py`
 
 Validates:
+
 - Workflow state persisted at each node transition
 - Checkpoint IDs generated correctly
 - State retrievable by thread_id + checkpoint_id
 - Optimistic locking prevents conflicts
 
 **Test Steps**:
+
 1. Start workflow with unique thread_id
 2. Execute 3 nodes (supervisor → feature-dev → code-review)
 3. Query database for checkpoints:
@@ -463,6 +493,7 @@ Validates:
    - B fails with version conflict error
 
 **Schema** (from `shared/services/langgraph/postgres_checkpointer.py`):
+
 ```sql
 CREATE TABLE langgraph_checkpoints (
     thread_id TEXT,
@@ -483,12 +514,14 @@ CREATE TABLE langgraph_checkpoints (
 **New Test**: `support/tests/integration/test_qdrant_memory.py`
 
 Validates:
+
 - Agent observations embedded and stored
 - Semantic search retrieves relevant context
 - Memory persists across workflow invocations
 - Collections properly namespaced by agent
 
 **Test Steps**:
+
 1. Feature-dev agent completes task: "Add OAuth2 middleware"
 2. Store observation in Qdrant:
    ```python
@@ -511,6 +544,7 @@ Validates:
 6. Verify vector dimensions match embedding model (e.g., 768 for sentence-transformers)
 
 **Expected Qdrant Collections**:
+
 - `devtools-supervisor`
 - `devtools-feature-dev`
 - `devtools-code-review`
@@ -525,12 +559,14 @@ Validates:
 **New Test**: `support/tests/integration/test_hybrid_memory.py`
 
 Validates:
+
 - Buffer memory tracks recent conversation (last 10 messages)
 - Vector memory provides long-term context retrieval
 - Hybrid query combines both sources
 - Memory correctly prioritizes recent + relevant context
 
 **Test Scenario**:
+
 1. Execute 15 tasks (exceeds buffer size of 10)
 2. Query: "What was the last deployment we did?"
    - Buffer memory: Returns most recent deployment (task 15)
@@ -540,6 +576,7 @@ Validates:
    - Hybrid: Returns task 15 (recent) + task 5 (relevant historical context)
 
 **Validation Criteria**:
+
 - Buffer memory limited to 10 most recent tasks
 - Vector memory retrieves from full history
 - Hybrid query returns combined results (deduplicated)
@@ -558,12 +595,14 @@ Validates:
 **File**: `support/tests/hitl/test_hitl_workflow.py::TestRiskAssessor`
 
 Validates:
+
 - Production delete operations → CRITICAL risk
 - Dev environment reads → LOW risk
 - Security findings → elevate to HIGH risk
 - Sensitive data operations → CRITICAL risk
 
 **Current Tests** (all passing):
+
 - ✅ `test_critical_production_delete()`
 - ✅ `test_low_dev_read()`
 - ✅ `test_high_security_findings()`
@@ -572,6 +611,7 @@ Validates:
 - ✅ `test_timeout_scaling()`
 
 **Run Command**:
+
 ```bash
 pytest support/tests/hitl/test_hitl_workflow.py::TestRiskAssessor -v
 ```
@@ -583,12 +623,14 @@ pytest support/tests/hitl/test_hitl_workflow.py::TestRiskAssessor -v
 **File**: `support/tests/hitl/test_hitl_workflow.py::TestHITLManager::test_create_approval_request()`
 
 Validates:
+
 - High-risk tasks create approval requests
 - Low-risk tasks auto-approve (no request)
 - Request stored in PostgreSQL
 - Timeout set based on risk level
 
 **Current Tests**:
+
 - ✅ `test_create_approval_request()` - High-risk creates request
 - ✅ `test_auto_approve_low_risk()` - Low-risk skips request
 
@@ -599,6 +641,7 @@ Validates:
 **New Test**: `support/tests/hitl/test_linear_integration.py`
 
 Validates:
+
 - Linear sub-issue created under DEV-68
 - Template populated correctly (HITL_ORCHESTRATOR_TEMPLATE_UUID)
 - Risk emoji included in title (🔴 🟠 🟡 🟢)
@@ -612,6 +655,7 @@ Validates:
   - estimated_tokens
 
 **Test Steps**:
+
 1. Mock Linear GraphQL API
 2. Call `linear_client.create_approval_subissue(...)`
 3. Verify GraphQL mutation:
@@ -632,6 +676,7 @@ Validates:
 5. Query Linear API to confirm sub-issue exists under DEV-68
 
 **Run Command**:
+
 ```bash
 $env:LINEAR_API_KEY="lin_oauth_..."; python -m pytest support/tests/hitl/test_linear_integration.py -v
 ```
@@ -643,12 +688,14 @@ $env:LINEAR_API_KEY="lin_oauth_..."; python -m pytest support/tests/hitl/test_li
 **File**: `support/tests/hitl/test_hitl_workflow.py::TestWorkflowIntegration`
 
 Validates:
+
 - LangGraph workflow interrupts at approval gate
 - PostgreSQL checkpoint persisted
 - Workflow resumes from checkpoint after approval
 - State preserved across interrupt/resume
 
 **Test Flow**:
+
 ```python
 # Initial invocation (should interrupt)
 result = await workflow.ainvoke(
@@ -702,6 +749,7 @@ curl -X POST http://localhost:8001/orchestrate/langgraph \
 ```
 
 **Expected Response**:
+
 ```json
 {
   "workflow_id": "wf-20251121-...",
@@ -713,6 +761,7 @@ curl -X POST http://localhost:8001/orchestrate/langgraph \
 ```
 
 **Manual Validation Steps**:
+
 1. ✅ Check LangSmith trace: Verify supervisor → feature-dev routing
 2. ✅ Verify MCP tool calls in trace:
    - `rust-mcp-filesystem:read_file` (read existing auth code)
@@ -747,6 +796,7 @@ curl -X POST http://localhost:8001/orchestrate/langgraph \
 ### 6.2 Low-Risk Task (No Approval)
 
 **Execute**:
+
 ```bash
 curl -X POST http://localhost:8001/orchestrate/langgraph \
   -H "Content-Type: application/json" \
@@ -757,6 +807,7 @@ curl -X POST http://localhost:8001/orchestrate/langgraph \
 ```
 
 **Expected Response**:
+
 ```json
 {
   "workflow_id": "wf-20251121-...",
@@ -769,6 +820,7 @@ curl -X POST http://localhost:8001/orchestrate/langgraph \
 ```
 
 **Validation**:
+
 - ✅ No approval issue created (low risk)
 - ✅ Workflow completes in <30s
 - ✅ Documentation files created
@@ -780,6 +832,7 @@ curl -X POST http://localhost:8001/orchestrate/langgraph \
 ### 6.3 Multi-Agent Handoff (Code Review)
 
 **Execute**:
+
 ```bash
 curl -X POST http://localhost:8001/orchestrate/langgraph \
   -H "Content-Type: application/json" \
@@ -790,11 +843,13 @@ curl -X POST http://localhost:8001/orchestrate/langgraph \
 ```
 
 **Expected Flow**:
+
 ```
 supervisor → code-review
 ```
 
 **Validation**:
+
 - ✅ LangSmith trace shows single agent execution
 - ✅ MCP tools called:
   - `gitmcp:get_pull_request` (fetch PR-85)
@@ -810,6 +865,7 @@ supervisor → code-review
 ### 6.4 Observability Validation
 
 **Check LangSmith Dashboard**:
+
 1. Navigate to: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
 2. Filter traces by: `tags: "production"`
 3. Verify trace includes:
@@ -821,6 +877,7 @@ supervisor → code-review
    - Latency per node
 
 **Check Prometheus Metrics**:
+
 ```bash
 ssh root@45.55.173.72
 curl http://localhost:9090/api/v1/query?query=langgraph_workflow_total
@@ -829,6 +886,7 @@ curl http://localhost:9090/api/v1/query?query=agent_node_duration_seconds
 ```
 
 **Expected Metrics**:
+
 - `langgraph_workflow_total{status="completed"}` > 0
 - `langgraph_workflow_total{status="pending_approval"}` > 0
 - `mcp_tool_call_total{server="gitmcp"}` > 0
@@ -847,12 +905,14 @@ curl http://localhost:9090/api/v1/query?query=agent_node_duration_seconds
 **New Test**: `support/tests/performance/test_concurrent_workflows.py`
 
 Validates:
+
 - 10 concurrent workflows execute without conflicts
 - PostgreSQL checkpointing handles concurrency
 - Resource locks prevent race conditions
 - No memory leaks or connection pool exhaustion
 
 **Test Scenario**:
+
 ```python
 tasks = [
     "Implement feature A",
@@ -873,6 +933,7 @@ assert all(r["status"] in ["completed", "pending_approval"] for r in results)
 ```
 
 **Validation**:
+
 - ✅ All 10 workflows complete within 2 minutes
 - ✅ No database deadlocks
 - ✅ No duplicate checkpoint IDs
@@ -886,12 +947,14 @@ assert all(r["status"] in ["completed", "pending_approval"] for r in results)
 **New Test**: `support/tests/performance/test_large_context.py`
 
 Validates:
+
 - Workflow handles large codebases (10K+ files)
 - Vector memory efficiently retrieves relevant context
 - Token limits respected (8K context window)
 - Progressive tool disclosure reduces token overhead
 
 **Test Scenario**:
+
 ```python
 task = {
     "task": "Refactor authentication module",
@@ -904,6 +967,7 @@ task = {
 ```
 
 **Validation**:
+
 - ✅ Only relevant files loaded (not all 12K)
 - ✅ Token usage < 8K per agent call
 - ✅ Progressive loader uses MINIMAL strategy (10-30 tools, not 150)
@@ -916,12 +980,14 @@ task = {
 **New Test**: `support/tests/performance/test_memory_persistence.py`
 
 Validates:
+
 - Workflow state persists across service restarts
 - Vector memory survives Qdrant restart
 - Checkpoints recoverable after PostgreSQL restart
 - No data loss on crash
 
 **Test Steps**:
+
 1. Start workflow with thread_id="persistence-test"
 2. Execute 3 nodes (supervisor → feature-dev → approval)
 3. Restart orchestrator service:
@@ -940,6 +1006,7 @@ Validates:
 7. Repeat with Qdrant restart
 
 **Validation**:
+
 - ✅ Workflow resumes correctly after each restart
 - ✅ No state corruption
 - ✅ All checkpoints intact
@@ -952,6 +1019,7 @@ Validates:
 ### Prerequisites
 
 **Local Development**:
+
 ```powershell
 # Install dependencies
 pip install -r agent_orchestrator/requirements.txt
@@ -969,6 +1037,7 @@ docker compose up -d postgres redis qdrant gateway-mcp
 ```
 
 **Production Droplet**:
+
 ```bash
 ssh root@45.55.173.72
 cd /opt/Dev-Tools
@@ -981,6 +1050,7 @@ docker compose ps
 ### Running Tests
 
 **Phase 1: Unit Tests** (5 minutes):
+
 ```powershell
 # All unit tests
 python test_langgraph_workflow.py
@@ -990,6 +1060,7 @@ python test_langgraph_workflow.py -k test_agent_initialization
 ```
 
 **Phase 2: Integration Tests** (15 minutes):
+
 ```powershell
 pytest support/tests/workflows/test_multi_agent_workflows.py -v -s
 
@@ -998,6 +1069,7 @@ pytest support/tests/workflows/test_multi_agent_workflows.py::TestPRDeploymentWo
 ```
 
 **Phase 3: E2E Tests** (30 minutes):
+
 ```powershell
 # Feature workflow (requires real LLM)
 pytest support/tests/e2e/test_feature_workflow.py -v -s
@@ -1010,6 +1082,7 @@ pytest support/tests/e2e/test_deploy_workflow.py -v -s
 ```
 
 **Phase 4: Memory Tests** (10 minutes):
+
 ```powershell
 pytest support/tests/integration/test_postgres_checkpointing.py -v
 pytest support/tests/integration/test_qdrant_memory.py -v
@@ -1017,12 +1090,14 @@ pytest support/tests/integration/test_hybrid_memory.py -v
 ```
 
 **Phase 5: HITL Tests** (15 minutes):
+
 ```powershell
 pytest support/tests/hitl/test_hitl_workflow.py -v
 pytest support/tests/hitl/test_linear_integration.py -v
 ```
 
 **Phase 6: Production Validation** (45 minutes):
+
 ```bash
 # Execute manual test checklist (see Section 6.1-6.4)
 # Use curl commands against droplet
@@ -1031,6 +1106,7 @@ ssh root@45.55.173.72
 ```
 
 **Phase 7: Performance Tests** (2 hours):
+
 ```powershell
 pytest support/tests/performance/ -v -s --timeout=7200
 ```
@@ -1040,16 +1116,19 @@ pytest support/tests/performance/ -v -s --timeout=7200
 ### Test Report Format
 
 **Generate HTML Report**:
+
 ```powershell
 pytest --html=support/reports/test_report.html --self-contained-html
 ```
 
 **Coverage Report**:
+
 ```powershell
 pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
 ```
 
 **Expected Coverage Targets**:
+
 - Agent modules: >80%
 - Shared libraries: >70%
 - Integration tests: >60%
@@ -1060,36 +1139,42 @@ pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
 ## Success Criteria
 
 ### Phase 1: Unit Tests
+
 - [x] All 6 agents initialize successfully
 - [x] Tool binding configured per agent
 - [x] LangGraph app compiles without errors
 - [x] Supervisor routes correctly
 
 ### Phase 2: Integration Tests
+
 - [ ] Agent handoffs preserve state
 - [ ] Parallel execution works correctly
 - [ ] MCP gateway returns 17 servers
 - [ ] Progressive loader reduces token usage by 80%
 
 ### Phase 3: E2E Workflows
+
 - [ ] Feature workflow executes end-to-end
 - [ ] High-risk tasks trigger HITL approval
 - [ ] Low-risk tasks auto-approve
 - [ ] Deployment workflow completes successfully
 
 ### Phase 4: Memory & Context
+
 - [ ] PostgreSQL checkpointing works
 - [ ] Qdrant vector search retrieves context
 - [ ] Hybrid memory combines buffer + vector
 - [ ] Optimistic locking prevents conflicts
 
 ### Phase 5: HITL Workflows
+
 - [ ] Risk assessment categorizes correctly
 - [ ] Linear sub-issues created under DEV-68
 - [ ] Workflow interrupts at approval gate
 - [ ] Workflow resumes after approval
 
 ### Phase 6: Production Validation
+
 - [ ] Real LLM calls execute successfully
 - [ ] Actual Linear API creates issues
 - [ ] MCP tools called correctly
@@ -1097,6 +1182,7 @@ pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
 - [ ] Prometheus metrics recorded
 
 ### Phase 7: Performance
+
 - [ ] 10 concurrent workflows execute without errors
 - [ ] Large context handled efficiently
 - [ ] Memory persists across restarts
@@ -1107,24 +1193,28 @@ pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
 ## Known Issues & Mitigations
 
 ### Issue 1: MCP Server Connection Failures
+
 **Symptom**: Some MCP servers unreachable (e.g., prometheus)  
 **Impact**: Reduced tool availability for agents  
 **Mitigation**: Agents should gracefully degrade; log warning but continue  
 **Test**: `test_mcp_gateway_resilience.py` - verify agents handle missing tools
 
 ### Issue 2: Linear API Rate Limits
+
 **Symptom**: 429 errors during bulk testing  
 **Impact**: HITL workflow tests may fail  
 **Mitigation**: Use mock Linear server for integration tests; only test real API in Phase 6  
 **Test**: Rate limit backoff in `linear_workspace_client.py`
 
 ### Issue 3: Gradient AI Latency
+
 **Symptom**: LLM calls take 5-10s on 70B model  
 **Impact**: E2E tests slow  
 **Mitigation**: Use smaller models (8B/13B) for non-critical tests; mock LLM for unit tests  
 **Test**: `test_gradient_fallback.py` - verify smaller models work
 
 ### Issue 4: PostgreSQL Connection Pool Exhaustion
+
 **Symptom**: `connection pool exhausted` error under load  
 **Impact**: Concurrent workflow tests fail  
 **Mitigation**: Increase pool size in `docker-compose.yml` (default: 20 → 50)  
@@ -1135,12 +1225,15 @@ pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
 ## Next Steps
 
 ### Immediate (Week 1)
+
 1. **Create E2E test suite** (`support/tests/e2e/`)
+
    - `test_feature_workflow.py`
    - `test_review_workflow.py`
    - `test_deploy_workflow.py`
 
 2. **Add Linear integration tests** (`support/tests/hitl/test_linear_integration.py`)
+
    - Mock GraphQL API
    - Validate sub-issue creation
    - Test approval resolution
@@ -1150,12 +1243,15 @@ pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
    - Replace event bus patterns with LangGraph state
 
 ### Short-term (Week 2-3)
+
 4. **Memory tests** (`support/tests/integration/`)
+
    - PostgreSQL checkpointing
    - Qdrant vector memory
    - Hybrid memory system
 
 5. **MCP gateway tests** (`support/tests/integration/test_mcp_gateway.py`)
+
    - Server discovery
    - Tool enumeration
    - Progressive loader validation
@@ -1166,12 +1262,15 @@ pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
    - Memory persistence
 
 ### Long-term (Week 4+)
+
 7. **CI/CD integration**
+
    - Add tests to GitHub Actions workflow
    - Nightly E2E tests against droplet
    - Coverage reporting to PR comments
 
 8. **Chaos testing** (`support/tests/chaos/`)
+
    - Service restart scenarios
    - Network partitions
    - Database failures
