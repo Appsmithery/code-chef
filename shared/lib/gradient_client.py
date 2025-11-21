@@ -18,7 +18,6 @@ from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.exceptions import OutputParserException
 
 from lib.langchain_gradient import get_llm
 
@@ -149,7 +148,7 @@ class GradientClient:
 
         try:
             parsed = parser.parse(raw_content)
-        except OutputParserException:
+        except Exception:
             logger.warning(
                 "[%s] JsonOutputParser failed, attempting manual json.loads", self.agent_name
             )
