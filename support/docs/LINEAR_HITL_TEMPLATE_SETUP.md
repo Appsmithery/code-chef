@@ -8,13 +8,13 @@ This guide configures the Linear approval template (ID: `8881211a-7b9c-42ab-a178
 
 ### Custom Fields
 
-1. **Request Status** (Dropdown, Required)
+1. **Request Status** (Dropdown, _NOT_ Required) // ---> this field tracks the approval decision, and is the human's input, so should _not_ be pre-filled by the orchestrator.
 
    - Approved (Default)
    - Denied
    - More information required
 
-2. **Required Action** (Checkboxes, Required)
+2. **Required Action** (Checkboxes, Required) // ---> this field indicates the actions the reviewer must take, and is pre-filled by the orchestrator based on risk level and should be moved up in the order.
    - Review proposed changes
    - Verify risks are acceptable
    - Check implementation approach
