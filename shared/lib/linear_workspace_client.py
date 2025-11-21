@@ -479,14 +479,33 @@ class LinearWorkspaceClient:
         }
         title = f"{risk_emoji.get(risk_level, '⚪')} [{risk_level.upper()}] HITL Approval: {task_description[:50]}"
         
+        # Map risk levels to Linear priorities (1=urgent, 2=high, 3=medium, 4=low)
+        priority_map = {
+            "critical": 1,  # Urgent
+            "high": 1,      # Urgent
+            "medium": 2,    # High
+            "low": 3        # Medium
+        }
+        
+        # Get label IDs for HITL and agent
+        label_ids = [
+            os.getenv("LINEAR_HITL_LABEL_ID", "f6157a00-f2d8-4417-a927-ba832733da90"),  # HITL label
+            os.getenv("LINEAR_ORCHESTRATOR_LABEL_ID", "0bc7a4c8-ece0-4778-9f21-eac54a7c469b")  # orchestrator label
+        ]
+        
         # Create sub-issue from template (inherit parent's team)
         team_id = parent_issue.get("team", {}).get("id")
+        assignee_id = os.getenv("LINEAR_DEFAULT_ASSIGNEE_ID", "12b01869-730b-4898-9ca3-88c463764071")  # alex@appsmithery.co
+        
         return await self.create_issue_from_template(
             template_id=template_id,
             template_variables=template_vars,
             title_override=title,
             parent_id=parent_id,
-            team_id=team_id
+            team_id=team_id,
+            assignee_id=assignee_id,
+            label_ids=label_ids,
+            priority=priority_map.get(risk_level, 2)
         )
     
     async def create_issue_from_template(
@@ -496,7 +515,11 @@ class LinearWorkspaceClient:
         title_override: Optional[str] = None,
         project_id: Optional[str] = None,
         parent_id: Optional[str] = None,
-        team_id: Optional[str] = None
+        team_id: Optional[str] = None,
+        assignee_id: Optional[str] = None,
+        label_ids: Optional[List[str]] = None,
+        priority: Optional[int] = None,
+        state_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create issue from Linear template with variable substitution.
@@ -552,6 +575,18 @@ class LinearWorkspaceClient:
         
         if team_id:
             input_data["teamId"] = team_id
+        
+        if assignee_id:
+            input_data["assigneeId"] = assignee_id
+        
+        if label_ids:
+            input_data["labelIds"] = label_ids
+        
+        if priority:
+            input_data["priority"] = priority
+        
+        if state_id:
+            input_data["stateId"] = state_id
         
         # Build description from template variables (manual template expansion)
         if template_variables:
