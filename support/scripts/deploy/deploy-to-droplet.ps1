@@ -192,20 +192,20 @@ function Test-HealthEndpoints {
     Write-Info "Waiting 15 seconds for services to stabilize..."
     Start-Sleep -Seconds 15
     
+    # Updated for LangGraph single-orchestrator architecture (no more microservices on 8002-8006)
     $endpoints = @(
+        @{Port=8000; Name="Gateway-MCP"},
         @{Port=8001; Name="Orchestrator"},
-        @{Port=8002; Name="Feature-Dev"},
-        @{Port=8003; Name="Code-Review"},
-        @{Port=8004; Name="Infrastructure"},
-        @{Port=8005; Name="CI/CD"},
-        @{Port=8006; Name="Documentation"}
+        @{Port=8007; Name="RAG-Context"},
+        @{Port=8008; Name="State-Persistence"},
+        @{Port=8009; Name="Agent-Registry"}
     )
     
     $healthyCount = 0
     foreach ($ep in $endpoints) {
         $health = ssh $DROPLET "curl -s http://localhost:$($ep.Port)/health 2>/dev/null"
         
-        if ($health -match '"status"\s*:\s*"ok"') {
+        if ($health -match '"status"\s*:\s*"(ok|healthy)"') {
             Write-Host "  [OK] $($ep.Name) (port $($ep.Port))" -ForegroundColor Green
             $healthyCount++
         } else {
