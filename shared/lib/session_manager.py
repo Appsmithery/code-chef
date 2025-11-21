@@ -58,7 +58,16 @@ class SessionManager:
         db_port = int(os.getenv("DB_PORT", "5432"))
         db_name = os.getenv("DB_NAME", "devtools")
         db_user = os.getenv("DB_USER", "devtools")
-        db_password = os.getenv("DB_PASSWORD", "changeme")
+        
+        # Support Docker secrets via POSTGRES_PASSWORD_FILE
+        db_password = os.getenv("DB_PASSWORD")
+        if not db_password:
+            password_file = os.getenv("POSTGRES_PASSWORD_FILE")
+            if password_file and os.path.exists(password_file):
+                with open(password_file, 'r') as f:
+                    db_password = f.read().strip()
+            else:
+                db_password = "changeme"
         
         try:
             self.db_pool = await asyncpg.create_pool(
