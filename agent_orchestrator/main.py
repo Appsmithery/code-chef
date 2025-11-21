@@ -2144,10 +2144,8 @@ async def chat_endpoint(request: ChatRequest):
                 if len(orchestrate_response.subtasks) > 3:
                     response_message += f"... and {len(orchestrate_response.subtasks) - 3} more\n"
                 
-                # Check if approval needed
-                if orchestrate_response.guardrail_report.status == GuardrailStatus.REQUIRES_APPROVAL:
-                    response_message += f"\n⏸ Approval required ({orchestrate_response.guardrail_report.risk_level} risk)\n"
-                    response_message += "Please review and approve/reject."
+                # Note: Approval check happens earlier in orchestrate_task_with_llm()
+                # via risk_assessor.requires_approval(), not via guardrail status
                 
                 # Save assistant message
                 await session_manager.add_message(
@@ -2165,7 +2163,7 @@ async def chat_endpoint(request: ChatRequest):
                     confidence=intent.confidence,
                     metadata={
                         "subtasks_count": len(orchestrate_response.subtasks),
-                        "requires_approval": orchestrate_response.guardrail_report.status == GuardrailStatus.REQUIRES_APPROVAL
+                        "guardrail_status": orchestrate_response.guardrail_report.status
                     }
                 )
                 
