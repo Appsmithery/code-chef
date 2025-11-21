@@ -22,29 +22,30 @@
 
 ### Template Variables
 
-| Variable | Type | Required | Example |
-|----------|------|----------|---------|
-| `{{agent}}` | Dropdown | Yes | orchestrator, feature-dev, code-review, infrastructure, cicd, documentation |
-| `{{task_id}}` | Text | Yes | abc123-def456-ghi789 |
-| `{{priority}}` | Dropdown | Yes | critical, high, medium, low |
-| `{{context}}` | Markdown | Yes | User requested JWT authentication for Express API |
-| `{{proposed_changes}}` | Markdown | Yes | - Add middleware/auth.js\n- Install jsonwebtoken package\n- Update routes |
-| `{{rationale}}` | Markdown | Yes | Secure API endpoints, prevent unauthorized access |
-| `{{risks}}` | Markdown | Yes | Breaking change for existing clients without tokens |
-| `{{deadline}}` | Date | No | 2025-11-25 |
+| Variable               | Type     | Required | Example                                                                     |
+| ---------------------- | -------- | -------- | --------------------------------------------------------------------------- |
+| `{{agent}}`            | Dropdown | Yes      | orchestrator, feature-dev, code-review, infrastructure, cicd, documentation |
+| `{{task_id}}`          | Text     | Yes      | abc123-def456-ghi789                                                        |
+| `{{priority}}`         | Dropdown | Yes      | critical, high, medium, low                                                 |
+| `{{context}}`          | Markdown | Yes      | User requested JWT authentication for Express API                           |
+| `{{proposed_changes}}` | Markdown | Yes      | - Add middleware/auth.js\n- Install jsonwebtoken package\n- Update routes   |
+| `{{rationale}}`        | Markdown | Yes      | Secure API endpoints, prevent unauthorized access                           |
+| `{{risks}}`            | Markdown | Yes      | Breaking change for existing clients without tokens                         |
+| `{{deadline}}`         | Date     | No       | 2025-11-25                                                                  |
 
 ---
 
 ## Template Content
 
 ### Title
+
 ```
 [HITL] {{agent}} - {{task_id}}
 ```
 
 ### Description
 
-````markdown
+```markdown
 # HITL Approval Request
 
 **Agent:** {{agent}}  
@@ -89,7 +90,7 @@
 {{/if}}
 
 **Approval Hub:** [PR-68](https://linear.app/project-roadmaps/issue/PR-68)
-````
+```
 
 ---
 
@@ -97,14 +98,14 @@
 
 Based on `{{agent}}` variable:
 
-| Agent Value | Applied Label |
-|-------------|---------------|
-| orchestrator | minion-labels/orchestrator |
-| feature-dev | minion-labels/feature-dev |
-| code-review | minion-labels/code-review |
+| Agent Value    | Applied Label                |
+| -------------- | ---------------------------- |
+| orchestrator   | minion-labels/orchestrator   |
+| feature-dev    | minion-labels/feature-dev    |
+| code-review    | minion-labels/code-review    |
 | infrastructure | minion-labels/infrastructure |
-| cicd | minion-labels/cicd |
-| documentation | minion-labels/documentation |
+| cicd           | minion-labels/cicd           |
+| documentation  | minion-labels/documentation  |
 
 ---
 
