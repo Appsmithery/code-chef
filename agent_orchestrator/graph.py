@@ -12,11 +12,15 @@ Architecture:
 
 import sys
 import uuid
+import logging
+from datetime import datetime
 from pathlib import Path
 from typing import TypedDict, List, Literal, Annotated
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
+
+logger = logging.getLogger(__name__)
 
 # Add shared modules to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
@@ -208,18 +212,26 @@ async def approval_node(state: WorkflowState) -> WorkflowState:
             break
     
     # Create approval sub-issue in Linear
-    approval_id = None
+    approval_id = f"approval-{uuid.uuid4()}"
     if linear_client:
         try:
             approval_issue = await linear_client.create_approval_subissue(
+                approval_id=approval_id,
                 task_description=task_description,
-                risk_level="HIGH",  # Determined by supervisor
-                requested_by="orchestrator"
+                risk_level="high",  # Determined by supervisor
+                project_name="Dev-Tools",
+                agent_name="orchestrator",
+                metadata={
+                    "timestamp": datetime.now().isoformat(),
+                    "workflow_id": state.get("workflow_id", "unknown")
+                }
             )
-            approval_id = approval_issue.get("id") if approval_issue else None
+            # Use Linear issue identifier for tracking
+            approval_id = approval_issue.get("identifier") if approval_issue else approval_id
+            logger.info(f"Created HITL approval sub-issue: {approval_id}")
         except Exception as e:
-            # Fallback if approval creation fails
-            approval_id = f"mock-approval-{uuid.uuid4()}"
+            logger.error(f"Failed to create approval sub-issue: {e}")
+            # Keep the UUID approval_id as fallback
     
     return {
         "messages": [AIMessage(content=f"Approval requested: {approval_id}")],
