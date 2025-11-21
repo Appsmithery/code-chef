@@ -380,6 +380,81 @@ class LinearWorkspaceClient:
     # Phase 2: Template-Based Issue Creation
     # ========================================
     
+    async def create_approval_subissue(
+        self,
+        approval_id: str,
+        task_description: str,
+        risk_level: str,
+        project_name: str,
+        agent_name: str = "orchestrator",
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Create HITL approval sub-issue using agent-specific template.
+        
+        Args:
+            approval_id: UUID of approval request
+            task_description: Task description requiring approval
+            risk_level: critical, high, medium, low
+            project_name: Project name for context
+            agent_name: Agent requesting approval (for template selection)
+            metadata: Additional context (task_id, priority, timestamp, etc.)
+        
+        Returns:
+            Created sub-issue with id, identifier, url
+        """
+        # Get parent approval hub issue
+        hub_identifier = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
+        
+        # Resolve parent issue ID from identifier
+        parent_issue = await self.get_issue_by_identifier(hub_identifier)
+        if not parent_issue:
+            raise ValueError(f"Approval hub issue {hub_identifier} not found")
+        
+        parent_id = parent_issue["id"]
+        
+        # Select HITL template based on agent
+        agent_upper = agent_name.upper().replace("-", "_")
+        template_env_var = f"HITL_{agent_upper}_TEMPLATE_UUID"
+        template_id = os.getenv(template_env_var)
+        
+        if not template_id:
+            # Fallback to generic orchestrator template
+            template_id = os.getenv("HITL_ORCHESTRATOR_TEMPLATE_UUID")
+            logger.warning(
+                f"HITL template not found for {agent_name} ({template_env_var}), "
+                f"using orchestrator template"
+            )
+        
+        if not template_id:
+            raise ValueError(
+                f"HITL approval template not configured. "
+                f"Set {template_env_var} or HITL_ORCHESTRATOR_TEMPLATE_UUID in .env"
+            )
+        
+        # Prepare template variables
+        template_vars = {
+            "agent": agent_name,
+            "task_id": approval_id,
+            "context_description": task_description,
+            "changes_summary": task_description,
+            "reasoning": f"Risk level: {risk_level}",
+            "risks": metadata.get("risk_factors", []) if metadata else [],
+            "deadline": "30 minutes",
+            "estimated_tokens": metadata.get("estimated_cost", 150) if metadata else 150
+        }
+        
+        # Add metadata as JSON
+        if metadata:
+            template_vars["metadata"] = str(metadata)
+        
+        # Create sub-issue from template
+        return await self.create_issue_from_template(
+            template_id=template_id,
+            template_variables=template_vars,
+            parent_id=parent_id
+        )
+    
     async def create_issue_from_template(
         self,
         template_id: str,
