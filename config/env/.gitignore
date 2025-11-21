@@ -1,0 +1,6 @@
+# Ignore actual environment files with secrets
+.env
+secrets/
+
+# Keep templates
+!.env.template

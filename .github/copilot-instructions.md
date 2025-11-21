@@ -4,25 +4,30 @@
 
 **Production Status**: Multi-agent DevOps automation platform running on DigitalOcean (droplet: 45.55.173.72)
 
-- **Agent Layer**: 6 FastAPI-based agents at repository root with `agent_*` prefix (agent_orchestrator, agent_feature-dev, agent_code-review, agent_infrastructure, agent_cicd, agent_documentation). Each agent directory contains main.py, Dockerfile, requirements.txt, README.md. Orchestrator uses LangChain tool binding for function calling.
+- **Agent Layer**: Single orchestrator FastAPI service (`agent_orchestrator/`) with 5 agent nodes as Python modules in `agent_orchestrator/agents/` (supervisor.py, feature_dev.py, code_review.py, infrastructure.py, cicd.py, documentation.py). LangGraph workflow manages agent coordination via StateGraph with conditional routing. Orchestrator uses LangChain tool binding for function calling.
 - **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; agents use `shared/lib/mcp_client.py` for tool access. Gateway routes to servers in `shared/mcp/servers/`. Orchestrator converts MCP tools to LangChain `BaseTool` instances for function calling via `to_langchain_tools()`.
 - **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
-- **LLM Inference**: DigitalOcean Gradient AI integration via LangChain wrappers (`shared/lib/gradient_client.py`, `shared/lib/langchain_gradient.py`) with per-agent model optimization (llama-3.1-70b for orchestrator/code-review, codellama-13b for feature-dev, llama-3.1-8b for infrastructure/cicd, mistral-7b for documentation).
-- **Observability**: LangSmith automatic LLM tracing (all 6 agents + workflows) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on all agents. Complete observability: LLM traces → LangSmith, HTTP metrics → Prometheus, state → PostgreSQL, vectors → Qdrant.
+- **LLM Inference**: DigitalOcean Gradient AI integration via LangChain wrappers (`shared/lib/gradient_client.py`, `shared/lib/langchain_gradient.py`) with per-node model optimization configured in agent node files (llama-3.1-70b for supervisor/code-review nodes, codellama-13b for feature-dev node, llama-3.1-8b for infrastructure/cicd nodes, mistral-7b for documentation node). Orchestrator service uses llama3.3-70b-instruct.
+- **Observability**: LangSmith automatic LLM tracing (orchestrator + all agent nodes + LangGraph workflow) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on orchestrator service. Complete observability: LLM traces → LangSmith, HTTP metrics → Prometheus, workflow state → PostgreSQL checkpointing, vectors → Qdrant.
 - **Notification System**: Event-driven approval notifications via `shared/lib/event_bus.py` (async pub/sub); Linear workspace client posts to PR-68 hub with @mentions; <1s latency; optional email fallback via SMTP.
 - **Copilot Integration**: Natural language task submission via `/chat` endpoint; multi-turn conversations with PostgreSQL session management; real-time approval notifications (<1s latency); OAuth integration with Linear GraphQL API.
-- **Service Ports**: gateway-mcp:8000, orchestrator:8001, feature-dev:8002, code-review:8003, infrastructure:8004, cicd:8005, documentation:8006, rag:8007, state:8008, prometheus:9090.
+- **Service Ports**: gateway-mcp:8000, orchestrator:8001, rag-context:8007, state-persistence:8008, agent-registry:8009, langgraph:8010, prometheus:9090. Agent nodes (feature-dev, code-review, infrastructure, cicd, documentation) are LangGraph workflow nodes within orchestrator, not separate services.
 
 ## Repository structure
 
 ```
 Dev-Tools/
-├── agent_orchestrator/          # Orchestrator agent (root-level, no nesting)
-├── agent_feature-dev/           # Feature development agent
-├── agent_code-review/           # Code review agent
-├── agent_infrastructure/        # Infrastructure agent
-├── agent_cicd/                  # CI/CD agent
-├── agent_documentation/         # Documentation agent
+├── agent_orchestrator/          # Orchestrator service (FastAPI + LangGraph)
+│   ├── agents/                  # Agent node implementations (Python modules)
+│   │   ├── supervisor.py        # Supervisor node (routing logic)
+│   │   ├── feature_dev.py       # Feature development node
+│   │   ├── code_review.py       # Code review node
+│   │   ├── infrastructure.py    # Infrastructure node
+│   │   ├── cicd.py              # CI/CD node
+│   │   └── documentation.py     # Documentation node
+│   ├── graph.py                 # LangGraph StateGraph definition
+│   ├── workflows.py             # Workflow orchestration
+│   └── main.py                  # FastAPI service
 ├── shared/                      # Shared runtime components
 │   ├── lib/                     # Agent runtime libraries (15+ Python modules)
 │   │   ├── progressive_mcp_loader.py  # Progressive tool disclosure (80-90% token savings)
@@ -32,7 +37,10 @@ Dev-Tools/
 │   │   ├── linear_workspace_client.py  # Linear GraphQL API client (OAuth)
 │   │   ├── notifiers/           # Event subscribers (Linear, Email)
 │   │   └── ...                  # Other shared modules
-│   ├── services/                # Backend microservices (rag, state, langgraph)
+│   ├── services/                # Backend microservices
+│   │   ├── langgraph/           # LangGraph workflow service (port 8010)
+│   │   ├── rag/                 # RAG context service (port 8007)
+│   │   └── state/               # State persistence service (port 8008)
 │   ├── gateway/                 # MCP gateway for tool routing
 │   ├── mcp/                     # MCP servers (17 servers)
 │   └── context/                 # MCP server context data
@@ -90,17 +98,30 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 - Gateway exposes `/oauth/linear/install` (OAuth) and `/oauth/linear/status` (token check); issues via `/api/linear-issues`, projects via `/api/linear-project/:projectId`.
 - Tokens from `LINEAR_*` envs or `*_FILE` Docker secrets; maintain `config/env/secrets/linear_oauth_token.txt` (never commit `.env` secrets).
 - **Linear Integration - Two Separate Workflows**:
-  1. **Roadmap Management (Project-Specific)**: Use `support/scripts/linear/agent-linear-update.py` with `--project-id` parameter. Sub-agents update their assigned project only; Orchestrator can update any project.
-  2. **HITL Approvals (Workspace-Wide)**: Use orchestrator event bus → PR-68. All agents can request approvals via events.
+  1. **Roadmap Management (Project-Specific)**: Use `support/scripts/linear/agent-linear-update.py` with `--project-id` parameter. Only orchestrator creates project issues (on behalf of agent nodes).
+  2. **HITL Approvals (Workspace-Wide)**: Agent nodes escalate to orchestrator → Orchestrator emits event via `event_bus.py` → `linear_workspace_client.py` creates sub-issue in PR-68 with agent context. Workflow interrupts via LangGraph checkpoint, resumes after approval.
 - **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use `agent-linear-update.py` with `--project-id` and `LINEAR_API_KEY` env var (OAuth token: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
 - **Sub-Issue Requirements**: Break down complex features into 3-5 sub-tasks using `agent-linear-update.py create-phase --project-id "UUID"`. Always set appropriate status (todo/in_progress/done) when creating/updating issues.
 - **Status Management**: Retrospective updates should be marked "done". Use `agent-linear-update.py update-status --issue-id "PR-XX" --status "done"` for completed work.
-- **Access Control**: Sub-agents MUST pass `--project-id` for their assigned project. Orchestrator can omit for default (AI DevOps Agent Platform) or specify any project UUID.
+- **Access Control**: Only orchestrator service has Linear API access. Agent nodes escalate requests to orchestrator which creates issues on their behalf. Use `--project-id` for project-scoped issues; orchestrator defaults to AI DevOps Agent Platform project.
 - **Approval Notifications**: Orchestrator posts approval requests to Linear workspace hub (PR-68) via `linear_workspace_client.py`; events emitted via `event_bus.py`; <1s latency; native Linear notifications (email/mobile/desktop). Configure: `LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68` in `.env`.
 - **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` (slug: `78b3b839d36b`)
 - **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
 - **Approval Hub Issue**: PR-68 (workspace-level approval notification hub - for HITL only)
 - **Phase 6 Issue**: PR-85 (Multi-Agent Collaboration completion)
+- **Linear Template Configuration** (Post-DEV-123 LangGraph Architecture):
+  - Only orchestrator service creates Linear issues (on behalf of all agent nodes)
+  - Template fallback logic in `shared/lib/linear_workspace_client.py:438-454`:
+    1. Try agent-specific template: `HITL_{AGENT}_TEMPLATE_UUID`
+    2. Fallback to orchestrator template if not found
+    3. All agent nodes inherit orchestrator templates by default
+  - Required `.env` variables (orchestrator only):
+    - `HITL_ORCHESTRATOR_TEMPLATE_UUID` (workspace-scoped HITL approvals)
+    - `TASK_ORCHESTRATOR_TEMPLATE_UUID` (project-scoped task issues)
+    - `LINEAR_ORCHESTRATOR_TEMPLATE_ID` (alias of TASK_ORCHESTRATOR)
+    - `LINEAR_HITL_ORCHESTRATOR_TEMPLATE_ID` (alias of HITL_ORCHESTRATOR)
+  - Agent-specific template variables (feature-dev, code-review, infrastructure, cicd, documentation) are OPTIONAL and will fallback to orchestrator templates
+  - HITL Approval Flow: Agent node escalates → Orchestrator creates sub-issue in PR-68 → User approves in Linear → Workflow resumes
 
 ## Deployment workflows
 
@@ -179,7 +200,7 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 - Method 2: SSH + git pull + docker-compose commands (see `support/docs/DEPLOY.md`)
 - Verify: Check health endpoints, LangSmith traces, Prometheus metrics
 - API key from `GRADIENT_API_KEY` env var (uses DigitalOcean PAT); base URL `https://api.digitalocean.com/v2/ai`.
-- Per-agent models: orchestrator/code-review (70b), feature-dev (codellama-13b), infrastructure/cicd (8b), documentation (mistral-7b).
+- Orchestrator model: llama3.3-70b-instruct. Agent node models configured in respective agent files (supervisor/code-review: 70b, feature-dev: codellama-13b, infrastructure/cicd: 8b, documentation: mistral-7b).
 - Cost: $0.20-0.60/1M tokens (150x cheaper than GPT-4); <50ms latency within DO network.
 
 ### SSH Access from VS Code
@@ -267,17 +288,20 @@ ufw status                    # Verify rules
 
 ## Extension points
 
-### Adding a New Agent
+### Adding a New Agent Node
 
-1. Create `agent_<agent>/main.py` (FastAPI app with Pydantic models)
-2. Initialize shared clients: `mcp_client = MCPClient(agent_name="...")` and `gradient_client = get_gradient_client("...")`
-3. Add Prometheus: `Instrumentator().instrument(app).expose(app)`
-4. Create `agent_<agent>/Dockerfile` (copy pattern from existing agents)
-5. Add service to `deploy/docker-compose.yml` with env vars (`GRADIENT_MODEL`, `PORT`, `MCP_GATEWAY_URL`)
-6. Update `config/mcp-agent-tool-mapping.yaml` with tool access
-7. Document endpoints in `support/docs/AGENT_ENDPOINTS.md`
+1. Create `agent_orchestrator/agents/<agent>.py` (Python module, not FastAPI service)
+2. Define agent function with signature: `async def agent_node(state: WorkflowState) -> WorkflowState`
+3. Load agent config from YAML: `config = yaml.safe_load(open(f"tools/{agent}_tools.yaml"))`
+4. Initialize Gradient client: `gradient_client = get_gradient_client(agent_name=agent, model=config["model"])`
+5. Bind MCP tools via progressive loader: `mcp_client.to_langchain_tools(relevant_toolsets)`
+6. Add node to LangGraph StateGraph in `agent_orchestrator/graph.py`
+7. Update conditional edges for supervisor routing
+8. Update `config/mcp-agent-tool-mapping.yaml` with tool access
+9. Create `agent_orchestrator/tools/<agent>_tools.yaml` with model and tool configs
+10. Add LangSmith tracing with project: `agents-<agent>`
 
-- Add requirements.txt with: `fastapi`, `uvicorn`, `pydantic`, `httpx`, `langchain>=0.1.0`, `langchain-openai>=0.1.0`, `langsmith>=0.1.0`, `prometheus-fastapi-instrumentator>=6.1.0`
+Note: Agent nodes are workflow steps, not separate containers. All nodes run within orchestrator service.
 
 ### MCP Servers
 
