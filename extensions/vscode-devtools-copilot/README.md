@@ -63,7 +63,7 @@ The orchestrator will decompose your task into subtasks and route them to approp
 - `devtools.orchestratorUrl` - Orchestrator endpoint (default: `http://45.55.173.72:8001`)
 - `devtools.mcpGatewayUrl` - MCP gateway endpoint (default: `http://45.55.173.72:8000`)
 - `devtools.linearHubIssue` - Linear approval hub issue (default: `DEV-68`)
-- `devtools.linearWorkspaceSlug` - Linear workspace slug for approval links (default: `project-roadmaps`)
+- `devtools.linearWorkspaceSlug` - Linear workspace slug for approval links (default: `dev-ops`)
 - `devtools.autoApproveThreshold` - Auto-approve risk level (default: `low`)
 - `devtools.enableNotifications` - Show toast notifications (default: `true`)
 - `devtools.langsmithUrl` - LangSmith project URL for traces
@@ -185,7 +185,7 @@ All tasks are traced and monitored:
 1. Verify Linear OAuth token configured: `LINEAR_API_KEY` in `.env`
 2. Check HITL templates configured: `HITL_ORCHESTRATOR_TEMPLATE_UUID`, etc.
 3. Subscribe to DEV-68 issue in Linear for sub-issue notifications
-4. Verify approval hub setting: `LINEAR_APPROVAL_HUB_ISSUE_ID=DEV-68`
+4. Verify approval hub setting: `LINEAR_APPROVAL_HUB_ISSUE_ID=DEV-68` (note: PR-68 is internal reference, DEV-68 is public identifier)
 
 ## Development
 

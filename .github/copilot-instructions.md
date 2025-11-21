@@ -99,15 +99,15 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 - Tokens from `LINEAR_*` envs or `*_FILE` Docker secrets; maintain `config/env/secrets/linear_oauth_token.txt` (never commit `.env` secrets).
 - **Linear Integration - Two Separate Workflows**:
   1. **Roadmap Management (Project-Specific)**: Use `support/scripts/linear/agent-linear-update.py` with `--project-id` parameter. Only orchestrator creates project issues (on behalf of agent nodes).
-  2. **HITL Approvals (Workspace-Wide)**: Agent nodes escalate to orchestrator → Orchestrator emits event via `event_bus.py` → `linear_workspace_client.py` creates sub-issue in PR-68 with agent context. Workflow interrupts via LangGraph checkpoint, resumes after approval.
+  2. **HITL Approvals (Workspace-Wide)**: Agent nodes escalate to orchestrator → Orchestrator emits event via `event_bus.py` → `linear_workspace_client.py` creates sub-issue in DEV-68 with agent context. Workflow interrupts via LangGraph checkpoint, resumes after approval.
 - **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use `agent-linear-update.py` with `--project-id` and `LINEAR_API_KEY` env var (OAuth token: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
 - **Sub-Issue Requirements**: Break down complex features into 3-5 sub-tasks using `agent-linear-update.py create-phase --project-id "UUID"`. Always set appropriate status (todo/in_progress/done) when creating/updating issues.
 - **Status Management**: Retrospective updates should be marked "done". Use `agent-linear-update.py update-status --issue-id "PR-XX" --status "done"` for completed work.
 - **Access Control**: Only orchestrator service has Linear API access. Agent nodes escalate requests to orchestrator which creates issues on their behalf. Use `--project-id` for project-scoped issues; orchestrator defaults to AI DevOps Agent Platform project.
-- **Approval Notifications**: Orchestrator posts approval requests to Linear workspace hub (PR-68) via `linear_workspace_client.py`; events emitted via `event_bus.py`; <1s latency; native Linear notifications (email/mobile/desktop). Configure: `LINEAR_APPROVAL_HUB_ISSUE_ID=PR-68` in `.env`.
+- **Approval Notifications**: Orchestrator posts approval requests to Linear workspace hub (DEV-68) via `linear_workspace_client.py`; events emitted via `event_bus.py`; <1s latency; native Linear notifications (email/mobile/desktop). Configure: `LINEAR_APPROVAL_HUB_ISSUE_ID=DEV-68` in `.env`.
 - **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` (slug: `78b3b839d36b`)
 - **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
-- **Approval Hub Issue**: PR-68 (workspace-level approval notification hub - for HITL only)
+- **Approval Hub Issue**: DEV-68 (workspace-level approval notification hub - for HITL only)
 - **Phase 6 Issue**: PR-85 (Multi-Agent Collaboration completion)
 - **Linear Template Configuration** (Post-DEV-123 LangGraph Architecture):
   - Only orchestrator service creates Linear issues (on behalf of all agent nodes)
@@ -121,7 +121,7 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
     - `LINEAR_ORCHESTRATOR_TEMPLATE_ID` (alias of TASK_ORCHESTRATOR)
     - `LINEAR_HITL_ORCHESTRATOR_TEMPLATE_ID` (alias of HITL_ORCHESTRATOR)
   - Agent-specific template variables (feature-dev, code-review, infrastructure, cicd, documentation) are OPTIONAL and will fallback to orchestrator templates
-  - HITL Approval Flow: Agent node escalates → Orchestrator creates sub-issue in PR-68 → User approves in Linear → Workflow resumes
+  - HITL Approval Flow: Agent node escalates → Orchestrator creates sub-issue in DEV-68 using template aa632a46-ea22-4dd0-9403-90b0d1f05aa0 → User approves in Linear → Workflow resumes
 
 ## Deployment workflows
 

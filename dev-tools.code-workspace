@@ -68,7 +68,12 @@
     "chat.tools.terminal.autoReplyToPrompts": true,
     "chat.useNestedAgentsMdFiles": true,
     "inlineChat.enableV2": true,
-    "inlineChat.notebookAgent": true
+    "inlineChat.notebookAgent": true,
+    "devtools.linearHubIssue": "DEV-68",
+    "devtools.linearWorkspaceSlug": "dev-ops",
+    "devtools.mcpGatewayUrl": "http://45.55.173.72:8000",
+    "devtools.orchestratorUrl": "http://45.55.173.72:8001",
+    "devtools.autoApproveThreshold": "medium"
   },
   "extensions": {
     "recommendations": [
