@@ -21,19 +21,18 @@
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
   "python.testing.pytestArgs": [
+    "support/tests",
     "-v",
-    "--tb=short",
-    "--strict-markers",
-    "-p",
-    "no:warnings"
+    "--tb=short"
   ],
-  "python.testing.cwd": "${workspaceFolder}/support/tests",
+  "python.testing.cwd": "${workspaceFolder}",
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "python.envFile": "${workspaceFolder}/config/env/.env",
   "python.analysis.extraPaths": [
     "${workspaceFolder}/shared",
     "${workspaceFolder}/agent_orchestrator"
   ],
+  "testExplorer.useNativeTesting": true,
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.tabSize": 2
