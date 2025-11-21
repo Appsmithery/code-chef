@@ -137,7 +137,7 @@ async def accept_task(task: TaskAssignment):
         template_variables={...},
         parent_id=task.orchestrator_issue_id
     )
-    
+
     # 2. Store mapping in state service
     await state_client.store_task_mapping(
         task_id=task.task_id,
@@ -148,20 +148,20 @@ async def accept_task(task: TaskAssignment):
         parent_identifier=task.orchestrator_issue_identifier,
         status="todo"
     )
-    
+
     # 3. Execute task with status updates
     await linear_client.update_issue_status(linear_issue["id"], "in_progress")
     await state_client.update_task_status(task.task_id, "in_progress")
-    
+
     # ... perform work ...
-    
+
     # 4. Mark complete (both Linear and state)
     await linear_client.update_issue_status(linear_issue["id"], "done")
     await state_client.update_task_status(task.task_id, "done", mark_completed=True)
-    
+
     # 5. Add completion comment
     await linear_client.add_comment(linear_issue["id"], "Task completed ✅")
-    
+
     return TaskResult(
         status="completed",
         linear_issue=linear_issue["identifier"],
@@ -201,7 +201,7 @@ event_bus = get_event_bus()
 async def handle_approval_decision(event):
     task_id = event.data["task_id"]
     decision = event.data["decision"]
-    
+
     if decision == "approved":
         # Resume task execution
         await resume_task(task_id)
@@ -295,8 +295,8 @@ curl -X POST http://localhost:8002/tasks/accept \
 
 # Verify mapping stored
 docker compose exec postgres psql -U devtools -d devtools_state -c "
-SELECT task_id, linear_identifier, status 
-FROM task_linear_mappings 
+SELECT task_id, linear_identifier, status
+FROM task_linear_mappings
 WHERE task_id='test-123';
 "
 ```
@@ -328,7 +328,7 @@ WHERE status = 'in_progress'
 GROUP BY agent_name;
 
 -- Completion rate by agent
-SELECT 
+SELECT
     agent_name,
     COUNT(*) as total,
     SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as completed,
@@ -337,7 +337,7 @@ FROM task_linear_mappings
 GROUP BY agent_name;
 
 -- Average completion time by agent
-SELECT 
+SELECT
     agent_name,
     COUNT(*) as completed_tasks,
     AVG(EXTRACT(EPOCH FROM (completed_at - created_at))) / 60 as avg_minutes
@@ -346,7 +346,7 @@ WHERE status = 'done' AND completed_at IS NOT NULL
 GROUP BY agent_name;
 
 -- Sub-tasks for approval hub (PR-68)
-SELECT 
+SELECT
     task_id,
     linear_identifier,
     agent_name,
