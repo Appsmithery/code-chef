@@ -10,7 +10,7 @@
       "**/.git": true,
       "**/__pycache__": true
     },
-    "workbench.iconTheme": "vs-seti-folder",
+    "workbench.iconTheme": "vs-seti",
     "workbench.colorTheme": "vira-ocean",
     "github.copilot.chat.alternateGptPrompt.enabled": true,
     "github.copilot.chat.anthropic.thinking.enabled": true,
