@@ -525,10 +525,6 @@ class LinearWorkspaceClient:
         if parent_id:
             input_data["parentId"] = parent_id
         
-        # Template variables are passed in description
-        if template_variables:
-            input_data["templateVariables"] = template_variables
-        
         # Build description from template variables (manual template expansion)
         if template_variables:
             description_parts = []
@@ -730,19 +726,21 @@ class LinearWorkspaceClient:
             >>> print(issue['id'])  # Use for parentId in sub-issues
         """
         query = gql("""
-            query GetIssue($identifier: String!) {
-                issue(id: $identifier) {
-                    id
-                    identifier
-                    title
-                    description
-                    url
-                    state {
-                        name
-                    }
-                    parent {
+            query GetIssueByIdentifier($filter: IssueFilter!) {
+                issues(filter: $filter, first: 1) {
+                    nodes {
                         id
                         identifier
+                        title
+                        description
+                        url
+                        state {
+                            name
+                        }
+                        parent {
+                            id
+                            identifier
+                        }
                     }
                 }
             }
@@ -751,12 +749,14 @@ class LinearWorkspaceClient:
         try:
             result = self.client.execute(
                 query,
-                variable_values={"identifier": identifier}
+                variable_values={"filter": {"identifier": {"eq": identifier}}}
             )
             
-            issue = result.get("issue")
+            nodes = result.get("issues", {}).get("nodes", [])
+            issue = nodes[0] if nodes else None
+            
             if issue:
-                logger.info(f"Found issue: {issue['identifier']} - {issue['title']}")
+                logger.info(f"Found issue: {issue['identifier']} - `{issue['title']}`")
             else:
                 logger.warning(f"Issue not found: {identifier}")
             
