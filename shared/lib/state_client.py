@@ -29,8 +29,8 @@ class StateClient:
         """Initialize state client with database connection."""
         self.db_host = os.getenv("POSTGRES_HOST", "postgres")
         self.db_port = int(os.getenv("POSTGRES_PORT", "5432"))
-        self.db_name = os.getenv("POSTGRES_DB", "devtools_state")
-        self.db_user = os.getenv("POSTGRES_USER")
+        self.db_name = os.getenv("POSTGRES_DB", "devtools")
+        self.db_user = os.getenv("POSTGRES_USER", "devtools")
         self.db_password = os.getenv("POSTGRES_PASSWORD")
         self._pool: Optional[asyncpg.Pool] = None
     

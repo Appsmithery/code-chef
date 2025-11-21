@@ -39,7 +39,7 @@ event_bus = get_event_bus()
 # Configuration
 # Use orchestrator-specific webhook secret
 WEBHOOK_SECRET = os.getenv("LINEAR_ORCHESTRATOR_WEBHOOK_SECRET") or os.getenv("LINEAR_WEBHOOK_SIGNING_SECRET")
-APPROVAL_HUB_ID = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "PR-68")
+APPROVAL_HUB_ID = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
 
 if not WEBHOOK_SECRET:
     logger.warning("LINEAR_ORCHESTRATOR_WEBHOOK_SECRET not configured - webhook verification disabled")

@@ -83,7 +83,7 @@ class LinearWorkspaceClient:
             Comment ID if successful
         """
         # Get approval hub issue ID from config
-        hub_issue_id = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "PR-68")
+        hub_issue_id = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
         
         if not hub_issue_id:
             logger.error("LINEAR_APPROVAL_HUB_ISSUE_ID not configured")
