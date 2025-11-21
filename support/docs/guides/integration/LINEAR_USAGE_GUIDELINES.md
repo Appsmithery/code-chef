@@ -52,33 +52,41 @@ This project uses Linear for **two completely separate workflows**:
 
 ### 2. **🚨 HITL APPROVAL NOTIFICATIONS** (Workspace-Level)
 
-**Purpose**: Real-time approval notifications for human-in-the-loop workflows  
-**Access**: ALL agents can post to PR-68 via orchestrator event bus  
-**Update Pattern**: Automatic via event bus (orchestrator mediates)
+**Purpose**: Real-time approval notifications for human-in-the-loop workflows via structured sub-issues  
+**Access**: Orchestrator creates sub-issues under DEV-68 using Linear templates  
+**Update Pattern**: Automatic via LangGraph approval node
 
-- **Issue**: PR-68 (Agent Approvals Hub)
-- **URL**: https://linear.app/project-roadmaps/issue/PR-68/agent-approvals-hub
-- **Issue ID**: `PR-68`
+- **Parent Issue**: DEV-68 (HITL Approvals Hub)
+- **URL**: https://linear.app/dev-ops/issue/DEV-68
+- **Issue ID**: `DEV-68`
 - **Scope**: Workspace-wide (not project-specific)
 
 **Use Cases:**
 
-- HITL approval requests
-- Critical action notifications
-- High-risk operation alerts
-- Deployment approvals
-- Configuration change approvals
+- HITL approval requests (high-risk tasks)
+- Production deployment approvals
+- Database schema change approvals
+- Secrets/credentials operations
+- Destructive actions
 
 **Integration Method:**
 
-- **Orchestrator Event Bus**: `shared/lib/event_bus.py` + `linear_workspace_client.py`
-- **Sub-agents**: Emit approval events → Orchestrator posts to PR-68
-- **Direct Script**: `support/scripts/update-linear-pr68.py` (manual use only)
+- **LangGraph Approval Node**: `agent_orchestrator/graph.py` → `approval_node()`
+- **Linear Workspace Client**: `shared/lib/linear_workspace_client.py` → `create_approval_subissue()`
+- **Templates**: Uses `HITL_ORCHESTRATOR_TEMPLATE_UUID` (and per-agent variants from `.env`)
+- **Sub-issues**: Each approval creates a structured sub-issue with risk level, metadata, task description
+
+**Sub-Issue Structure:**
+
+- **Title**: 🟠 [HIGH] HITL Approval: <task description>
+- **Description**: Template-populated fields (agent, task_id, context, reasoning, risks, deadline, metadata)
+- **Parent**: DEV-68 (HITL Approvals Hub)
+- **Status Mapping**: "Done" = approved, "Canceled" = rejected
 
 **⚠️ CRITICAL: DO NOT confuse these two workflows!**
 
 - **Roadmap updates** → Use `agent-linear-update.py` with `--project-id`
-- **Approval requests** → Use orchestrator event bus (automatic) or `update-linear-pr68.py` (manual)
+- **Approval requests** → Use `linear_workspace_client.create_approval_subissue()` (automatic via graph.py)
 
 ---
 
