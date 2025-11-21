@@ -49,5 +49,10 @@
   "linear.apiKey": "${LINEAR_API_KEY}",
   "linear.workspaceId": "5029c640-3f73-480c-82f3-58e402ed4207",
   "linear.teamId": "f5b610be-ac34-4983-918b-2c9d00aa9b7a",
-  "linear.defaultProject": "AI DevOps Agent Platform"
+  "linear.defaultProject": "AI DevOps Agent Platform",
+  "chat.mcp.serverSampling": {
+    "Dev-Tools Root/.vscode/mcp.json: Docs by LangChain": {
+      "allowedModels": ["copilot/claude-sonnet-4.5"]
+    }
+  }
 }
