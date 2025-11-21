@@ -109,7 +109,7 @@ Add to `config/env/.env`:
 # PostgreSQL State Service
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
-POSTGRES_DB=devtools_state
+POSTGRES_DB=devtools
 POSTGRES_USER=devtools
 POSTGRES_PASSWORD=<your-password>
 
@@ -142,7 +142,7 @@ LINEAR_ORCHESTRATOR_TEMPLATE_ID=<uuid>
   ```bash
   ssh root@45.55.173.72
   cd /opt/Dev-Tools
-  docker compose exec postgres psql -U devtools -d devtools_state -f /migrations/004_task_linear_mappings.sql
+  docker compose exec postgres psql -U devtools -d devtools -f /migrations/004_task_linear_mappings.sql
   ```
 
 - [ ] **Deploy Configuration**
