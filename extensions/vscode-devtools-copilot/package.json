@@ -141,8 +141,8 @@
         },
         "devtools.linearWorkspaceSlug": {
           "type": "string",
-          "default": "project-roadmaps",
-          "description": "Linear workspace slug used when opening approval links"
+          "default": "dev-ops",
+          "description": "Linear workspace slug used when opening approval links (e.g., 'dev-ops' for /dev-ops/ URLs)"
         },
         "devtools.autoApproveThreshold": {
           "type": "string",
