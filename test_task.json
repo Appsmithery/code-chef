@@ -1,0 +1,4 @@
+{
+  "description": "Add logging to database connection module for better observability",
+  "priority": "medium"
+}
