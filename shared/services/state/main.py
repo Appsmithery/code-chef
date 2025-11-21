@@ -21,7 +21,14 @@ PG_HOST = os.getenv("POSTGRES_HOST", "postgres")
 PG_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 PG_DB = os.getenv("POSTGRES_DB", "devtools")
 PG_USER = os.getenv("POSTGRES_USER", "admin")
-PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "changeme")
+
+# Read password from file if POSTGRES_PASSWORD_FILE is set (Docker secrets)
+PG_PASSWORD_FILE = os.getenv("POSTGRES_PASSWORD_FILE")
+if PG_PASSWORD_FILE and os.path.exists(PG_PASSWORD_FILE):
+    with open(PG_PASSWORD_FILE, 'r') as f:
+        PG_PASSWORD = f.read().strip()
+else:
+    PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "changeme")
 
 
 def get_db_connection():
