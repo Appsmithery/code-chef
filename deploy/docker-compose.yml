@@ -52,9 +52,6 @@ services:
           cpus: "0.5"
           memory: 512M
 
-  # Agent microservices removed - now using LangGraph multi-agent in single orchestrator container
-  # See agent_orchestrator/agents/ for LangGraph agent nodes (feature-dev, code-review, infrastructure, cicd, documentation)
-
   # ============================================================================
   # INFRASTRUCTURE SERVICES
   # ============================================================================
