@@ -83,7 +83,7 @@ class LinearWorkspaceClient:
             Comment ID if successful
         """
         # Get approval hub issue ID from config
-        hub_issue_id = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID")
+        hub_issue_id = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "PR-68")
         
         if not hub_issue_id:
             logger.error("LINEAR_APPROVAL_HUB_ISSUE_ID not configured")
@@ -103,13 +103,14 @@ class LinearWorkspaceClient:
 **Project**: `{project_name}`
 **Approval ID**: `{approval_id}`
 
-@lead-minion - Your approval is needed:
+@alextorelli28 - Your approval is needed:
 
 {task_description}
 
 **Actions**:
-- ✅ Approve: `task workflow:approve REQUEST_ID={approval_id}`
-- ❌ Reject: `task workflow:reject REQUEST_ID={approval_id} REASON="<reason>"`
+- ✅ Approve: Change issue status to "Approved" or "Done"
+- ❌ Reject: Change issue status to "Rejected" or "Canceled"
+- Or comment: `approve REQUEST_ID={approval_id}` or `reject REQUEST_ID={approval_id} REASON="<reason>"`
 
 **Details**: [View in dashboard](http://45.55.173.72:8001/approvals/{approval_id})
 """
@@ -457,3 +458,215 @@ class LinearWorkspaceClient:
         except Exception as e:
             logger.error(f"Failed to create issue from template: {e}")
             raise
+    
+    # ========================================
+    # Phase 5: Issue Updates (Status & Comments)
+    # ========================================
+    
+    async def update_issue_status(
+        self,
+        issue_id: str,
+        status: str
+    ) -> Dict[str, Any]:
+        """
+        Update Linear issue status.
+        
+        Args:
+            issue_id: Issue UUID
+            status: Status name (e.g., "todo", "in_progress", "done", "approved", "rejected")
+        
+        Returns:
+            Updated issue with id, identifier, state
+        
+        Usage:
+            >>> await client.update_issue_status(
+            ...     issue_id="issue-uuid",
+            ...     status="done"
+            ... )
+        """
+        # First, get the workflow state ID for this status
+        query = gql("""
+            query GetWorkflowStates($teamId: String!) {
+                team(id: $teamId) {
+                    states {
+                        nodes {
+                            id
+                            name
+                            type
+                        }
+                    }
+                }
+            }
+        """)
+        
+        try:
+            # Get team ID
+            team_id = os.getenv("LINEAR_TEAM_ID")
+            if not team_id:
+                raise ValueError("LINEAR_TEAM_ID not configured")
+            
+            # Fetch workflow states
+            result = self.client.execute(query, variable_values={"teamId": team_id})
+            states = result["team"]["states"]["nodes"]
+            
+            # Find matching state (case-insensitive)
+            state_id = None
+            status_lower = status.lower().replace("_", " ")
+            
+            for state in states:
+                if state["name"].lower() == status_lower:
+                    state_id = state["id"]
+                    break
+            
+            if not state_id:
+                # Try partial match
+                for state in states:
+                    if status_lower in state["name"].lower():
+                        state_id = state["id"]
+                        break
+            
+            if not state_id:
+                logger.error(f"Status '{status}' not found in workflow states")
+                raise ValueError(f"Invalid status: {status}")
+            
+            # Update issue
+            mutation = gql("""
+                mutation UpdateIssue($issueId: String!, $stateId: String!) {
+                    issueUpdate(id: $issueId, input: {stateId: $stateId}) {
+                        success
+                        issue {
+                            id
+                            identifier
+                            state {
+                                name
+                            }
+                        }
+                    }
+                }
+            """)
+            
+            result = self.client.execute(
+                mutation,
+                variable_values={
+                    "issueId": issue_id,
+                    "stateId": state_id
+                }
+            )
+            
+            issue = result["issueUpdate"]["issue"]
+            logger.info(f"Updated issue {issue['identifier']} to status: {issue['state']['name']}")
+            
+            return issue
+            
+        except Exception as e:
+            logger.error(f"Failed to update issue status: {e}")
+            raise
+    
+    async def add_comment(
+        self,
+        issue_id: str,
+        body: str
+    ) -> Dict[str, Any]:
+        """
+        Add comment to Linear issue.
+        
+        Args:
+            issue_id: Issue UUID
+            body: Comment markdown content
+        
+        Returns:
+            Created comment with id, createdAt
+        
+        Usage:
+            >>> await client.add_comment(
+            ...     issue_id="issue-uuid",
+            ...     body="Code generation complete. 3 files created, all tests passing."
+            ... )
+        """
+        mutation = gql("""
+            mutation CreateComment($issueId: String!, $body: String!) {
+                commentCreate(input: {
+                    issueId: $issueId
+                    body: $body
+                }) {
+                    success
+                    comment {
+                        id
+                        createdAt
+                        body
+                    }
+                }
+            }
+        """)
+        
+        try:
+            result = self.client.execute(
+                mutation,
+                variable_values={
+                    "issueId": issue_id,
+                    "body": body
+                }
+            )
+            
+            comment = result["commentCreate"]["comment"]
+            logger.info(f"Added comment to issue: {comment['id']}")
+            
+            return comment
+            
+        except Exception as e:
+            logger.error(f"Failed to add comment: {e}")
+            raise
+    
+    async def get_issue_by_identifier(
+        self,
+        identifier: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get issue by identifier (e.g., "PR-68").
+        
+        Args:
+            identifier: Issue identifier (team prefix + number)
+        
+        Returns:
+            Issue with id, identifier, title, description, state, parent
+        
+        Usage:
+            >>> issue = await client.get_issue_by_identifier("PR-68")
+            >>> print(issue['id'])  # Use for parentId in sub-issues
+        """
+        query = gql("""
+            query GetIssue($identifier: String!) {
+                issue(id: $identifier) {
+                    id
+                    identifier
+                    title
+                    description
+                    url
+                    state {
+                        name
+                    }
+                    parent {
+                        id
+                        identifier
+                    }
+                }
+            }
+        """)
+        
+        try:
+            result = self.client.execute(
+                query,
+                variable_values={"identifier": identifier}
+            )
+            
+            issue = result.get("issue")
+            if issue:
+                logger.info(f"Found issue: {issue['identifier']} - {issue['title']}")
+            else:
+                logger.warning(f"Issue not found: {identifier}")
+            
+            return issue
+            
+        except Exception as e:
+            logger.error(f"Failed to get issue: {e}")
+            return None
