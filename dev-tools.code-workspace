@@ -58,7 +58,17 @@
         ]
       }
     },
-    "terminal.integrated.cursorStyle": "line"
+    "terminal.integrated.cursorStyle": "line",
+    "chat.agent.thinking.collapsedTools": "all",
+    "chat.checkpoints.showFileChanges": false,
+    "chat.customAgentInSubagent.enabled": true,
+    "chat.extensionUnification.enabled": true,
+    "chat.renderRelatedFiles": true,
+    "chat.todoListTool.writeOnly": false,
+    "chat.tools.terminal.autoReplyToPrompts": true,
+    "chat.useNestedAgentsMdFiles": true,
+    "inlineChat.enableV2": true,
+    "inlineChat.notebookAgent": true
   },
   "extensions": {
     "recommendations": [
