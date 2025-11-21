@@ -494,6 +494,31 @@ class LinearWorkspaceClient:
             "LINEAR_DEFAULT_ASSIGNEE_ID", "12b01869-730b-4898-9ca3-88c463764071"
         )  # alex@appsmithery.co
 
+        # Prepare custom fields for approval template
+        # Request Status: Set to "Approved" by default (user can change)
+        # Required Action: Pre-check "Review proposed changes" and "Verify risks"
+        custom_fields = {}
+
+        # Request Status dropdown field
+        request_status_field_id = os.getenv("LINEAR_FIELD_REQUEST_STATUS_ID")
+        if request_status_field_id:
+            # Default to "Approved" for low/medium risk, empty for high/critical
+            if risk_level in ["low", "medium"]:
+                custom_fields[request_status_field_id] = os.getenv(
+                    "LINEAR_REQUEST_STATUS_APPROVED", "approved"
+                )
+
+        # Required Action checkboxes field
+        required_action_field_id = os.getenv("LINEAR_FIELD_REQUIRED_ACTION_ID")
+        if required_action_field_id:
+            # Auto-check based on risk level
+            actions = ["review_proposed_changes"]  # Always check this
+            if risk_level in ["high", "critical"]:
+                actions.extend(
+                    ["verify_risks_are_acceptable", "check_implementation_approach"]
+                )
+            custom_fields[required_action_field_id] = actions
+
         return await self.create_issue_from_template(
             template_id=template_id,
             template_variables=template_vars,
@@ -503,6 +528,7 @@ class LinearWorkspaceClient:
             assignee_id=assignee_id,
             label_ids=label_ids,
             priority=priority_map.get(risk_level, 2),
+            custom_fields=custom_fields,
         )
 
     async def create_issue_from_template(
@@ -517,6 +543,7 @@ class LinearWorkspaceClient:
         label_ids: Optional[List[str]] = None,
         priority: Optional[int] = None,
         state_id: Optional[str] = None,
+        custom_fields: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Create issue from Linear template with variable substitution.
@@ -586,6 +613,10 @@ class LinearWorkspaceClient:
 
         if state_id:
             input_data["stateId"] = state_id
+
+        # Add custom fields for template (e.g., Request Status, Required Action)
+        if custom_fields:
+            input_data["customFields"] = custom_fields
 
         # Build description from template variables (manual template expansion)
         if template_variables:
