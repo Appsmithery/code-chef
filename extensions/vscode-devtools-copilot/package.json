@@ -53,6 +53,9 @@
     "function-calling",
     "progressive-disclosure"
   ],
+  "extensionDependencies": [
+    "linear.linear-connect"
+  ],
   "activationEvents": [
     "onStartupFinished",
     "onCommand:devtools.orchestrate",

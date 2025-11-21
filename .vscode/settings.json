@@ -44,5 +44,10 @@
   "github.copilot.chat.languageContext.inline.typescript.enabled": true,
   "github.copilot.chat.languageContext.fix.typescript.enabled": true,
   "editor.wordWrap": "on",
-  "files.autoSave": "onWindowChange"
+  "files.autoSave": "onWindowChange",
+  
+  "linear.apiKey": "${LINEAR_API_KEY}",
+  "linear.workspaceId": "5029c640-3f73-480c-82f3-58e402ed4207",
+  "linear.teamId": "f5b610be-ac34-4983-918b-2c9d00aa9b7a",
+  "linear.defaultProject": "AI DevOps Agent Platform"
 }
