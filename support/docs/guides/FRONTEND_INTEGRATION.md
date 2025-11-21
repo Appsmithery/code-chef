@@ -359,32 +359,10 @@ console.log("Result:", result);
 - `POST /orchestrate` - Create task
 - `POST /execute/:taskId` - Execute workflow
 - `GET /tasks/:taskId` - Get task status
+- `POST /orchestrate/langgraph` - Submit task to LangGraph workflow
 - `GET /health` - Health check
 
-### Feature-Dev (Port 8002)
-
-- `POST /implement` - Generate code
-- `GET /health` - Health check
-
-### Code-Review (Port 8003)
-
-- `POST /review` - Review code
-- `GET /health` - Health check
-
-### Infrastructure (Port 8004)
-
-- `POST /generate` - Generate IaC
-- `GET /health` - Health check
-
-### CI/CD (Port 8005)
-
-- `POST /configure` - Configure pipeline
-- `GET /health` - Health check
-
-### Documentation (Port 8006)
-
-- `POST /generate-docs` - Generate docs
-- `GET /health` - Health check
+**Note:** Individual agent endpoints (ports 8002-8006) removed in LangGraph migration. All agent interactions now go through orchestrator's LangGraph workflow at port 8001.
 
 ### RAG Context (Port 8007)
 

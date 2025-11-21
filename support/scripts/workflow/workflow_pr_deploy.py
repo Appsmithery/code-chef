@@ -43,12 +43,11 @@ DB_CONN_STRING = os.getenv(
     "postgresql://devtools:changeme@localhost:5432/devtools"
 )
 
-# Agent endpoints
+# LangGraph orchestrator endpoint (all agent nodes accessible through orchestrator)
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "http://localhost:8001")
-CODE_REVIEW_URL = os.getenv("CODE_REVIEW_URL", "http://localhost:8003")
-CICD_URL = os.getenv("CICD_URL", "http://localhost:8005")
-INFRASTRUCTURE_URL = os.getenv("INFRASTRUCTURE_URL", "http://localhost:8004")
-DOCUMENTATION_URL = os.getenv("DOCUMENTATION_URL", "http://localhost:8006")
+
+# Note: Individual agent URLs removed - all agents now internal LangGraph nodes
+# Use orchestrator's /orchestrate/langgraph endpoint for all agent interactions
 
 
 class PRDeploymentWorkflow:

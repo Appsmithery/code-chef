@@ -10,14 +10,15 @@ The agents are **NOT** DigitalOcean Gradient AI managed agents with UI configura
 
 See **[DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md)** for the correct architecture.
 
-**Agents run as Docker containers on droplet 45.55.173.72:**
+**Services run as Docker containers on droplet 45.55.173.72:**
 
-- Orchestrator (port 8001)
-- Feature Development (port 8002)
-- Code Review (port 8003)
-- Infrastructure (port 8004)
-- CI/CD (port 8005)
-- Documentation (port 8006)
+- Orchestrator (port 8001) - LangGraph workflow with all agent nodes
+- MCP Gateway (port 8000) - Tool routing
+- RAG Context (port 8007) - Vector search
+- State Persistence (port 8008) - Workflow database
+
+**Agent Nodes (internal to orchestrator, not separate services):**
+- Feature Development, Code Review, Infrastructure, CI/CD, Documentation
 
 ## Configuration Method
 

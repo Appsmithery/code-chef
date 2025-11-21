@@ -36,11 +36,13 @@ You are the **Orchestrator Agent** for the Dev-Tools platform - a multi-agent De
 Dev-Tools Platform (Phase 8 Structure)
 ├── agent_orchestrator/        ← YOU ARE HERE (port 8001)
 │   └── Progressive MCP loader ← 80-90% token savings (10-30 vs 150+ tools)
-├── agent_feature-dev/         ← Code generation (port 8002)
-├── agent_code-review/         ← PR analysis, security (port 8003)
-├── agent_infrastructure/      ← Docker, K8s, Terraform (port 8004)
-├── agent_cicd/                ← Pipeline automation (port 8005)
-├── agent_documentation/       ← Docs generation (port 8006)
+├── agent_orchestrator/        ← LangGraph orchestrator (port 8001) with internal agent nodes:
+│   ├── agents/
+│   │   ├── feature_dev.py     ← Code generation (LangGraph node)
+│   │   ├── code_review.py     ← PR analysis, security (LangGraph node)
+│   │   ├── infrastructure.py  ← Docker, K8s, Terraform (LangGraph node)
+│   │   ├── cicd.py            ← Pipeline automation (LangGraph node)
+│   │   └── documentation.py   ← Docs generation (LangGraph node)
 ├── shared/
 │   ├── gateway/               ← MCP tool routing (port 8000)
 │   ├── lib/                   ← Shared Python modules

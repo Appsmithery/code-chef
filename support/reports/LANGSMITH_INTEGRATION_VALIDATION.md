@@ -133,14 +133,18 @@ All agent services in `deploy/docker-compose.yml` now include LangSmith configur
 - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
 ```
 
-**Updated Services**:
+**⚠️ HISTORICAL REPORT - Pre-LangGraph Architecture**
 
-1. ✅ orchestrator (port 8001)
-2. ✅ feature-dev (port 8002)
-3. ✅ code-review (port 8003)
-4. ✅ infrastructure (port 8004)
-5. ✅ cicd (port 8005)
-6. ✅ documentation (port 8006)
+This validation report documents the legacy microservices architecture (6 separate agent containers) that was replaced by LangGraph in November 2025. Current architecture uses a single orchestrator with internal agent nodes.
+
+**Updated Services (Legacy Architecture)**:
+
+1. ✅ orchestrator (port 8001) - Now: LangGraph orchestrator with all agent nodes
+2. ❌ feature-dev (port 8002) - Now: LangGraph node within orchestrator
+3. ❌ code-review (port 8003) - Now: LangGraph node within orchestrator
+4. ❌ infrastructure (port 8004) - Now: LangGraph node within orchestrator
+5. ❌ cicd (port 8005) - Now: LangGraph node within orchestrator
+6. ❌ documentation (port 8006) - Now: LangGraph node within orchestrator
 
 **Also Fixed**:
 
@@ -287,21 +291,14 @@ docker compose -f deploy/docker-compose.yml logs feature-dev | grep "LangSmith"
 curl http://localhost:8001/health
 curl http://localhost:8001/ready
 
-# Feature Dev
-curl http://localhost:8002/health
-curl http://localhost:8002/ready
+# Current Architecture (LangGraph)
+curl http://localhost:8001/health  # Orchestrator with all agent nodes
+curl http://localhost:8000/health  # MCP Gateway
+curl http://localhost:8007/health  # RAG Context
+curl http://localhost:8008/health  # State Persistence
 
-# Code Review
-curl http://localhost:8003/health
-
-# Infrastructure
-curl http://localhost:8004/health
-
-# CI/CD
-curl http://localhost:8005/health
-
-# Documentation
-curl http://localhost:8006/health
+# Legacy Individual Agents (REMOVED)
+# Ports 8002-8006 no longer exist - all agents are LangGraph nodes in orchestrator
 ```
 
 ### Test Tracing End-to-End

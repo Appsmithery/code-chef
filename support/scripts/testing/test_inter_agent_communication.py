@@ -13,31 +13,35 @@ import asyncio
 import httpx
 from datetime import datetime
 
+# LangGraph Architecture - all agents are internal nodes within orchestrator
 ORCHESTRATOR_URL = "http://localhost:8001"
-AGENT_URLS = {
+
+# Core services only (agents are LangGraph nodes, not separate services)
+SERVICE_URLS = {
     "orchestrator": "http://localhost:8001",
-    "feature-dev": "http://localhost:8002",
-    "code-review": "http://localhost:8003",
-    "infrastructure": "http://localhost:8004",
-    "cicd": "http://localhost:8005",
-    "documentation": "http://localhost:8006",
+    "gateway-mcp": "http://localhost:8000",
+    "rag-context": "http://localhost:8007",
+    "state-persistence": "http://localhost:8008",
 }
 
+# Agent nodes (internal to orchestrator, not accessible via direct HTTP)
+AGENT_NODES = ["feature-dev", "code-review", "infrastructure", "cicd", "documentation"]
 
-async def test_agent_health():
-    """Test that all agents are healthy and ready."""
-    print("\n=== Testing Agent Health ===")
+
+async def test_service_health():
+    """Test that all core services are healthy and ready."""
+    print("\n=== Testing Service Health ===")
     async with httpx.AsyncClient(timeout=10.0) as client:
-        for agent, url in AGENT_URLS.items():
+        for service, url in SERVICE_URLS.items():
             try:
                 response = await client.get(f"{url}/health")
                 if response.status_code == 200:
                     data = response.json()
-                    print(f"✓ {agent}: {data['status']}")
+                    print(f"✓ {service}: {data.get('status', 'ok')}")
                 else:
-                    print(f"✗ {agent}: HTTP {response.status_code}")
+                    print(f"✗ {service}: HTTP {response.status_code}")
             except Exception as e:
-                print(f"✗ {agent}: {e}")
+                print(f"✗ {service}: {e}")
 
 
 async def test_direct_agent_request(target_agent: str, request_type: str):

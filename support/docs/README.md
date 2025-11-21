@@ -72,7 +72,7 @@ Documentation is organized into logical categories:
 
 **Current Phase:** Phase 7 Complete ✅
 
-- ✅ All 6 agents operational with MCP integration
+- ✅ LangGraph orchestrator with 6 internal agent nodes
 - ✅ 150+ MCP tools available (filesystem, memory, git, sequential-thinking, etc.)
 - ✅ **LangChain tool binding** - Progressive disclosure with function calling (80-90% token savings)
 - ✅ LangSmith LLM tracing infrastructure configured
@@ -86,12 +86,14 @@ Documentation is organized into logical categories:
 **Core Services:**
 
 - MCP Gateway: Port 8000 - 150+ tools, Linear integration, secrets management
-- Orchestrator: Port 8001 - LangGraph agent nodes (feature-dev, code-review, infrastructure, cicd, documentation, orchestrator)
+- Orchestrator: Port 8001 - LangGraph workflow engine with agent nodes (feature-dev, code-review, infrastructure, cicd, documentation)
 - RAG: Port 8007 - Vector search
 - State: Port 8008 - Workflow persistence
 - Prometheus: Port 9090 - Metrics dashboard
 - Qdrant: Ports 6333 (HTTP), 6334 (gRPC)
 - PostgreSQL: Port 5432
+
+**Architecture:** Single orchestrator container with LangGraph supervisor routing. All 6 agents are internal nodes within the workflow graph, not separate microservices.
 
 ---
 

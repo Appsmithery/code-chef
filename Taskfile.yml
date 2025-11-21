@@ -22,10 +22,12 @@ tasks:
   #============================================================================
 
   build:all:
-    desc: Build all agent images locally
+    desc: Build all service images locally
     summary: |
-      Builds all 6 agent images plus gateway, RAG, and state services using
+      Builds orchestrator, gateway, RAG, and state services using
       docker-compose.yml definitions. Uses cache for faster builds.
+      The orchestrator contains LangGraph agent nodes (feature-dev,
+      code-review, infrastructure, cicd, documentation).
     dir: "{{.DEPLOY_DIR}}"
     cmds:
       - docker compose build
@@ -199,15 +201,17 @@ tasks:
       - |
         echo "Service Port Mappings:"
         echo "  8000 → gateway-mcp (MCP tool routing)"
-        echo "  8001 → orchestrator (task delegation)"
-        echo "  8002 → feature-dev (code generation)"
-        echo "  8003 → code-review (PR analysis)"
-        echo "  8004 → infrastructure (Docker/K8s)"
-        echo "  8005 → cicd (pipeline automation)"
-        echo "  8006 → documentation (docs generation)"
+        echo "  8001 → orchestrator (LangGraph multi-agent workflows)"
         echo "  8007 → rag-context (vector search)"
         echo "  8008 → state-persistence (workflow DB)"
         echo "  9090 → prometheus (metrics)"
+        echo ""
+        echo "LangGraph Agent Nodes (internal to orchestrator):"
+        echo "  - feature-dev (code generation)"
+        echo "  - code-review (PR analysis)"
+        echo "  - infrastructure (Docker/K8s)"
+        echo "  - cicd (pipeline automation)"
+        echo "  - documentation (docs generation)"
 
   #============================================================================
   # WORKFLOW MANAGEMENT (HITL)
