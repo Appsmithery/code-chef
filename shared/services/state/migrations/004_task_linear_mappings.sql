@@ -7,21 +7,21 @@ CREATE TABLE IF NOT EXISTS task_linear_mappings (
     id SERIAL PRIMARY KEY,
     task_id VARCHAR(255) NOT NULL UNIQUE,
     linear_issue_id VARCHAR(255) NOT NULL,
-    linear_identifier VARCHAR(50) NOT NULL,  -- e.g., "PR-123"
+    linear_identifier VARCHAR(50) NOT NULL,  -- e.g., "DEV-123"
     agent_name VARCHAR(50) NOT NULL,
     parent_issue_id VARCHAR(255),  -- Parent Linear issue (approval/orchestrator task)
-    parent_identifier VARCHAR(50),  -- e.g., "PR-68"
+    parent_identifier VARCHAR(50),  -- e.g., "DEV-68"
     status VARCHAR(50) DEFAULT 'todo',  -- todo, in_progress, done, canceled
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP,
-    
-    -- Indexes for fast lookups
-    INDEX idx_task_id (task_id),
-    INDEX idx_linear_issue_id (linear_issue_id),
-    INDEX idx_agent_name (agent_name),
-    INDEX idx_status (status)
+    completed_at TIMESTAMP
 );
+
+-- Create indexes for fast lookups
+CREATE INDEX IF NOT EXISTS idx_task_id ON task_linear_mappings(task_id);
+CREATE INDEX IF NOT EXISTS idx_linear_issue_id ON task_linear_mappings(linear_issue_id);
+CREATE INDEX IF NOT EXISTS idx_agent_name ON task_linear_mappings(agent_name);
+CREATE INDEX IF NOT EXISTS idx_status ON task_linear_mappings(status);
 
 -- Trigger to update updated_at on row modification
 CREATE OR REPLACE FUNCTION update_task_mapping_timestamp()
