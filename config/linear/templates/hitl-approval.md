@@ -1,7 +1,7 @@
 # HITL Approval Request Template
 
 **Template Type:** Workspace-scoped  
-**Usage:** All agents posting approval requests to PR-68
+**Usage:** All agents posting approval requests to DEV-68
 
 ---
 
@@ -13,9 +13,9 @@
 
 ### Default Properties
 
-- **Team:** Dev-Ops
+- **Team:** DevOps
 - **Project:** AI DevOps Agent Platform
-- **Parent:** PR-68 (Approval Hub)
+- **Parent:** DEV-68 (Approval Hub)
 - **Priority:** Urgent
 - **Assignee:** alextorelli28
 - **Status:** Todo
@@ -89,7 +89,7 @@
 **Deadline:** {{deadline}}
 {{/if}}
 
-**Approval Hub:** [PR-68](https://linear.app/dev-ops/issue/PR-68)
+**Approval Hub:** [DEV-68](https://linear.app/dev-ops/issue/DEV-68)
 ```
 
 ---
@@ -142,11 +142,11 @@ JWT tokens provide stateless auth suitable for microservices.
         """.strip(),
         "deadline": "2025-11-25"
     },
-    parent_id="PR-68"  # Link to approval hub
+    parent_id="DEV-68"  # Link to approval hub
 )
 
 print(f"Created approval request: {approval_issue['identifier']}")
-# Output: Created approval request: PR-123
+# Output: Created approval request: DEV-123
 ```
 
 ### Via Linear UI:

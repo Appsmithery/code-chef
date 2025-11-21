@@ -47,7 +47,7 @@ CREATE TRIGGER task_linear_mappings_update
 -- Find all sub-issues for parent
 -- SELECT task_id, linear_identifier, agent_name, status
 -- FROM task_linear_mappings
--- WHERE parent_identifier = 'PR-68'
+-- WHERE parent_identifier = 'DEV-68'
 -- ORDER BY created_at DESC;
 
 -- Get agent's active tasks

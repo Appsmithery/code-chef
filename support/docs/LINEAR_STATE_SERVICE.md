@@ -8,7 +8,7 @@ Phase 5 implementation now includes PostgreSQL-backed state management for task-
 
 ```
 ┌──────────────┐     ┌───────────────┐     ┌──────────────┐
-│ Orchestrator │────▶│ Feature-Dev   │────▶│ Linear API   │
+│ Orchestrator │────▶│ Feature-Dev  │────▶│ Linear API   │
 │              │     │ Agent         │     │              │
 └──────────────┘     └───────────────┘     └──────────────┘
                             │                      │
@@ -105,7 +105,7 @@ tasks = await state_client.get_agent_tasks("feature-dev")
 active = await state_client.get_agent_tasks("feature-dev", status="in_progress")
 
 # Get sub-tasks for parent
-subtasks = await state_client.get_parent_subtasks("PR-68")
+subtasks = await state_client.get_parent_subtasks("DEV-68")
 
 # Get completion stats
 stats = await state_client.get_completion_stats("feature-dev")
@@ -220,7 +220,7 @@ event_bus.subscribe("approval_decision", handle_approval_decision)
 ```bash
 ssh root@45.55.173.72
 cd /opt/Dev-Tools
-docker compose exec postgres psql -U devtools -d devtools_state -f /migrations/004_task_linear_mappings.sql
+docker compose exec postgres psql -U devtools -d devtools -f /migrations/004_task_linear_mappings.sql
 ```
 
 ### 2. Update Environment Variables
@@ -231,7 +231,7 @@ Add to `config/env/.env`:
 # State Service (PostgreSQL)
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
-POSTGRES_DB=devtools_state
+POSTGRES_DB=devtools
 POSTGRES_USER=devtools
 POSTGRES_PASSWORD=<your-password>
 
@@ -287,14 +287,14 @@ curl -X POST http://localhost:8002/tasks/accept \
     "task_id": "test-123",
     "description": "Test task",
     "orchestrator_issue_id": "parent-uuid",
-    "orchestrator_issue_identifier": "PR-68",
+    "orchestrator_issue_identifier": "DEV-68",
     "complexity": "medium",
     "requirements": "Test requirements",
     "acceptance_criteria": ["Criterion 1", "Criterion 2"]
   }'
 
 # Verify mapping stored
-docker compose exec postgres psql -U devtools -d devtools_state -c "
+docker compose exec postgres psql -U devtools -d devtools -c "
 SELECT task_id, linear_identifier, status
 FROM task_linear_mappings
 WHERE task_id='test-123';
@@ -345,7 +345,7 @@ FROM task_linear_mappings
 WHERE status = 'done' AND completed_at IS NOT NULL
 GROUP BY agent_name;
 
--- Sub-tasks for approval hub (PR-68)
+-- Sub-tasks for approval hub (DEV-68)
 SELECT
     task_id,
     linear_identifier,
@@ -353,7 +353,7 @@ SELECT
     status,
     created_at
 FROM task_linear_mappings
-WHERE parent_identifier = 'PR-68'
+WHERE parent_identifier = 'DEV-68'
 ORDER BY created_at DESC
 LIMIT 10;
 ```
@@ -364,7 +364,7 @@ LIMIT 10;
 
 ```python
 # Check PostgreSQL connection
-docker compose exec postgres psql -U devtools -d devtools_state -c "\dt"
+docker compose exec postgres psql -U devtools -d devtools -c "\dt"
 
 # Check environment variables
 docker compose exec orchestrator env | grep POSTGRES
