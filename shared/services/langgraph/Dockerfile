@@ -11,12 +11,7 @@ RUN apt-get update && apt-get install -y \
 # Copy shared dependencies
 COPY shared/lib /app/shared/lib
 
-# Copy agent source code (needed for workflow imports)
-COPY agent_feature-dev /app/agents/feature-dev
-COPY agent_code-review /app/agents/code-review
-COPY agent_infrastructure /app/agents/infrastructure
-COPY agent_cicd /app/agents/agent_cicd
-COPY agent_documentation /app/agents/agent_documentation
+# Copy orchestrator source code (contains all LangGraph agent nodes)
 COPY agent_orchestrator /app/agents/orchestrator
 
 # Ensure agent packages are discoverable by Python
