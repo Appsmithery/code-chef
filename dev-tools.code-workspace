@@ -57,7 +57,8 @@
           "copilot/oswe-vscode-prime"
         ]
       }
-    }
+    },
+    "terminal.integrated.cursorStyle": "line"
   },
   "extensions": {
     "recommendations": [
