@@ -6,12 +6,18 @@ import pytest
 import sys
 from pathlib import Path
 
-# Add agent_feature-dev to path (hyphens not allowed in Python imports)
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "agent_feature-dev"))
-from service import FeatureRequest
-sys.path.pop(0)
+# Add paths for imports
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "agent_feature-dev"))
+sys.path.insert(0, str(REPO_ROOT / "shared"))
 
-from shared.services.langgraph.workflow import invoke_workflow
+try:
+    from service import FeatureRequest
+    from services.langgraph.workflow import invoke_workflow
+except ImportError:
+    # Fallback if imports not available
+    FeatureRequest = None
+    invoke_workflow = None
 
 
 class DummyGraph:
@@ -27,7 +33,9 @@ class DummyGraph:
 
 def test_feature_request_payload_is_injected():
     graph = DummyGraph()
-    feature_request = FeatureRequest(description="Implement caching", task_id="task-123")
+    feature_request = FeatureRequest(
+        description="Implement caching", task_id="task-123"
+    )
 
     result = invoke_workflow(
         graph=graph,
