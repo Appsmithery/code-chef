@@ -176,13 +176,13 @@ The orchestrator automatically configures custom fields based on risk level:
 
 ### Low/Medium Risk
 
-- **Request Status**: `approved` (pre-selected)
-- **Required Action**: `["review_proposed_changes"]`
+- **Request Status**: Empty (user decides approval)
+- **Required Action**: `["review_proposed_changes"]` (pre-checked)
 
 ### High/Critical Risk
 
-- **Request Status**: Empty (requires manual selection)
-- **Required Action**: `["review_proposed_changes", "verify_risks_are_acceptable", "check_implementation_approach"]`
+- **Request Status**: Empty (user decides approval)
+- **Required Action**: `["review_proposed_changes", "verify_risks_are_acceptable", "check_implementation_approach"]` (pre-checked)
 
 ## Comment Commands
 
