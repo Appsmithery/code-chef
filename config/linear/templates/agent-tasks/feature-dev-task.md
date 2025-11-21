@@ -21,30 +21,31 @@
 
 ### Template Variables
 
-| Variable | Type | Required | Example |
-|----------|------|----------|---------|
-| `{{parent_task_id}}` | Text | Yes | task_abc123 |
-| `{{complexity}}` | Dropdown | Yes | simple, moderate, complex |
-| `{{requirements}}` | Markdown | Yes | Add JWT middleware with RS256 signing |
-| `{{acceptance_criteria}}` | Checklist | Yes | - [ ] Middleware validates tokens\n- [ ] Tests pass |
-| `{{technical_approach}}` | Markdown | Yes | Use jsonwebtoken library, extract from Authorization header |
-| `{{dependencies}}` | Text | No | jsonwebtoken@9.0.0, crypto module |
-| `{{files_affected}}` | Text | No | middleware/auth.js, routes/users.js |
-| `{{test_coverage_target}}` | Number | No | 85 |
-| `{{code_generation_strategy}}` | Dropdown | No | llm_first, template_based, hybrid |
+| Variable                       | Type      | Required | Example                                                     |
+| ------------------------------ | --------- | -------- | ----------------------------------------------------------- |
+| `{{parent_task_id}}`           | Text      | Yes      | task_abc123                                                 |
+| `{{complexity}}`               | Dropdown  | Yes      | simple, moderate, complex                                   |
+| `{{requirements}}`             | Markdown  | Yes      | Add JWT middleware with RS256 signing                       |
+| `{{acceptance_criteria}}`      | Checklist | Yes      | - [ ] Middleware validates tokens\n- [ ] Tests pass         |
+| `{{technical_approach}}`       | Markdown  | Yes      | Use jsonwebtoken library, extract from Authorization header |
+| `{{dependencies}}`             | Text      | No       | jsonwebtoken@9.0.0, crypto module                           |
+| `{{files_affected}}`           | Text      | No       | middleware/auth.js, routes/users.js                         |
+| `{{test_coverage_target}}`     | Number    | No       | 85                                                          |
+| `{{code_generation_strategy}}` | Dropdown  | No       | llm_first, template_based, hybrid                           |
 
 ---
 
 ## Template Content
 
 ### Title
+
 ```
 [Feature-Dev] {{parent_task_id}}
 ```
 
 ### Description
 
-````markdown
+```markdown
 # Feature Development Task
 
 **Parent Task:** `{{parent_task_id}}`  
@@ -68,32 +69,28 @@
 
 {{technical_approach}}
 
-{{#if dependencies}}
----
+## {{#if dependencies}}
 
 ## Dependencies
 
 {{dependencies}}
 {{/if}}
 
-{{#if files_affected}}
----
+## {{#if files_affected}}
 
 ## Files/Modules Affected
 
 {{files_affected}}
 {{/if}}
 
-{{#if test_coverage_target}}
----
+## {{#if test_coverage_target}}
 
 ## Test Coverage Target
 
 {{test_coverage_target}}%
 {{/if}}
 
-{{#if code_generation_strategy}}
----
+## {{#if code_generation_strategy}}
 
 ## Code Generation Strategy
 
@@ -105,7 +102,7 @@
 ## Status Updates
 
 Agent will update this issue as work progresses.
-````
+```
 
 ---
 
@@ -125,7 +122,7 @@ Template automatically sets `parentId` when agent provides parent issue ID.
 @app.post("/tasks/accept")
 async def accept_task(task: TaskAssignment):
     """Agent accepts task and creates Linear sub-issue"""
-    
+
     # Create Linear sub-issue from template
     linear_issue = await linear_client.create_issue_from_template(
         template_id="feature-dev-task-template-uuid",
@@ -142,14 +139,14 @@ async def accept_task(task: TaskAssignment):
         },
         parent_id=task.orchestrator_issue_id  # Link to parent approval/task
     )
-    
+
     # Store mapping for status updates
     await state_client.store_task_mapping(
         task_id=task.task_id,
         linear_issue_id=linear_issue["id"],
         linear_identifier=linear_issue["identifier"]
     )
-    
+
     return {"linear_issue": linear_issue["identifier"]}
 ```
 
