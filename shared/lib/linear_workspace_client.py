@@ -5,6 +5,9 @@ Handles workspace-level operations like:
 - Posting to approval hub (workspace-wide issue)
 - Creating new projects
 - Reading all projects for routing
+- GitHub permalink generation
+- Issue documents (rich markdown attachments)
+- Template-based issue creation
 
 Security: Only orchestrator should use this client.
 """
@@ -14,6 +17,7 @@ import logging
 from typing import Optional, Dict, Any, List
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
@@ -227,4 +231,229 @@ class LinearWorkspaceClient:
             
         except Exception as e:
             logger.error(f"Failed to create project: {e}")
+            raise
+    
+    # ========================================
+    # Phase 3: GitHub Permalinks
+    # ========================================
+    
+    @staticmethod
+    def generate_github_permalink(
+        repo: str,
+        file_path: str,
+        line_start: int,
+        line_end: Optional[int] = None,
+        commit_sha: Optional[str] = None
+    ) -> str:
+        """
+        Generate GitHub permalink for code reference.
+        
+        Args:
+            repo: Repository in format "owner/repo" (e.g., "Appsmithery/Dev-Tools")
+            file_path: Path to file relative to repo root (e.g., "agent_orchestrator/main.py")
+            line_start: Starting line number (1-indexed)
+            line_end: Ending line number (optional, for ranges)
+            commit_sha: Specific commit SHA (optional, defaults to "main")
+        
+        Returns:
+            Full GitHub permalink URL
+        
+        Example:
+            >>> LinearWorkspaceClient.generate_github_permalink(
+            ...     "Appsmithery/Dev-Tools",
+            ...     "agent_orchestrator/main.py",
+            ...     150,
+            ...     175
+            ... )
+            'https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/main.py#L150-L175'
+        """
+        # Ensure file_path doesn't start with /
+        file_path = file_path.lstrip("/")
+        
+        # Default to main branch if no commit specified
+        ref = commit_sha or "main"
+        
+        # Build base URL
+        base_url = f"https://github.com/{repo}/blob/{ref}/{file_path}"
+        
+        # Add line anchors
+        if line_end and line_end != line_start:
+            line_fragment = f"#L{line_start}-L{line_end}"
+        else:
+            line_fragment = f"#L{line_start}"
+        
+        permalink = f"{base_url}{line_fragment}"
+        logger.debug(f"Generated GitHub permalink: {permalink}")
+        
+        return permalink
+    
+    # ========================================
+    # Phase 4: Issue Documents
+    # ========================================
+    
+    async def create_issue_with_document(
+        self,
+        title: str,
+        description: str,
+        document_markdown: str,
+        project_id: str,
+        labels: Optional[List[str]] = None,
+        parent_id: Optional[str] = None,
+        priority: Optional[int] = None,
+        assignee_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create Linear issue with attached rich markdown document.
+        
+        Args:
+            title: Issue title
+            description: Brief description (shown in issue list)
+            document_markdown: Full markdown content for attached document
+            project_id: Project UUID
+            labels: List of label IDs
+            parent_id: Parent issue ID (for sub-issues)
+            priority: Priority level (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low)
+            assignee_id: User UUID to assign
+        
+        Returns:
+            Created issue with id, identifier, url, and document
+        
+        Use Cases:
+            - HITL approvals with detailed context
+            - Task decomposition analysis
+            - Post-mortem documentation
+            - Architecture decision records (ADRs)
+        """
+        mutation = gql("""
+            mutation CreateIssueWithDoc($input: IssueCreateInput!) {
+                issueCreate(input: $input) {
+                    success
+                    issue {
+                        id
+                        identifier
+                        url
+                        title
+                        description
+                    }
+                }
+            }
+        """)
+        
+        input_data = {
+            "title": title,
+            "description": description,
+            "projectId": project_id,
+            "document": {
+                "content": document_markdown
+            }
+        }
+        
+        if labels:
+            input_data["labelIds"] = labels
+        
+        if parent_id:
+            input_data["parentId"] = parent_id
+        
+        if priority is not None:
+            input_data["priority"] = priority
+        
+        if assignee_id:
+            input_data["assigneeId"] = assignee_id
+        
+        try:
+            result = self.client.execute(
+                mutation,
+                variable_values={"input": input_data}
+            )
+            
+            issue = result["issueCreate"]["issue"]
+            logger.info(f"Created issue with document: {issue['identifier']} - {issue['title']}")
+            
+            return issue
+            
+        except Exception as e:
+            logger.error(f"Failed to create issue with document: {e}")
+            raise
+    
+    # ========================================
+    # Phase 2: Template-Based Issue Creation
+    # ========================================
+    
+    async def create_issue_from_template(
+        self,
+        template_id: str,
+        template_variables: Optional[Dict[str, str]] = None,
+        title_override: Optional[str] = None,
+        project_id: Optional[str] = None,
+        parent_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Create issue from Linear template with variable substitution.
+        
+        Args:
+            template_id: Linear template UUID
+            template_variables: Dict of template variables to substitute
+            title_override: Override template title
+            project_id: Override template project
+            parent_id: Set parent issue (for sub-issues)
+        
+        Returns:
+            Created issue with id, identifier, url
+        
+        Example:
+            >>> await client.create_issue_from_template(
+            ...     template_id="hitl-approval-template-uuid",
+            ...     template_variables={
+            ...         "agent": "feature-dev",
+            ...         "task_id": "abc123",
+            ...         "priority": "high",
+            ...         "context": "User requested JWT authentication"
+            ...     }
+            ... )
+        """
+        mutation = gql("""
+            mutation CreateIssueFromTemplate($input: IssueCreateInput!, $templateId: String!) {
+                issueCreate(input: $input, templateId: $templateId) {
+                    success
+                    issue {
+                        id
+                        identifier
+                        url
+                        title
+                    }
+                }
+            }
+        """)
+        
+        input_data = {}
+        
+        if title_override:
+            input_data["title"] = title_override
+        
+        if project_id:
+            input_data["projectId"] = project_id
+        
+        if parent_id:
+            input_data["parentId"] = parent_id
+        
+        # Template variables are passed in description
+        if template_variables:
+            input_data["templateVariables"] = template_variables
+        
+        try:
+            result = self.client.execute(
+                mutation,
+                variable_values={
+                    "input": input_data,
+                    "templateId": template_id
+                }
+            )
+            
+            issue = result["issueCreate"]["issue"]
+            logger.info(f"Created issue from template: {issue['identifier']} - {issue['title']}")
+            
+            return issue
+            
+        except Exception as e:
+            logger.error(f"Failed to create issue from template: {e}")
             raise
