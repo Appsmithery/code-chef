@@ -83,15 +83,10 @@ Documentation is organized into logical categories:
 - ✅ State persistence with PostgreSQL
 - ✅ E2E workflows validated
 
-**Services:**
+**Core Services:**
 
-- Gateway (MCP): Port 8000 - 150+ tools, Linear integration, secrets management
-- Orchestrator: Port 8001 - Task delegation, llama-3.1-70b inference
-- Feature Dev: Port 8002 - Code generation, codellama-13b inference, RAG context
-- Code Review: Port 8003 - Quality assurance, llama-3.1-70b inference
-- Infrastructure: Port 8004 - IaC generation, llama-3.1-8b inference
-- CI/CD: Port 8005 - Pipeline automation, llama-3.1-8b inference
-- Documentation: Port 8006 - Docs generation, mistral-7b inference
+- MCP Gateway: Port 8000 - 150+ tools, Linear integration, secrets management
+- Orchestrator: Port 8001 - LangGraph agent nodes (feature-dev, code-review, infrastructure, cicd, documentation, orchestrator)
 - RAG: Port 8007 - Vector search
 - State: Port 8008 - Workflow persistence
 - Prometheus: Port 9090 - Metrics dashboard

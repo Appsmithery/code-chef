@@ -2,47 +2,45 @@
 
 > Single-root development environment for AI-assisted software development workflows
 
-Dev-Tools consolidates AI agents, MCP gateway, Docker orchestration, and development configurations into a unified repository designed for remote development on DigitalOcean droplets with VS Code Dev Containers.
+Dev-Tools is a unified AI DevOps automation platform built on a single orchestrator container using LangGraph multi-agent workflows. It eliminates legacy microservice agents in favor of a scalable, memory-efficient architecture (900MB → 154MB RAM, 100% → 0.2% CPU).
 
-## Features
+## Key Features
 
-- **AI Agent Suite**: Six specialized agents (Orchestrator, Feature-Dev, Code-Review, Infrastructure, CI/CD, Documentation)
+- **LangGraph Multi-Agent Orchestration**: All agent logic (feature-dev, code-review, infrastructure, cicd, documentation, orchestrator) is now implemented as nodes in a single orchestrator container using LangGraph.
 - **MCP Direct Access**: 150+ tools across 17 servers via stdio transport (memory, filesystem, git, playwright, notion, etc.)
 - **Linear Integration**: Direct SDK access for issue management with OAuth support
 - **LLM Inference**: DigitalOcean Gradient AI with per-agent model optimization
-- **Observability**: Langfuse LLM tracing + Prometheus HTTP metrics
-- **LangGraph Workflows**: Multi-agent orchestration with PostgreSQL state persistence and streaming
-- **Inter-Agent Communication**: HTTP-based workflow orchestration with automated task routing
-- **Docker Compose Stack**: Complete containerized development environment
-- **Docker MCP Toolkit**: Direct stdio communication with MCP servers (no HTTP gateway)
-- **VS Code Integration**: Dev Container support with Remote-SSH
+- **Observability**: LangSmith LLM tracing + Prometheus HTTP metrics
+- **State Management**: PostgreSQL-backed workflow state
 - **RAG Configuration**: Qdrant vector database and indexing for context-aware agents
-- **State Management**: PostgreSQL-backed task tracking and workflow state
 - **Backup & Restore**: Volume management scripts for data persistence
+
+## Resource Metrics
+
+- **Memory**: 154MB RAM (down from 900MB)
+- **CPU**: 0.2% (down from 100%)
 
 ## Deployment Status
 
-**Phase 5 Complete** ✅ - Production-ready with full observability
+**Production-ready with full observability**
 
-- ✅ **LangSmith Integration**: All 6 agents + workflows traced (prompts, completions, tokens, latencies)
-- ✅ **LangGraph Workflows**: Multi-agent orchestration with PostgreSQL state persistence
-- ✅ **MCP Toolkit**: 150+ tools via direct stdio transport (50-100ms latency)
-- ✅ **Gradient AI**: Per-agent model optimization (70b → 8b based on complexity)
-- ✅ **HITL Approvals**: Risk assessment + Linear notifications + approval workflows
-- ✅ **Copilot Integration**: Natural language chat interface with session management
-- ✅ **Event Bus**: Redis-based inter-agent communication with <1s latency
-- ✅ **Prometheus Metrics**: HTTP monitoring on all services
-- ✅ **Agent Registry**: Phase 6 discovery infrastructure ready
+- **LangSmith Integration**: All agent nodes + workflows traced (prompts, completions, tokens, latencies)
+- **LangGraph Workflows**: Multi-agent orchestration with PostgreSQL state persistence
+- **MCP Toolkit**: 150+ tools via direct stdio transport (50-100ms latency)
+- **Gradient AI**: Per-agent model optimization (70b → 8b based on complexity)
+- **HITL Approvals**: Risk assessment + Linear notifications + approval workflows
+- **Copilot Integration**: Natural language chat interface with session management
+- **Event Bus**: Redis-based inter-agent communication with <1s latency
+- **Prometheus Metrics**: HTTP monitoring on all services
+- **Agent Registry**: Phase 6 discovery infrastructure ready
 
-**Observability Stack**:
+**Observability Stack:**
 
 - LLM Traces → LangSmith (https://smith.langchain.com)
 - HTTP Metrics → Prometheus → Grafana
 - Workflow State → PostgreSQL
 - Vector Operations → Qdrant Cloud
 - Notifications → Linear + Email
-
-**Next:** Phase 6 - Multi-agent collaboration workflows (see `support/docs/PHASE_6_PLAN.md`)
 
 **Deploy Now:** `./support/scripts/deploy.ps1 -Target remote` (see validation report: `support/reports/LANGSMITH_INTEGRATION_VALIDATION.md`)
 
@@ -110,64 +108,47 @@ docker-compose logs -f
 3. **Verify services**:
 
    ```bash
-   cd compose
+   cd deploy
    docker-compose ps
-
-   # Test health endpoints
-   curl http://localhost:8000/health  # MCP Gateway
-   curl http://localhost:8001/health  # Orchestrator
-   curl http://localhost:8002/health  # Feature-Dev
-   curl http://localhost:8003/health  # Code-Review
-   curl http://localhost:8004/health  # Infrastructure
-   curl http://localhost:8005/health  # CI/CD
-   curl http://localhost:8006/health  # Documentation
-   curl http://localhost:8007/health  # RAG Context
-   curl http://localhost:8008/health  # State Persistence
    ```
 
-   **Windows PowerShell:**
+# Test health endpoints (only 3 core services remain)
 
-   ```powershell
-   # Test health endpoints
-   Invoke-RestMethod http://localhost:8000/health  # MCP Gateway
-   Invoke-RestMethod http://localhost:8001/health  # Orchestrator
-   Invoke-RestMethod http://localhost:8002/health  # Feature-Dev
-   Invoke-RestMethod http://localhost:8003/health  # Code-Review
-   Invoke-RestMethod http://localhost:8004/health  # Infrastructure
-   Invoke-RestMethod http://localhost:8005/health  # CI/CD
-   Invoke-RestMethod http://localhost:8006/health  # Documentation
-   Invoke-RestMethod http://localhost:8007/health  # RAG Context
-   Invoke-RestMethod http://localhost:8008/health  # State Persistence
-   ```
+curl http://localhost:8000/health # MCP Gateway
+curl http://localhost:8001/health # Orchestrator (LangGraph)
+curl http://localhost:8007/health # RAG Context
+curl http://localhost:8008/health # State Persistence
+
+````
+
+**Windows PowerShell:**
+
+```powershell
+# Test health endpoints
+Invoke-RestMethod http://localhost:8000/health  # MCP Gateway
+Invoke-RestMethod http://localhost:8001/health  # Orchestrator (LangGraph)
+Invoke-RestMethod http://localhost:8007/health  # RAG Context
+Invoke-RestMethod http://localhost:8008/health  # State Persistence
+````
 
 ## Architecture
 
 ```
-Dev-Tools (MCP Toolkit Integration - Direct Stdio Transport)
-├── Agents (6 specialized FastAPI services)
-│   ├── Orchestrator (8001) - Task routing & coordination
-│   ├── Feature-Dev (8002) - Code generation
-│   ├── Code-Review (8003) - Quality & security
-│   ├── Infrastructure (8004) - IaC authoring
-│   ├── CI/CD (8005) - Pipeline automation
-│   └── Documentation (8006) - Doc generation
-├── MCP Integration
-│   ├── Direct Stdio Access (shared/lib/mcp_tool_client.py)
-│   ├── Docker MCP Toolkit (150+ tools, 17 servers)
-│   └── Linear Gateway (8000) - OAuth only (Node.js)
-├── Supporting Services
-│   ├── RAG Context (8007) - Qdrant vector search
-│   └── State Persistence (8008) - PostgreSQL workflow state
+Dev-Tools (LangGraph Multi-Agent Orchestrator)
+├── Orchestrator (8001) - LangGraph agent nodes (feature-dev, code-review, infrastructure, cicd, documentation, orchestrator)
+├── MCP Gateway (8000) - Linear OAuth, tool routing
+├── RAG Context (8007) - Qdrant vector search
+├── State Persistence (8008) - PostgreSQL workflow state
 ├── Shared Modules (shared/lib/)
-│   ├── mcp_tool_client.py - Direct MCP tool invocation
-│   ├── mcp_discovery.py - Real-time server discovery
-│   ├── linear_client.py - Direct Linear SDK access
+│   ├── mcp_client.py - Direct MCP tool invocation
+│   ├── progressive_mcp_loader.py - Progressive tool disclosure
+│   ├── linear_workspace_client.py - Linear GraphQL API
 │   └── gradient_client.py - DigitalOcean Gradient AI
 └── Configuration
-    ├── Routing rules (config/routing/)
-    ├── MCP tool mappings (config/mcp-agent-tool-mapping.yaml)
-    ├── RAG indexing (config/rag/)
-    └── Environment (config/env/.env)
+  ├── Routing rules (config/routing/)
+  ├── MCP tool mappings (config/mcp-agent-tool-mapping.yaml)
+  ├── RAG indexing (config/rag/)
+  └── Environment (config/env/.env)
 ```
 
 **Architecture Highlights:**
@@ -200,13 +181,8 @@ For AWS, Azure, or GCP deployments, adapt the DigitalOcean guide or see [support
 
 | Service             | Port       | Purpose                  |
 | ------------------- | ---------- | ------------------------ |
-| Linear Gateway      | 8000       | Linear OAuth + API proxy |
-| Orchestrator        | 8001       | Task coordination        |
-| Feature-Dev         | 8002       | Code generation          |
-| Code-Review         | 8003       | Quality checks           |
-| Infrastructure      | 8004       | IaC generation           |
-| CI/CD               | 8005       | Pipeline automation      |
-| Documentation       | 8006       | Doc generation           |
+| MCP Gateway         | 8000       | Linear OAuth + API proxy |
+| Orchestrator        | 8001       | LangGraph agent nodes    |
 | RAG Context Manager | 8007       | Semantic code search     |
 | State Persistence   | 8008       | Task/workflow state      |
 | Qdrant              | 6333, 6334 | Vector database          |
@@ -215,76 +191,25 @@ For AWS, Azure, or GCP deployments, adapt the DigitalOcean guide or see [support
 
 **Note:** MCP tool invocation now happens directly via stdio (no HTTP gateway for tools). The gateway at port 8000 handles Linear OAuth only.
 
-## Agent Responsibilities
+## LangGraph Agent Nodes
 
-### Orchestrator
+All agent logic is now implemented as nodes in the LangGraph workflow within the orchestrator container:
 
-Coordinates task routing, agent selection, and workflow orchestration.
+- **feature-dev**: Feature implementation, code generation, testing
+- **code-review**: Quality analysis, security scanning, review comments
+- **infrastructure**: IaC (Terraform, Docker Compose), deployment
+- **cicd**: Pipeline automation, workflow orchestration
+- **documentation**: README, API docs, architecture diagrams
+- **orchestrator**: Task routing, agent selection, workflow orchestration
 
-### Feature-Dev
+## LangGraph Workflows
 
-Implements features, generates code, sets up testing.
-
-### Code-Review
-
-Performs quality analysis, security scanning, generates review comments.
-
-### Infrastructure
-
-Generates IaC (Terraform, Docker Compose), manages deployments.
-
-### CI/CD
-
-Creates pipelines, automates workflows, orchestrates builds.
-
-### Documentation
-
-Generates READMEs, API docs, architecture diagrams.
-
-## Usage
-
-### Task-Based Workflows
-
-Dev-Tools uses [Task](https://taskfile.dev) for agent workflow automation. Each agent has its own Taskfile with standardized commands.
-
-**Quick Commands:**
-
-```bash
-# Check agent health
-task health
-
-# Build all agent containers
-task build:all
-
-# Start services
-task compose:up
-
-# Stop services
-task compose:down
-```
-
-**Per-Agent Commands:**
-
-```bash
-# Run agent locally
-task <agent>:dev:run
-
-# Build agent container
-task <agent>:build
-
-# Check agent health
-task <agent>:health
-
-# View agent logs
-task <agent>:logs
-```
-
-For complete workflow documentation, see [support/docs/TASKFILE_WORKFLOWS.md](support/docs/TASKFILE_WORKFLOWS.md).
+All agent workflows are now orchestrated via LangGraph in the orchestrator container. See [support/docs/LANGGRAPH_ARCHITECTURE.md](support/docs/LANGGRAPH_ARCHITECTURE.md) for details.
 
 ### Submit a Task
 
 ```bash
-curl -X POST http://localhost:8001/orchestrate \
+curl -X POST http://localhost:8001/orchestrate/langgraph \
   -H "Content-Type: application/json" \
   -d '{
     "description": "Add user authentication with JWT",
@@ -300,76 +225,22 @@ $body = @{
     priority = "high"
 } | ConvertTo-Json
 
-Invoke-RestMethod -Uri http://localhost:8001/orchestrate `
+Invoke-RestMethod -Uri http://localhost:8001/orchestrate/langgraph `
     -Method Post `
     -Body $body `
     -ContentType "application/json"
 ```
 
-**Response:**
-
-```json
-{
-  "task_id": "uuid",
-  "subtasks": [
-    {
-      "id": "uuid",
-      "agent_type": "feature-dev",
-      "description": "Implement JWT authentication",
-      "status": "pending"
-    }
-  ],
-  "routing_plan": {
-    "execution_order": ["uuid"],
-    "estimated_duration_minutes": 15
-  },
-  "estimated_tokens": 25
-}
-```
-
 ### Human-in-the-Loop (HITL) Approvals
 
-High-risk operations (production deploys, destructive database work, secrets handling) trigger a human approval gate before orchestration proceeds.
+High-risk operations (production deploys, destructive database work, secrets handling) trigger a human approval gate before orchestration proceeds. The orchestrator will respond with `routing_plan.status = "approval_pending"` and an `approval_request_id`.
 
-1. **First-time setup:**
+See [support/docs/LANGGRAPH_ARCHITECTURE.md](support/docs/LANGGRAPH_ARCHITECTURE.md) for HITL workflow details.
 
-   ```powershell
-   task workflow:init-db
-   ```
-
-   Initializes the `approval_requests` table in PostgreSQL.
-
-2. **Submit task:** `/orchestrate` responds with `routing_plan.status = "approval_pending"` and an `approval_request_id`.
-3. **Review queue:**
-
-   ```powershell
-   task workflow:list-pending
-   ```
-
-4. **Approve or reject:**
-
-   ```powershell
-   task workflow:approve REQUEST_ID=<uuid>
-   task workflow:reject REQUEST_ID=<uuid> REASON="Needs runbook"
-   ```
-
-5. **Resume orchestration:**
-
-   ```powershell
-   Invoke-RestMethod -Uri http://localhost:8001/resume/<task_id> -Method Post
-   ```
-
-Rejected or expired approvals return HTTP errors with explanatory messages so the operator can re-submit safely.
-
-### Backup Volumes
+### Backup & Restore
 
 ```bash
 ./scripts/backup_volumes.sh
-```
-
-### Restore from Backup
-
-```bash
 ./scripts/restore_volumes.sh ./backups/20250112_140000
 ```
 
@@ -377,49 +248,24 @@ Rejected or expired approvals return HTTP errors with explanatory messages so th
 
 ### Environment Variables
 
-Edit `config/env/.env`:
-
-```bash
-ORCHESTRATOR_URL=http://orchestrator:8001
-MCP_GATEWAY_URL=http://gateway-mcp:8000
-LOG_LEVEL=info
-```
+Edit `config/env/.env` as needed for orchestrator, gateway, and supporting services. See `.env.template` for all options.
 
 ### Task Routing Rules
 
-Edit `config/routing/task-router.rules.yaml`:
-
-```yaml
-routes:
-  - pattern: "feature|implement"
-    agent: "feature-dev"
-    priority: 1
-```
+Edit `config/routing/task-router.rules.yaml` to control LangGraph agent node routing.
 
 ### RAG Configuration
 
-Edit `config/rag/vectordb.config.yaml`:
-
-```yaml
-vectordb:
-  type: "qdrant"
-  mode: "cloud"
-  url_env: "QDRANT_URL"
-  api_key_env: "QDRANT_API_KEY"
-  default_collection: "the-shop"
-
-embeddings:
-  provider: "digitalocean-gradient"
-  model_env: "GRADIENT_EMBEDDING_MODEL"
-```
+Edit `config/rag/vectordb.config.yaml` for Qdrant and embedding model settings.
 
 ## Documentation
 
 - **[📚 Documentation Index](support/docs/README.md)** - Complete documentation hub with navigation
 - **[🚀 DigitalOcean Deployment](support/docs/DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
-- **[🏭️ Architecture Overview](support/docs/ARCHITECTURE.md)** - System design and components
-- **[📡 Agent Endpoints](support/docs/AGENT_ENDPOINTS.md)** - Complete API reference
-- **[🔒 Secrets Management](support/docs/SECRETS_MANAGEMENT.md)** - Security and configuration
+- **[🏠 Architecture Overview](support/docs/ARCHITECTURE.md)** - System design and components
+- **[🛰️ LangGraph Architecture](support/docs/LANGGRAPH_ARCHITECTURE.md)** - Multi-agent workflow and node details
+- **[🛰️ Agent Endpoints](support/docs/AGENT_ENDPOINTS.md)** - Complete API reference
+- **[🔐 Secrets Management](support/docs/SECRETS_MANAGEMENT.md)** - Security and configuration
 - **[📖 Operational Handbook](support/docs/HANDBOOK.md)** - Development practices and troubleshooting
 
 ## Development

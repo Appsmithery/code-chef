@@ -183,23 +183,19 @@ From LangSmith URL: `https://smith.langchain.com/o/{workspace-id}/projects/p/{pr
 
 Both deployment methods validate these endpoints after deployment:
 
-| Port | Service        | Endpoint                       |
-| ---- | -------------- | ------------------------------ |
-| 8001 | Orchestrator   | `http://localhost:8001/health` |
-| 8002 | Feature-Dev    | `http://localhost:8002/health` |
-| 8003 | Code-Review    | `http://localhost:8003/health` |
-| 8004 | Infrastructure | `http://localhost:8004/health` |
-| 8005 | CI/CD          | `http://localhost:8005/health` |
-| 8006 | Documentation  | `http://localhost:8006/health` |
+| Port | Service      | Endpoint                       |
+| ---- | ------------ | ------------------------------ |
+| 8000 | MCP Gateway  | `http://localhost:8000/health` |
+| 8001 | Orchestrator | `http://localhost:8001/health` |
+| 8007 | RAG Context  | `http://localhost:8007/health` |
+| 8008 | State        | `http://localhost:8008/health` |
 
 **Expected response:**
 
 ```json
 {
-  "status": "ok",
-  "service": "orchestrator",
-  "timestamp": "2025-11-20T22:00:00.000000",
-  "version": "1.0.0"
+  "status": "healthy",
+  "mcp_gateway": "connected"
 }
 ```
 
