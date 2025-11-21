@@ -30,7 +30,7 @@ linear_client = LinearWorkspaceClient()
 state_client = get_state_client()
 
 # Configuration
-FEATURE_DEV_TEMPLATE_ID = os.getenv("LINEAR_FEATURE_DEV_TEMPLATE_ID", "")
+FEATURE_DEV_TEMPLATE_ID = os.getenv("LINEAR_FEATURE_DEV_TEMPLATE_ID") or os.getenv("FEATURE_DEV_TEMPLATE_UUID", "")
 LINEAR_PROJECT_ID = os.getenv("LINEAR_PROJECT_ID", "")
 
 
