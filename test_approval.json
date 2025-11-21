@@ -1,0 +1,8 @@
+{
+  "description": "Deploy database schema changes to production with new user_permissions table",
+  "priority": "high",
+  "project_context": {
+    "environment": "production",
+    "project": "ai-devops-platform"
+  }
+}
