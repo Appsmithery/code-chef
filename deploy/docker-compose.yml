@@ -21,6 +21,7 @@ services:
       - AGENT_REGISTRY_URL=http://agent-registry:8009
       - EVENT_BUS_URL=redis://redis:6379
       - HITL_POLICIES_PATH=/app/config/hitl/approval-policies.yaml
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
     env_file:
       - ../config/env/.env
     networks:
@@ -37,6 +38,8 @@ services:
       - ../config/env:/app/config/env:ro
       - ../config/mcp-agent-tool-mapping.yaml:/app/config/mcp-agent-tool-mapping.yaml:ro
       - ../config/prometheus:/app/config/prometheus:ro
+    secrets:
+      - db_password
     restart: unless-stopped
     deploy:
       resources:
