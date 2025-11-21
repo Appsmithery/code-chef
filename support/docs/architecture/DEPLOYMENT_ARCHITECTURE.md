@@ -72,18 +72,22 @@
 **Agent Nodes (internal to orchestrator, not separate services):**
 
 - **Feature Development**
+
   - Implements new features, code generation
   - Model config: codellama-13b-instruct (code-specialized)
 
 - **Code Review**
+
   - Reviews pull requests, security analysis
   - Model config: llama-3.1-70b-instruct (thorough analysis)
 
 - **Infrastructure**
+
   - Docker, Kubernetes, Terraform
   - Model config: llama-3.1-8b-instruct (efficient for structured tasks)
 
 - **CI/CD**
+
   - Pipeline configuration
   - Model config: llama-3.1-8b-instruct
 

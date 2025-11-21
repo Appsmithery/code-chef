@@ -18,6 +18,7 @@ See **[DEPLOYMENT_ARCHITECTURE.md](./DEPLOYMENT_ARCHITECTURE.md)** for the corre
 - State Persistence (port 8008) - Workflow database
 
 **Agent Nodes (internal to orchestrator, not separate services):**
+
 - Feature Development, Code Review, Infrastructure, CI/CD, Documentation
 
 ## Configuration Method
