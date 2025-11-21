@@ -448,10 +448,20 @@ class LinearWorkspaceClient:
         if metadata:
             template_vars["metadata"] = str(metadata)
         
+        # Generate title with risk emoji
+        risk_emoji = {
+            "critical": "🔴",
+            "high": "🟠",
+            "medium": "🟡",
+            "low": "🟢"
+        }
+        title = f"{risk_emoji.get(risk_level, '⚪')} [{risk_level.upper()}] HITL Approval: {task_description[:50]}"
+        
         # Create sub-issue from template
         return await self.create_issue_from_template(
             template_id=template_id,
             template_variables=template_vars,
+            title_override=title,
             parent_id=parent_id
         )
     
@@ -487,9 +497,12 @@ class LinearWorkspaceClient:
             ...     }
             ... )
         """
+        # Note: Linear doesn't support templateId in issueCreate.
+        # Templates in Linear SDK work via template.instantiate() which requires
+        # SDK access, not pure GraphQL. For now, create issue with template structure.
         mutation = gql("""
-            mutation CreateIssueFromTemplate($input: IssueCreateInput!, $templateId: String!) {
-                issueCreate(input: $input, templateId: $templateId) {
+            mutation CreateIssue($input: IssueCreateInput!) {
+                issueCreate(input: $input) {
                     success
                     issue {
                         id
@@ -516,22 +529,29 @@ class LinearWorkspaceClient:
         if template_variables:
             input_data["templateVariables"] = template_variables
         
+        # Build description from template variables (manual template expansion)
+        if template_variables:
+            description_parts = []
+            for key, value in template_variables.items():
+                if isinstance(value, list):
+                    value = "\n".join([f"- {item}" for item in value])
+                description_parts.append(f"**{key.replace('_', ' ').title()}:** {value}")
+            
+            input_data["description"] = "\n\n".join(description_parts)
+        
         try:
             result = self.client.execute(
                 mutation,
-                variable_values={
-                    "input": input_data,
-                    "templateId": template_id
-                }
+                variable_values={"input": input_data}
             )
             
             issue = result["issueCreate"]["issue"]
-            logger.info(f"Created issue from template: {issue['identifier']} - {issue['title']}")
+            logger.info(f"Created issue: {issue['identifier']} - {issue['title']}")
             
             return issue
             
         except Exception as e:
-            logger.error(f"Failed to create issue from template: {e}")
+            logger.error(f"Failed to create issue: {e}")
             raise
     
     # ========================================
