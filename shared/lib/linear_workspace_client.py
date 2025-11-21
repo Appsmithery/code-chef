@@ -516,12 +516,6 @@ class LinearWorkspaceClient:
         
         input_data = {}
         
-        # Team ID is required for issue creation
-        team_id = os.getenv("LINEAR_TEAM_ID")
-        if not team_id:
-            raise ValueError("LINEAR_TEAM_ID environment variable is required")
-        input_data["teamId"] = team_id
-        
         if title_override:
             input_data["title"] = title_override
         
