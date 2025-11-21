@@ -725,9 +725,22 @@ class LinearWorkspaceClient:
             >>> issue = await client.get_issue_by_identifier("PR-68")
             >>> print(issue['id'])  # Use for parentId in sub-issues
         """
+        # Split identifier into team key and number (e.g., "DEV-68" -> "DEV", 68)
+        parts = identifier.split('-')
+        if len(parts) != 2:
+            logger.error(f"Invalid identifier format: {identifier}")
+            return None
+        
+        team_key = parts[0]
+        try:
+            issue_number = int(parts[1])
+        except ValueError:
+            logger.error(f"Invalid issue number in identifier: {identifier}")
+            return None
+        
         query = gql("""
-            query GetIssueByIdentifier($filter: IssueFilter!) {
-                issues(filter: $filter, first: 1) {
+            query GetIssueByIdentifier($teamKey: String!, $number: Float!) {
+                issues(filter: {team: {key: {eq: $teamKey}}, number: {eq: $number}}, first: 1) {
                     nodes {
                         id
                         identifier
@@ -749,7 +762,7 @@ class LinearWorkspaceClient:
         try:
             result = self.client.execute(
                 query,
-                variable_values={"filter": {"identifier": {"eq": identifier}}}
+                variable_values={"teamKey": team_key, "number": issue_number}
             )
             
             nodes = result.get("issues", {}).get("nodes", [])
