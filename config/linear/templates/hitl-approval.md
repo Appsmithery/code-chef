@@ -13,7 +13,7 @@
 
 ### Default Properties
 
-- **Team:** Project Roadmaps (PR)
+- **Team:** Dev-Ops
 - **Project:** AI DevOps Agent Platform
 - **Parent:** PR-68 (Approval Hub)
 - **Priority:** Urgent
@@ -25,7 +25,7 @@
 | Variable               | Type     | Required | Example                                                                     |
 | ---------------------- | -------- | -------- | --------------------------------------------------------------------------- |
 | `{{agent}}`            | Dropdown | Yes      | orchestrator, feature-dev, code-review, infrastructure, cicd, documentation |
-| `{{task_id}}`          | Text     | Yes      | abc123-def456-ghi789                                                        |
+| `{{task_id}}`          | Text     | Yes      |                                                                             |
 | `{{priority}}`         | Dropdown | Yes      | critical, high, medium, low                                                 |
 | `{{context}}`          | Markdown | Yes      | User requested JWT authentication for Express API                           |
 | `{{proposed_changes}}` | Markdown | Yes      | - Add middleware/auth.js\n- Install jsonwebtoken package\n- Update routes   |
@@ -89,7 +89,7 @@
 **Deadline:** {{deadline}}
 {{/if}}
 
-**Approval Hub:** [PR-68](https://linear.app/project-roadmaps/issue/PR-68)
+**Approval Hub:** [PR-68](https://linear.app/dev-ops/issue/PR-68)
 ```
 
 ---
