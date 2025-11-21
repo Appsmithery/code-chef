@@ -457,12 +457,14 @@ class LinearWorkspaceClient:
         }
         title = f"{risk_emoji.get(risk_level, '⚪')} [{risk_level.upper()}] HITL Approval: {task_description[:50]}"
         
-        # Create sub-issue from template
+        # Create sub-issue from template (inherit parent's team)
+        team_id = parent_issue.get("team", {}).get("id")
         return await self.create_issue_from_template(
             template_id=template_id,
             template_variables=template_vars,
             title_override=title,
-            parent_id=parent_id
+            parent_id=parent_id,
+            team_id=team_id
         )
     
     async def create_issue_from_template(
@@ -471,7 +473,8 @@ class LinearWorkspaceClient:
         template_variables: Optional[Dict[str, str]] = None,
         title_override: Optional[str] = None,
         project_id: Optional[str] = None,
-        parent_id: Optional[str] = None
+        parent_id: Optional[str] = None,
+        team_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Create issue from Linear template with variable substitution.
@@ -524,6 +527,9 @@ class LinearWorkspaceClient:
         
         if parent_id:
             input_data["parentId"] = parent_id
+        
+        if team_id:
+            input_data["teamId"] = team_id
         
         # Build description from template variables (manual template expansion)
         if template_variables:
@@ -747,6 +753,11 @@ class LinearWorkspaceClient:
                         title
                         description
                         url
+                        team {
+                            id
+                            key
+                            name
+                        }
                         state {
                             name
                         }
