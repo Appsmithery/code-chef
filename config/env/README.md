@@ -16,13 +16,13 @@ The `config/env` directory now holds both runtime credentials (ignored at commit
 
 ## Storage Guidance
 
-| Secret class                                                         | Storage location                                                           | Notes                                                                  |
-| -------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------ |
+| Secret class                                                           | Storage location                                                           | Notes                                                                  |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ------------ |
 | Runtime credentials for agents (LangSmith, Gradient, Linear, DB, etc.) | `config/env/.env` on each machine/droplet                                  | Keep in password manager. Use `config/env/.env.template` as reference. |
-| Docker secret files (Linear tokens, PATs)                            | `config/env/secrets/*.txt` locally, then copy to droplet via deploy script | Generated via `scripts/setup_secrets.sh`.                              |
-| Declarative schema definitions                                       | `config/env/schema` (tracked)                                              | Updated whenever new secrets or overlays are introduced.               |
-| CI/CD secrets                                                        | GitHub Actions secrets / environment variables                             | Validated through `npm run secrets:validate[:json                      | :discover]`. |
-| Codespaces/devcontainer secrets                                      | GitHub Codespaces secrets                                                  | Provide same keys as `.env` for parity.                                |
+| Docker secret files (Linear tokens, PATs)                              | `config/env/secrets/*.txt` locally, then copy to droplet via deploy script | Generated via `scripts/setup_secrets.sh`.                              |
+| Declarative schema definitions                                         | `config/env/schema` (tracked)                                              | Updated whenever new secrets or overlays are introduced.               |
+| CI/CD secrets                                                          | GitHub Actions secrets / environment variables                             | Validated through `npm run secrets:validate[:json                      | :discover]`. |
+| Codespaces/devcontainer secrets                                        | GitHub Codespaces secrets                                                  | Provide same keys as `.env` for parity.                                |
 
 Key runtime values include:
 
