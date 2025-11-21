@@ -60,6 +60,20 @@ class LinearWorkspaceClient:
         
         logger.info("Linear workspace client initialized")
     
+    async def _execute_query(self, query_string: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """
+        Execute raw GraphQL query (for testing/debugging).
+        
+        Args:
+            query_string: GraphQL query string
+            variables: Optional query variables
+        
+        Returns:
+            Query result
+        """
+        query = gql(query_string)
+        return self.client.execute(query, variable_values=variables or {})
+    
     async def post_to_approval_hub(
         self,
         approval_id: str,
@@ -82,12 +96,20 @@ class LinearWorkspaceClient:
         Returns:
             Comment ID if successful
         """
-        # Get approval hub issue ID from config
-        hub_issue_id = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
+        # Get approval hub issue identifier from config (e.g., "DEV-68")
+        hub_issue_identifier = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
         
-        if not hub_issue_id:
+        if not hub_issue_identifier:
             logger.error("LINEAR_APPROVAL_HUB_ISSUE_ID not configured")
             raise ValueError("Approval hub not configured")
+        
+        # Resolve identifier to UUID
+        hub_issue = await self.get_issue_by_identifier(hub_issue_identifier)
+        if not hub_issue:
+            logger.error(f"Approval hub issue {hub_issue_identifier} not found")
+            raise ValueError(f"Approval hub issue {hub_issue_identifier} not found")
+        
+        hub_issue_id = hub_issue["id"]
         
         # Format comment body
         risk_emoji = {
