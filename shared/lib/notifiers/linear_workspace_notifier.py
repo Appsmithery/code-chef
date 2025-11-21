@@ -112,21 +112,22 @@ class LinearWorkspaceNotifier:
                 return
             
             logger.info(
-                f"Posting approval {approval_id} to workspace hub "
+                f"Creating approval sub-issue for {approval_id} "
                 f"(risk: {risk_level}, project: {project_name})"
             )
             
-            # Post to approval hub
-            comment_id = await self.client.post_to_approval_hub(
+            # Create sub-issue from HITL approval template
+            issue = await self.client.create_approval_subissue(
                 approval_id=approval_id,
                 task_description=task_description,
                 risk_level=risk_level,
                 project_name=project_name,
+                agent_name=metadata.get("agent", "orchestrator") if metadata else "orchestrator",
                 metadata=metadata
             )
             
             logger.info(
-                f"✅ Posted approval {approval_id} to workspace hub: {comment_id}"
+                f"✅ Created approval sub-issue {issue['identifier']} for {approval_id}"
             )
             
         except Exception as e:
