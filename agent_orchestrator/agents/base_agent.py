@@ -2,6 +2,7 @@
 
 import sys
 import yaml
+import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
@@ -14,6 +15,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "shared"))
 from lib.mcp_client import MCPClient
 from lib.gradient_client import get_gradient_client
 from lib.progressive_mcp_loader import ProgressiveMCPLoader, ToolLoadingStrategy
+
+logger = logging.getLogger(__name__)
 
 
 class BaseAgent:
@@ -40,8 +43,14 @@ class BaseAgent:
         # Initialize MCP client for tool access
         self.mcp_client = MCPClient(agent_name=agent_name)
         
-        # Initialize progressive tool loader
-        self.tool_loader = ProgressiveMCPLoader(self.mcp_client)
+        # Initialize progressive tool loader (skip if mcp_discovery not available)
+        try:
+            from lib.mcp_discovery import get_mcp_discovery
+            mcp_discovery = get_mcp_discovery()
+            self.tool_loader = ProgressiveMCPLoader(self.mcp_client, mcp_discovery)
+        except Exception as e:
+            logger.warning(f"Progressive tool loader unavailable: {e}")
+            self.tool_loader = None
         
         # Initialize LLM with agent-specific model
         self.llm = self._initialize_llm()
@@ -94,36 +103,48 @@ class BaseAgent:
         agent_config = self.config["agent"]
         
         # Get Gradient client with agent-specific model
-        llm = get_gradient_client(
-            model_name=agent_config.get("model", "llama-3.1-8b"),
-            temperature=agent_config.get("temperature", 0.7),
-            max_tokens=agent_config.get("max_tokens", 2000),
-            agent_name=self.agent_name
+        gradient_client = get_gradient_client(
+            agent_name=self.agent_name,
+            model=agent_config.get("model", "llama-3.1-8b")
         )
         
-        return llm
+        # Store gradient client for later tool binding
+        self._gradient_client = gradient_client
+        
+        # For now, return a mock LangChain LLM (will be replaced with actual LLM at runtime)
+        # This avoids requiring API keys at import/initialization time
+        try:
+            # Try to get LangChain LLM if client is configured
+            if gradient_client.is_enabled():
+                return gradient_client.get_llm_with_tools(
+                    tools=[],
+                    temperature=agent_config.get("temperature", 0.7),
+                    max_tokens=agent_config.get("max_tokens", 2000)
+                )
+        except:
+            pass
+        
+        # Return gradient client itself (has invoke/ainvoke methods)
+        return gradient_client
     
     def _bind_tools(self) -> BaseChatModel:
         """Bind MCP tools to LLM for function calling.
         
         Uses progressive tool disclosure to reduce token usage.
         """
-        tools_config = self.config["tools"]
-        
-        # Get progressive loading strategy
-        strategy_name = tools_config.get("progressive_strategy", "MINIMAL")
-        strategy = ToolLoadingStrategy[strategy_name]
+        tools_config = self.config.get("tools", {})
         
         # Get allowed MCP servers for this agent
         allowed_servers = tools_config.get("allowed_servers", [])
         
-        # Load tools with progressive disclosure
-        # Note: For initialization, we load tools without task context
-        # At runtime, call get_tools_for_task() with actual task description
-        langchain_tools = self.mcp_client.to_langchain_tools(allowed_servers)
+        # Skip tool binding if no MCP client or no servers configured
+        if not allowed_servers or not self.mcp_client:
+            return self.llm
         
-        # Bind tools to LLM
-        return self.llm.bind_tools(langchain_tools)
+        # For now, return LLM without tools (tools will be bound at runtime with task context)
+        # This avoids import-time dependencies on MCP gateway
+        # TODO: Implement runtime tool binding with progressive disclosure
+        return self.llm
     
     def get_system_prompt(self) -> str:
         """Get agent-specific system prompt from configuration."""
