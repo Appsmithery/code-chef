@@ -62,7 +62,7 @@ The orchestrator will decompose your task into subtasks and route them to approp
 
 - `devtools.orchestratorUrl` - Orchestrator endpoint (default: `http://45.55.173.72:8001`)
 - `devtools.mcpGatewayUrl` - MCP gateway endpoint (default: `http://45.55.173.72:8000`)
-- `devtools.linearHubIssue` - Linear approval hub issue (default: `PR-68`)
+- `devtools.linearHubIssue` - Linear approval hub issue (default: `DEV-68`)
 - `devtools.linearWorkspaceSlug` - Linear workspace slug for approval links (default: `project-roadmaps`)
 - `devtools.autoApproveThreshold` - Auto-approve risk level (default: `low`)
 - `devtools.enableNotifications` - Show toast notifications (default: `true`)
@@ -147,10 +147,15 @@ Response shows 150+ tools across 17 MCP servers:
 High-risk tasks require human approval:
 
 1. **Task Submitted** → Risk assessed by guardrail system
-2. **Approval Posted** → Linear issue PR-68 receives notification
-3. **User Notified** → Toast notification (if enabled) or status bar indicator
-4. **Approve/Reject** → Use `/approve` command or Linear interface
+2. **Sub-Issue Created** → Linear creates sub-issue under DEV-68 (HITL Approvals Hub) using agent-specific template
+3. **User Notified** → Toast notification (if enabled) or status bar indicator with Linear link
+4. **Approve/Reject** → Change Linear sub-issue status to "Done" (approved) or "Canceled" (rejected)
 5. **Agents Proceed** → Execution continues after approval
+
+**Linear Integration:**
+- Parent Hub: [DEV-68](https://linear.app/dev-ops/issue/DEV-68)
+- Sub-issues include: Risk level emoji, task description, metadata, timestamp
+- Templates: `HITL_ORCHESTRATOR_TEMPLATE_UUID` (and per-agent variants)
 
 ## Observability
 
@@ -158,7 +163,7 @@ All tasks are traced and monitored:
 
 - **LangSmith Traces**: [View Project](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
 - **Prometheus Metrics**: http://45.55.173.72:9090
-- **Linear Approvals**: https://linear.app/project-roadmaps/issue/PR-68
+- **Linear Approvals**: https://linear.app/dev-ops/issue/DEV-68 (HITL Approvals Hub with sub-issues)
 
 ## Troubleshooting
 
@@ -176,9 +181,10 @@ All tasks are traced and monitored:
 
 ### Approval notifications not working
 
-1. Install Linear Connect extension: `linear.linear-vscode`
-2. Configure Linear API token in extension settings
-3. Subscribe to PR-68 issue in Linear
+1. Verify Linear OAuth token configured: `LINEAR_API_KEY` in `.env`
+2. Check HITL templates configured: `HITL_ORCHESTRATOR_TEMPLATE_UUID`, etc.
+3. Subscribe to DEV-68 issue in Linear for sub-issue notifications
+4. Verify approval hub setting: `LINEAR_APPROVAL_HUB_ISSUE_ID=DEV-68`
 
 ## Development
 

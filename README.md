@@ -28,7 +28,7 @@ Dev-Tools is a unified AI DevOps automation platform built on a single orchestra
 - **LangGraph Workflows**: Multi-agent orchestration with PostgreSQL state persistence
 - **MCP Toolkit**: 150+ tools via direct stdio transport (50-100ms latency)
 - **Gradient AI**: Per-agent model optimization (70b → 8b based on complexity)
-- **HITL Approvals**: Risk assessment + Linear notifications + approval workflows
+- **HITL Approvals**: Risk assessment + Linear sub-issues (DEV-68) + template-based approval workflows
 - **Copilot Integration**: Natural language chat interface with session management
 - **Event Bus**: Redis-based inter-agent communication with <1s latency
 - **Prometheus Metrics**: HTTP monitoring on all services
@@ -233,9 +233,19 @@ Invoke-RestMethod -Uri http://localhost:8001/orchestrate/langgraph `
 
 ### Human-in-the-Loop (HITL) Approvals
 
-High-risk operations (production deploys, destructive database work, secrets handling) trigger a human approval gate before orchestration proceeds. The orchestrator will respond with `routing_plan.status = "approval_pending"` and an `approval_request_id`.
+High-risk operations (production deploys, destructive database work, secrets handling) trigger a human approval gate before orchestration proceeds. The orchestrator:
 
-See [support/docs/LANGGRAPH_ARCHITECTURE.md](support/docs/LANGGRAPH_ARCHITECTURE.md) for HITL workflow details.
+1. **Creates Linear sub-issue** under DEV-68 (HITL Approvals Hub) using agent-specific templates
+2. **Responds** with `routing_plan.status = "approval_pending"` and `approval_request_id`
+3. **Includes metadata**: Task description, risk level, agent name, timestamp, environment
+4. **Waits** for approval via Linear issue status change (e.g., "Done" = approved, "Canceled" = rejected)
+
+**Linear Integration:**
+- Approval Hub: [DEV-68](https://linear.app/dev-ops/issue/DEV-68)
+- Sub-issues use HITL templates: `HITL_ORCHESTRATOR_TEMPLATE_UUID`, `HITL_FEATURE_DEV_TEMPLATE_UUID`, etc.
+- Each sub-issue includes risk emoji (🔴 critical, 🟠 high, 🟡 medium, 🟢 low)
+
+See [support/docs/architecture/NOTIFICATION_SYSTEM.md](support/docs/architecture/NOTIFICATION_SYSTEM.md) for complete HITL workflow details.
 
 ### Backup & Restore
 
