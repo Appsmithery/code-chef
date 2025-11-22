@@ -365,49 +365,58 @@ npm run secrets:hydrate
 
 ## Deployment workflows
 
-### ⚠️ Configuration Changes Deployment (CRITICAL)
+### Quick Reference
+
+**Automated Deployment (Recommended):**
+
+```powershell
+# Auto-detect changes and deploy
+.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType auto
+
+# Config-only (30s - for .env changes)
+.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
+
+# Full rebuild (10min - for code changes)
+.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType full
+
+# Rollback to previous commit
+.\support\scripts\deploy\deploy-to-droplet.ps1 -Rollback
+```
+
+**Health Checks:**
+
+```bash
+curl http://45.55.173.72:8001/health  # Orchestrator
+curl http://45.55.173.72:8000/health  # Gateway
+curl http://45.55.173.72:8007/health  # RAG
+curl http://45.55.173.72:8008/health  # State
+```
+
+### ⚠️ Configuration Changes (CRITICAL)
 
 **The droplet is connected to the main repo branch.** Configuration changes in `config/env/.env` require a specific workflow:
 
 1. **Update Local `.env`**: Edit `config/env/.env` with new configuration
 2. **Update Template** (if applicable): Sync changes to `config/env/.env.template` if adding new variables
 3. **Commit Template**: `git add config/env/.env.template && git commit && git push` (`.env` is gitignored)
-4. **Deploy to Droplet** (choose one method):
-
-   **Method A - Automated PowerShell script (recommended):**
+4. **Deploy to Droplet**:
 
    ```powershell
    .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
-   ```
-
-   **Method B - Manual commands:**
-
-   ```bash
-   scp config/env/.env root@45.55.173.72:/opt/Dev-Tools/config/env/.env
-   ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull origin main && cd deploy && docker compose down && docker compose up -d"
    ```
 
 5. **Verify**: Check health endpoints and verify environment variables loaded correctly
 
 **Why This Matters**: Docker Compose reads `.env` at startup. Simple `docker compose restart` does NOT reload environment variables from disk. You must use `down && up` to pick up `.env` changes.
 
-### Automated Deployment (NEW)
+### Deployment Strategies
 
-**PowerShell Script:** `support/scripts/deploy/deploy-to-droplet.ps1`
-
-- **Auto-detect changes:** `.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType auto`
-
-  - Detects config-only changes → fast deployment (30s)
-  - Detects code changes → full rebuild (10min)
-  - Detects docs-only → quick restart (15s)
-
-- **Explicit strategies:**
-
-  - `config`: Fast env-only deployment with down+up cycle
-  - `full`: Complete rebuild for code/dependency changes
-  - `quick`: Simple restart for non-critical changes
-
-- **Rollback:** `.\support\scripts\deploy\deploy-to-droplet.ps1 -Rollback`
+| Change Type             | Strategy | Duration | Command                                        |
+| ----------------------- | -------- | -------- | ---------------------------------------------- |
+| `.env` or config YAML   | `config` | 30s      | `...\deploy-to-droplet.ps1 -DeployType config` |
+| Python code, Dockerfile | `full`   | 10min    | `...\deploy-to-droplet.ps1 -DeployType full`   |
+| Documentation, README   | `quick`  | 15s      | `...\deploy-to-droplet.ps1 -DeployType quick`  |
+| Not sure                | `auto`   | varies   | `...\deploy-to-droplet.ps1 -DeployType auto`   |
 
 **GitHub Action:** `.github/workflows/deploy-intelligent.yml`
 
@@ -416,13 +425,7 @@ npm run secrets:hydrate
 - Manual trigger with strategy override via workflow_dispatch
 - Health validation and automatic cleanup on failure
 
-**Documentation:** See `support/docs/DEPLOYMENT_AUTOMATION.md` for complete guide
-
-### Quick Deploy (Legacy)
-
-- **Automated**: `./support/scripts/deploy.ps1` (validates env, builds, deploys, health checks); use `-Target remote` for droplet deployment.
-- **Manual**: `cd deploy && docker-compose build && docker-compose up -d && docker-compose ps`
-- **Health Checks**: Curl `/health` on ports 8000-8008; verify `{"status": "healthy"}` and `mcp_gateway: "connected"`.
+**Complete Documentation:** See `support/docs/DEPLOYMENT_GUIDE.md` for detailed procedures, troubleshooting, and HITL workflow
 
 ### Local Development
 
