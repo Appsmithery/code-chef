@@ -217,6 +217,15 @@ class LinearWebhookProcessor:
         Returns:
             Action dict with "resume_workflow", "cancel_workflow", or "ignore"
         """
+        # DEBUG: Log the full payload structure to understand what Linear sends
+        import json
+
+        logger.info(f"🔍 DEBUG: Full Reaction event payload structure:")
+        logger.info(f"🔍 reaction_data keys: {list(reaction_data.keys())}")
+        logger.info(
+            f"🔍 reaction_data: {json.dumps(reaction_data, indent=2, default=str)[:1000]}"
+        )
+
         emoji = reaction_data.get("emoji")
         comment = reaction_data.get("comment", {})
         comment_id = comment.get("id")
@@ -230,8 +239,15 @@ class LinearWebhookProcessor:
         user_name = user.get("displayName")
         created_at = reaction_data.get("createdAt")
 
+        logger.info(
+            f"🔍 Extracted data: emoji={emoji}, comment_id={comment_id}, comment_body_length={len(comment_body)}, issue={issue_identifier}, user={user_name}"
+        )
+
         # Check if this is an approval comment (contains "HITL Approval Required")
         if "HITL Approval Required" not in comment_body:
+            logger.info(
+                f"⚠️ Comment body does NOT contain 'HITL Approval Required'. Body preview: {comment_body[:100]}"
+            )
             logger.debug(f"Reaction on non-approval comment {comment_id}, ignoring")
             return {"action": "ignore"}
 
