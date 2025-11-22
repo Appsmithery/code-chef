@@ -71,7 +71,7 @@ export class OrchestratorClient {
     }
 
     async checkStatus(taskId: string): Promise<TaskStatus> {
-        const response = await this.client.get(`/task/${taskId}`);
+        const response = await this.client.get(`/tasks/${taskId}`);
         return response.data;
     }
 
