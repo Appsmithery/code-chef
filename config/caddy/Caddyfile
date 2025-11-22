@@ -20,7 +20,9 @@
 
 	# Linear webhooks proxy to orchestrator
 	handle_path /webhook/linear {
-		reverse_proxy orchestrator:8001
+		reverse_proxy orchestrator:8001 {
+			header_up Linear-Signature {http.request.header.Linear-Signature}
+		}
 	}
 
 	# Prometheus monitoring with OAuth protection
