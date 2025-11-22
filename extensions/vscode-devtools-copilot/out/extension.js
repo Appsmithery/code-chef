@@ -33,26 +33,58 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAgentIcon = getAgentIcon;
+exports.getAgentColor = getAgentColor;
 exports.activate = activate;
 exports.deactivate = deactivate;
+const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const chatParticipant_1 = require("./chatParticipant");
 const linearWatcher_1 = require("./linearWatcher");
 const orchestratorClient_1 = require("./orchestratorClient");
+// Agent icon mapping for UI display (agents are LangGraph nodes, not separate services)
+const AGENT_ICONS = {
+    'orchestrator': 'orchestrator.png', // Purple - Coordination
+    'feature-dev': 'feature-dev.png', // Blue - Development
+    'code-review': 'code-review.png', // Green - Quality
+    'infrastructure': 'infrastructure.png', // Navy - Infrastructure
+    'cicd': 'cicd.png', // Orange - Deployment
+    'documentation': 'documentation.png' // Teal - Knowledge
+};
 let chatParticipant;
 let linearWatcher;
 let statusBarItem;
+let extensionContext;
 function buildLinearIssueUrl(issueId, workspaceSlug) {
     const slug = workspaceSlug ?? vscode.workspace.getConfiguration('devtools').get('linearWorkspaceSlug', 'project-roadmaps');
     return `https://linear.app/${slug}/issue/${issueId}`;
 }
+function getAgentIconPath(agentName) {
+    const iconFile = AGENT_ICONS[agentName] || AGENT_ICONS['orchestrator'];
+    return extensionContext.asAbsolutePath(path.join('src', 'icons', iconFile));
+}
+function getAgentIcon(agentName) {
+    return vscode.Uri.file(getAgentIconPath(agentName));
+}
+function getAgentColor(agentName) {
+    const colors = {
+        'orchestrator': '#9333EA', // Purple
+        'feature-dev': '#3B82F6', // Blue
+        'code-review': '#22C55E', // Green
+        'infrastructure': '#1E3A8A', // Navy
+        'cicd': '#F97316', // Orange
+        'documentation': '#14B8A6' // Teal
+    };
+    return colors[agentName] || colors['orchestrator'];
+}
 function activate(context) {
     console.log('Dev-Tools extension activating...');
+    extensionContext = context;
     try {
         // Initialize status bar
         statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
         statusBarItem.text = '$(rocket) Dev-Tools';
-        statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to check status';
+        statusBarItem.tooltip = 'Dev-Tools LangGraph Orchestrator - Click to check status';
         statusBarItem.command = 'devtools.checkStatus';
         statusBarItem.show();
         context.subscriptions.push(statusBarItem);
@@ -76,9 +108,9 @@ function activate(context) {
         // Initialize Linear watcher for approval notifications
         linearWatcher = new linearWatcher_1.LinearWatcher(context);
         const config = vscode.workspace.getConfiguration('devtools');
-        const workspaceSlug = config.get('linearWorkspaceSlug', 'project-roadmaps');
+        const workspaceSlug = config.get('linearWorkspaceSlug', 'dev-ops');
         if (config.get('enableNotifications')) {
-            linearWatcher.start(config.get('linearHubIssue', 'PR-68'), workspaceSlug);
+            linearWatcher.start(config.get('linearHubIssue', 'DEV-68'), workspaceSlug);
         }
         context.subscriptions.push(linearWatcher);
         // Register commands

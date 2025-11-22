@@ -4,7 +4,7 @@ import { DevToolsChatParticipant } from './chatParticipant';
 import { LinearWatcher } from './linearWatcher';
 import { OrchestratorClient } from './orchestratorClient';
 
-// Agent icon mapping
+// Agent icon mapping for UI display (agents are LangGraph nodes, not separate services)
 const AGENT_ICONS: { [key: string]: string } = {
     'orchestrator': 'orchestrator.png',      // Purple - Coordination
     'feature-dev': 'feature-dev.png',        // Blue - Development
@@ -56,7 +56,7 @@ export function activate(context: vscode.ExtensionContext) {
             100
         );
         statusBarItem.text = '$(rocket) Dev-Tools';
-        statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to check status';
+        statusBarItem.tooltip = 'Dev-Tools LangGraph Orchestrator - Click to check status';
         statusBarItem.command = 'devtools.checkStatus';
         statusBarItem.show();
         context.subscriptions.push(statusBarItem);
@@ -88,9 +88,9 @@ export function activate(context: vscode.ExtensionContext) {
     // Initialize Linear watcher for approval notifications
     linearWatcher = new LinearWatcher(context);
     const config = vscode.workspace.getConfiguration('devtools');
-    const workspaceSlug = config.get('linearWorkspaceSlug', 'project-roadmaps');
+    const workspaceSlug = config.get('linearWorkspaceSlug', 'dev-ops');
     if (config.get('enableNotifications')) {
-        linearWatcher.start(config.get('linearHubIssue', 'PR-68'), workspaceSlug);
+        linearWatcher.start(config.get('linearHubIssue', 'DEV-68'), workspaceSlug);
     }
     context.subscriptions.push(linearWatcher);
 

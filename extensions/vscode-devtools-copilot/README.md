@@ -1,21 +1,22 @@
 # Dev-Tools Multi-Agent Orchestrator
 
-[![Agents](https://img.shields.io/badge/agents-6-blue)](https://github.com/Appsmithery/Dev-Tools)
+[![Orchestrator](https://img.shields.io/badge/orchestrator-LangGraph-blue)](https://github.com/Appsmithery/Dev-Tools)
 [![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/Dev-Tools/tree/main/shared/mcp/servers)
 [![LangChain](https://img.shields.io/badge/LangChain-enabled-purple)](https://www.langchain.com/)
 
-VS Code extension that integrates Dev-Tools orchestrator into Copilot Chat, enabling you to submit development tasks to specialized AI agents with LangChain-powered function calling and progressive tool disclosure from any workspace.
+VS Code extension that integrates Dev-Tools LangGraph orchestrator into Copilot Chat, enabling you to submit development tasks with LangChain-powered function calling and progressive tool disclosure from any workspace.
 
 ## Features
 
 - **@devtools Chat Participant**: Submit tasks directly from Copilot Chat with natural language
-- **LangChain Function Calling**: Agents can INVOKE 150+ MCP tools via LangChain's native tool binding
+- **LangGraph Workflow Engine**: Single orchestrator with internal agent nodes and PostgreSQL checkpointing
+- **LangChain Function Calling**: Orchestrator can INVOKE 150+ MCP tools via LangChain's native tool binding
 - **Progressive Tool Disclosure**: 80-90% token reduction through intelligent tool filtering (minimal/agent_profile/progressive/full strategies)
-- **Multi-Agent Orchestration**: Routes tasks to 6 specialized agents (feature-dev, code-review, infrastructure, cicd, documentation)
+- **Agent Node Routing**: Routes tasks to internal agent nodes (feature-dev, code-review, infrastructure, cicd, documentation)
 - **Workspace Context Extraction**: Automatically gathers git branch, open files, project type
 - **Real-Time Approvals**: Linear integration for HITL approval workflow (<1s notification latency)
-- **Observability**: LangSmith LLM tracing + Prometheus HTTP metrics across all agents
-- **Session Management**: PostgreSQL-backed multi-turn conversations with context retention
+- **Observability**: LangSmith LLM tracing + Prometheus HTTP metrics
+- **Session Management**: PostgreSQL-backed multi-turn conversations with workflow state retention
 
 ## Quick Start
 
@@ -238,41 +239,41 @@ task install-local
 └─────────────┼───────────────────────┘
               │ HTTP POST
               ▼
-┌─────────────────────────────────────────────────────────┐
-│ Dev-Tools Droplet (45.55.173.72)                        │
-│                                                          │
-│  ┌────────────────────────────────────────────────────┐ │
-│  │ Orchestrator (:8001)                               │ │
-│  │ ┌────────────────────────────────────────────────┐ │ │
-│  │ │ LangChain Tool Binding (3-Layer Architecture)  │ │ │
-│  │ │ 1. Discovery: progressive_mcp_loader.py        │ │ │
-│  │ │    (150+ tools → 10-30 relevant, 80-90% saved) │ │ │
-│  │ │ 2. Conversion: mcp_client.to_langchain_tools() │ │ │
-│  │ │    (MCP schemas → LangChain BaseTool instances)│ │ │
-│  │ │ 3. Binding: llm.bind_tools(tools)              │ │ │
-│  │ │    (LLM can INVOKE tools via function calling) │ │ │
-│  │ └────────────────────────────────────────────────┘ │ │
-│  │ - Task decomposition                               │ │
-│  │ - Agent routing                                    │ │
-│  │ - Approval workflow                                │ │
-│  └──────────┬─────────────────────────────────────────┘ │
-│             │                                            │
-│  ┌──────────▼───────────────────────────────────────┐   │
-│  │ MCP Gateway (:8000)                              │   │
-│  │ - 17 MCP servers, 150+ tools                     │   │
-│  │ - Stdio communication                            │   │
-│  └──────────┬───────────────────────────────────────┘   │
-│             │                                            │
-│  ┌──────────▼───────────────────────────────────────┐   │
-│  │ 6 Specialized Agents (:8002-:8006)               │   │
-│  │ - feature-dev (codellama-13b)                    │   │
-│  │ - code-review (llama-3.1-70b)                    │   │
-│  │ - infrastructure (llama-3.1-8b)                  │   │
-│  │ - cicd (llama-3.1-8b)                            │   │
-│  │ - documentation (mistral-7b)                     │   │
-│  │ Each with MCP client + LangChain tool binding    │   │
-│  └──────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Dev-Tools Droplet (45.55.173.72)                             │
+│                                                               │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │ LangGraph Orchestrator (:8001)                          │ │
+│  │ ┌─────────────────────────────────────────────────────┐ │ │
+│  │ │ LangChain Tool Binding (3-Layer Architecture)       │ │ │
+│  │ │ 1. Discovery: progressive_mcp_loader.py             │ │ │
+│  │ │    (150+ tools → 10-30 relevant, 80-90% saved)      │ │ │
+│  │ │ 2. Conversion: mcp_client.to_langchain_tools()      │ │ │
+│  │ │    (MCP schemas → LangChain BaseTool instances)     │ │ │
+│  │ │ 3. Binding: llm.bind_tools(tools)                   │ │ │
+│  │ │    (LLM can INVOKE tools via function calling)      │ │ │
+│  │ └─────────────────────────────────────────────────────┘ │ │
+│  │ ┌─────────────────────────────────────────────────────┐ │ │
+│  │ │ LangGraph StateGraph (Workflow Engine)              │ │ │
+│  │ │ - Task decomposition node                           │ │ │
+│  │ │ - Supervisor node (routing logic)                   │ │ │
+│  │ │ - 5 Agent nodes (internal workflow steps):          │ │ │
+│  │ │   • feature-dev (codellama-13b)                     │ │ │
+│  │ │   • code-review (llama-3.1-70b)                     │ │ │
+│  │ │   • infrastructure (llama-3.1-8b)                   │ │ │
+│  │ │   • cicd (llama-3.1-8b)                             │ │ │
+│  │ │   • documentation (mistral-7b)                      │ │ │
+│  │ │ - Approval gate node (HITL workflow interrupts)     │ │ │
+│  │ │ - PostgreSQL checkpointing (workflow state)         │ │ │
+│  │ └─────────────────────────────────────────────────────┘ │ │
+│  └───────────┬─────────────────────────────────────────────┘ │
+│              │                                                │
+│  ┌───────────▼──────────────────────────────────────────┐    │
+│  │ MCP Gateway (:8000)                                  │    │
+│  │ - 17 MCP servers, 150+ tools                         │    │
+│  │ - Stdio communication with orchestrator              │    │
+│  └──────────────────────────────────────────────────────┘    │
+└───────────────────────────────────────────────────────────────┘
 ```
 
 ## Contributing
@@ -299,8 +300,9 @@ MIT License - see LICENSE file
 
 - [Dev-Tools Repository](https://github.com/Appsmithery/Dev-Tools)
 - [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
-- [Integration Implementation Plan](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md)
-- [Setup Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/SETUP_GUIDE.md)
+- [Linear Integration Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/LINEAR_INTEGRATION_GUIDE.md)
+- [Linear HITL Workflow](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/LINEAR_HITL_WORKFLOW.md)
+- [Deployment Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/DEPLOYMENT_GUIDE.md)
 
 ### Integrations
 
