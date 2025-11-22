@@ -46,25 +46,27 @@ jobs:
         run: |
           cp config/env/.env.template config/env/.env
           echo "GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}" >> config/env/.env
-          echo "LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}" >> config/env/.env
-          echo "LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}" >> config/env/.env
+          echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+          echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+          echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
           echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> config/env/.env
           echo "QDRANT_URL=${{ secrets.QDRANT_URL }}" >> config/env/.env
           echo "LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
+          echo "LINEAR_WEBHOOK_SIGNING_SECRET=${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}" >> config/env/.env
 
       - name: Build all services with docker compose
         env:
           IMAGE_TAG: ${{ steps.set_tag.outputs.tag }}
           DOCR_REGISTRY: ${{ env.DOCR_REGISTRY }}
         run: |
-          docker compose --env-file config/env/.env -f compose/docker-compose.yml build
+          docker compose --env-file config/env/.env -f deploy/docker-compose.yml build
 
       - name: Push all services to DOCR
         env:
           IMAGE_TAG: ${{ steps.set_tag.outputs.tag }}
           DOCR_REGISTRY: ${{ env.DOCR_REGISTRY }}
         run: |
-          docker compose --env-file config/env/.env -f compose/docker-compose.yml push
+          docker compose --env-file config/env/.env -f deploy/docker-compose.yml push
 
       - name: Clean up builder cache
         if: always()
@@ -121,7 +123,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
         run: |
-          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/compose && \
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && \
             export IMAGE_TAG=${{ env.IMAGE_TAG }} && \
             export DOCR_REGISTRY=${{ env.DOCR_REGISTRY }} && \
             docker compose down --remove-orphans && \
@@ -129,13 +131,14 @@ jobs:
             docker compose up -d"
 
       - name: Wait for services to initialize
-        run: sleep 15
+        run: sleep 30
 
       - name: Run health checks
         run: |
-          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }} && bash scripts/validate-tracing.sh"
+          ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:8000/health"
+          ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:8001/health"
 
       - name: Cleanup on failure
         if: failure()
         run: |
-          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/compose && docker compose logs --tail=100 && docker system prune --volumes --force"
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose logs --tail=100 && docker system prune --volumes --force"

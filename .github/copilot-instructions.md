@@ -130,6 +130,239 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
   - Agent-specific template variables (feature-dev, code-review, infrastructure, cicd, documentation) are OPTIONAL and will fallback to orchestrator templates
   - HITL Approval Flow: Agent node escalates → Orchestrator creates sub-issue in DEV-68 using template aa632a46-ea22-4dd0-9403-90b0d1f05aa0 → User approves in Linear → Workflow resumes
 
+### Human-in-the-Loop (HITL) Approval System
+
+**Architecture**: Risk-based approval workflow with LangGraph checkpoint integration and Linear UI for approval requests.
+
+**Core Components**:
+
+- **Risk Assessor** (`shared/lib/risk_assessor.py`): Evaluates task risk (low/medium/high/critical) based on operation type, environment, and impact. Configuration in `config/hitl/risk-assessment-rules.yaml`.
+- **HITL Manager** (`shared/lib/hitl_manager.py`): Creates approval requests, manages lifecycle, enforces role-based policies. Persists state in PostgreSQL `approval_requests` table.
+- **LangGraph Interrupt Nodes** (`shared/services/langgraph/src/interrupt_nodes.py`): `approval_gate` node interrupts workflow, waits for human decision, resumes on approval.
+- **Approval Policies** (`config/hitl/approval-policies.yaml`): Role-based access control (developer/tech_lead/devops_engineer) with max pending limits and escalation rules.
+
+**Risk Levels & Auto-Approval**:
+
+- **Low**: Auto-approved (dev reads, non-critical operations)
+- **Medium**: Requires developer/tech_lead approval (staging deploys, data imports)
+- **High**: Requires tech_lead/devops_engineer approval (production deploys, infrastructure changes)
+- **Critical**: Requires devops_engineer approval with justification (production deletes, secrets management, sensitive data operations)
+
+**HITL Workflow Pattern**:
+
+1. **Risk Assessment**: Orchestrator assesses task risk using `risk_assessor.assess_task(task_dict)`
+2. **Approval Request Creation**: If `requires_approval()`, create request via `hitl_manager.create_approval_request()` with workflow_id/thread_id/checkpoint_id
+3. **Workflow Interrupt**: LangGraph workflow hits `approval_gate` node, checks for `approval_request_id` in state, interrupts if present
+4. **Linear Notification**: Orchestrator creates sub-issue in DEV-68 with approval form (Request Status dropdown, Required Action checkboxes)
+5. **Human Decision**: User reviews in Linear, sets Request Status (Approved/Denied/More info), adds justification
+6. **Webhook Processing**: Linear webhook triggers status check, updates PostgreSQL, emits resume/cancel event
+7. **Workflow Resumption**: LangGraph workflow resumes from checkpoint, conditional router checks status, proceeds if approved
+
+**Custom Fields** (Linear HITL Template `aa632a46-ea22-4dd0-9403-90b0d1f05aa0`):
+
+- **Request Status** (dropdown): Approved, Denied, More information required (user input, not pre-filled)
+- **Required Action** (checkboxes): Pre-filled by orchestrator based on risk level (Review changes, Verify risks, Check implementation, Request modifications)
+
+**Environment Variables**:
+
+```bash
+# Linear HITL Configuration
+LINEAR_APPROVAL_HUB_ISSUE_ID=DEV-68                                    # Workspace hub for approval notifications
+HITL_ORCHESTRATOR_TEMPLATE_UUID=aa632a46-ea22-4dd0-9403-90b0d1f05aa0   # Linear template ID for HITL approvals
+LINEAR_WEBHOOK_SIGNING_SECRET=<secret>                                 # Webhook signature validation
+LINEAR_FIELD_REQUEST_STATUS_ID=<field_uuid>                            # Custom field: Request Status
+LINEAR_FIELD_REQUIRED_ACTION_ID=<field_uuid>                           # Custom field: Required Action
+LINEAR_REQUEST_STATUS_APPROVED=<option_uuid>                           # Request Status option: Approved
+LINEAR_REQUEST_STATUS_DENIED=<option_uuid>                             # Request Status option: Denied
+LINEAR_REQUEST_STATUS_MORE_INFO=<option_uuid>                          # Request Status option: More info required
+```
+
+**Taskfile Commands** (for manual testing/management):
+
+- `task workflow:init-db` - Initialize approval_requests table schema
+- `task workflow:list-pending` - List pending approval requests
+- `task workflow:approve REQUEST_ID=<uuid>` - Approve request (bypasses Linear UI)
+- `task workflow:reject REQUEST_ID=<uuid> REASON="..."` - Reject request
+- `task workflow:status WORKFLOW_ID=<id>` - Show workflow status
+- `task workflow:clean-expired` - Clean up expired requests
+
+**Orchestrator Integration Pattern**:
+
+```python
+from shared.lib.risk_assessor import get_risk_assessor
+from shared.lib.hitl_manager import get_hitl_manager
+
+risk_assessor = get_risk_assessor()
+hitl_manager = get_hitl_manager()
+
+# In /orchestrate endpoint
+risk_level = risk_assessor.assess_task(task_dict)
+if risk_assessor.requires_approval(risk_level):
+    approval_request_id = await hitl_manager.create_approval_request(
+        workflow_id=task_id,
+        thread_id=f"thread-{task_id}",
+        checkpoint_id=f"checkpoint-{task_id}",
+        task=task_dict,
+        agent_name="orchestrator"
+    )
+    # Return early with approval_pending status
+    return {"status": "approval_pending", "approval_request_id": approval_request_id}
+```
+
+**LangGraph Integration Pattern**:
+
+```python
+from shared.services.langgraph.src.interrupt_nodes import approval_gate, conditional_approval_router
+
+workflow = StateGraph(WorkflowState)
+workflow.add_node("approval_gate", approval_gate)
+workflow.add_conditional_edges("approval_gate", conditional_approval_router, {
+    "execute": "execute_operation",
+    "rejected": "handle_rejection"
+})
+compiled = workflow.compile(checkpointer=checkpointer, interrupt_before=["approval_gate"])
+```
+
+**Documentation**: `support/docs/LINEAR_HITL_TEMPLATE_SETUP.md`, `support/docs/guides/implementation/HITL_IMPLEMENTATION_PHASE2.md`
+
+### Secrets Management
+
+**Architecture**: Modular overlay-based secrets system with provenance tracking, automated validation, and Docker secrets integration.
+
+**Core Components**:
+
+- **Core Schema** (`config/env/schema/secrets.core.json`): Defines fundamental secrets (GITHUB_TOKEN, NODE_ENV, etc.)
+- **Overlay System** (`config/env/schema/overlays/`): Service-specific extensions (agent-ops.json, supabase.json, vercel.json, etc.)
+- **Validation Library** (`scripts/automation/validate-secrets.ts`): Validates secrets against merged schema with provenance tracking
+- **Hydration Script** (`scripts/automation/hydrate-env.ts`): Automated development environment setup
+- **Docker Secrets**: Linear OAuth tokens, GitHub PAT mounted from `config/env/secrets/*.txt` files
+
+**Directory Structure**:
+
+```
+config/env/
+├── .env                          # Runtime secrets (gitignored)
+├── .env.template                 # Tracked template for team setup
+├── secrets/                      # Docker-mounted secret files (gitignored)
+│   ├── linear_oauth_token.txt
+│   ├── github_pat.txt
+│   └── agent-access/             # Per-agent API keys
+│       └── <workspace>/
+│           └── <agent>.txt       # JSON: {workspace, agent_name, api_key_uuid, secret}
+└── schema/                       # Declarative schema + overlays
+    ├── secrets.core.json         # Core secrets
+    └── overlays/                 # Service-specific extensions
+        ├── agent-ops.json        # Agent memory, logging, Playwright
+        ├── supabase.json         # Supabase URL/key
+        ├── supabase-advanced.json # Project refs, JWT tokens
+        └── vercel.json           # Vercel project IDs
+```
+
+**Secrets Categories**:
+
+1. **Stack-Level Credentials** (`.env`): LangSmith API keys, Gradient API keys, Linear OAuth tokens, Supabase URLs, database passwords
+2. **Docker Secrets** (`config/env/secrets/*.txt`): Mounted via Docker Compose secrets; GitHub PAT for git operations, Linear OAuth tokens
+3. **Agent Access Keys** (`config/env/secrets/agent-access/`): Per-agent API keys generated by Gradient, stored as JSON blobs
+4. **Workspace Metadata** (`config/env/workspaces/*.json`): Tracked manifests for Gradient workspaces, knowledge bases, agents
+
+**Environment Variables** (Common Stack-Level Secrets):
+
+```bash
+# LangSmith (LLM Tracing)
+LANGSMITH_API_KEY=lsv2_sk_***                                           # Service key (full org access)
+LANGCHAIN_API_KEY=lsv2_sk_***                                           # Same key (SDK compatibility)
+LANGSMITH_WORKSPACE_ID=5029c640-3f73-480c-82f3-58e402ed4207           # Org ID from URL
+
+# DigitalOcean Gradient AI
+GRADIENT_API_KEY=<gradient_api_key>                                    # DigitalOcean PAT for Gradient
+DIGITALOCEAN_TOKEN=<do_pat>                                            # Alias of GRADIENT_API_KEY
+DIGITAL_OCEAN_PAT=<do_pat>                                             # Alias of GRADIENT_API_KEY
+GRADIENT_MODEL_ACCESS_KEY=<model_key>                                  # Model-specific access key
+
+# Linear (Project Management + HITL)
+LINEAR_API_KEY=lin_oauth_***                                           # OAuth token (full workspace access)
+LINEAR_OAUTH_DEV_TOKEN=lin_oauth_***                                   # Alias for development
+LINEAR_WEBHOOK_SIGNING_SECRET=<secret>                                 # Webhook signature validation
+
+# Database (PostgreSQL)
+DB_PASSWORD=<postgres_password>                                        # PostgreSQL root password
+POSTGRES_PASSWORD=<postgres_password>                                  # Alias for docker-compose
+
+# Supabase (Optional)
+SUPABASE_URL=https://<project>.supabase.co                             # Supabase project URL
+SUPABASE_ANON_KEY=<anon_key>                                           # Anonymous/public key
+SUPABASE_SERVICE_ROLE_KEY=<service_key>                                # Service role key (admin)
+```
+
+**Docker Secrets Pattern** (docker-compose.yml):
+
+```yaml
+secrets:
+  linear_oauth_token:
+    file: ../config/env/secrets/linear_oauth_token.txt
+  github_pat:
+    file: ../config/env/secrets/github_pat.txt
+
+services:
+  orchestrator:
+    secrets:
+      - linear_oauth_token
+      - github_pat
+    environment:
+      LINEAR_OAUTH_TOKEN_FILE: /run/secrets/linear_oauth_token
+      GITHUB_TOKEN_FILE: /run/secrets/github_pat
+```
+
+**Validation Commands**:
+
+```bash
+# Basic validation
+npm run secrets:validate
+
+# With overlay discovery
+npm run secrets:validate:discover
+
+# JSON output (for CI/CD)
+npm run secrets:validate:json
+
+# Environment hydration
+npm run secrets:hydrate
+```
+
+**Deployment Workflow**:
+
+1. **Local Development**: Copy `.env.template` to `.env`, populate secrets, validate with `npm run secrets:validate`
+2. **Create Docker Secrets**: Run `support/scripts/setup_secrets.sh` to create secret files from `.env`
+3. **Deploy to Droplet**: Use `support/scripts/deploy/deploy-to-droplet.ps1 -DeployType config` to sync `.env` and restart services
+4. **Verify**: Check health endpoints, confirm secrets loaded via logs
+
+**Security Best Practices**:
+
+- **Never commit `.env` or `config/env/secrets/` files** (gitignored)
+- **Use GitHub Secrets for CI/CD** (workflow reads secrets from GitHub Actions environment)
+- **Rotate secrets routinely** (see `support/docs/operations/SECRETS_ROTATION.md`)
+- **Use Docker secrets for sensitive values** (mounted as files, not environment variables)
+- **Validate regularly** to catch configuration drift
+
+**Agent Manifest Integration** (`shared/lib/agents-manifest.json`):
+
+```json
+{
+  "name": "orchestrator",
+  "requiredSecrets": [
+    "LINEAR_API_KEY",
+    "LANGSMITH_API_KEY",
+    "GRADIENT_API_KEY"
+  ],
+  "secretsWithProvenance": [
+    { "name": "LINEAR_API_KEY", "provenance": "secrets.core.json" },
+    { "name": "LANGSMITH_API_KEY", "provenance": "secrets.core.json" }
+  ]
+}
+```
+
+**Documentation**: `support/docs/operations/SECRETS_MANAGEMENT.md`, `support/docs/operations/SECRETS_ROTATION.md`, `config/env/README.md`
+
 ## Deployment workflows
 
 ### ⚠️ Configuration Changes Deployment (CRITICAL)

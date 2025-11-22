@@ -36,17 +36,19 @@ jobs:
           # Runtime overrides from GitHub Secrets
           IMAGE_TAG=${{ env.IMAGE_TAG }}
           DOCKER_USERNAME=${{ env.DOCKER_USERNAME }}
-          LANGFUSE_SECRET_KEY=${{ secrets.LANGFUSE_SECRET_KEY }}
-          LANGFUSE_PUBLIC_KEY=${{ secrets.LANGFUSE_PUBLIC_KEY }}
           GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}
+          LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}
           LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}
+          LINEAR_WEBHOOK_SIGNING_SECRET=${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}
           QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
           QDRANT_URL=${{ secrets.QDRANT_URL }}
           EOF
 
       - name: Build and push all services
         run: |
-          cd compose
+          cd deploy
           docker compose build
           docker compose push
 
@@ -115,7 +117,7 @@ jobs:
             sed -i "s/^IMAGE_TAG=.*/IMAGE_TAG=${{ github.sha }}/" config/env/.env
             
             # Pull latest images from Docker Hub
-            cd compose
+            cd deploy
             docker compose pull
             
             # Deploy with zero-downtime
@@ -150,7 +152,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key root@45.55.173.72 << 'EOF'
             export DOCKER_HOST=unix:///var/run/docker.sock
-            cd /opt/Dev-Tools/compose
+            cd /opt/Dev-Tools/deploy
             echo "=== Last 30 lines from failed services ==="
             docker compose logs --tail=30
           EOF
