@@ -18,7 +18,7 @@ class OrchestratorClient {
         return response.data;
     }
     async checkStatus(taskId) {
-        const response = await this.client.get(`/task/${taskId}`);
+        const response = await this.client.get(`/tasks/${taskId}`);
         return response.data;
     }
     async chat(message) {
