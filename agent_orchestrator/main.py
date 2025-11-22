@@ -848,7 +848,7 @@ async def linear_webhook(request: Request):
 
             linear_client = LinearWorkspaceClient()
             await linear_client.add_comment(
-                metadata["comment_id"],
+                metadata["issue_id"],  # Use issue_id, not comment_id
                 f"✅ **Approved by @{metadata['approved_by_name']}**\n\n"
                 f"Workflow will resume automatically. Thank you for your approval!",
             )
@@ -875,7 +875,7 @@ async def linear_webhook(request: Request):
 
             linear_client = LinearWorkspaceClient()
             await linear_client.add_comment(
-                metadata["comment_id"],
+                metadata["issue_id"],  # Use issue_id, not comment_id
                 f"❌ **Denied by @{metadata['denied_by_name']}**\n\n"
                 f"Workflow has been cancelled. No actions will be taken.",
             )
