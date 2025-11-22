@@ -17,6 +17,10 @@ class OrchestratorClient {
         const response = await this.client.post('/orchestrate', request);
         return response.data;
     }
+    async execute(taskId) {
+        const response = await this.client.post(`/execute/${taskId}`);
+        return response.data;
+    }
     async checkStatus(taskId) {
         const response = await this.client.get(`/tasks/${taskId}`);
         return response.data;
