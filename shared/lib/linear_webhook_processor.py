@@ -21,8 +21,21 @@ class LinearWebhookProcessor:
     """Process Linear webhook events for HITL approvals via emoji reactions."""
 
     def __init__(self):
-        """Initialize webhook processor with signing secret from env."""
+        """Initialize webhook processor with signing secret from env or file."""
+        # Try direct env var first
         self.signing_secret = os.getenv("LINEAR_WEBHOOK_SIGNING_SECRET")
+        
+        # If not found, try Docker secret file
+        if not self.signing_secret:
+            secret_file = os.getenv("LINEAR_WEBHOOK_SIGNING_SECRET_FILE")
+            if secret_file and os.path.exists(secret_file):
+                try:
+                    with open(secret_file, "r") as f:
+                        self.signing_secret = f.read().strip()
+                    logger.info(f"Loaded webhook signing secret from {secret_file}")
+                except Exception as e:
+                    logger.error(f"Failed to read webhook secret from {secret_file}: {e}")
+        
         if not self.signing_secret:
             logger.warning(
                 "LINEAR_WEBHOOK_SIGNING_SECRET not set - webhook signature verification disabled"
