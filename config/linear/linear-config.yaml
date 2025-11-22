@@ -1,0 +1,90 @@
+# Linear Integration Configuration
+# Non-sensitive structural configuration for Linear API integration
+#
+# Secrets (OAuth tokens, API keys, webhook secrets) are stored in config/env/.env
+# This file contains UUIDs, field mappings, endpoints, and feature flags
+
+workspace:
+  slug: "dev-ops"
+  team_id: "f5b610be-ac34-4983-918b-2c9d00aa9b7a" # Project Roadmaps (PR)
+
+approval_hub:
+  issue_id: "DEV-68" # Workspace-level HITL approval hub
+
+templates:
+  # HITL Approval Template (workspace-scoped)
+  hitl_orchestrator:
+    uuid: "aa632a46-ea22-4dd0-9403-90b0d1f05aa0"
+    url: "https://linear.app/dev-ops/team/DEV/new?template=aa632a46-ea22-4dd0-9403-90b0d1f05aa0"
+    name: "HITL - Orchestrator Approval"
+    scope: "workspace"
+
+  # Task Template (project-scoped)
+  task_orchestrator:
+    uuid: "e9591ca7-c9cf-4960-acce-a99792542b95"
+    name: "Task - Orchestrator"
+    scope: "project"
+
+custom_fields:
+  # Custom field IDs extracted from template 8881211a-7b9c-42ab-a178-608ddf1f6665
+  required_action:
+    id: "ac2c5d12-ead1-4444-af32-62e9bcacee72"
+    type: "checkboxes"
+    options:
+      - "Review proposed changes"
+      - "Verify risks are acceptable"
+      - "Check implementation approach"
+      - "Request modifications"
+
+  request_status:
+    id: "ee8b5f23-a3c6-41e2-938c-7f8161d50de7"
+    type: "select"
+    options:
+      - value: "Approved"
+        default: true
+      - value: "Denied"
+      - value: "More information required"
+
+labels:
+  hitl: "f6157a00-f2d8-4417-a927-ba832733da90"
+  orchestrator: "0bc7a4c8-ece0-4778-9f21-eac54a7c469b"
+
+default_assignee:
+  id: "12b01869-730b-4898-9ca3-88c463764071"
+  email: "alex@appsmithery.co"
+
+webhooks:
+  orchestrator:
+    signing_secret_env: "LINEAR_ORCHESTRATOR_WEBHOOK_SECRET" # Reference to .env var
+    uri: "https://agent.appsmithery.co/webhook/linear"
+
+oauth:
+  redirect_uri: "http://localhost:8000/oauth/linear/callback"
+  scopes: "read,write,app:mentionable,app:assignable"
+
+# Risk-based approval policies
+approval_policies:
+  low:
+    required_actions:
+      - "Review proposed changes"
+    priority: 0 # No priority override
+
+  medium:
+    required_actions:
+      - "Review proposed changes"
+    priority: 2 # Medium priority
+
+  high:
+    required_actions:
+      - "Review proposed changes"
+      - "Verify risks are acceptable"
+      - "Check implementation approach"
+    priority: 1 # High priority
+
+  critical:
+    required_actions:
+      - "Review proposed changes"
+      - "Verify risks are acceptable"
+      - "Check implementation approach"
+      - "Request modifications"
+    priority: 0 # Urgent priority
