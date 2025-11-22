@@ -564,10 +564,10 @@ task workflow:clean-expired        # Clean up expired requests
 ## Related Documentation
 
 - **Copilot Instructions:** `.github/copilot-instructions.md`
-- **HITL Setup:** `support/docs/LINEAR_HITL_TEMPLATE_SETUP.md`
+- **Linear Integration:** `support/docs/LINEAR_INTEGRATION_GUIDE.md`
+- **HITL Workflow:** `support/docs/LINEAR_HITL_WORKFLOW.md`
 - **Secrets Management:** `support/docs/operations/SECRETS_MANAGEMENT.md`
 - **LangSmith Tracing:** `support/docs/guides/integration/LANGSMITH_TRACING.md`
-- **Linear Integration:** `support/docs/guides/integration/LINEAR_SETUP.md`
 - **Docker Compose:** `deploy/docker-compose.yml`
 - **Environment Template:** `config/env/.env.template`
 
