@@ -583,9 +583,14 @@ class LinearWorkspaceClient:
         if state_id:
             input_data["stateId"] = state_id
 
-        # Add custom fields for template (e.g., Request Status, Required Action)
+        # Note: Linear API doesn't support setting customFields during issue creation
+        # Custom fields must be set after creation via issueUpdate mutation
+        # Store for potential future use, but don't send to API
         if custom_fields:
-            input_data["customFields"] = custom_fields
+            # Log that custom fields were requested but can't be set during creation
+            logger.warning(
+                f"Custom fields requested but not supported during creation: {list(custom_fields.keys())}"
+            )
 
         # Build description from template variables (manual template expansion)
         if template_variables:
