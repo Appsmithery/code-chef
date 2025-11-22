@@ -265,8 +265,8 @@ class LinearWebhookProcessor:
             f"in {issue_identifier} by {user_name}"
         )
 
-        # Handle approval reaction
-        if emoji == "👍":
+        # Handle approval reaction (Linear sends "+1" for 👍)
+        if emoji in ("+1", "👍"):
             logger.info(f"✅ Approval detected on {comment_id} by {user_email}")
             return {
                 "action": "resume_workflow",
@@ -282,8 +282,8 @@ class LinearWebhookProcessor:
                 },
             }
 
-        # Handle denial reaction
-        elif emoji == "👎":
+        # Handle denial reaction (Linear sends "-1" for 👎)
+        elif emoji in ("-1", "👎"):
             logger.info(f"❌ Denial detected on {comment_id} by {user_email}")
             return {
                 "action": "cancel_workflow",
