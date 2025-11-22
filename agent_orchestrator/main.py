@@ -824,8 +824,14 @@ async def linear_webhook(request: Request):
         logger.error(f"Failed to parse webhook payload: {e}")
         raise HTTPException(status_code=400, detail="Invalid JSON payload")
 
+    # Log event type for debugging
+    event_type = event.get("type")
+    action = event.get("action")
+    logger.info(f"📨 Received {event_type}.{action} webhook event")
+
     # Process webhook and get action
     result = await webhook_processor.process_webhook(event)
+    logger.info(f"🔄 Webhook processing result: {result.get('action')}")
 
     if result["action"] == "resume_workflow":
         # TODO: Resume LangGraph workflow from checkpoint
