@@ -1,8 +1,8 @@
 {
   "name": "vscode-devtools-copilot",
   "displayName": "Dev-Tools Multi-Agent Orchestrator",
-  "description": "AI-powered task orchestration with 6 specialized agents, 150+ MCP tools, and LangChain function calling. Submit development tasks via Copilot Chat.",
-  "version": "0.2.0",
+  "description": "AI-powered task orchestration with LangGraph single-orchestrator architecture, 150+ MCP tools, and LangChain function calling. Submit development tasks via Copilot Chat.",
+  "version": "0.3.0",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "minions_purple.png",
@@ -16,8 +16,8 @@
   "homepage": "https://github.com/Appsmithery/Dev-Tools#readme",
   "badges": [
     {
-      "url": "https://img.shields.io/badge/agents-6-blue",
-      "description": "6 Specialized Agents"
+      "url": "https://img.shields.io/badge/orchestrator-LangGraph-blue",
+      "description": "LangGraph Orchestrator (6 Agent Nodes)"
     },
     {
       "url": "https://img.shields.io/badge/MCP_tools-150+-green",
@@ -43,6 +43,9 @@
     "mcp",
     "langsmith",
     "langchain",
+    "langgraph",
+    "workflow-engine",
+    "state-management",
     "multi-agent",
     "automation",
     "code-generation",
@@ -70,7 +73,7 @@
       {
         "id": "devtools",
         "name": "devtools-orchestrator",
-        "description": "Multi-agent orchestrator with LangChain function calling. Access 150+ tools across 6 specialized agents (feature-dev, code-review, infrastructure, cicd, documentation). 80-90% token cost reduction via progressive disclosure.",
+        "description": "LangGraph orchestrator with LangChain function calling. Access 150+ tools routed through internal agent nodes (feature-dev, code-review, infrastructure, cicd, documentation). 80-90% token cost reduction via progressive disclosure.",
         "isSticky": true,
         "commands": [
           {
@@ -136,7 +139,7 @@
         },
         "devtools.linearHubIssue": {
           "type": "string",
-          "default": "PR-68",
+          "default": "DEV-68",
           "description": "Linear issue ID for approval notifications"
         },
         "devtools.linearWorkspaceSlug": {
