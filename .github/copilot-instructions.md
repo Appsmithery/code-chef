@@ -90,7 +90,7 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
   - **Loader**: `shared/lib/linear_config.py` provides type-safe config access with Pydantic validation
   - **Usage**: `from lib.linear_config import get_linear_config; config = get_linear_config()`
   - **Benefits**: 50% .env reduction, version-controlled structure, type safety, multi-environment ready
-  - **See**: `support/docs/LINEAR_CONFIG_MIGRATION.md` for complete guide
+  - **See**: `support/docs/LINEAR_INTEGRATION_GUIDE.md` for complete guide
 - **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `support/scripts/setup_secrets.sh` to create.
 - **Agent Models**: Per-agent Gradient model configured in `deploy/docker-compose.yml` via `GRADIENT_MODEL` env var; models optimized for task complexity and cost.
 - **Task Routing**: Rules in `config/routing/task-router.rules.yaml` (if used); orchestrator uses LLM-powered decomposition when `gradient_client.is_enabled()`.
@@ -223,7 +223,7 @@ workflow.add_conditional_edges("approval_gate", conditional_approval_router, {
 compiled = workflow.compile(checkpointer=checkpointer, interrupt_before=["approval_gate"])
 ```
 
-**Documentation**: `support/docs/LINEAR_HITL_TEMPLATE_SETUP.md`, `support/docs/guides/implementation/HITL_IMPLEMENTATION_PHASE2.md`
+**Documentation**: `support/docs/LINEAR_HITL_WORKFLOW.md`, `support/docs/guides/implementation/HITL_IMPLEMENTATION_PHASE2.md`
 
 ### Secrets Management
 
