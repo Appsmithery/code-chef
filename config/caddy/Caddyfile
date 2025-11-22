@@ -18,6 +18,11 @@
 		reverse_proxy gateway-mcp:8000
 	}
 
+	# Linear webhooks proxy to orchestrator
+	handle_path /webhook/linear {
+		reverse_proxy orchestrator:8001
+	}
+
 	# Prometheus monitoring with OAuth protection
 	redir /prometheus /prometheus/
 	handle_path /prometheus/* {
