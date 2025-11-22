@@ -5,7 +5,6 @@
   "version": "0.3.0",
   "publisher": "appsmithery",
   "license": "MIT",
-  "icon": "minions_purple.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/Appsmithery/Dev-Tools"
