@@ -1290,7 +1290,7 @@ pytest --cov=agent_orchestrator --cov=shared/lib --cov-report=html
 - **MCP Gateway**: `shared/gateway/README.md`
 - **Agent Endpoints**: `support/docs/AGENT_ENDPOINTS.md`
 - **Linear API**: https://developers.linear.app/docs/graphql/working-with-the-graphql-api
-- **Deployment Guide**: `support/docs/DEPLOYMENT_AUTOMATION.md`
+- **Deployment Guide**: `support/docs/DEPLOYMENT_GUIDE.md`
 
 ---
 
