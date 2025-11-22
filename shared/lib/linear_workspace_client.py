@@ -768,6 +768,141 @@ class LinearWorkspaceClient:
             logger.error(f"Failed to add comment: {e}")
             raise
 
+    async def create_approval_comment(
+        self,
+        agent_name: str,
+        task_description: str,
+        risk_level: str,
+        approval_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create HITL approval request as a comment with emoji reaction instructions.
+
+        This replaces sub-issue creation with a simpler comment-based approval flow:
+        - User reacts with 👍 to approve
+        - User reacts with 👎 to deny
+        - User replies with comment to request more info
+
+        Args:
+            agent_name: Name of agent requesting approval
+            task_description: Description of task requiring approval
+            risk_level: Risk level (low, medium, high, critical)
+            approval_id: Optional unique ID for tracking
+            metadata: Optional metadata (risk factors, estimated cost, etc.)
+
+        Returns:
+            {
+                "comment_id": "comment-uuid",
+                "url": "https://linear.app/...",
+                "issue_id": "DEV-68"
+            }
+
+        Usage:
+            >>> comment_data = await client.create_approval_comment(
+            ...     agent_name="feature-dev",
+            ...     task_description="Deploy multi-layer config to production",
+            ...     risk_level="high",
+            ...     metadata={"risk_factors": ["Configuration change", "Production deployment"]}
+            ... )
+        """
+        # Get approval hub from config
+        hub_identifier = self.config.approval_hub.issue_id
+
+        # Resolve to UUID
+        hub_issue = await self.get_issue_by_identifier(hub_identifier)
+        if not hub_issue:
+            raise ValueError(f"Approval hub issue {hub_identifier} not found")
+
+        hub_issue_id = hub_issue["id"]
+
+        # Get approval policy for risk level
+        policy = self.config.get_approval_policy(risk_level)
+
+        # Format risk emoji
+        risk_emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
+        emoji = risk_emoji.get(risk_level, "⚪")
+
+        # Format required actions
+        actions_text = "\n".join(f"- {action}" for action in policy.required_actions)
+
+        # Format risk factors if provided
+        risk_factors_text = ""
+        if metadata and "risk_factors" in metadata:
+            risk_factors_text = "\n\n**Risk Factors:**\n" + "\n".join(
+                f"- {factor}" for factor in metadata["risk_factors"]
+            )
+
+        # Build approval comment body
+        approval_body = f"""## {emoji} HITL Approval Required
+
+**Agent:** `{agent_name}`
+**Risk Level:** {risk_level.upper()}
+**Priority:** {"Urgent" if policy.priority == 0 else "High" if policy.priority == 1 else "Medium" if policy.priority == 2 else "Low"}
+
+### Task
+{task_description}
+
+### Required Actions
+{actions_text}{risk_factors_text}
+
+---
+
+### ✅ How to Approve/Deny
+
+**React to this comment with:**
+- 👍 **Approve** - Resume workflow and execute actions
+- 👎 **Deny** - Cancel workflow, no actions taken
+- 💬 **Reply** - Request more information (workflow pauses)
+
+The workflow will automatically resume or cancel based on your reaction.
+"""
+
+        if approval_id:
+            approval_body += f"\n*Approval ID: `{approval_id}`*"
+
+        # Create comment
+        mutation = gql(
+            """
+            mutation CreateComment($issueId: String!, $body: String!) {
+                commentCreate(input: {
+                    issueId: $issueId
+                    body: $body
+                }) {
+                    success
+                    comment {
+                        id
+                        url
+                        createdAt
+                    }
+                }
+            }
+        """
+        )
+
+        try:
+            result = self.client.execute(
+                mutation,
+                variable_values={"issueId": hub_issue_id, "body": approval_body},
+            )
+
+            if not result["commentCreate"]["success"]:
+                raise Exception("Failed to create approval comment")
+
+            comment = result["commentCreate"]["comment"]
+            logger.info(f"Created approval comment for {agent_name}: {comment['url']}")
+
+            return {
+                "comment_id": comment["id"],
+                "url": comment["url"],
+                "issue_id": hub_identifier,
+                "approval_id": approval_id,
+            }
+
+        except Exception as e:
+            logger.error(f"Failed to create approval comment: {e}")
+            raise
+
     async def get_issue_by_identifier(
         self, identifier: str
     ) -> Optional[Dict[str, Any]]:

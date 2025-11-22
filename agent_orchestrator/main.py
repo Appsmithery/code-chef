@@ -783,6 +783,125 @@ async def readiness_check():
     }
 
 
+# ============================================================================
+# Linear Webhook Endpoint for HITL Approvals (Emoji Reactions)
+# ============================================================================
+
+from fastapi import Request
+from lib.linear_webhook_processor import LinearWebhookProcessor
+
+webhook_processor = LinearWebhookProcessor()
+
+
+@app.post("/webhooks/linear")
+async def linear_webhook(request: Request):
+    """
+    Handle Linear webhook events for HITL approvals via emoji reactions.
+
+    Processes:
+    - 👍 reactions (approve workflow)
+    - 👎 reactions (deny workflow)
+    - 💬 comment replies (request more info)
+
+    Triggered by Linear webhooks on Comment create/update events.
+    """
+    # Get raw payload for signature verification
+    payload = await request.body()
+
+    # Verify webhook signature
+    signature = request.headers.get("Linear-Signature")
+    if not webhook_processor.verify_signature(signature, payload):
+        logger.warning("Invalid Linear webhook signature")
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    # Parse event data
+    try:
+        event = await request.json()
+    except Exception as e:
+        logger.error(f"Failed to parse webhook payload: {e}")
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    # Process webhook and get action
+    result = await webhook_processor.process_webhook(event)
+
+    if result["action"] == "resume_workflow":
+        # TODO: Resume LangGraph workflow from checkpoint
+        # For now, just log and notify via Linear comment
+        metadata = result["metadata"]
+        logger.info(
+            f"✅ Workflow approved by {metadata['approved_by_name']} - "
+            f"Comment: {metadata['comment_url']}"
+        )
+
+        # Add confirmation comment to Linear
+        try:
+            from lib.linear_workspace_client import LinearWorkspaceClient
+
+            linear_client = LinearWorkspaceClient()
+            await linear_client.add_comment(
+                metadata["comment_id"],
+                f"✅ **Approved by @{metadata['approved_by_name']}**\n\n"
+                f"Workflow will resume automatically. Thank you for your approval!",
+            )
+        except Exception as e:
+            logger.error(f"Failed to add confirmation comment: {e}")
+
+        return {
+            "status": "workflow_resumed",
+            "metadata": metadata,
+            "message": "Workflow approved and will resume",
+        }
+
+    elif result["action"] == "cancel_workflow":
+        # TODO: Cancel LangGraph workflow
+        metadata = result["metadata"]
+        logger.info(
+            f"❌ Workflow denied by {metadata['denied_by_name']} - "
+            f"Comment: {metadata['comment_url']}"
+        )
+
+        # Add confirmation comment to Linear
+        try:
+            from lib.linear_workspace_client import LinearWorkspaceClient
+
+            linear_client = LinearWorkspaceClient()
+            await linear_client.add_comment(
+                metadata["comment_id"],
+                f"❌ **Denied by @{metadata['denied_by_name']}**\n\n"
+                f"Workflow has been cancelled. No actions will be taken.",
+            )
+        except Exception as e:
+            logger.error(f"Failed to add confirmation comment: {e}")
+
+        return {
+            "status": "workflow_cancelled",
+            "metadata": metadata,
+            "message": "Workflow denied and cancelled",
+        }
+
+    elif result["action"] == "pause_workflow":
+        # TODO: Keep workflow paused, await clarification
+        metadata = result["metadata"]
+        logger.info(
+            f"💬 More information requested by {metadata['requested_by_name']} - "
+            f"Comment: {metadata['comment_url']}"
+        )
+
+        return {
+            "status": "workflow_paused",
+            "metadata": metadata,
+            "message": "Workflow paused, awaiting more information",
+        }
+
+    # Ignored event (not an approval comment)
+    return {"status": "ignored", "message": "Event processed but no action taken"}
+
+
+# ============================================================================
+# Main Orchestration Endpoints
+# ============================================================================
+
+
 @app.post("/orchestrate", response_model=TaskResponse)
 async def orchestrate_task(request: TaskRequest):
     """
