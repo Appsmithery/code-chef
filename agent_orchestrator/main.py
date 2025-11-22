@@ -808,6 +808,9 @@ async def linear_webhook(request: Request):
     # Get raw payload for signature verification
     payload = await request.body()
 
+    # Debug: Log all headers
+    logger.info(f"Webhook headers: {dict(request.headers)}")
+
     # Verify webhook signature
     signature = request.headers.get("Linear-Signature")
     if not webhook_processor.verify_signature(signature, payload):
