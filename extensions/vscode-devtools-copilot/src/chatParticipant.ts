@@ -51,12 +51,16 @@ export class DevToolsChatParticipant {
             this.lastTaskId = response.task_id;
 
             // Check if approval is required
-            if (response.routing_plan?.status === 'approval_pending') {
+            if (response.status === 'approval_pending' || response.approval_request_id) {
                 stream.markdown('\n⚠️ **Approval Required**\n\n');
-                stream.markdown(`Risk Level: ${response.routing_plan.risk_level}\n\n`);
-                stream.markdown(`Approval ID: ${response.routing_plan.approval_request_id}\n\n`);
-                stream.markdown('This task requires approval before execution. Approve in Linear or use:\n');
-                stream.markdown(`\`@devtools /approve ${response.task_id} ${response.routing_plan.approval_request_id}\`\n`);
+                if (response.risk_level) {
+                    stream.markdown(`Risk Level: ${response.risk_level}\n\n`);
+                }
+                if (response.approval_request_id) {
+                    stream.markdown(`Approval ID: ${response.approval_request_id}\n\n`);
+                    stream.markdown('This task requires approval before execution. Approve in Linear or use:\n');
+                    stream.markdown(`\`@devtools /approve ${response.task_id} ${response.approval_request_id}\`\n`);
+                }
                 return { metadata: { taskId: response.task_id, requiresApproval: true } };
             }
 

@@ -21,7 +21,9 @@ export interface SubTask {
 export interface TaskResponse {
     task_id: string;
     subtasks: SubTask[];
+    status?: 'pending' | 'approval_pending' | 'in_progress' | 'completed' | 'failed';
     approval_request_id?: string;
+    risk_level?: 'low' | 'medium' | 'high' | 'critical';
     routing_plan: {
         execution_order: string[];
         parallel_groups?: string[][];
