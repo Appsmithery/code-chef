@@ -1,8 +1,22 @@
-name: Deploy Agents (Legacy - DISABLED)
+name: Deploy to Droplet (LangGraph Architecture)
 on:
     workflow_dispatch:
-    # push:
-    #     branches: [main]
+        inputs:
+            service:
+                description: "Service to deploy (all, orchestrator, gateway, rag, state)"
+                required: false
+                default: "all"
+    push:
+        branches: [main]
+        paths:
+            - "agent_orchestrator/**"
+            - "shared/gateway/**"
+            - "shared/services/**"
+            - "deploy/docker-compose.yml"
+
+env:
+    DROPLET_HOST: root@45.55.173.72
+    DEPLOY_PATH: /opt/Dev-Tools
 
 jobs:
     deploy:
@@ -10,13 +24,58 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Write secrets to files
+            - name: Configure SSH
+              run: |
+                  mkdir -p ~/.ssh
+                  echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/id_ed25519
+                  chmod 600 ~/.ssh/id_ed25519
+                  ssh-keyscan -H 45.55.173.72 >> ~/.ssh/known_hosts
+
+            - name: Prepare .env file
+              run: |
+                  cp config/env/.env.template config/env/.env
+                  echo "GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}" >> config/env/.env
+                  echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+                  echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
+                  echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+                  echo "LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
+                  echo "LINEAR_WEBHOOK_SIGNING_SECRET=${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}" >> config/env/.env
+                  echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> config/env/.env
+
+            - name: Create Docker secrets
               run: |
                   mkdir -p config/env/secrets
                   echo "${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" > config/env/secrets/linear_oauth_token.txt
                   echo "${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}" > config/env/secrets/linear_webhook_secret.txt
+                  echo "${{ secrets.DB_PASSWORD }}" > config/env/secrets/db_password.txt
                   chmod 600 config/env/secrets/*.txt
+
+            - name: Upload .env to droplet
+              run: |
+                  scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
+
+            - name: Upload secrets to droplet
+              run: |
+                  ssh ${{ env.DROPLET_HOST }} "mkdir -p ${{ env.DEPLOY_PATH }}/config/env/secrets"
+                  scp config/env/secrets/*.txt ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/secrets/
+
+            - name: Pull latest code on droplet
+              run: |
+                  ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }} && git pull origin main"
 
             - name: Deploy stack
               run: |
-                  docker-compose -f compose/docker-compose.yml up -d
+                  ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose down --remove-orphans && docker compose up -d --build"
+
+            - name: Wait for services
+              run: sleep 30
+
+            - name: Health checks
+              run: |
+                  ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:8000/health"
+                  ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:8001/health"
+
+            - name: Show logs on failure
+              if: failure()
+              run: |
+                  ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose logs --tail=100"
