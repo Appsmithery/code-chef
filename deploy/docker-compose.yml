@@ -37,6 +37,7 @@ services:
     volumes:
       - orchestrator-data:/app/data
       - ../config/hitl:/app/config/hitl:ro
+      - ../config/linear:/app/config/linear:ro
       - ../config/env:/app/config/env:ro
       - ../config/mcp-agent-tool-mapping.yaml:/app/config/mcp-agent-tool-mapping.yaml:ro
       - ../config/prometheus:/app/config/prometheus:ro
