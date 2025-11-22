@@ -247,7 +247,7 @@ class LinearWebhookProcessor:
         issue_identifier = issue.get("identifier") if issue else None
         user = reaction_data.get("user", {})
         user_email = user.get("email")
-        user_name = user.get("displayName")
+        user_name = user.get("name")  # Linear uses "name", not "displayName"
         created_at = reaction_data.get("createdAt")
 
         logger.info(
