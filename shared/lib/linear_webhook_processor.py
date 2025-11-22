@@ -95,9 +95,15 @@ class LinearWebhookProcessor:
 
         logger.debug(f"Processing webhook event: {event_type}.{action}")
 
+        # Handle Reaction events (emoji reactions on comments)
+        if event_type == "Reaction" and action == "create":
+            return await self._handle_reaction_event(data)
+
+        # Handle Comment update events (legacy reaction handling via reactions array)
         if event_type == "Comment" and action == "update":
             return await self._handle_comment_reaction(data)
 
+        # Handle Comment create events (reply comments requesting more info)
         elif event_type == "Comment" and action == "create":
             return await self._handle_comment_reply(data)
 
@@ -172,6 +178,106 @@ class LinearWebhookProcessor:
                 }
 
         logger.debug(f"No approval/denial reactions found on comment {comment_id}")
+        return {"action": "ignore"}
+
+    async def _handle_reaction_event(
+        self, reaction_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Handle Reaction.create event when user adds emoji to a comment.
+
+        Linear Reaction event structure:
+        {
+            "type": "Reaction",
+            "action": "create",
+            "data": {
+                "id": "...",
+                "emoji": "👍",
+                "comment": {
+                    "id": "...",
+                    "body": "...",
+                    "url": "...",
+                    "issue": {
+                        "id": "...",
+                        "identifier": "DEV-68"
+                    }
+                },
+                "user": {
+                    "id": "...",
+                    "email": "...",
+                    "displayName": "..."
+                },
+                "createdAt": "..."
+            }
+        }
+
+        Args:
+            reaction_data: Reaction data from webhook
+
+        Returns:
+            Action dict with "resume_workflow", "cancel_workflow", or "ignore"
+        """
+        emoji = reaction_data.get("emoji")
+        comment = reaction_data.get("comment", {})
+        comment_id = comment.get("id")
+        comment_body = comment.get("body", "")
+        comment_url = comment.get("url")
+        issue = comment.get("issue", {})
+        issue_id = issue.get("id")
+        issue_identifier = issue.get("identifier")
+        user = reaction_data.get("user", {})
+        user_email = user.get("email")
+        user_name = user.get("displayName")
+        created_at = reaction_data.get("createdAt")
+
+        # Check if this is an approval comment (contains "HITL Approval Required")
+        if "HITL Approval Required" not in comment_body:
+            logger.debug(f"Reaction on non-approval comment {comment_id}, ignoring")
+            return {"action": "ignore"}
+
+        logger.info(
+            f"Processing {emoji} reaction on approval comment {comment_id} "
+            f"in {issue_identifier} by {user_name}"
+        )
+
+        # Handle approval reaction
+        if emoji == "👍":
+            logger.info(f"✅ Approval detected on {comment_id} by {user_email}")
+            return {
+                "action": "resume_workflow",
+                "metadata": {
+                    "comment_id": comment_id,
+                    "comment_url": comment_url,
+                    "issue_id": issue_id,
+                    "issue_identifier": issue_identifier,
+                    "approved_by": user_email,
+                    "approved_by_name": user_name,
+                    "approved_at": created_at,
+                    "emoji": emoji,
+                },
+            }
+
+        # Handle denial reaction
+        elif emoji == "👎":
+            logger.info(f"❌ Denial detected on {comment_id} by {user_email}")
+            return {
+                "action": "cancel_workflow",
+                "metadata": {
+                    "comment_id": comment_id,
+                    "comment_url": comment_url,
+                    "issue_id": issue_id,
+                    "issue_identifier": issue_identifier,
+                    "denied_by": user_email,
+                    "denied_by_name": user_name,
+                    "denied_at": created_at,
+                    "emoji": emoji,
+                },
+            }
+
+        # Ignore other emoji reactions
+        logger.debug(
+            f"Reaction {emoji} on {comment_id} not an approval/denial, ignoring"
+        )
         return {"action": "ignore"}
 
     async def _handle_comment_reply(
