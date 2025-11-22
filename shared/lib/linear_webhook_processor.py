@@ -93,6 +93,15 @@ class LinearWebhookProcessor:
         action = event.get("action")
         data = event.get("data")
 
+        # DEBUG: Log full webhook payload structure
+        import json
+
+        logger.info(f"🔍 WEBHOOK RECEIVED: {event_type}.{action}")
+        logger.info(f"🔍 Data keys: {list(data.keys()) if data else 'None'}")
+        logger.info(
+            f"🔍 Full payload (first 2000 chars): {json.dumps(event, indent=2, default=str)[:2000]}"
+        )
+
         logger.debug(f"Processing webhook event: {event_type}.{action}")
 
         # Handle Reaction events (emoji reactions on comments)
