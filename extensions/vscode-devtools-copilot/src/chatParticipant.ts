@@ -50,6 +50,28 @@ export class DevToolsChatParticipant {
 
             this.lastTaskId = response.task_id;
 
+            // Check if approval is required
+            if (response.routing_plan?.status === 'approval_pending') {
+                stream.markdown('\n⚠️ **Approval Required**\n\n');
+                stream.markdown(`Risk Level: ${response.routing_plan.risk_level}\n\n`);
+                stream.markdown(`Approval ID: ${response.routing_plan.approval_request_id}\n\n`);
+                stream.markdown('This task requires approval before execution. Approve in Linear or use:\n');
+                stream.markdown(`\`@devtools /approve ${response.task_id} ${response.routing_plan.approval_request_id}\`\n`);
+                return { metadata: { taskId: response.task_id, requiresApproval: true } };
+            }
+
+            // Execute the workflow automatically (Agent mode)
+            stream.progress('Executing workflow...');
+            try {
+                await this.client.execute(response.task_id);
+                stream.markdown('\n✅ **Workflow execution started!**\n\n');
+                stream.markdown(`Monitor progress: \`@devtools /status ${response.task_id}\`\n\n`);
+            } catch (executeError: any) {
+                stream.markdown('\n⚠️ **Task planned but execution failed to start**\n\n');
+                stream.markdown(`Error: ${executeError.message}\n\n`);
+                stream.markdown(`You can manually execute with: POST /execute/${response.task_id}\n\n`);
+            }
+
             // Stream response
             return await this.renderTaskResponse(response, stream);
 
