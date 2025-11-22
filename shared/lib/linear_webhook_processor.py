@@ -52,7 +52,12 @@ class LinearWebhookProcessor:
 
         is_valid = hmac.compare_digest(signature, expected_signature)
         if not is_valid:
-            logger.warning("Invalid webhook signature")
+            logger.warning(
+                f"Invalid webhook signature - "
+                f"Received: {signature[:20]}... "
+                f"Expected: {expected_signature[:20]}... "
+                f"Using secret: {self.signing_secret[:15]}..."
+            )
 
         return is_valid
 
