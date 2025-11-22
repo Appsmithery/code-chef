@@ -19,6 +19,8 @@ from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
 from urllib.parse import quote
 
+from lib.linear_config import get_linear_config, LinearConfig
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,17 +36,24 @@ class LinearWorkspaceClient:
     Security: Only the orchestrator should instantiate this.
     """
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(
+        self, api_key: Optional[str] = None, config: Optional[LinearConfig] = None
+    ):
         """
         Initialize workspace-level Linear client.
 
         Args:
-            api_key: Linear OAuth token with workspace scope
+            api_key: Linear OAuth token with workspace scope (optional, loaded from config)
+            config: LinearConfig instance (optional, auto-loaded if not provided)
         """
-        self.api_key = api_key or os.getenv("LINEAR_API_KEY")
+        # Load configuration
+        self.config = config or get_linear_config()
+
+        # Use provided API key or load from config
+        self.api_key = api_key or self.config.api_key
 
         if not self.api_key:
-            raise ValueError("LINEAR_API_KEY not configured")
+            raise ValueError("LINEAR_API_KEY not configured in .env")
 
         # Initialize GraphQL client
         transport = RequestsHTTPTransport(
@@ -95,11 +104,11 @@ class LinearWorkspaceClient:
         Returns:
             Comment ID if successful
         """
-        # Get approval hub issue identifier from config (e.g., "DEV-68")
-        hub_issue_identifier = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
+        # Get approval hub issue identifier from config
+        hub_issue_identifier = self.config.approval_hub.issue_id
 
         if not hub_issue_identifier:
-            logger.error("LINEAR_APPROVAL_HUB_ISSUE_ID not configured")
+            logger.error("approval_hub.issue_id not configured")
             raise ValueError("Approval hub not configured")
 
         # Resolve identifier to UUID
@@ -420,7 +429,7 @@ class LinearWorkspaceClient:
             Created sub-issue with id, identifier, url
         """
         # Get parent approval hub issue
-        hub_identifier = os.getenv("LINEAR_APPROVAL_HUB_ISSUE_ID", "DEV-68")
+        hub_identifier = self.config.approval_hub.issue_id
 
         # Resolve parent issue ID from identifier
         parent_issue = await self.get_issue_by_identifier(hub_identifier)
@@ -429,24 +438,8 @@ class LinearWorkspaceClient:
 
         parent_id = parent_issue["id"]
 
-        # Select HITL template based on agent
-        agent_upper = agent_name.upper().replace("-", "_")
-        template_env_var = f"HITL_{agent_upper}_TEMPLATE_UUID"
-        template_id = os.getenv(template_env_var)
-
-        if not template_id:
-            # Fallback to generic orchestrator template
-            template_id = os.getenv("HITL_ORCHESTRATOR_TEMPLATE_UUID")
-            logger.warning(
-                f"HITL template not found for {agent_name} ({template_env_var}), "
-                f"using orchestrator template"
-            )
-
-        if not template_id:
-            raise ValueError(
-                f"HITL approval template not configured. "
-                f"Set {template_env_var} or HITL_ORCHESTRATOR_TEMPLATE_UUID in .env"
-            )
+        # Select HITL template based on agent (with fallback to orchestrator)
+        template_id = self.config.get_template_uuid(agent_name, scope="workspace")
 
         # Prepare template variables
         template_vars = {
@@ -470,54 +463,30 @@ class LinearWorkspaceClient:
         risk_emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🟢"}
         title = f"{risk_emoji.get(risk_level, '⚪')} [{risk_level.upper()}] HITL Approval: {task_description[:50]}"
 
-        # Map risk levels to Linear priorities (1=urgent, 2=high, 3=medium, 4=low)
-        priority_map = {
-            "critical": 1,  # Urgent
-            "high": 1,  # Urgent
-            "medium": 2,  # High
-            "low": 3,  # Medium
-        }
+        # Get approval policy for risk level (includes priority and required actions)
+        policy = self.config.get_approval_policy(risk_level)
 
         # Get label IDs for HITL and agent
         label_ids = [
-            os.getenv(
-                "LINEAR_HITL_LABEL_ID", "f6157a00-f2d8-4417-a927-ba832733da90"
-            ),  # HITL label
-            os.getenv(
-                "LINEAR_ORCHESTRATOR_LABEL_ID", "0bc7a4c8-ece0-4778-9f21-eac54a7c469b"
-            ),  # orchestrator label
+            self.config.labels.hitl,
+            self.config.labels.orchestrator,
         ]
 
         # Create sub-issue from template (inherit parent's team)
         team_id = parent_issue.get("team", {}).get("id")
-        assignee_id = os.getenv(
-            "LINEAR_DEFAULT_ASSIGNEE_ID", "12b01869-730b-4898-9ca3-88c463764071"
-        )  # alex@appsmithery.co
+        assignee_id = self.config.default_assignee.id
 
         # Prepare custom fields for approval template
-        # Request Status: Set to "Approved" by default (user can change)
-        # Required Action: Pre-check "Review proposed changes" and "Verify risks"
+        # Request Status: Leave empty (user input required)
+        # Required Action: Pre-check actions based on risk level from policy
         custom_fields = {}
 
-        # Request Status dropdown field
-        request_status_field_id = os.getenv("LINEAR_FIELD_REQUEST_STATUS_ID")
-        if request_status_field_id:
-            # Default to "Approved" for low/medium risk, empty for high/critical
-            if risk_level in ["low", "medium"]:
-                custom_fields[request_status_field_id] = os.getenv(
-                    "LINEAR_REQUEST_STATUS_APPROVED", "approved"
-                )
+        # Request Status dropdown field - leave empty for user to fill
+        # (no default value for high-stakes decisions)
 
-        # Required Action checkboxes field
-        required_action_field_id = os.getenv("LINEAR_FIELD_REQUIRED_ACTION_ID")
-        if required_action_field_id:
-            # Auto-check based on risk level
-            actions = ["review_proposed_changes"]  # Always check this
-            if risk_level in ["high", "critical"]:
-                actions.extend(
-                    ["verify_risks_are_acceptable", "check_implementation_approach"]
-                )
-            custom_fields[required_action_field_id] = actions
+        # Required Action checkboxes field - use policy's required actions
+        required_action_field_id = self.config.get_custom_field_id("required_action")
+        custom_fields[required_action_field_id] = policy.required_actions
 
         return await self.create_issue_from_template(
             template_id=template_id,
@@ -527,7 +496,7 @@ class LinearWorkspaceClient:
             team_id=team_id,
             assignee_id=assignee_id,
             label_ids=label_ids,
-            priority=priority_map.get(risk_level, 2),
+            priority=policy.priority,
             custom_fields=custom_fields,
         )
 
@@ -683,10 +652,10 @@ class LinearWorkspaceClient:
         )
 
         try:
-            # Get team ID
-            team_id = os.getenv("LINEAR_TEAM_ID")
+            # Get team ID from config
+            team_id = self.config.workspace.team_id
             if not team_id:
-                raise ValueError("LINEAR_TEAM_ID not configured")
+                raise ValueError("workspace.team_id not configured")
 
             # Fetch workflow states
             result = self.client.execute(query, variable_values={"teamId": team_id})

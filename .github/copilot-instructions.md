@@ -83,7 +83,14 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
 
 ## Configuration sources
 
-- **Environment**: `config/env/.env` contains all production credentials (LangSmith API key, Gradient model access key, Linear OAuth, DO PAT, database creds). Copy from `config/env/.env.template` and populate secrets.
+- **Environment**: `config/env/.env` contains secrets only (API keys, OAuth tokens, webhook secrets). Copy from `config/env/.env.template` and populate secrets. Structural config moved to YAML files (see Linear config below).
+- **Linear Configuration** (Multi-Layer Strategy - November 2025):
+  - **Structural Config**: `config/linear/linear-config.yaml` (UUIDs, field IDs, labels, templates, policies) - version controlled
+  - **Secrets**: `config/env/.env` (LINEAR_API_KEY, OAuth tokens, webhook secrets) - gitignored
+  - **Loader**: `shared/lib/linear_config.py` provides type-safe config access with Pydantic validation
+  - **Usage**: `from lib.linear_config import get_linear_config; config = get_linear_config()`
+  - **Benefits**: 50% .env reduction, version-controlled structure, type safety, multi-environment ready
+  - **See**: `support/docs/LINEAR_CONFIG_MIGRATION.md` for complete guide
 - **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `support/scripts/setup_secrets.sh` to create.
 - **Agent Models**: Per-agent Gradient model configured in `deploy/docker-compose.yml` via `GRADIENT_MODEL` env var; models optimized for task complexity and cost.
 - **Task Routing**: Rules in `config/routing/task-router.rules.yaml` (if used); orchestrator uses LLM-powered decomposition when `gradient_client.is_enabled()`.
