@@ -240,9 +240,11 @@ class LinearWebhookProcessor:
         comment_id = comment.get("id")
         comment_body = comment.get("body", "")
         comment_url = comment.get("url")
+        # Issue ID is directly in comment object, not nested
+        issue_id = comment.get("issueId")
+        # Issue object (with identifier) may be nested
         issue = comment.get("issue", {})
-        issue_id = issue.get("id")
-        issue_identifier = issue.get("identifier")
+        issue_identifier = issue.get("identifier") if issue else None
         user = reaction_data.get("user", {})
         user_email = user.get("email")
         user_name = user.get("displayName")
