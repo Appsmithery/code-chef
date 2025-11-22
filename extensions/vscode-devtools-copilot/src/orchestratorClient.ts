@@ -70,6 +70,11 @@ export class OrchestratorClient {
         return response.data;
     }
 
+    async execute(taskId: string): Promise<any> {
+        const response = await this.client.post(`/execute/${taskId}`);
+        return response.data;
+    }
+
     async checkStatus(taskId: string): Promise<TaskStatus> {
         const response = await this.client.get(`/tasks/${taskId}`);
         return response.data;
