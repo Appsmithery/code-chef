@@ -22,6 +22,8 @@ services:
       - EVENT_BUS_URL=redis://redis:6379
       - HITL_POLICIES_PATH=/app/config/hitl/approval-policies.yaml
       - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+      - LINEAR_OAUTH_DEV_TOKEN_FILE=/run/secrets/linear_oauth_token
+      - LINEAR_WEBHOOK_SIGNING_SECRET_FILE=/run/secrets/linear_webhook_secret
     env_file:
       - ../config/env/.env
     networks:
