@@ -42,6 +42,8 @@ services:
       - ../shared:/app/shared:ro
     secrets:
       - db_password
+      - linear_oauth_token
+      - linear_webhook_secret
     restart: unless-stopped
     deploy:
       resources:
