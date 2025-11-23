@@ -45,18 +45,33 @@ class ContextExtractor {
                 workspace_name: 'unknown',
                 workspace_path: null,
                 git_branch: null,
+                github_repo_url: null,
+                github_commit_sha: null,
+                linear_project_id: null,
                 open_files: [],
                 project_type: 'unknown',
                 active_editor: null
             };
         }
+        const workspacePath = workspace.uri.fsPath;
+        const gitBranch = await this.getGitBranch(workspacePath);
+        const gitRemote = await this.getGitRemote(workspacePath);
+        const githubRepoUrl = this.parseGitHubUrl(gitRemote);
+        const commitSha = await this.getCommitSha(workspacePath, gitBranch);
+        const linearProjectId = this.getLinearProjectId();
         return {
             workspace_name: workspace.name,
-            workspace_path: workspace.uri.fsPath,
-            git_branch: await this.getGitBranch(workspace.uri.fsPath),
-            git_remote: await this.getGitRemote(workspace.uri.fsPath),
+            workspace_path: workspacePath,
+            git_branch: gitBranch,
+            git_remote: gitRemote,
+            // GitHub context
+            github_repo_url: githubRepoUrl,
+            github_commit_sha: commitSha,
+            // Linear context (may be null for new projects)
+            linear_project_id: linearProjectId,
+            // Existing fields
             open_files: this.getOpenFiles(),
-            project_type: await this.detectProjectType(workspace.uri.fsPath),
+            project_type: await this.detectProjectType(workspacePath),
             active_editor: this.getActiveEditorContext(),
             languages: this.getWorkspaceLanguages()
         };
@@ -137,6 +152,70 @@ class ContextExtractor {
             }
         }
         return Array.from(languages).slice(0, 10); // Top 10 languages
+    }
+    /**
+     * Parse GitHub URL from git remote
+     * Handles both SSH and HTTPS formats
+     */
+    parseGitHubUrl(gitRemote) {
+        if (!gitRemote)
+            return null;
+        // SSH: git@github.com:owner/repo.git
+        const sshMatch = gitRemote.match(/git@github\.com:([^\/]+\/[^\.]+)\.git/);
+        if (sshMatch) {
+            return `https://github.com/${sshMatch[1]}`;
+        }
+        // HTTPS: https://github.com/owner/repo.git
+        const httpsMatch = gitRemote.match(/https:\/\/github\.com\/([^\/]+\/[^\.]+)\.git/);
+        if (httpsMatch) {
+            return `https://github.com/${httpsMatch[1]}`;
+        }
+        // Already clean HTTPS URL
+        const cleanMatch = gitRemote.match(/https:\/\/github\.com\/([^\/]+\/[^\/]+)/);
+        if (cleanMatch) {
+            return `https://github.com/${cleanMatch[1]}`;
+        }
+        return null;
+    }
+    /**
+     * Get current commit SHA from git
+     * Reads directly from .git/refs/heads/<branch>
+     */
+    async getCommitSha(workspacePath, branch) {
+        if (!branch)
+            return null;
+        try {
+            const refPath = path.join(workspacePath, '.git', 'refs', 'heads', branch);
+            const sha = await fs.readFile(refPath, 'utf-8');
+            return sha.trim();
+        }
+        catch {
+            // Try packed-refs fallback
+            try {
+                const packedRefsPath = path.join(workspacePath, '.git', 'packed-refs');
+                const content = await fs.readFile(packedRefsPath, 'utf-8');
+                const match = content.match(new RegExp(`^([a-f0-9]{40}) refs/heads/${branch}$`, 'm'));
+                return match ? match[1] : null;
+            }
+            catch {
+                return null;
+            }
+        }
+    }
+    /**
+     * Get Linear project ID from workspace settings (if exists)
+     */
+    getLinearProjectId() {
+        const config = vscode.workspace.getConfiguration('devtools.linear');
+        return config.get('projectId') || null;
+    }
+    /**
+     * Save Linear project ID to workspace settings
+     * Called after orchestrator creates new project
+     */
+    async saveLinearProjectId(projectId) {
+        const config = vscode.workspace.getConfiguration('devtools.linear');
+        await config.update('projectId', projectId, vscode.ConfigurationTarget.Workspace);
     }
 }
 exports.ContextExtractor = ContextExtractor;

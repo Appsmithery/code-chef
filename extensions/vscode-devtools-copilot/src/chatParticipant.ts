@@ -50,6 +50,15 @@ export class DevToolsChatParticipant {
 
             this.lastTaskId = response.task_id;
 
+            // Cache Linear project ID if returned (for new projects)
+            if (response.linear_project?.id && !workspaceContext.linear_project_id) {
+                await this.contextExtractor.saveLinearProjectId(response.linear_project.id);
+                stream.markdown(`\n✨ Created Linear project: **${response.linear_project.name}**\n`);
+                if (response.linear_project.url) {
+                    stream.markdown(`📋 [View in Linear](${response.linear_project.url})\n\n`);
+                }
+            }
+
             // Check if approval is required
             if (response.status === 'approval_pending' || response.approval_request_id) {
                 stream.markdown('\n⚠️ **Approval Required**\n\n');

@@ -40,9 +40,9 @@ exports.deactivate = deactivate;
 const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const chatParticipant_1 = require("./chatParticipant");
+const copyPermalink_1 = require("./commands/copyPermalink");
 const linearWatcher_1 = require("./linearWatcher");
 const orchestratorClient_1 = require("./orchestratorClient");
-const copyPermalink_1 = require("./commands/copyPermalink");
 // Agent icon mapping for UI display (agents are LangGraph nodes, not separate services)
 const AGENT_ICONS = {
     'orchestrator': 'orchestrator.png', // Purple - Coordination

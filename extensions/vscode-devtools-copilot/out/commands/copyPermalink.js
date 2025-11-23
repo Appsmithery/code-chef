@@ -34,8 +34,8 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.registerCopyPermalinkCommand = registerCopyPermalinkCommand;
-const vscode = __importStar(require("vscode"));
 const child_process_1 = require("child_process");
+const vscode = __importStar(require("vscode"));
 /**
  * Register the "Copy GitHub Permalink" command.
  *
