@@ -42,6 +42,7 @@ const vscode = __importStar(require("vscode"));
 const chatParticipant_1 = require("./chatParticipant");
 const linearWatcher_1 = require("./linearWatcher");
 const orchestratorClient_1 = require("./orchestratorClient");
+const copyPermalink_1 = require("./commands/copyPermalink");
 // Agent icon mapping for UI display (agents are LangGraph nodes, not separate services)
 const AGENT_ICONS = {
     'orchestrator': 'orchestrator.png', // Purple - Coordination
@@ -113,6 +114,8 @@ function activate(context) {
             linearWatcher.start(config.get('linearHubIssue', 'DEV-68'), workspaceSlug);
         }
         context.subscriptions.push(linearWatcher);
+        // Register copy permalink command
+        (0, copyPermalink_1.registerCopyPermalinkCommand)(context);
         // Register commands
         context.subscriptions.push(vscode.commands.registerCommand('devtools.orchestrate', async () => {
             const task = await vscode.window.showInputBox({

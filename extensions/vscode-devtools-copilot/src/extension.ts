@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { DevToolsChatParticipant } from './chatParticipant';
+import { registerCopyPermalinkCommand } from './commands/copyPermalink';
 import { LinearWatcher } from './linearWatcher';
 import { OrchestratorClient } from './orchestratorClient';
 
@@ -93,6 +94,9 @@ export function activate(context: vscode.ExtensionContext) {
         linearWatcher.start(config.get('linearHubIssue', 'DEV-68'), workspaceSlug);
     }
     context.subscriptions.push(linearWatcher);
+
+    // Register copy permalink command
+    registerCopyPermalinkCommand(context);
 
     // Register commands
     context.subscriptions.push(
