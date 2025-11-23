@@ -31,6 +31,12 @@ export interface TaskResponse {
         tool_validation?: Record<string, any>;
     };
     guardrail_report?: any;
+    workspace_context?: Record<string, any>;
+    linear_project?: {
+        id: string;
+        name: string;
+        url?: string;
+    };
 }
 
 export interface TaskStatus {
