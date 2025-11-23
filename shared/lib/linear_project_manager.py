@@ -98,8 +98,7 @@ class LinearProjectManager:
             project = await self.linear.create_project(
                 name=workspace_name,
                 team_id=self.default_team_id,
-                description=description,
-                state="planned",  # Start in "Planned" state
+                description=description
             )
 
             logger.info(
@@ -128,16 +127,15 @@ class LinearProjectManager:
         """
         try:
             # Use Linear GraphQL to list projects
-            # Filter by team and search name
-            projects = await self.linear.list_projects(
-                team_id=self.default_team_id, query=workspace_name
-            )
+            # list_projects() returns all workspace projects (no filter args)
+            projects = await self.linear.list_projects()
 
-            # Exact match filter
+            # Filter by team and exact name match
             matching = [
                 p
                 for p in projects
                 if p.get("name", "").lower() == workspace_name.lower()
+                # Note: LinearWorkspaceClient doesn't expose team filter, so we get all projects
             ]
 
             return matching
