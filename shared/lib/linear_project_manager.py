@@ -7,7 +7,7 @@ Projects are auto-created based on workspace name and GitHub repo URL.
 
 from typing import Optional, Dict, List
 import logging
-from lib.linear_workspace_client import get_linear_client
+from lib.linear_workspace_client import LinearWorkspaceClient
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +156,7 @@ def get_project_manager() -> LinearProjectManager:
     if _project_manager is None:
         import os
 
-        linear_client = get_linear_client()
+        linear_client = LinearWorkspaceClient()
         team_id = os.getenv("LINEAR_TEAM_ID", "f5b610be-ac34-4983-918b-2c9d00aa9b7a")
         _project_manager = LinearProjectManager(linear_client, team_id)
     return _project_manager
