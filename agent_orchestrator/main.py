@@ -52,6 +52,8 @@ from lib.notifiers import (
     EmailConfig,
 )
 from lib.registry_client import RegistryClient, AgentCapability
+from lib.linear_project_manager import get_project_manager
+from lib.github_permalink_generator import enrich_markdown_with_permalinks_stateless
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -315,6 +317,10 @@ class TaskResponse(BaseModel):
     routing_plan: Dict[str, Any]
     estimated_tokens: int
     guardrail_report: GuardrailReport
+    workspace_context: Optional[Dict[str, Any]] = (
+        None  # Workspace context from extension
+    )
+    linear_project: Optional[Dict[str, str]] = None  # Linear project info for caching
 
 
 # In-memory task registry (in production, this would use State Persistence Layer)
@@ -914,7 +920,10 @@ async def linear_webhook(request: Request):
 @app.post("/orchestrate", response_model=TaskResponse)
 async def orchestrate_task(request: TaskRequest):
     """
-    Main orchestration endpoint with progressive tool disclosure
+    Main orchestration endpoint with progressive tool disclosure and workspace-aware context
+    - Extracts workspace context (GitHub repo, Linear project)
+    - Auto-creates Linear project for new workspaces
+    - Enriches descriptions with GitHub permalinks
     - Analyzes request and decomposes into subtasks
     - Progressively loads only relevant MCP tools (10-30 vs 150+)
     - Validates tool availability before routing
@@ -926,6 +935,63 @@ async def orchestrate_task(request: TaskRequest):
     import uuid
 
     task_id = str(uuid.uuid4())
+
+    # Extract workspace context from request
+    workspace_ctx = request.project_context or {}
+    workspace_name = workspace_ctx.get("workspace_name", "unknown")
+    github_repo_url = workspace_ctx.get("github_repo_url")
+    commit_sha = workspace_ctx.get("github_commit_sha")
+    linear_project_id = workspace_ctx.get("linear_project_id")
+
+    logger.info(
+        f"[Orchestrator] Task {task_id} - Workspace: {workspace_name}, GitHub: {github_repo_url}, Linear: {linear_project_id}"
+    )
+
+    # Get or create Linear project
+    try:
+        project_manager = get_project_manager()
+        project = await project_manager.get_or_create_project(
+            workspace_name=workspace_name,
+            github_repo_url=github_repo_url,
+            project_id=linear_project_id,
+        )
+
+        # Update workspace context with resolved project ID
+        workspace_ctx["linear_project_id"] = project["id"]
+        workspace_ctx["linear_project_name"] = project["name"]
+
+        logger.info(
+            f"[Orchestrator] Using Linear project: {project['name']} ({project['id']})"
+        )
+    except Exception as e:
+        logger.error(
+            f"[Orchestrator] Failed to get/create Linear project: {e}", exc_info=True
+        )
+        # Continue without Linear project
+        project = {"id": "", "name": workspace_name, "url": ""}
+
+    # Enrich description with permalinks (if GitHub context available)
+    original_description = request.description
+    if github_repo_url and commit_sha:
+        try:
+            enriched_description = enrich_markdown_with_permalinks_stateless(
+                request.description, repo_url=github_repo_url, commit_sha=commit_sha
+            )
+            logger.info(
+                f"[Orchestrator] Enriched description with GitHub permalinks for {github_repo_url}"
+            )
+            # Update request with enriched description
+            request.description = enriched_description
+        except Exception as e:
+            logger.warning(
+                f"[Orchestrator] Failed to enrich description with permalinks: {e}"
+            )
+            enriched_description = original_description
+    else:
+        logger.info(
+            "[Orchestrator] No GitHub context available, skipping permalink enrichment"
+        )
+        enriched_description = original_description
 
     guardrail_report = await guardrail_orchestrator.run(
         "orchestrator",
@@ -1127,6 +1193,16 @@ async def execute_orchestration_flow(
         routing_plan=routing_plan,
         estimated_tokens=estimated_tokens,
         guardrail_report=guardrail_report,
+        workspace_context=workspace_ctx,  # Include workspace context for extension
+        linear_project=(
+            {  # Include Linear project info for extension caching
+                "id": project["id"],
+                "name": project["name"],
+                "url": project.get("url", ""),
+            }
+            if project["id"]
+            else None
+        ),
     )
 
     task_registry[task_id] = response

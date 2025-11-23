@@ -2,7 +2,7 @@
   "name": "vscode-devtools-copilot",
   "displayName": "Dev-Tools Multi-Agent Orchestrator",
   "description": "AI-powered task orchestration with LangGraph single-orchestrator architecture, 150+ MCP tools, and LangChain function calling. Submit development tasks via Copilot Chat.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "appsmithery",
   "license": "MIT",
   "repository": {
