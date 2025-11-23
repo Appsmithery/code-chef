@@ -7,6 +7,7 @@ Projects are auto-created based on workspace name and GitHub repo URL.
 
 from typing import Optional, Dict, List
 import logging
+from langsmith import traceable
 from lib.linear_workspace_client import LinearWorkspaceClient
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,7 @@ class LinearProjectManager:
         self.default_team_id = default_team_id
         logger.info(f"Initialized LinearProjectManager with team: {default_team_id}")
 
+    @traceable(name="get_or_create_project", tags=["linear", "project-management"])
     async def get_or_create_project(
         self,
         workspace_name: str,
