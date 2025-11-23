@@ -351,3 +351,93 @@ def extract_file_references(text: str) -> List[FileReference]:
     if _generator is None:
         raise RuntimeError("Call init_permalink_generator() first")
     return _generator.extract_file_references(text)
+
+
+# ============================================================================
+# STATELESS FUNCTIONS (New Workspace-Aware API)
+# ============================================================================
+
+
+def generate_permalink_stateless(
+    repo_url: str,
+    file_path: str,
+    commit_sha: str,
+    line_start: Optional[int] = None,
+    line_end: Optional[int] = None,
+) -> str:
+    """
+    Generate GitHub permalink for any repository (stateless, workspace-aware).
+
+    This is the NEW API for workspace-aware permalink generation.
+    No global state, no git operations - just URL construction.
+
+    Args:
+        repo_url: GitHub repository URL (e.g., "https://github.com/owner/repo")
+        file_path: Relative path from repo root
+        commit_sha: Commit SHA (REQUIRED - from extension)
+        line_start: Starting line number (optional)
+        line_end: Ending line number (optional)
+
+    Returns:
+        GitHub permalink URL
+
+    Example:
+        >>> generate_permalink_stateless(
+        ...     "https://github.com/user/project",
+        ...     "src/main.py",
+        ...     "abc123def456",
+        ...     45,
+        ...     67
+        ... )
+        'https://github.com/user/project/blob/abc123def456/src/main.py#L45-L67'
+    """
+    # Clean repo URL
+    base_url = repo_url.rstrip(".git").rstrip("/")
+
+    # Normalize file path
+    file_path = file_path.lstrip("./").lstrip("/")
+
+    # Build permalink
+    url = f"{base_url}/blob/{commit_sha}/{file_path}"
+
+    # Add line numbers
+    if line_start:
+        url += f"#L{line_start}"
+        if line_end and line_end != line_start:
+            url += f"-L{line_end}"
+
+    logger.debug(f"Generated permalink (stateless): {url}")
+    return url
+
+
+def enrich_markdown_with_permalinks_stateless(
+    markdown_text: str, repo_url: str, commit_sha: str
+) -> str:
+    """
+    Enrich markdown with permalinks for any repository (stateless, workspace-aware).
+
+    This is the NEW API for workspace-aware enrichment.
+    Creates temporary generator for this specific repo.
+
+    Args:
+        markdown_text: Text containing file references
+        repo_url: GitHub repository URL
+        commit_sha: Commit SHA (REQUIRED - from extension)
+
+    Returns:
+        Markdown text with file references converted to links
+
+    Example:
+        >>> enrich_markdown_with_permalinks_stateless(
+        ...     "Review src/main.py lines 45-67",
+        ...     "https://github.com/user/project",
+        ...     "abc123def456"
+        ... )
+        'Review [src/main.py (L45-L67)](https://github.com/user/project/blob/abc123def456/src/main.py#L45-L67)'
+    """
+    # Create temporary generator for this repo
+    generator = GitHubPermalinkGenerator(repo_url, repo_path="/tmp")
+    return generator.enrich_markdown_with_permalinks(markdown_text, commit_sha)
+    if _generator is None:
+        raise RuntimeError("Call init_permalink_generator() first")
+    return _generator.extract_file_references(text)
