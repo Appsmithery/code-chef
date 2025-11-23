@@ -21,6 +21,7 @@ from typing import Optional, List
 from dataclasses import dataclass
 from pathlib import Path
 import logging
+from langsmith import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -410,6 +411,7 @@ def generate_permalink_stateless(
     return url
 
 
+@traceable(name="enrich_markdown_with_permalinks", tags=["github", "permalinks"])
 def enrich_markdown_with_permalinks_stateless(
     markdown_text: str, repo_url: str, commit_sha: str
 ) -> str:

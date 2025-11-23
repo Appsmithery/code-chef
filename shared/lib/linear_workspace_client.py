@@ -18,6 +18,7 @@ from typing import Optional, Dict, Any, List
 from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
 from urllib.parse import quote
+from langsmith import traceable
 
 from lib.linear_config import get_linear_config, LinearConfig
 
@@ -82,6 +83,7 @@ class LinearWorkspaceClient:
         query = gql(query_string)
         return self.client.execute(query, variable_values=variables or {})
 
+    @traceable(name="post_to_approval_hub", tags=["linear", "hitl", "graphql"])
     async def post_to_approval_hub(
         self,
         approval_id: str,
@@ -175,6 +177,7 @@ class LinearWorkspaceClient:
             logger.error(f"Failed to post to approval hub: {e}")
             raise
 
+    @traceable(name="list_projects", tags=["linear", "graphql"])
     async def list_projects(self) -> List[Dict[str, Any]]:
         """
         List all projects in workspace for routing decisions.
@@ -208,6 +211,7 @@ class LinearWorkspaceClient:
             logger.error(f"Failed to list projects: {e}")
             raise
 
+    @traceable(name="create_project", tags=["linear", "graphql", "mutation"])
     async def create_project(
         self, name: str, team_id: str, description: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -500,6 +504,10 @@ class LinearWorkspaceClient:
             custom_fields=custom_fields,
         )
 
+    @traceable(
+        name="create_issue_from_template",
+        tags=["linear", "graphql", "mutation", "template"],
+    )
     async def create_issue_from_template(
         self,
         template_id: str,

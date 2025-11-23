@@ -21,6 +21,7 @@ import logging
 import uuid
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Counter, Histogram
+from langsmith import traceable
 
 from lib.mcp_client import MCPClient, resolve_manifest_path
 from lib.gradient_client import get_gradient_client
@@ -918,6 +919,7 @@ async def linear_webhook(request: Request):
 
 
 @app.post("/orchestrate", response_model=TaskResponse)
+@traceable(name="orchestrate_task", tags=["orchestrator", "workflow", "routing"])
 async def orchestrate_task(request: TaskRequest):
     """
     Main orchestration endpoint with progressive tool disclosure and workspace-aware context
@@ -2405,6 +2407,7 @@ class ChatResponse(BaseModel):
 
 
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
+@traceable(name="chat_endpoint", tags=["chat", "nlp", "conversation"])
 async def chat_endpoint(request: ChatRequest):
     """
     Natural language chat interface for task submission and status queries.
@@ -2798,6 +2801,7 @@ Return JSON array of subtasks with:
 
 
 @app.post("/orchestrate/langgraph", response_model=Dict[str, Any])
+@traceable(name="orchestrate_langgraph", tags=["langgraph", "workflow", "multi-agent"])
 async def orchestrate_langgraph(request: TaskRequest):
     """
     LangGraph multi-agent workflow orchestration (NEW)
