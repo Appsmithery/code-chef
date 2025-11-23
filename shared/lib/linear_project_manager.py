@@ -98,7 +98,7 @@ class LinearProjectManager:
             project = await self.linear.create_project(
                 name=workspace_name,
                 team_id=self.default_team_id,
-                description=description
+                description=description,
             )
 
             logger.info(
