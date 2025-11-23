@@ -1106,11 +1106,12 @@ async def orchestrate_task(request: TaskRequest):
             risk_level,
         )
 
-    return await execute_orchestration_flow(task_id, request, guardrail_report)
+    return await execute_orchestration_flow(task_id, request, guardrail_report, workspace_ctx, project)
 
 
 async def execute_orchestration_flow(
-    task_id: str, request: TaskRequest, guardrail_report: GuardrailReport
+    task_id: str, request: TaskRequest, guardrail_report: GuardrailReport,
+    workspace_ctx: Dict[str, Any], project: Dict[str, str]
 ) -> TaskResponse:
     """Execute decomposition, validation, and persistence once approvals pass."""
 
