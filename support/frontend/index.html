@@ -628,44 +628,61 @@ stateDiagram-v2
               <pre class="mermaid">
 sequenceDiagram
     participant User as 👤 User<br/>(VS Code)
-                participant Orchestrator as 🎯 Orchestrator participant
-                RiskAssessor as ⚠️ Risk Assessor participant HITLManager as 🛡️
-                HITL Manager participant LangGraph as 🔄 LangGraph<br />Workflow
-                participant LinearClient as 📋 Linear Client participant
-                LinearUI as 🖥️ Linear UI<br />(DEV-68 Hub) participant
-                PostgreSQL as 🗄️ PostgreSQL<br />Checkpoints
-                User->>Orchestrator: Submit Task Orchestrator->>RiskAssessor:
-                Assess Risk Level alt Low Risk RiskAssessor-->>Orchestrator:
-                Auto-Approve Orchestrator->>LangGraph: Execute Task else
-                High/Critical Risk RiskAssessor-->>Orchestrator: Requires
-                Approval Orchestrator->>HITLManager: Create Approval Request
-                HITLManager->>PostgreSQL: Store approval_requests
-                PostgreSQL-->>HITLManager: request_id HITLManager->>LangGraph:
-                Set approval_request_id LangGraph->>PostgreSQL: Save Checkpoint
-                LangGraph->>LangGraph: Interrupt at approval_gate
-                HITLManager->>LinearClient: Create Sub-Issue
-                LinearClient->>LinearUI: POST to DEV-68
-                LinearUI-->>LinearClient: Issue Created (PR-XXX)
-                LinearClient-->>User: Notification (< 1s) User->>LinearUI:
-                Review Request User->>LinearUI: Set Request Status<br />(Approved/Denied/More
-                Info) LinearUI->>LinearClient: Webhook Trigger
-                LinearClient->>HITLManager: Update Approval Status
-                HITLManager->>PostgreSQL: UPDATE approval_requests alt Approved
-                HITLManager->>LangGraph: Emit Resume Event
-                LangGraph->>PostgreSQL: Load Checkpoint LangGraph->>LangGraph:
-                Resume from approval_gate LangGraph->>Orchestrator: Continue
-                Execution Orchestrator->>User: Task Completed else Denied
-                HITLManager->>LangGraph: Emit Cancel Event LangGraph->>User:
-                Task Cancelled else More Info Required HITLManager->>User:
-                Request Justification User->>LinearUI: Add Comments
-                LinearUI->>LinearClient: Updated Context
-                LinearClient->>LangGraph: Resume with Context end end note over
-                RiskAssessor,HITLManager: Risk Levels:<br />Low →
-                Auto-approve<br />Medium → Developer approval<br />High → Tech
-                Lead approval<br />Critical → DevOps approval note over
-                LinearUI: Custom Fields:<br />- Request Status (dropdown)<br />-
-                Required Action (checkboxes)<br />- Risk Assessment (text)
-              </div>
+    participant Orchestrator as 🎯 Orchestrator
+    participant RiskAssessor as ⚠️ Risk Assessor
+    participant HITLManager as 🛡️ HITL Manager
+    participant LangGraph as 🔄 LangGraph<br/>Workflow
+    participant LinearClient as 📋 Linear Client
+    participant LinearUI as 🖥️ Linear UI<br/>(DEV-68 Hub)
+    participant PostgreSQL as 🗄️ PostgreSQL<br/>Checkpoints
+
+    User->>Orchestrator: Submit Task
+    Orchestrator->>RiskAssessor: Assess Risk Level
+    
+    alt Low Risk
+        RiskAssessor-->>Orchestrator: Auto-Approve
+        Orchestrator->>LangGraph: Execute Task
+    else High/Critical Risk
+        RiskAssessor-->>Orchestrator: Requires Approval
+        Orchestrator->>HITLManager: Create Approval Request
+        HITLManager->>PostgreSQL: Store approval_requests
+        PostgreSQL-->>HITLManager: request_id
+        
+        HITLManager->>LangGraph: Set approval_request_id
+        LangGraph->>PostgreSQL: Save Checkpoint
+        LangGraph->>LangGraph: Interrupt at approval_gate
+        
+        HITLManager->>LinearClient: Create Sub-Issue
+        LinearClient->>LinearUI: POST to DEV-68
+        LinearUI-->>LinearClient: Issue Created (PR-XXX)
+        LinearClient-->>User: Notification (< 1s)
+        
+        User->>LinearUI: Review Request
+        User->>LinearUI: Set Request Status<br/>(Approved/Denied/More Info)
+        LinearUI->>LinearClient: Webhook Trigger
+        LinearClient->>HITLManager: Update Approval Status
+        HITLManager->>PostgreSQL: UPDATE approval_requests
+        
+        alt Approved
+            HITLManager->>LangGraph: Emit Resume Event
+            LangGraph->>PostgreSQL: Load Checkpoint
+            LangGraph->>LangGraph: Resume from approval_gate
+            LangGraph->>Orchestrator: Continue Execution
+            Orchestrator->>User: Task Completed
+        else Denied
+            HITLManager->>LangGraph: Emit Cancel Event
+            LangGraph->>User: Task Cancelled
+        else More Info Required
+            HITLManager->>User: Request Justification
+            User->>LinearUI: Add Comments
+            LinearUI->>LinearClient: Updated Context
+            LinearClient->>LangGraph: Resume with Context
+        end
+    end
+
+    note over RiskAssessor,HITLManager: Risk Levels:<br/>Low → Auto-approve<br/>Medium → Developer approval<br/>High → Tech Lead approval<br/>Critical → DevOps approval
+    note over LinearUI: Custom Fields:<br/>- Request Status (dropdown)<br/>- Required Action (checkboxes)<br/>- Risk Assessment (text)
+              </pre>
             </div>
 
             <!-- MCP Integration Diagram -->
