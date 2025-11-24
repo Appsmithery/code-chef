@@ -1,9 +1,9 @@
 apiVersion: 1
 
 providers:
-  - name: 'LLM Token Metrics'
+  - name: "LLM Token Metrics"
     orgId: 1
-    folder: 'LLM Metrics'
+    folder: "LLM Metrics"
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30

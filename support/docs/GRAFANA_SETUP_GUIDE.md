@@ -1,9 +1,11 @@
 # Grafana Setup Guide
 
 ## Current Issue
+
 Grafana GitHub OAuth authentication is stuck on "Grafana is loading..." screen.
 
 ## Root Cause
+
 Missing GitHub OAuth application configuration for Grafana authentication.
 
 ---
@@ -33,10 +35,12 @@ If you want GitHub authentication, follow these steps:
 ### Step 1: Create GitHub OAuth App
 
 1. **Go to GitHub Settings:**
+
    - https://github.com/settings/developers
    - Click "OAuth Apps" → "New OAuth App"
 
 2. **Configure OAuth App:**
+
    ```
    Application name: Dev-Tools Grafana
    Homepage URL: http://45.55.173.72:3000
@@ -84,6 +88,7 @@ docker compose logs -f grafana
 ### Prerequisites
 
 The Grafana MCP server requires:
+
 - **Grafana URL**: `http://grafana:3000` (internal) or `http://45.55.173.72:3000` (external)
 - **Grafana API Key**: Generate from Grafana UI (Service Account token)
 
@@ -118,6 +123,7 @@ curl http://45.55.173.72:8000/tools | jq '.[] | select(.name | contains("grafana
 ```
 
 You should see Grafana tools like:
+
 - `grafana_create_dashboard`
 - `grafana_query_prometheus`
 - `grafana_list_datasources`
@@ -168,12 +174,14 @@ Invoke-RestMethod -Uri "$GRAFANA_URL/api/dashboards/db" -Method POST -Headers $h
 ## Verification Checklist
 
 ### ✅ Grafana Service Health
+
 ```bash
 docker compose ps grafana
 curl http://45.55.173.72:3000/api/health
 ```
 
 ### ✅ Prometheus Data Source
+
 ```bash
 # Login to Grafana UI
 # Go to: Configuration → Data Sources
@@ -181,6 +189,7 @@ curl http://45.55.173.72:3000/api/health
 ```
 
 ### ✅ Dashboard Imported
+
 ```bash
 # Login to Grafana UI
 # Go to: Dashboards → LLM Token Metrics & Cost Attribution
@@ -188,6 +197,7 @@ curl http://45.55.173.72:3000/api/health
 ```
 
 ### ✅ Live Metrics Flowing
+
 ```bash
 # Trigger test LLM call to populate metrics
 curl -X POST http://45.55.173.72:8001/orchestrate \
@@ -212,11 +222,13 @@ curl -X POST http://45.55.173.72:8001/orchestrate \
 ### Issue: Dashboard Shows "No Data"
 
 **Possible Causes:**
+
 1. Prometheus not scraping orchestrator metrics
 2. No LLM calls made yet (fresh deployment)
 3. Datasource misconfigured
 
 **Solutions:**
+
 ```bash
 # 1. Check Prometheus targets
 curl http://45.55.173.72:9090/api/v1/targets | jq '.data.activeTargets[] | select(.labels.job=="orchestrator")'
@@ -231,6 +243,7 @@ curl http://45.55.173.72:3000/api/datasources -u admin:devtools_grafana_2024
 ### Issue: MCP Server Can't Connect to Grafana
 
 **Solution:**
+
 1. Generate Grafana API key (Service Account token)
 2. Add to `.env`: `GRAFANA_API_KEY=glsa_...`
 3. Restart gateway: `docker compose restart gateway-mcp`
