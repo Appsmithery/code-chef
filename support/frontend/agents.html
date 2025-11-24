@@ -737,21 +737,71 @@
       </div>
 
       <!-- Architecture Visualizations -->
-      <div style="margin-top: 3rem; padding-top: 2rem; border-top: 3px solid #667eea;">
-        <h2 style="color: #667eea; margin-bottom: 2rem; font-size: 2rem;">🏗️ System Architecture</h2>
-        
+      <div
+        style="
+          margin-top: 3rem;
+          padding-top: 2rem;
+          border-top: 3px solid #667eea;
+        "
+      >
+        <h2 style="color: #667eea; margin-bottom: 2rem; font-size: 2rem">
+          🏗️ System Architecture
+        </h2>
+
         <!-- Tab Navigation -->
-        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-          <button class="diagram-tab active" data-diagram="simplified-arch" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+        <div
+          style="
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+          "
+        >
+          <button
+            class="diagram-tab active"
+            data-diagram="simplified-arch"
+            style="
+              padding: 0.75rem 1.5rem;
+              background: #667eea;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.3s;
+            "
+          >
             System Overview
           </button>
-          <button class="diagram-tab" data-diagram="workflow" style="padding: 0.75rem 1.5rem; background: #f8f9fa; color: #666; border: 2px solid #dee2e6; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+          <button
+            class="diagram-tab"
+            data-diagram="workflow"
+            style="
+              padding: 0.75rem 1.5rem;
+              background: #f8f9fa;
+              color: #666;
+              border: 2px solid #dee2e6;
+              border-radius: 8px;
+              cursor: pointer;
+              font-weight: 600;
+              transition: all 0.3s;
+            "
+          >
             Request Flow
           </button>
         </div>
 
         <!-- Diagram Container -->
-        <div id="diagram-container" style="background: #1e1e2e; padding: 2rem; border-radius: 12px; overflow-x: auto; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);">
+        <div
+          id="diagram-container"
+          style="
+            background: #1e1e2e;
+            padding: 2rem;
+            border-radius: 12px;
+            overflow-x: auto;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          "
+        >
           <!-- Simplified Architecture Diagram -->
           <div class="diagram-content active" id="simplified-arch">
             <pre class="mermaid">
@@ -800,7 +850,7 @@ graph TB
           </div>
 
           <!-- Workflow Diagram -->
-          <div class="diagram-content" id="workflow" style="display: none;">
+          <div class="diagram-content" id="workflow" style="display: none">
             <pre class="mermaid">
 %%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#667eea','primaryTextColor':'#fff','primaryBorderColor':'#764ba2','lineColor':'#a0a0ff','secondaryColor':'#1e1e2e','tertiaryColor':'#2d2d44'}}}%%
 sequenceDiagram
@@ -828,37 +878,37 @@ sequenceDiagram
 
     <!-- Mermaid.js -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ 
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
         startOnLoad: true,
-        theme: 'dark'
+        theme: "dark",
       });
     </script>
 
     <script>
       // Diagram tab switching
-      document.addEventListener('DOMContentLoaded', () => {
-        const tabs = document.querySelectorAll('.diagram-tab');
-        const contents = document.querySelectorAll('.diagram-content');
-        
-        tabs.forEach(tab => {
-          tab.addEventListener('click', () => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const tabs = document.querySelectorAll(".diagram-tab");
+        const contents = document.querySelectorAll(".diagram-content");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
             // Remove active class
-            tabs.forEach(t => {
-              t.style.background = '#f8f9fa';
-              t.style.color = '#666';
-              t.style.border = '2px solid #dee2e6';
+            tabs.forEach((t) => {
+              t.style.background = "#f8f9fa";
+              t.style.color = "#666";
+              t.style.border = "2px solid #dee2e6";
             });
-            contents.forEach(c => c.style.display = 'none');
-            
+            contents.forEach((c) => (c.style.display = "none"));
+
             // Add active class
-            tab.style.background = '#667eea';
-            tab.style.color = 'white';
-            tab.style.border = 'none';
-            
+            tab.style.background = "#667eea";
+            tab.style.color = "white";
+            tab.style.border = "none";
+
             // Show content
-            const diagramId = tab.getAttribute('data-diagram');
-            document.getElementById(diagramId).style.display = 'block';
+            const diagramId = tab.getAttribute("data-diagram");
+            document.getElementById(diagramId).style.display = "block";
           });
         });
       });
