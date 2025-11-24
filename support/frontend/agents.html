@@ -274,68 +274,13 @@
 
           <div class="agent-meta">
             <div class="meta-item">
-              <span class="meta-label">Port</span>
-              <span class="meta-value">8001</span>
-            </div>
-            <div class="meta-item">
               <span class="meta-label">Model</span>
-              <span class="meta-value">llama-3.1-70b-instruct</span>
+              <span class="meta-value">llama3.3-70b-instruct</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Agent Name</span>
-              <span class="meta-value">orchestrator</span>
+              <span class="meta-label">Capabilities</span>
+              <span class="meta-value">Task Routing, Delegation, Coordination</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-label">Base URL</span>
-              <span class="meta-value">http://orchestrator:8001</span>
-            </div>
-          </div>
-
-          <div class="endpoints-section">
-            <h3>API Endpoints</h3>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/health</span>
-              <p class="endpoint-description">
-                Service heartbeat and version check
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/orchestrate</span>
-              <p class="endpoint-description">
-                Submit development request for task decomposition and routing
-                (&lt;500 tokens per routing decision)
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/tasks/{task_id}</span>
-              <p class="endpoint-description">
-                Retrieve task status and subtask progress
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/agents</span>
-              <p class="endpoint-description">
-                List available specialized agents and their endpoints
-              </p>
-            </div>
-          </div>
-
-          <div class="metadata-section">
-            <h4>📊 Traced Metadata</h4>
-            <ul class="metadata-list">
-              <li><code>agent_name</code> - "orchestrator"</li>
-              <li><code>task_id</code> - Workflow task identifier</li>
-              <li>
-                <code>thread_id</code> - Workflow thread for state persistence
-              </li>
-              <li><code>model</code> - "llama-3.1-70b-instruct"</li>
-              <li>Execution timing and performance data</li>
-              <li>Token usage and cost tracking</li>
-            </ul>
           </div>
         </div>
 
@@ -350,75 +295,19 @@
           </div>
 
           <p class="agent-description">
-            Handles feature implementation and code generation. Optimized for
-            application code with minimal context loading (10-50 relevant lines)
-            and incremental generation for 60-70% token savings.
+            Handles feature implementation and code generation. Specializes in creating new features, 
+            writing application code, and implementing business logic across the stack.
           </p>
 
           <div class="agent-meta">
             <div class="meta-item">
-              <span class="meta-label">Port</span>
-              <span class="meta-value">8002</span>
-            </div>
-            <div class="meta-item">
               <span class="meta-label">Model</span>
-              <span class="meta-value">codellama-13b-instruct</span>
+              <span class="meta-value">codellama-13b</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Agent Name</span>
-              <span class="meta-value">feature-dev</span>
+              <span class="meta-label">Capabilities</span>
+              <span class="meta-value">Feature Implementation, Refactoring, Code Generation</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-label">Base URL</span>
-              <span class="meta-value">http://feature-dev:8002</span>
-            </div>
-          </div>
-
-          <div class="endpoints-section">
-            <h3>API Endpoints</h3>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/health</span>
-              <p class="endpoint-description">
-                Service heartbeat and version check
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/implement</span>
-              <p class="endpoint-description">
-                Implement feature with code generation and testing (minimal
-                context, incremental generation)
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/patterns</span>
-              <p class="endpoint-description">
-                Retrieve cached coding patterns for token optimization
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/query-rag</span>
-              <p class="endpoint-description">
-                Query RAG Context Manager for relevant code snippets
-              </p>
-            </div>
-          </div>
-
-          <div class="metadata-section">
-            <h4>📊 Traced Metadata</h4>
-            <ul class="metadata-list">
-              <li><code>agent_name</code> - "feature-dev"</li>
-              <li><code>task_id</code> - Workflow task identifier</li>
-              <li>
-                <code>thread_id</code> - Workflow thread for state persistence
-              </li>
-              <li><code>model</code> - "codellama-13b-instruct"</li>
-              <li><code>context_lines_used</code> - RAG context efficiency</li>
-              <li>Token savings via minimal context loading</li>
-            </ul>
           </div>
         </div>
 
@@ -433,61 +322,19 @@
           </div>
 
           <p class="agent-description">
-            Performs automated code reviews, static analysis, and security
-            scanning. Uses diff-only context with 5-line window for ~60% token
-            reduction.
+            Performs automated code reviews, static analysis, and security scanning. 
+            Ensures code quality, identifies bugs, and enforces best practices across the codebase.
           </p>
 
           <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Port</span>
-              <span class="meta-value">8003</span>
-            </div>
             <div class="meta-item">
               <span class="meta-label">Model</span>
               <span class="meta-value">llama-3.1-70b-instruct</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Agent Name</span>
-              <span class="meta-value">code-review</span>
+              <span class="meta-label">Capabilities</span>
+              <span class="meta-value">Code Review, Quality Analysis, Best Practices</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-label">Base URL</span>
-              <span class="meta-value">http://code-review:8003</span>
-            </div>
-          </div>
-
-          <div class="endpoints-section">
-            <h3>API Endpoints</h3>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/health</span>
-              <p class="endpoint-description">
-                Service heartbeat and version check
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/review</span>
-              <p class="endpoint-description">
-                Review code changes with static analysis and security scanning
-                (diff-only context, ~60% token reduction)
-              </p>
-            </div>
-          </div>
-
-          <div class="metadata-section">
-            <h4>📊 Traced Metadata</h4>
-            <ul class="metadata-list">
-              <li><code>agent_name</code> - "code-review"</li>
-              <li><code>task_id</code> - Workflow task identifier</li>
-              <li>
-                <code>thread_id</code> - Workflow thread for state persistence
-              </li>
-              <li><code>model</code> - "llama-3.1-70b-instruct"</li>
-              <li><code>diff_context_lines</code> - Optimized diff window</li>
-              <li>Token savings via diff-only analysis</li>
-            </ul>
           </div>
         </div>
 
@@ -502,70 +349,19 @@
           </div>
 
           <p class="agent-description">
-            Manages infrastructure as code, Docker, Kubernetes, and Terraform
-            configurations. Template-first generation achieves 70-85% token
-            reduction via parameter customization.
+            Manages infrastructure as code, Docker, Kubernetes, and Terraform configurations. 
+            Handles provisioning, scaling, and deployment infrastructure across cloud providers.
           </p>
 
           <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Port</span>
-              <span class="meta-value">8004</span>
-            </div>
             <div class="meta-item">
               <span class="meta-label">Model</span>
               <span class="meta-value">llama-3.1-8b-instruct</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Agent Name</span>
-              <span class="meta-value">infrastructure</span>
+              <span class="meta-label">Capabilities</span>
+              <span class="meta-value">Infrastructure Provisioning, Docker, Kubernetes</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-label">Base URL</span>
-              <span class="meta-value">http://infrastructure:8004</span>
-            </div>
-          </div>
-
-          <div class="endpoints-section">
-            <h3>API Endpoints</h3>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/health</span>
-              <p class="endpoint-description">
-                Service heartbeat and version check
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/generate</span>
-              <p class="endpoint-description">
-                Generate infrastructure-as-code configurations (70-85% token
-                reduction via template reuse)
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/templates</span>
-              <p class="endpoint-description">
-                List available infrastructure templates
-              </p>
-            </div>
-          </div>
-
-          <div class="metadata-section">
-            <h4>📊 Traced Metadata</h4>
-            <ul class="metadata-list">
-              <li><code>agent_name</code> - "infrastructure"</li>
-              <li><code>task_id</code> - Workflow task identifier</li>
-              <li>
-                <code>thread_id</code> - Workflow thread for state persistence
-              </li>
-              <li><code>model</code> - "llama-3.1-8b-instruct"</li>
-              <li>
-                <code>template_reuse_pct</code> - Template efficiency metric
-              </li>
-              <li>Token savings via template customization</li>
-            </ul>
           </div>
         </div>
 
@@ -580,68 +376,19 @@
           </div>
 
           <p class="agent-description">
-            Manages continuous integration and deployment pipelines. Template
-            library provides 75% token reduction via customization for GitHub
-            Actions, GitLab CI, and Jenkins.
+            Manages continuous integration and deployment pipelines. Creates and maintains 
+            CI/CD workflows for GitHub Actions, GitLab CI, and Jenkins.
           </p>
 
           <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Port</span>
-              <span class="meta-value">8005</span>
-            </div>
             <div class="meta-item">
               <span class="meta-label">Model</span>
               <span class="meta-value">llama-3.1-8b-instruct</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Agent Name</span>
-              <span class="meta-value">cicd</span>
+              <span class="meta-label">Capabilities</span>
+              <span class="meta-value">Pipeline Generation, Deployment Automation</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-label">Base URL</span>
-              <span class="meta-value">http://cicd:8005</span>
-            </div>
-          </div>
-
-          <div class="endpoints-section">
-            <h3>API Endpoints</h3>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/health</span>
-              <p class="endpoint-description">
-                Service heartbeat and version check
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/generate</span>
-              <p class="endpoint-description">
-                Generate CI/CD pipeline configuration (75% token reduction via
-                template library)
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/deploy</span>
-              <p class="endpoint-description">Execute deployment workflow</p>
-            </div>
-          </div>
-
-          <div class="metadata-section">
-            <h4>📊 Traced Metadata</h4>
-            <ul class="metadata-list">
-              <li><code>agent_name</code> - "cicd"</li>
-              <li><code>task_id</code> - Workflow task identifier</li>
-              <li>
-                <code>thread_id</code> - Workflow thread for state persistence
-              </li>
-              <li><code>model</code> - "llama-3.1-8b-instruct"</li>
-              <li>
-                <code>template_reuse_pct</code> - Pipeline template efficiency
-              </li>
-              <li>Token savings via template customization</li>
-            </ul>
           </div>
         </div>
 
@@ -656,69 +403,19 @@
           </div>
 
           <p class="agent-description">
-            Generates and maintains project documentation, READMEs, API docs,
-            and guides. Template-based generation with targeted RAG queries for
-            context.
+            Generates and maintains project documentation, READMEs, API docs, and guides. 
+            Keeps technical documentation up-to-date and accessible for the team.
           </p>
 
           <div class="agent-meta">
             <div class="meta-item">
-              <span class="meta-label">Port</span>
-              <span class="meta-value">8006</span>
-            </div>
-            <div class="meta-item">
               <span class="meta-label">Model</span>
-              <span class="meta-value">mistral-7b-instruct</span>
+              <span class="meta-value">mistral-7b</span>
             </div>
             <div class="meta-item">
-              <span class="meta-label">Agent Name</span>
-              <span class="meta-value">documentation</span>
+              <span class="meta-label">Capabilities</span>
+              <span class="meta-value">Documentation Generation, Technical Writing</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-label">Base URL</span>
-              <span class="meta-value">http://documentation:8006</span>
-            </div>
-          </div>
-
-          <div class="endpoints-section">
-            <h3>API Endpoints</h3>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/health</span>
-              <p class="endpoint-description">
-                Service heartbeat and version check
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-post">POST</span>
-              <span class="endpoint-path">/generate</span>
-              <p class="endpoint-description">
-                Generate documentation artifacts with template-based generation
-              </p>
-            </div>
-            <div class="endpoint">
-              <span class="endpoint-method method-get">GET</span>
-              <span class="endpoint-path">/templates</span>
-              <p class="endpoint-description">
-                List available documentation templates
-              </p>
-            </div>
-          </div>
-
-          <div class="metadata-section">
-            <h4>📊 Traced Metadata</h4>
-            <ul class="metadata-list">
-              <li><code>agent_name</code> - "documentation"</li>
-              <li><code>task_id</code> - Workflow task identifier</li>
-              <li>
-                <code>thread_id</code> - Workflow thread for state persistence
-              </li>
-              <li><code>model</code> - "mistral-7b-instruct"</li>
-              <li>
-                <code>template_used</code> - Documentation template identifier
-              </li>
-              <li>RAG context queries for relevant content</li>
-            </ul>
           </div>
         </div>
       </div>
