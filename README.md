@@ -202,6 +202,46 @@ All agent logic is now implemented as nodes in the LangGraph workflow within the
 - **documentation**: README, API docs, architecture diagrams
 - **orchestrator**: Task routing, agent selection, workflow orchestration
 
+## Model Configuration
+
+**Single Source of Truth:** `config/agents/models.yaml`
+
+All LLM configuration (models, costs, context windows, parameters) is managed via YAML with Pydantic validation. No hardcoded models in Python code.
+
+**Quick Model Switch:**
+```bash
+# Edit YAML
+nano config/agents/models.yaml
+
+# Restart orchestrator (30s)
+docker compose restart orchestrator
+```
+
+**Features:**
+- ✅ **Hot-reload** - No rebuild required for model changes
+- ✅ **Environment overrides** - Use cheaper models in dev, production models in prod
+- ✅ **Automatic cost tracking** - Token costs calculated from YAML config
+- ✅ **Validation** - PowerShell script ensures all agents have valid config
+
+**Example Config:**
+```yaml
+agents:
+  orchestrator:
+    model: llama3.3-70b-instruct
+    cost_per_1m_tokens: 0.60
+    context_window: 128000
+    max_tokens: 2000
+    temperature: 0.7
+
+environments:
+  development:
+    orchestrator:
+      model: llama3-8b-instruct  # 3x cheaper for testing
+      cost_per_1m_tokens: 0.20
+```
+
+**Documentation:** See [LLM Configuration Refactoring Plan](support/docs/guides/implementation/LLM_CONFIG_REFACTORING_PLAN.md) for architecture details and [Observability Guide](support/docs/OBSERVABILITY_GUIDE.md) for token tracking.
+
 ## LangGraph Workflows
 
 All agent workflows are now orchestrated via LangGraph in the orchestrator container. See [support/docs/LANGGRAPH_ARCHITECTURE.md](support/docs/LANGGRAPH_ARCHITECTURE.md) for details.

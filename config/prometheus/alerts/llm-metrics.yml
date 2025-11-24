@@ -1,0 +1,236 @@
+# Prometheus Alert Rules for LLM Token Metrics
+# File: config/prometheus/alerts/llm-metrics.yml
+# Purpose: Monitor token usage, cost anomalies, and performance issues
+
+groups:
+  - name: llm-metrics
+    interval: 30s
+    rules:
+      # ============================================================================
+      # Cost Monitoring Alerts
+      # ============================================================================
+      
+      - alert: HighLLMCostPerAgent
+        expr: rate(llm_cost_usd_total[1h]) * 3600 > 10
+        for: 5m
+        labels:
+          severity: warning
+          component: llm
+          category: cost
+        annotations:
+          summary: "High LLM cost for agent {{ $labels.agent }}"
+          description: |
+            Agent {{ $labels.agent }} is incurring high costs.
+            Current rate: ${{ $value | humanize }}/hour
+            Threshold: $10/hour
+            
+            Possible causes:
+            - High request volume
+            - Large context windows
+            - Expensive model (70b vs 8b)
+            
+            Actions:
+            - Review agent usage patterns
+            - Consider switching to cheaper model in config/agents/models.yaml
+            - Check for infinite loops or retry storms
+          dashboard: "http://grafana:3000/d/llm-token-metrics"
+          runbook: "https://docs/runbooks/high-llm-cost"
+      
+      - alert: TotalDailyCostExceeded
+        expr: sum(increase(llm_cost_usd_total[24h])) > 50
+        for: 10m
+        labels:
+          severity: critical
+          component: llm
+          category: cost
+        annotations:
+          summary: "Total daily LLM cost exceeded budget"
+          description: |
+            Total LLM cost has exceeded $50 in the last 24 hours.
+            Current total: ${{ $value | humanize }}
+            
+            This requires immediate attention to prevent runaway costs.
+            
+            Actions:
+            - Review per-agent breakdown in Grafana
+            - Check /metrics/tokens endpoint for details
+            - Consider emergency rate limiting
+          dashboard: "http://grafana:3000/d/llm-token-metrics"
+      
+      # ============================================================================
+      # Token Usage Anomaly Detection
+      # ============================================================================
+      
+      - alert: TokenAnomalyDetected
+        expr: |
+          (
+            rate(llm_tokens_total[5m])
+            /
+            avg_over_time(rate(llm_tokens_total[5m])[1h:5m])
+          ) > 3
+        for: 5m
+        labels:
+          severity: warning
+          component: llm
+          category: anomaly
+        annotations:
+          summary: "Token usage anomaly for agent {{ $labels.agent }}"
+          description: |
+            Agent {{ $labels.agent }} token usage is {{ $value | humanize }}x higher than average.
+            
+            Current rate: {{ $value | humanize }}x normal
+            Threshold: 3x normal
+            
+            Possible causes:
+            - Sudden traffic spike
+            - Prompt expansion (verbose system messages)
+            - Retry loop
+            - Large batch processing
+            
+            Actions:
+            - Check LangSmith traces for large prompts
+            - Review recent code changes
+            - Verify rate limiting is working
+          dashboard: "http://grafana:3000/d/llm-token-metrics"
+      
+      - alert: TokensPerCallTooHigh
+        expr: |
+          (
+            sum by (agent) (increase(llm_tokens_total[1h]))
+            /
+            sum by (agent) (increase(llm_calls_total[1h]))
+          ) > 4000
+        for: 10m
+        labels:
+          severity: info
+          component: llm
+          category: efficiency
+        annotations:
+          summary: "High avg tokens/call for agent {{ $labels.agent }}"
+          description: |
+            Agent {{ $labels.agent }} is using {{ $value | humanize }} tokens per call on average.
+            Threshold: 4000 tokens/call
+            
+            This may indicate:
+            - Verbose system prompts
+            - Large context windows
+            - Inefficient prompt engineering
+            
+            Actions:
+            - Review prompt templates
+            - Consider prompt compression
+            - Check if RAG context is too large
+          dashboard: "http://grafana:3000/d/llm-token-metrics"
+      
+      # ============================================================================
+      # Latency Monitoring
+      # ============================================================================
+      
+      - alert: LLMLatencyHigh
+        expr: histogram_quantile(0.99, rate(llm_latency_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: llm
+          category: performance
+        annotations:
+          summary: "High LLM latency for agent {{ $labels.agent }}"
+          description: |
+            Agent {{ $labels.agent }} P99 latency is {{ $value | humanize }}s.
+            Threshold: 5s
+            
+            Possible causes:
+            - Gradient AI API slow response
+            - Large completion tokens
+            - Network issues
+            - Model inference backlog
+            
+            Actions:
+            - Check Gradient AI status
+            - Review max_tokens setting in config/agents/models.yaml
+            - Consider timeout adjustments
+          dashboard: "http://grafana:3000/d/llm-token-metrics"
+      
+      - alert: LLMLatencyP95Degraded
+        expr: |
+          (
+            histogram_quantile(0.95, rate(llm_latency_seconds_bucket[5m]))
+            /
+            histogram_quantile(0.95, rate(llm_latency_seconds_bucket[5m]) offset 1h)
+          ) > 2
+        for: 10m
+        labels:
+          severity: info
+          component: llm
+          category: performance
+        annotations:
+          summary: "LLM latency degraded for agent {{ $labels.agent }}"
+          description: |
+            Agent {{ $labels.agent }} P95 latency is {{ $value | humanize }}x slower than 1 hour ago.
+            
+            This suggests performance degradation over time.
+            
+            Actions:
+            - Check Gradient AI service health
+            - Review recent deployments
+            - Monitor for continued degradation
+          dashboard: "http://grafana:3000/d/llm-token-metrics"
+      
+      # ============================================================================
+      # Availability Monitoring
+      # ============================================================================
+      
+      - alert: LLMNoRecentCalls
+        expr: rate(llm_calls_total[5m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+          component: llm
+          category: availability
+        annotations:
+          summary: "No LLM calls for agent {{ $labels.agent }}"
+          description: |
+            Agent {{ $labels.agent }} has not made any LLM calls in the last 15 minutes.
+            
+            Possible causes:
+            - Agent service down
+            - Gradient API key expired
+            - Network connectivity issues
+            - No incoming requests
+            
+            Actions:
+            - Check /health endpoint
+            - Verify GRADIENT_MODEL_ACCESS_KEY environment variable
+            - Check agent logs
+          dashboard: "http://grafana:3000/d/llm-token-metrics"
+      
+      # ============================================================================
+      # Recording Rules (for efficient dashboard queries)
+      # ============================================================================
+      
+      - record: llm:tokens_per_call:rate1h
+        expr: |
+          sum by (agent) (rate(llm_tokens_total[1h]))
+          /
+          sum by (agent) (rate(llm_calls_total[1h]))
+      
+      - record: llm:cost_per_call:rate1h
+        expr: |
+          sum by (agent) (rate(llm_cost_usd_total[1h]))
+          /
+          sum by (agent) (rate(llm_calls_total[1h]))
+      
+      - record: llm:latency_p50:rate5m
+        expr: histogram_quantile(0.50, rate(llm_latency_seconds_bucket[5m]))
+      
+      - record: llm:latency_p95:rate5m
+        expr: histogram_quantile(0.95, rate(llm_latency_seconds_bucket[5m]))
+      
+      - record: llm:latency_p99:rate5m
+        expr: histogram_quantile(0.99, rate(llm_latency_seconds_bucket[5m]))
+      
+      - record: llm:total_cost:increase24h
+        expr: sum(increase(llm_cost_usd_total[24h]))
+      
+      - record: llm:total_tokens:increase24h
+        expr: sum(increase(llm_tokens_total[24h]))
