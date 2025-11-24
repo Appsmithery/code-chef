@@ -26,7 +26,10 @@ from datetime import datetime, timedelta
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 
-from lib.agent_config_schema import ModelsConfig, AgentConfig
+try:
+    from lib.agent_config_schema import ModelsConfig, AgentConfig
+except ModuleNotFoundError:
+    from agent_config_schema import ModelsConfig, AgentConfig
 
 
 logger = logging.getLogger(__name__)

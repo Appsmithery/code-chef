@@ -18,8 +18,11 @@ from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
+import time
 
 from lib.langchain_gradient import get_llm
+from lib.token_tracker import token_tracker
+from lib.config_loader import get_config_loader
 
 logger = logging.getLogger(__name__)
 
@@ -109,9 +112,20 @@ class GradientClient:
             messages.append(SystemMessage(content=system_prompt))
         messages.append(HumanMessage(content=prompt))
 
+        start_time = time.time()
         response = await llm.ainvoke(messages)
+        latency = time.time() - start_time
+        
         content = _coerce_text(response.content)
         usage = self._usage_from_response(response)
+
+        # Track token usage and cost
+        self._track_tokens(
+            prompt_tokens=usage["prompt_tokens"],
+            completion_tokens=usage["completion_tokens"],
+            latency_seconds=latency,
+            model=llm.model_name
+        )
 
         return {
             "content": content,
@@ -143,7 +157,11 @@ class GradientClient:
         combined_system += format_instructions
 
         messages = [SystemMessage(content=combined_system), HumanMessage(content=prompt)]
+        
+        start_time = time.time()
         response = await llm.ainvoke(messages)
+        latency = time.time() - start_time
+        
         raw_content = _strip_code_fences(_coerce_text(response.content))
 
         try:
@@ -161,6 +179,15 @@ class GradientClient:
                 raise
 
         usage = self._usage_from_response(response)
+        
+        # Track token usage and cost
+        self._track_tokens(
+            prompt_tokens=usage["prompt_tokens"],
+            completion_tokens=usage["completion_tokens"],
+            latency_seconds=latency,
+            model=llm.model_name
+        )
+        
         result = {
             "content": parsed,
             "raw_content": raw_content,
@@ -173,6 +200,37 @@ class GradientClient:
         )
         return result
 
+    def _track_tokens(
+        self,
+        prompt_tokens: int,
+        completion_tokens: int,
+        latency_seconds: float,
+        model: str
+    ):
+        """Calculate cost and track token usage."""
+        try:
+            # Get cost per 1M tokens from YAML config
+            config_loader = get_config_loader()
+            agent_config = config_loader.get_agent_config(self.agent_name)
+            cost_per_1m = agent_config.cost_per_1m_tokens
+            
+            # Calculate cost for this call
+            total_tokens = prompt_tokens + completion_tokens
+            cost = (total_tokens / 1_000_000) * cost_per_1m
+            
+            # Track via TokenTracker
+            token_tracker.track(
+                agent_name=self.agent_name,
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                cost=cost,
+                latency_seconds=latency_seconds,
+                model=model
+            )
+        except Exception as e:
+            # Don't fail requests if tracking fails
+            logger.warning(f"[{self.agent_name}] Token tracking failed: {e}")
+    
     def is_enabled(self) -> bool:
         return self._enabled
 
