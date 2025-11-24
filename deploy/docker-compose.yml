@@ -386,8 +386,49 @@ services:
         tag: "{{.Name}}"
 
   # ============================================================================
-  # LOG AGGREGATION (Loki + Promtail)
+  # OBSERVABILITY STACK (Grafana + Loki + Promtail)
   # ============================================================================
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_AUTH_GITHUB_ENABLED=${GRAFANA_GITHUB_AUTH_ENABLED:-false}
+      - GF_AUTH_GITHUB_CLIENT_ID=${GRAFANA_GITHUB_CLIENT_ID:-}
+      - GF_AUTH_GITHUB_CLIENT_SECRET=${GRAFANA_GITHUB_CLIENT_SECRET:-}
+      - GF_AUTH_GITHUB_SCOPES=user:email,read:org
+      - GF_AUTH_GITHUB_AUTH_URL=https://github.com/login/oauth/authorize
+      - GF_AUTH_GITHUB_TOKEN_URL=https://github.com/login/oauth/access_token
+      - GF_AUTH_GITHUB_API_URL=https://api.github.com/user
+      - GF_AUTH_GITHUB_ALLOW_SIGN_UP=true
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ../config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ../config/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - devtools-network
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   loki:
     image: grafana/loki:2.9.3
@@ -436,6 +477,7 @@ volumes:
   postgres-data:
   redis-data:
   prometheus-data:
+  grafana-data:
   caddy-data:
   caddy-config:
   loki-data:
