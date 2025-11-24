@@ -790,6 +790,33 @@ async def readiness_check():
     }
 
 
+@app.get("/metrics/tokens")
+async def get_token_metrics():
+    """
+    Get real-time token usage statistics and cost attribution.
+    
+    Returns aggregated metrics per agent:
+    - Token counts (prompt + completion)
+    - Total cost in USD
+    - Efficiency metrics (avg tokens/call, avg cost/call, avg latency)
+    - Model information
+    
+    Prometheus metrics also available at /metrics endpoint.
+    """
+    from lib.token_tracker import token_tracker
+    
+    summary = token_tracker.get_summary()
+    
+    return {
+        "per_agent": summary["per_agent"],
+        "totals": summary["totals"],
+        "tracking_since": summary["tracking_since"],
+        "uptime_seconds": summary["uptime_seconds"],
+        "timestamp": datetime.utcnow().isoformat(),
+        "note": "Cost calculated from config/agents/models.yaml (cost_per_1m_tokens). See /metrics for Prometheus format."
+    }
+
+
 # ============================================================================
 # Linear Webhook Endpoint for HITL Approvals (Emoji Reactions)
 # ============================================================================
