@@ -442,294 +442,214 @@
         <h2>🏗️ Architecture Visualizations</h2>
         <div style="margin-top: 1.5rem">
           <!-- Tab Navigation -->
-          <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <button class="diagram-tab active" data-diagram="system-arch">System Architecture</button>
-            <button class="diagram-tab" data-diagram="agent-workflow">Agent Workflow</button>
-            <button class="diagram-tab" data-diagram="hitl-approval">HITL Approval Flow</button>
-            <button class="diagram-tab" data-diagram="mcp-integration">MCP Integration</button>
+          <div
+            style="
+              display: flex;
+              gap: 0.5rem;
+              margin-bottom: 1.5rem;
+              flex-wrap: wrap;
+            "
+          >
+            <button class="diagram-tab active" data-diagram="system-arch">
+              System Architecture
+            </button>
+            <button class="diagram-tab" data-diagram="agent-workflow">
+              Agent Workflow
+            </button>
+            <button class="diagram-tab" data-diagram="hitl-approval">
+              HITL Approval Flow
+            </button>
+            <button class="diagram-tab" data-diagram="mcp-integration">
+              MCP Integration
+            </button>
           </div>
 
           <!-- Diagram Container -->
-          <div id="diagram-container" style="background: white; padding: 2rem; border-radius: 8px; overflow-x: auto;">
+          <div
+            id="diagram-container"
+            style="
+              background: white;
+              padding: 2rem;
+              border-radius: 8px;
+              overflow-x: auto;
+            "
+          >
             <!-- System Architecture Diagram -->
             <div class="diagram-content active" id="system-arch">
-              <h3 style="color: #667eea; margin-bottom: 1rem;">System Architecture</h3>
+              <h3 style="color: #667eea; margin-bottom: 1rem">
+                System Architecture
+              </h3>
               <div class="mermaid">
-graph TB
-    subgraph "Client Layer"
-        VSCode["VS Code<br/>Copilot Extension"]
-        Linear["Linear<br/>Project Management"]
-        GitHub["GitHub<br/>Source Control"]
-    end
-
-    subgraph "Orchestration Layer - Port 8001"
-        Orchestrator["🎯 Orchestrator Service<br/>(FastAPI + LangGraph)<br/>llama3.3-70b-instruct"]
-        Supervisor["👔 Supervisor Agent<br/>(Routing Logic)<br/>llama-3.1-70b"]
-    end
-
-    subgraph "Agent Layer - LangGraph Nodes"
-        FeatureDev["💻 Feature Dev<br/>codellama-13b"]
-        CodeReview["🔍 Code Review<br/>llama-3.1-70b"]
-        Infrastructure["☁️ Infrastructure<br/>llama-3.1-8b"]
-        CICD["🚀 CI/CD<br/>llama-3.1-8b"]
-        Documentation["📝 Documentation<br/>mistral-7b"]
-    end
-
-    subgraph "Tool Layer - Port 8000"
-        MCPGateway["🔌 MCP Gateway<br/>150+ Tools<br/>17 Servers"]
-    end
-
-    subgraph "Support Services"
-        RAG["📚 RAG Context<br/>Port 8007"]
-        State["💾 State Persistence<br/>Port 8008<br/>PostgreSQL"]
-        LangSmith["📊 LangSmith<br/>Tracing"]
-        Gradient["⚡ Gradient AI<br/>LLM Inference"]
-    end
-
-    subgraph "Data Layer"
-        PostgreSQL["🗄️ PostgreSQL<br/>Checkpoints & State"]
-        Qdrant["🔍 Qdrant<br/>Vector Store"]
-    end
-
-    VSCode -->|Task Request| Orchestrator
-    Linear -->|HITL Approvals| Orchestrator
-    GitHub -->|Source Code| Orchestrator
-    
-    Orchestrator -->|Route Task| Supervisor
-    Supervisor -->|Delegate| FeatureDev
-    Supervisor -->|Delegate| CodeReview
-    Supervisor -->|Delegate| Infrastructure
-    Supervisor -->|Delegate| CICD
-    Supervisor -->|Delegate| Documentation
-    
-    FeatureDev -->|Use Tools| MCPGateway
-    CodeReview -->|Use Tools| MCPGateway
-    Infrastructure -->|Use Tools| MCPGateway
-    CICD -->|Use Tools| MCPGateway
-    Documentation -->|Use Tools| MCPGateway
-    
-    Orchestrator -->|Query Context| RAG
-    Orchestrator -->|Save/Load State| State
-    Orchestrator -->|Trace Execution| LangSmith
-    
-    Supervisor -->|LLM Inference| Gradient
-    FeatureDev -->|LLM Inference| Gradient
-    CodeReview -->|LLM Inference| Gradient
-    Infrastructure -->|LLM Inference| Gradient
-    CICD -->|LLM Inference| Gradient
-    Documentation -->|LLM Inference| Gradient
-    
-    State -->|Persist| PostgreSQL
-    RAG -->|Vector Search| Qdrant
-
-    classDef client fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
-    classDef orchestrator fill:#f3e5f5,stroke:#764ba2,stroke-width:3px
-    classDef agent fill:#fff3e0,stroke:#f59e0b,stroke-width:2px
-    classDef service fill:#e8f5e9,stroke:#28a745,stroke-width:2px
-    classDef data fill:#fce4ec,stroke:#e91e63,stroke-width:2px
-    
-    class VSCode,Linear,GitHub client
-    class Orchestrator,Supervisor orchestrator
-    class FeatureDev,CodeReview,Infrastructure,CICD,Documentation agent
-    class MCPGateway,RAG,State,LangSmith,Gradient service
-    class PostgreSQL,Qdrant data
+                graph TB subgraph "Client Layer" VSCode["VS Code<br />Copilot
+                Extension"] Linear["Linear<br />Project Management"]
+                GitHub["GitHub<br />Source Control"] end subgraph "Orchestration
+                Layer - Port 8001" Orchestrator["🎯 Orchestrator Service<br />(FastAPI
+                + LangGraph)<br />llama3.3-70b-instruct"] Supervisor["👔
+                Supervisor Agent<br />(Routing Logic)<br />llama-3.1-70b"] end
+                subgraph "Agent Layer - LangGraph Nodes" FeatureDev["💻 Feature
+                Dev<br />codellama-13b"] CodeReview["🔍 Code Review<br />llama-3.1-70b"]
+                Infrastructure["☁️ Infrastructure<br />llama-3.1-8b"] CICD["🚀
+                CI/CD<br />llama-3.1-8b"] Documentation["📝 Documentation<br />mistral-7b"]
+                end subgraph "Tool Layer - Port 8000" MCPGateway["🔌 MCP
+                Gateway<br />150+ Tools<br />17 Servers"] end subgraph "Support
+                Services" RAG["📚 RAG Context<br />Port 8007"] State["💾 State
+                Persistence<br />Port 8008<br />PostgreSQL"] LangSmith["📊
+                LangSmith<br />Tracing"] Gradient["⚡ Gradient AI<br />LLM
+                Inference"] end subgraph "Data Layer" PostgreSQL["🗄️
+                PostgreSQL<br />Checkpoints & State"] Qdrant["🔍 Qdrant<br />Vector
+                Store"] end VSCode -->|Task Request| Orchestrator Linear
+                -->|HITL Approvals| Orchestrator GitHub -->|Source Code|
+                Orchestrator Orchestrator -->|Route Task| Supervisor Supervisor
+                -->|Delegate| FeatureDev Supervisor -->|Delegate| CodeReview
+                Supervisor -->|Delegate| Infrastructure Supervisor -->|Delegate|
+                CICD Supervisor -->|Delegate| Documentation FeatureDev -->|Use
+                Tools| MCPGateway CodeReview -->|Use Tools| MCPGateway
+                Infrastructure -->|Use Tools| MCPGateway CICD -->|Use Tools|
+                MCPGateway Documentation -->|Use Tools| MCPGateway Orchestrator
+                -->|Query Context| RAG Orchestrator -->|Save/Load State| State
+                Orchestrator -->|Trace Execution| LangSmith Supervisor -->|LLM
+                Inference| Gradient FeatureDev -->|LLM Inference| Gradient
+                CodeReview -->|LLM Inference| Gradient Infrastructure -->|LLM
+                Inference| Gradient CICD -->|LLM Inference| Gradient
+                Documentation -->|LLM Inference| Gradient State -->|Persist|
+                PostgreSQL RAG -->|Vector Search| Qdrant classDef client
+                fill:#e1f5ff,stroke:#0066cc,stroke-width:2px classDef
+                orchestrator fill:#f3e5f5,stroke:#764ba2,stroke-width:3px
+                classDef agent fill:#fff3e0,stroke:#f59e0b,stroke-width:2px
+                classDef service fill:#e8f5e9,stroke:#28a745,stroke-width:2px
+                classDef data fill:#fce4ec,stroke:#e91e63,stroke-width:2px class
+                VSCode,Linear,GitHub client class Orchestrator,Supervisor
+                orchestrator class
+                FeatureDev,CodeReview,Infrastructure,CICD,Documentation agent
+                class MCPGateway,RAG,State,LangSmith,Gradient service class
+                PostgreSQL,Qdrant data
               </div>
             </div>
 
             <!-- Agent Workflow Diagram -->
             <div class="diagram-content" id="agent-workflow">
-              <h3 style="color: #667eea; margin-bottom: 1rem;">Multi-Agent Workflow</h3>
+              <h3 style="color: #667eea; margin-bottom: 1rem">
+                Multi-Agent Workflow
+              </h3>
               <div class="mermaid">
-stateDiagram-v2
-    [*] --> Supervisor: User Task
-    
-    Supervisor --> RiskAssessment: Analyze Task
-    
-    RiskAssessment --> ApprovalNode: High Risk?
-    RiskAssessment --> FeatureDev: Feature Request
-    RiskAssessment --> CodeReview: Code Quality
-    RiskAssessment --> Infrastructure: Cloud/Infra
-    RiskAssessment --> CICD: Deployment
-    RiskAssessment --> Documentation: Docs Update
-    
-    ApprovalNode --> LinearIssue: Create HITL Sub-Issue
-    LinearIssue --> WaitForApproval: DEV-68 Hub
-    WaitForApproval --> CheckApprovalStatus: User Reviews
-    
-    CheckApprovalStatus --> Approved: ✅ Approved
-    CheckApprovalStatus --> Denied: ❌ Denied
-    CheckApprovalStatus --> MoreInfo: ℹ️ More Info
-    
-    Approved --> FeatureDev: Feature Request
-    Approved --> CodeReview: Code Quality
-    Approved --> Infrastructure: Cloud/Infra
-    Approved --> CICD: Deployment
-    Approved --> Documentation: Docs Update
-    
-    Denied --> [*]: Task Cancelled
-    MoreInfo --> WaitForApproval: User Provides Details
-    
-    FeatureDev --> Supervisor: Task Complete
-    CodeReview --> Supervisor: Task Complete
-    Infrastructure --> Supervisor: Task Complete
-    CICD --> Supervisor: Task Complete
-    Documentation --> Supervisor: Task Complete
-    
-    Supervisor --> [*]: All Steps Done
-    Supervisor --> RiskAssessment: Next Subtask
-
-    note right of ApprovalNode
-        LangGraph Checkpoint
-        Workflow Interrupts
-        PostgreSQL State
-    end note
-    
-    note right of LinearIssue
-        Custom Fields:
-        - Request Status
-        - Required Action
-        - Risk Level
-    end note
+                stateDiagram-v2 [*] --> Supervisor: User Task Supervisor -->
+                RiskAssessment: Analyze Task RiskAssessment --> ApprovalNode:
+                High Risk? RiskAssessment --> FeatureDev: Feature Request
+                RiskAssessment --> CodeReview: Code Quality RiskAssessment -->
+                Infrastructure: Cloud/Infra RiskAssessment --> CICD: Deployment
+                RiskAssessment --> Documentation: Docs Update ApprovalNode -->
+                LinearIssue: Create HITL Sub-Issue LinearIssue -->
+                WaitForApproval: DEV-68 Hub WaitForApproval -->
+                CheckApprovalStatus: User Reviews CheckApprovalStatus -->
+                Approved: ✅ Approved CheckApprovalStatus --> Denied: ❌ Denied
+                CheckApprovalStatus --> MoreInfo: ℹ️ More Info Approved -->
+                FeatureDev: Feature Request Approved --> CodeReview: Code
+                Quality Approved --> Infrastructure: Cloud/Infra Approved -->
+                CICD: Deployment Approved --> Documentation: Docs Update Denied
+                --> [*]: Task Cancelled MoreInfo --> WaitForApproval: User
+                Provides Details FeatureDev --> Supervisor: Task Complete
+                CodeReview --> Supervisor: Task Complete Infrastructure -->
+                Supervisor: Task Complete CICD --> Supervisor: Task Complete
+                Documentation --> Supervisor: Task Complete Supervisor --> [*]:
+                All Steps Done Supervisor --> RiskAssessment: Next Subtask note
+                right of ApprovalNode LangGraph Checkpoint Workflow Interrupts
+                PostgreSQL State end note note right of LinearIssue Custom
+                Fields: - Request Status - Required Action - Risk Level end note
               </div>
             </div>
 
             <!-- HITL Approval Flow Diagram -->
             <div class="diagram-content" id="hitl-approval">
-              <h3 style="color: #667eea; margin-bottom: 1rem;">Human-in-the-Loop Approval Flow</h3>
+              <h3 style="color: #667eea; margin-bottom: 1rem">
+                Human-in-the-Loop Approval Flow
+              </h3>
               <div class="mermaid">
-sequenceDiagram
-    participant User as 👤 User<br/>(VS Code)
-    participant Orchestrator as 🎯 Orchestrator
-    participant RiskAssessor as ⚠️ Risk Assessor
-    participant HITLManager as 🛡️ HITL Manager
-    participant LangGraph as 🔄 LangGraph<br/>Workflow
-    participant LinearClient as 📋 Linear Client
-    participant LinearUI as 🖥️ Linear UI<br/>(DEV-68 Hub)
-    participant PostgreSQL as 🗄️ PostgreSQL<br/>Checkpoints
-
-    User->>Orchestrator: Submit Task
-    Orchestrator->>RiskAssessor: Assess Risk Level
-    
-    alt Low Risk
-        RiskAssessor-->>Orchestrator: Auto-Approve
-        Orchestrator->>LangGraph: Execute Task
-    else High/Critical Risk
-        RiskAssessor-->>Orchestrator: Requires Approval
-        Orchestrator->>HITLManager: Create Approval Request
-        HITLManager->>PostgreSQL: Store approval_requests
-        PostgreSQL-->>HITLManager: request_id
-        
-        HITLManager->>LangGraph: Set approval_request_id
-        LangGraph->>PostgreSQL: Save Checkpoint
-        LangGraph->>LangGraph: Interrupt at approval_gate
-        
-        HITLManager->>LinearClient: Create Sub-Issue
-        LinearClient->>LinearUI: POST to DEV-68
-        LinearUI-->>LinearClient: Issue Created (PR-XXX)
-        LinearClient-->>User: Notification (< 1s)
-        
-        User->>LinearUI: Review Request
-        User->>LinearUI: Set Request Status<br/>(Approved/Denied/More Info)
-        LinearUI->>LinearClient: Webhook Trigger
-        LinearClient->>HITLManager: Update Approval Status
-        HITLManager->>PostgreSQL: UPDATE approval_requests
-        
-        alt Approved
-            HITLManager->>LangGraph: Emit Resume Event
-            LangGraph->>PostgreSQL: Load Checkpoint
-            LangGraph->>LangGraph: Resume from approval_gate
-            LangGraph->>Orchestrator: Continue Execution
-            Orchestrator->>User: Task Completed
-        else Denied
-            HITLManager->>LangGraph: Emit Cancel Event
-            LangGraph->>User: Task Cancelled
-        else More Info Required
-            HITLManager->>User: Request Justification
-            User->>LinearUI: Add Comments
-            LinearUI->>LinearClient: Updated Context
-            LinearClient->>LangGraph: Resume with Context
-        end
-    end
-
-    note over RiskAssessor,HITLManager: Risk Levels:<br/>Low → Auto-approve<br/>Medium → Developer approval<br/>High → Tech Lead approval<br/>Critical → DevOps approval
-    note over LinearUI: Custom Fields:<br/>- Request Status (dropdown)<br/>- Required Action (checkboxes)<br/>- Risk Assessment (text)
+                sequenceDiagram participant User as 👤 User<br />(VS Code)
+                participant Orchestrator as 🎯 Orchestrator participant
+                RiskAssessor as ⚠️ Risk Assessor participant HITLManager as 🛡️
+                HITL Manager participant LangGraph as 🔄 LangGraph<br />Workflow
+                participant LinearClient as 📋 Linear Client participant
+                LinearUI as 🖥️ Linear UI<br />(DEV-68 Hub) participant
+                PostgreSQL as 🗄️ PostgreSQL<br />Checkpoints
+                User->>Orchestrator: Submit Task Orchestrator->>RiskAssessor:
+                Assess Risk Level alt Low Risk RiskAssessor-->>Orchestrator:
+                Auto-Approve Orchestrator->>LangGraph: Execute Task else
+                High/Critical Risk RiskAssessor-->>Orchestrator: Requires
+                Approval Orchestrator->>HITLManager: Create Approval Request
+                HITLManager->>PostgreSQL: Store approval_requests
+                PostgreSQL-->>HITLManager: request_id HITLManager->>LangGraph:
+                Set approval_request_id LangGraph->>PostgreSQL: Save Checkpoint
+                LangGraph->>LangGraph: Interrupt at approval_gate
+                HITLManager->>LinearClient: Create Sub-Issue
+                LinearClient->>LinearUI: POST to DEV-68
+                LinearUI-->>LinearClient: Issue Created (PR-XXX)
+                LinearClient-->>User: Notification (< 1s) User->>LinearUI:
+                Review Request User->>LinearUI: Set Request Status<br />(Approved/Denied/More
+                Info) LinearUI->>LinearClient: Webhook Trigger
+                LinearClient->>HITLManager: Update Approval Status
+                HITLManager->>PostgreSQL: UPDATE approval_requests alt Approved
+                HITLManager->>LangGraph: Emit Resume Event
+                LangGraph->>PostgreSQL: Load Checkpoint LangGraph->>LangGraph:
+                Resume from approval_gate LangGraph->>Orchestrator: Continue
+                Execution Orchestrator->>User: Task Completed else Denied
+                HITLManager->>LangGraph: Emit Cancel Event LangGraph->>User:
+                Task Cancelled else More Info Required HITLManager->>User:
+                Request Justification User->>LinearUI: Add Comments
+                LinearUI->>LinearClient: Updated Context
+                LinearClient->>LangGraph: Resume with Context end end note over
+                RiskAssessor,HITLManager: Risk Levels:<br />Low →
+                Auto-approve<br />Medium → Developer approval<br />High → Tech
+                Lead approval<br />Critical → DevOps approval note over
+                LinearUI: Custom Fields:<br />- Request Status (dropdown)<br />-
+                Required Action (checkboxes)<br />- Risk Assessment (text)
               </div>
             </div>
 
             <!-- MCP Integration Diagram -->
             <div class="diagram-content" id="mcp-integration">
-              <h3 style="color: #667eea; margin-bottom: 1rem;">MCP Tool Integration</h3>
+              <h3 style="color: #667eea; margin-bottom: 1rem">
+                MCP Tool Integration
+              </h3>
               <div class="mermaid">
-graph LR
-    subgraph "Agent Layer"
-        Agent["🤖 Agent Node<br/>(Feature-Dev, Code-Review, etc.)"]
-    end
-
-    subgraph "Progressive Tool Disclosure"
-        Loader["📦 Progressive Loader<br/>80-90% Token Reduction"]
-        Strategy["Strategy Selection:<br/>- MINIMAL (keyword)<br/>- AGENT_PROFILE (manifest)<br/>- PROGRESSIVE (hybrid)<br/>- FULL (all tools)"]
-    end
-
-    subgraph "Tool Binding"
-        MCPClient["🔌 MCP Client<br/>to_langchain_tools()"]
-        LangChainTools["⚙️ LangChain BaseTool<br/>Function Calling"]
-    end
-
-    subgraph "Gateway - Port 8000"
-        MCPGateway["🌐 MCP Gateway<br/>Tool Routing"]
-    end
-
-    subgraph "MCP Servers"
-        Linear["Linear API<br/>(Projects, Issues)"]
-        GitHub["GitHub API<br/>(Repos, PRs)"]
-        Filesystem["Filesystem<br/>(Read/Write)"]
-        Docker["Docker<br/>(Containers)"]
-        Playwright["Playwright<br/>(Browser Automation)"]
-        Memory["Memory<br/>(RAG Context)"]
-        More["... 11 more servers"]
-    end
-
-    subgraph "LLM Inference"
-        Gradient["⚡ Gradient AI<br/>Model-Specific<br/>Function Calling"]
-    end
-
-    Agent -->|Task Request| Loader
-    Loader -->|Filter Tools| Strategy
-    Strategy -->|10-30 Relevant Tools| MCPClient
-    MCPClient -->|Convert to BaseTool| LangChainTools
-    LangChainTools -->|Bind Tools| Gradient
-    
-    Gradient -->|Tool Call Request| MCPGateway
-    MCPGateway -->|Route to Server| Linear
-    MCPGateway -->|Route to Server| GitHub
-    MCPGateway -->|Route to Server| Filesystem
-    MCPGateway -->|Route to Server| Docker
-    MCPGateway -->|Route to Server| Playwright
-    MCPGateway -->|Route to Server| Memory
-    MCPGateway -->|Route to Server| More
-    
-    Linear -->|Tool Response| MCPGateway
-    GitHub -->|Tool Response| MCPGateway
-    Filesystem -->|Tool Response| MCPGateway
-    Docker -->|Tool Response| MCPGateway
-    Playwright -->|Tool Response| MCPGateway
-    Memory -->|Tool Response| MCPGateway
-    More -->|Tool Response| MCPGateway
-    
-    MCPGateway -->|Result| Gradient
-    Gradient -->|Continue Workflow| Agent
-
-    classDef agent fill:#fff3e0,stroke:#f59e0b,stroke-width:2px
-    classDef loader fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
-    classDef gateway fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
-    classDef server fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
-    classDef llm fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
-    
-    class Agent agent
-    class Loader,Strategy,MCPClient,LangChainTools loader
-    class MCPGateway gateway
-    class Linear,GitHub,Filesystem,Docker,Playwright,Memory,More server
-    class Gradient llm
+                graph LR subgraph "Agent Layer" Agent["🤖 Agent Node<br />(Feature-Dev,
+                Code-Review, etc.)"] end subgraph "Progressive Tool Disclosure"
+                Loader["📦 Progressive Loader<br />80-90% Token Reduction"]
+                Strategy["Strategy Selection:<br />- MINIMAL (keyword)<br />-
+                AGENT_PROFILE (manifest)<br />- PROGRESSIVE (hybrid)<br />- FULL
+                (all tools)"] end subgraph "Tool Binding" MCPClient["🔌 MCP
+                Client<br />to_langchain_tools()"] LangChainTools["⚙️ LangChain
+                BaseTool<br />Function Calling"] end subgraph "Gateway - Port
+                8000" MCPGateway["🌐 MCP Gateway<br />Tool Routing"] end
+                subgraph "MCP Servers" Linear["Linear API<br />(Projects,
+                Issues)"] GitHub["GitHub API<br />(Repos, PRs)"]
+                Filesystem["Filesystem<br />(Read/Write)"] Docker["Docker<br />(Containers)"]
+                Playwright["Playwright<br />(Browser Automation)"]
+                Memory["Memory<br />(RAG Context)"] More["... 11 more servers"]
+                end subgraph "LLM Inference" Gradient["⚡ Gradient AI<br />Model-Specific<br />Function
+                Calling"] end Agent -->|Task Request| Loader Loader -->|Filter
+                Tools| Strategy Strategy -->|10-30 Relevant Tools| MCPClient
+                MCPClient -->|Convert to BaseTool| LangChainTools LangChainTools
+                -->|Bind Tools| Gradient Gradient -->|Tool Call Request|
+                MCPGateway MCPGateway -->|Route to Server| Linear MCPGateway
+                -->|Route to Server| GitHub MCPGateway -->|Route to Server|
+                Filesystem MCPGateway -->|Route to Server| Docker MCPGateway
+                -->|Route to Server| Playwright MCPGateway -->|Route to Server|
+                Memory MCPGateway -->|Route to Server| More Linear -->|Tool
+                Response| MCPGateway GitHub -->|Tool Response| MCPGateway
+                Filesystem -->|Tool Response| MCPGateway Docker -->|Tool
+                Response| MCPGateway Playwright -->|Tool Response| MCPGateway
+                Memory -->|Tool Response| MCPGateway More -->|Tool Response|
+                MCPGateway MCPGateway -->|Result| Gradient Gradient -->|Continue
+                Workflow| Agent classDef agent
+                fill:#fff3e0,stroke:#f59e0b,stroke-width:2px classDef loader
+                fill:#e3f2fd,stroke:#2196f3,stroke-width:2px classDef gateway
+                fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px classDef server
+                fill:#e8f5e9,stroke:#4caf50,stroke-width:2px classDef llm
+                fill:#fff9c4,stroke:#fbc02d,stroke-width:2px class Agent agent
+                class Loader,Strategy,MCPClient,LangChainTools loader class
+                MCPGateway gateway class
+                Linear,GitHub,Filesystem,Docker,Playwright,Memory,More server
+                class Gradient llm
               </div>
             </div>
           </div>
@@ -778,28 +698,28 @@ graph LR
 
     <!-- Mermaid.js for Diagrams -->
     <script type="module">
-      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
-      mermaid.initialize({ 
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
         startOnLoad: true,
-        theme: 'default',
+        theme: "default",
         themeVariables: {
-          primaryColor: '#667eea',
-          primaryTextColor: '#fff',
-          primaryBorderColor: '#764ba2',
-          lineColor: '#764ba2',
-          secondaryColor: '#f3e5f5',
-          tertiaryColor: '#fff3e0',
-          background: '#ffffff',
-          mainBkg: '#667eea',
-          secondBkg: '#764ba2',
-          lineColor: '#764ba2',
-          border1: '#764ba2',
-          border2: '#667eea'
+          primaryColor: "#667eea",
+          primaryTextColor: "#fff",
+          primaryBorderColor: "#764ba2",
+          lineColor: "#764ba2",
+          secondaryColor: "#f3e5f5",
+          tertiaryColor: "#fff3e0",
+          background: "#ffffff",
+          mainBkg: "#667eea",
+          secondBkg: "#764ba2",
+          lineColor: "#764ba2",
+          border1: "#764ba2",
+          border2: "#667eea",
         },
         flowchart: {
           htmlLabels: true,
-          curve: 'basis',
-          padding: 20
+          curve: "basis",
+          padding: 20,
         },
         sequence: {
           diagramMarginX: 50,
@@ -810,29 +730,29 @@ graph LR
           boxMargin: 10,
           boxTextMargin: 5,
           noteMargin: 10,
-          messageMargin: 35
-        }
+          messageMargin: 35,
+        },
       });
     </script>
 
     <script>
       // Diagram tab switching
-      document.addEventListener('DOMContentLoaded', () => {
-        const tabs = document.querySelectorAll('.diagram-tab');
-        const contents = document.querySelectorAll('.diagram-content');
-        
-        tabs.forEach(tab => {
-          tab.addEventListener('click', () => {
+      document.addEventListener("DOMContentLoaded", () => {
+        const tabs = document.querySelectorAll(".diagram-tab");
+        const contents = document.querySelectorAll(".diagram-content");
+
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
             // Remove active class from all tabs and contents
-            tabs.forEach(t => t.classList.remove('active'));
-            contents.forEach(c => c.classList.remove('active'));
-            
+            tabs.forEach((t) => t.classList.remove("active"));
+            contents.forEach((c) => c.classList.remove("active"));
+
             // Add active class to clicked tab
-            tab.classList.add('active');
-            
+            tab.classList.add("active");
+
             // Show corresponding content
-            const diagramId = tab.getAttribute('data-diagram');
-            document.getElementById(diagramId).classList.add('active');
+            const diagramId = tab.getAttribute("data-diagram");
+            document.getElementById(diagramId).classList.add("active");
           });
         });
       });
