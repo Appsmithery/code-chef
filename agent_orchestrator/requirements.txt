@@ -6,6 +6,7 @@ langsmith>=0.1.0
 langchain-core>=0.1.0
 prometheus-fastapi-instrumentator>=6.1.0
 pyyaml>=6.0
+watchdog>=3.0.0
 requests>=2.31.0
 gql[requests]>=3.5.0
 langgraph>=0.1.7
