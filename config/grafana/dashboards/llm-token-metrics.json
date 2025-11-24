@@ -16,7 +16,7 @@
         "id": 1,
         "title": "Token Usage Rate by Agent (Last 1h)",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
         "targets": [
           {
             "expr": "rate(llm_tokens_total[1h]) * 3600",
@@ -27,7 +27,7 @@
         "fieldConfig": {
           "defaults": {
             "unit": "tokens/hour",
-            "color": {"mode": "palette-classic"},
+            "color": { "mode": "palette-classic" },
             "custom": {
               "drawStyle": "line",
               "lineInterpolation": "smooth",
@@ -42,14 +42,14 @@
             "placement": "right",
             "calcs": ["mean", "max", "last"]
           },
-          "tooltip": {"mode": "multi"}
+          "tooltip": { "mode": "multi" }
         }
       },
       {
         "id": 2,
         "title": "Cost Breakdown by Agent (Last 24h)",
         "type": "piechart",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
         "targets": [
           {
             "expr": "increase(llm_cost_usd_total[24h])",
@@ -70,14 +70,14 @@
             "values": ["value", "percent"]
           },
           "pieType": "donut",
-          "tooltip": {"mode": "single"}
+          "tooltip": { "mode": "single" }
         }
       },
       {
         "id": 3,
         "title": "LLM Latency Distribution (P50, P95, P99)",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
         "targets": [
           {
             "expr": "histogram_quantile(0.50, rate(llm_latency_seconds_bucket[5m]))",
@@ -98,7 +98,7 @@
         "fieldConfig": {
           "defaults": {
             "unit": "s",
-            "color": {"mode": "palette-classic"},
+            "color": { "mode": "palette-classic" },
             "custom": {
               "drawStyle": "line",
               "lineInterpolation": "smooth"
@@ -116,7 +116,7 @@
         "id": 4,
         "title": "Total Cost (Last 24h)",
         "type": "stat",
-        "gridPos": {"h": 4, "w": 4, "x": 12, "y": 8},
+        "gridPos": { "h": 4, "w": 4, "x": 12, "y": 8 },
         "targets": [
           {
             "expr": "sum(increase(llm_cost_usd_total[24h]))",
@@ -127,13 +127,13 @@
           "defaults": {
             "unit": "currencyUSD",
             "decimals": 4,
-            "color": {"mode": "thresholds"},
+            "color": { "mode": "thresholds" },
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"value": 0, "color": "green"},
-                {"value": 5, "color": "yellow"},
-                {"value": 10, "color": "red"}
+                { "value": 0, "color": "green" },
+                { "value": 5, "color": "yellow" },
+                { "value": 10, "color": "red" }
               ]
             }
           }
@@ -149,7 +149,7 @@
         "id": 5,
         "title": "Total Tokens (Last 24h)",
         "type": "stat",
-        "gridPos": {"h": 4, "w": 4, "x": 16, "y": 8},
+        "gridPos": { "h": 4, "w": 4, "x": 16, "y": 8 },
         "targets": [
           {
             "expr": "sum(increase(llm_tokens_total[24h]))",
@@ -160,13 +160,13 @@
           "defaults": {
             "unit": "short",
             "decimals": 0,
-            "color": {"mode": "thresholds"},
+            "color": { "mode": "thresholds" },
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"value": 0, "color": "green"},
-                {"value": 1000000, "color": "yellow"},
-                {"value": 5000000, "color": "red"}
+                { "value": 0, "color": "green" },
+                { "value": 1000000, "color": "yellow" },
+                { "value": 5000000, "color": "red" }
               ]
             }
           }
@@ -182,7 +182,7 @@
         "id": 6,
         "title": "Total LLM Calls (Last 24h)",
         "type": "stat",
-        "gridPos": {"h": 4, "w": 4, "x": 20, "y": 8},
+        "gridPos": { "h": 4, "w": 4, "x": 20, "y": 8 },
         "targets": [
           {
             "expr": "sum(increase(llm_calls_total[24h]))",
@@ -193,13 +193,13 @@
           "defaults": {
             "unit": "short",
             "decimals": 0,
-            "color": {"mode": "thresholds"},
+            "color": { "mode": "thresholds" },
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"value": 0, "color": "green"},
-                {"value": 1000, "color": "yellow"},
-                {"value": 5000, "color": "red"}
+                { "value": 0, "color": "green" },
+                { "value": 1000, "color": "yellow" },
+                { "value": 5000, "color": "red" }
               ]
             }
           }
@@ -209,7 +209,7 @@
         "id": 7,
         "title": "Avg Tokens per Call by Agent",
         "type": "bargauge",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
         "targets": [
           {
             "expr": "sum by (agent) (increase(llm_tokens_total[1h])) / sum by (agent) (increase(llm_calls_total[1h]))",
@@ -221,13 +221,13 @@
           "defaults": {
             "unit": "short",
             "decimals": 0,
-            "color": {"mode": "thresholds"},
+            "color": { "mode": "thresholds" },
             "thresholds": {
               "mode": "absolute",
               "steps": [
-                {"value": 0, "color": "green"},
-                {"value": 2000, "color": "yellow"},
-                {"value": 4000, "color": "red"}
+                { "value": 0, "color": "green" },
+                { "value": 2000, "color": "yellow" },
+                { "value": 4000, "color": "red" }
               ]
             }
           }
@@ -242,7 +242,7 @@
         "id": 8,
         "title": "Cost Trend Over Time",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16},
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 16 },
         "targets": [
           {
             "expr": "rate(llm_cost_usd_total[5m]) * 3600",
@@ -254,12 +254,12 @@
           "defaults": {
             "unit": "currencyUSD/hour",
             "decimals": 4,
-            "color": {"mode": "palette-classic"},
+            "color": { "mode": "palette-classic" },
             "custom": {
               "drawStyle": "line",
               "lineInterpolation": "smooth",
               "fillOpacity": 20,
-              "stacking": {"mode": "normal"}
+              "stacking": { "mode": "normal" }
             }
           }
         },
@@ -275,7 +275,7 @@
         "id": 9,
         "title": "Token Type Distribution (Prompt vs Completion)",
         "type": "timeseries",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
         "targets": [
           {
             "expr": "sum by (type) (rate(llm_tokens_total[5m])) * 60",
@@ -286,11 +286,11 @@
         "fieldConfig": {
           "defaults": {
             "unit": "tokens/min",
-            "color": {"mode": "palette-classic"},
+            "color": { "mode": "palette-classic" },
             "custom": {
               "drawStyle": "bars",
               "fillOpacity": 80,
-              "stacking": {"mode": "normal"}
+              "stacking": { "mode": "normal" }
             }
           }
         },
@@ -305,7 +305,7 @@
         "id": 10,
         "title": "Top 5 Most Expensive Agents",
         "type": "table",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
         "targets": [
           {
             "expr": "topk(5, sum by (agent) (llm_cost_usd_total))",
@@ -321,30 +321,24 @@
           },
           "overrides": [
             {
-              "matcher": {"id": "byName", "options": "agent"},
-              "properties": [
-                {"id": "displayName", "value": "Agent"}
-              ]
+              "matcher": { "id": "byName", "options": "agent" },
+              "properties": [{ "id": "displayName", "value": "Agent" }]
             },
             {
-              "matcher": {"id": "byName", "options": "Value"},
-              "properties": [
-                {"id": "displayName", "value": "Total Cost"}
-              ]
+              "matcher": { "id": "byName", "options": "Value" },
+              "properties": [{ "id": "displayName", "value": "Total Cost" }]
             }
           ]
         },
         "options": {
-          "sortBy": [
-            {"displayName": "Total Cost", "desc": true}
-          ]
+          "sortBy": [{ "displayName": "Total Cost", "desc": true }]
         },
         "transformations": [
           {
             "id": "organize",
             "options": {
-              "excludeByName": {"Time": true},
-              "indexByName": {"agent": 0, "Value": 1}
+              "excludeByName": { "Time": true },
+              "indexByName": { "agent": 0, "Value": 1 }
             }
           }
         ]

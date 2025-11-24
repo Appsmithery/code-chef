@@ -157,7 +157,7 @@ git push origin main
 
 # Deploy
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType quick
-   ```
+```
 
 ---
 
@@ -170,26 +170,30 @@ git push origin main
 **Procedure:**
 
 1. **Edit YAML config:**
+
    ```bash
    # Local machine
    nano config/agents/models.yaml
    ```
 
 2. **Example change:**
+
    ```yaml
    agents:
      orchestrator:
-       model: llama3-8b-instruct  # Changed from llama3.3-70b-instruct
-       cost_per_1m_tokens: 0.20   # Changed from 0.60
+       model: llama3-8b-instruct # Changed from llama3.3-70b-instruct
+       cost_per_1m_tokens: 0.20 # Changed from 0.60
    ```
 
 3. **Commit and push:**
+
    ```bash
    git commit -am "config: Switch orchestrator to 8B model for cost savings"
    git push origin main
    ```
 
 4. **Apply to droplet:**
+
    ```bash
    ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull origin main"
    ```
@@ -231,17 +235,17 @@ ssh root@45.55.173.72 "docker compose -f /opt/Dev-Tools/deploy/docker-compose.ym
 # config/agents/models.yaml
 agents:
   orchestrator:
-    model: llama3.3-70b-instruct  # Default (production)
+    model: llama3.3-70b-instruct # Default (production)
     cost_per_1m_tokens: 0.60
 
 environments:
   development:
     orchestrator:
-      model: llama3-8b-instruct  # Override for dev
+      model: llama3-8b-instruct # Override for dev
       cost_per_1m_tokens: 0.20
   staging:
     orchestrator:
-      model: llama3.1-8b-instruct  # Override for staging
+      model: llama3.1-8b-instruct # Override for staging
       cost_per_1m_tokens: 0.20
 ```
 
@@ -268,11 +272,11 @@ docker compose up -d
 
 **Cost Impact:**
 
-| Environment | Model                   | Cost/1M Tokens | Monthly (100M tokens) |
-| ----------- | ----------------------- | -------------- | --------------------- |
-| Development | llama3-8b-instruct      | $0.20          | $20                   |
-| Staging     | llama3.1-8b-instruct    | $0.20          | $20                   |
-| Production  | llama3.3-70b-instruct   | $0.60          | $60                   |
+| Environment | Model                 | Cost/1M Tokens | Monthly (100M tokens) |
+| ----------- | --------------------- | -------------- | --------------------- |
+| Development | llama3-8b-instruct    | $0.20          | $20                   |
+| Staging     | llama3.1-8b-instruct  | $0.20          | $20                   |
+| Production  | llama3.3-70b-instruct | $0.60          | $60                   |
 
 ---
 
