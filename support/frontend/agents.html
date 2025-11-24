@@ -735,6 +735,133 @@
         execution timing, token usage, costs). Prometheus metrics available on
         port 9090.
       </div>
+
+      <!-- Architecture Visualizations -->
+      <div style="margin-top: 3rem; padding-top: 2rem; border-top: 3px solid #667eea;">
+        <h2 style="color: #667eea; margin-bottom: 2rem; font-size: 2rem;">🏗️ System Architecture</h2>
+        
+        <!-- Tab Navigation -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <button class="diagram-tab active" data-diagram="simplified-arch" style="padding: 0.75rem 1.5rem; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+            System Overview
+          </button>
+          <button class="diagram-tab" data-diagram="workflow" style="padding: 0.75rem 1.5rem; background: #f8f9fa; color: #666; border: 2px solid #dee2e6; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+            Request Flow
+          </button>
+        </div>
+
+        <!-- Diagram Container -->
+        <div id="diagram-container" style="background: #1e1e2e; padding: 2rem; border-radius: 12px; overflow-x: auto; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);">
+          <!-- Simplified Architecture Diagram -->
+          <div class="diagram-content active" id="simplified-arch">
+            <pre class="mermaid">
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#667eea','primaryTextColor':'#fff','primaryBorderColor':'#764ba2','lineColor':'#a0a0ff','secondaryColor':'#1e1e2e','tertiaryColor':'#2d2d44'}}}%%
+graph TB
+    Client[("👤<br/>User")]
+    
+    Orchestrator{"🎯<br/>Orchestrator<br/><small>Port 8001</small>"}
+    
+    FeatureDev[["💻<br/>Feature Dev"]]
+    CodeReview[["🔍<br/>Code Review"]]
+    Infrastructure[["☁️<br/>Infrastructure"]]
+    CICD[["🚀<br/>CI/CD"]]
+    Documentation[["📝<br/>Docs"]]
+    
+    MCP[("🔌<br/>MCP Gateway<br/><small>150+ Tools</small>")]
+    
+    RAG[("<br/>📚 RAG<br/><small>Context</small>")]
+    State[("<br/>💾 State<br/><small>PostgreSQL</small>")]
+    Gradient[("<br/>⚡ Gradient<br/><small>LLM</small>")]
+    
+    Client -->|Task| Orchestrator
+    
+    Orchestrator -.->|Route| FeatureDev
+    Orchestrator -.->|Route| CodeReview
+    Orchestrator -.->|Route| Infrastructure
+    Orchestrator -.->|Route| CICD
+    Orchestrator -.->|Route| Documentation
+    
+    FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|Tools| MCP
+    
+    Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|Context| RAG
+    Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|State| State
+    Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|LLM| Gradient
+    
+    classDef client fill:#667eea,stroke:#764ba2,stroke-width:3px,color:#fff
+    classDef orchestrator fill:#764ba2,stroke:#667eea,stroke-width:3px,color:#fff
+    classDef agent fill:#4a9eff,stroke:#3d7dcc,stroke-width:2px,color:#fff
+    classDef service fill:#2d2d44,stroke:#667eea,stroke-width:2px,color:#a0a0ff
+    
+    class Client client
+    class Orchestrator orchestrator
+    class FeatureDev,CodeReview,Infrastructure,CICD,Documentation agent
+    class MCP,RAG,State,Gradient service
+            </pre>
+          </div>
+
+          <!-- Workflow Diagram -->
+          <div class="diagram-content" id="workflow" style="display: none;">
+            <pre class="mermaid">
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#667eea','primaryTextColor':'#fff','primaryBorderColor':'#764ba2','lineColor':'#a0a0ff','secondaryColor':'#1e1e2e','tertiaryColor':'#2d2d44'}}}%%
+sequenceDiagram
+    participant U as 👤 User
+    participant O as 🎯 Orchestrator
+    participant A as 🤖 Agent
+    participant M as 🔌 MCP Tools
+    participant L as ⚡ Gradient AI
+
+    U->>O: Submit Request
+    O->>L: Route Task
+    L-->>O: Agent Selected
+    O->>A: Delegate Task
+    A->>M: Query Tools
+    M-->>A: Tool Response
+    A->>L: Generate Solution
+    L-->>A: LLM Response
+    A-->>O: Task Complete
+    O-->>U: Result
+            </pre>
+          </div>
+        </div>
+      </div>
     </div>
+
+    <!-- Mermaid.js -->
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ 
+        startOnLoad: true,
+        theme: 'dark'
+      });
+    </script>
+
+    <script>
+      // Diagram tab switching
+      document.addEventListener('DOMContentLoaded', () => {
+        const tabs = document.querySelectorAll('.diagram-tab');
+        const contents = document.querySelectorAll('.diagram-content');
+        
+        tabs.forEach(tab => {
+          tab.addEventListener('click', () => {
+            // Remove active class
+            tabs.forEach(t => {
+              t.style.background = '#f8f9fa';
+              t.style.color = '#666';
+              t.style.border = '2px solid #dee2e6';
+            });
+            contents.forEach(c => c.style.display = 'none');
+            
+            // Add active class
+            tab.style.background = '#667eea';
+            tab.style.color = 'white';
+            tab.style.border = 'none';
+            
+            // Show content
+            const diagramId = tab.getAttribute('data-diagram');
+            document.getElementById(diagramId).style.display = 'block';
+          });
+        });
+      });
+    </script>
   </body>
 </html>
