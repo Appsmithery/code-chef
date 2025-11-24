@@ -479,51 +479,86 @@
               <h3 style="color: #667eea; margin-bottom: 1rem">
                 System Architecture
               </h3>
-              <div class="mermaid">
-                graph TB subgraph "Client Layer" VSCode["VS Code<br />Copilot
-                Extension"] Linear["Linear<br />Project Management"]
-                GitHub["GitHub<br />Source Control"] end subgraph "Orchestration
-                Layer - Port 8001" Orchestrator["🎯 Orchestrator Service<br />(FastAPI
-                + LangGraph)<br />llama3.3-70b-instruct"] Supervisor["👔
-                Supervisor Agent<br />(Routing Logic)<br />llama-3.1-70b"] end
-                subgraph "Agent Layer - LangGraph Nodes" FeatureDev["💻 Feature
-                Dev<br />codellama-13b"] CodeReview["🔍 Code Review<br />llama-3.1-70b"]
-                Infrastructure["☁️ Infrastructure<br />llama-3.1-8b"] CICD["🚀
-                CI/CD<br />llama-3.1-8b"] Documentation["📝 Documentation<br />mistral-7b"]
-                end subgraph "Tool Layer - Port 8000" MCPGateway["🔌 MCP
-                Gateway<br />150+ Tools<br />17 Servers"] end subgraph "Support
-                Services" RAG["📚 RAG Context<br />Port 8007"] State["💾 State
-                Persistence<br />Port 8008<br />PostgreSQL"] LangSmith["📊
-                LangSmith<br />Tracing"] Gradient["⚡ Gradient AI<br />LLM
-                Inference"] end subgraph "Data Layer" PostgreSQL["🗄️
-                PostgreSQL<br />Checkpoints & State"] Qdrant["🔍 Qdrant<br />Vector
-                Store"] end VSCode -->|Task Request| Orchestrator Linear
-                -->|HITL Approvals| Orchestrator GitHub -->|Source Code|
-                Orchestrator Orchestrator -->|Route Task| Supervisor Supervisor
-                -->|Delegate| FeatureDev Supervisor -->|Delegate| CodeReview
-                Supervisor -->|Delegate| Infrastructure Supervisor -->|Delegate|
-                CICD Supervisor -->|Delegate| Documentation FeatureDev -->|Use
-                Tools| MCPGateway CodeReview -->|Use Tools| MCPGateway
-                Infrastructure -->|Use Tools| MCPGateway CICD -->|Use Tools|
-                MCPGateway Documentation -->|Use Tools| MCPGateway Orchestrator
-                -->|Query Context| RAG Orchestrator -->|Save/Load State| State
-                Orchestrator -->|Trace Execution| LangSmith Supervisor -->|LLM
-                Inference| Gradient FeatureDev -->|LLM Inference| Gradient
-                CodeReview -->|LLM Inference| Gradient Infrastructure -->|LLM
-                Inference| Gradient CICD -->|LLM Inference| Gradient
-                Documentation -->|LLM Inference| Gradient State -->|Persist|
-                PostgreSQL RAG -->|Vector Search| Qdrant classDef client
-                fill:#e1f5ff,stroke:#0066cc,stroke-width:2px classDef
-                orchestrator fill:#f3e5f5,stroke:#764ba2,stroke-width:3px
-                classDef agent fill:#fff3e0,stroke:#f59e0b,stroke-width:2px
-                classDef service fill:#e8f5e9,stroke:#28a745,stroke-width:2px
-                classDef data fill:#fce4ec,stroke:#e91e63,stroke-width:2px class
-                VSCode,Linear,GitHub client class Orchestrator,Supervisor
-                orchestrator class
-                FeatureDev,CodeReview,Infrastructure,CICD,Documentation agent
-                class MCPGateway,RAG,State,LangSmith,Gradient service class
-                PostgreSQL,Qdrant data
-              </div>
+              <pre class="mermaid">
+graph TB
+    subgraph "Client Layer"
+        VSCode["VS Code<br/>Copilot Extension"]
+        Linear["Linear<br/>Project Management"]
+        GitHub["GitHub<br/>Source Control"]
+    end
+
+    subgraph "Orchestration Layer - Port 8001"
+        Orchestrator["🎯 Orchestrator Service<br/>(FastAPI + LangGraph)<br/>llama3.3-70b-instruct"]
+        Supervisor["👔 Supervisor Agent<br/>(Routing Logic)<br/>llama-3.1-70b"]
+    end
+
+    subgraph "Agent Layer - LangGraph Nodes"
+        FeatureDev["💻 Feature Dev<br/>codellama-13b"]
+        CodeReview["🔍 Code Review<br/>llama-3.1-70b"]
+        Infrastructure["☁️ Infrastructure<br/>llama-3.1-8b"]
+        CICD["🚀 CI/CD<br/>llama-3.1-8b"]
+        Documentation["📝 Documentation<br/>mistral-7b"]
+    end
+
+    subgraph "Tool Layer - Port 8000"
+        MCPGateway["🔌 MCP Gateway<br/>150+ Tools<br/>17 Servers"]
+    end
+
+    subgraph "Support Services"
+        RAG["📚 RAG Context<br/>Port 8007"]
+        State["💾 State Persistence<br/>Port 8008<br/>PostgreSQL"]
+        LangSmith["📊 LangSmith<br/>Tracing"]
+        Gradient["⚡ Gradient AI<br/>LLM Inference"]
+    end
+
+    subgraph "Data Layer"
+        PostgreSQL["🗄️ PostgreSQL<br/>Checkpoints & State"]
+        Qdrant["🔍 Qdrant<br/>Vector Store"]
+    end
+
+    VSCode -->|Task Request| Orchestrator
+    Linear -->|HITL Approvals| Orchestrator
+    GitHub -->|Source Code| Orchestrator
+    
+    Orchestrator -->|Route Task| Supervisor
+    Supervisor -->|Delegate| FeatureDev
+    Supervisor -->|Delegate| CodeReview
+    Supervisor -->|Delegate| Infrastructure
+    Supervisor -->|Delegate| CICD
+    Supervisor -->|Delegate| Documentation
+    
+    FeatureDev -->|Use Tools| MCPGateway
+    CodeReview -->|Use Tools| MCPGateway
+    Infrastructure -->|Use Tools| MCPGateway
+    CICD -->|Use Tools| MCPGateway
+    Documentation -->|Use Tools| MCPGateway
+    
+    Orchestrator -->|Query Context| RAG
+    Orchestrator -->|Save/Load State| State
+    Orchestrator -->|Trace Execution| LangSmith
+    
+    Supervisor -->|LLM Inference| Gradient
+    FeatureDev -->|LLM Inference| Gradient
+    CodeReview -->|LLM Inference| Gradient
+    Infrastructure -->|LLM Inference| Gradient
+    CICD -->|LLM Inference| Gradient
+    Documentation -->|LLM Inference| Gradient
+    
+    State -->|Persist| PostgreSQL
+    RAG -->|Vector Search| Qdrant
+
+    classDef client fill:#e1f5ff,stroke:#0066cc,stroke-width:2px
+    classDef orchestrator fill:#f3e5f5,stroke:#764ba2,stroke-width:3px
+    classDef agent fill:#fff3e0,stroke:#f59e0b,stroke-width:2px
+    classDef service fill:#e8f5e9,stroke:#28a745,stroke-width:2px
+    classDef data fill:#fce4ec,stroke:#e91e63,stroke-width:2px
+    
+    class VSCode,Linear,GitHub client
+    class Orchestrator,Supervisor orchestrator
+    class FeatureDev,CodeReview,Infrastructure,CICD,Documentation agent
+    class MCPGateway,RAG,State,LangSmith,Gradient service
+    class PostgreSQL,Qdrant data
+              </pre>
             </div>
 
             <!-- Agent Workflow Diagram -->
@@ -531,31 +566,58 @@
               <h3 style="color: #667eea; margin-bottom: 1rem">
                 Multi-Agent Workflow
               </h3>
-              <div class="mermaid">
-                stateDiagram-v2 [*] --> Supervisor: User Task Supervisor -->
-                RiskAssessment: Analyze Task RiskAssessment --> ApprovalNode:
-                High Risk? RiskAssessment --> FeatureDev: Feature Request
-                RiskAssessment --> CodeReview: Code Quality RiskAssessment -->
-                Infrastructure: Cloud/Infra RiskAssessment --> CICD: Deployment
-                RiskAssessment --> Documentation: Docs Update ApprovalNode -->
-                LinearIssue: Create HITL Sub-Issue LinearIssue -->
-                WaitForApproval: DEV-68 Hub WaitForApproval -->
-                CheckApprovalStatus: User Reviews CheckApprovalStatus -->
-                Approved: ✅ Approved CheckApprovalStatus --> Denied: ❌ Denied
-                CheckApprovalStatus --> MoreInfo: ℹ️ More Info Approved -->
-                FeatureDev: Feature Request Approved --> CodeReview: Code
-                Quality Approved --> Infrastructure: Cloud/Infra Approved -->
-                CICD: Deployment Approved --> Documentation: Docs Update Denied
-                --> [*]: Task Cancelled MoreInfo --> WaitForApproval: User
-                Provides Details FeatureDev --> Supervisor: Task Complete
-                CodeReview --> Supervisor: Task Complete Infrastructure -->
-                Supervisor: Task Complete CICD --> Supervisor: Task Complete
-                Documentation --> Supervisor: Task Complete Supervisor --> [*]:
-                All Steps Done Supervisor --> RiskAssessment: Next Subtask note
-                right of ApprovalNode LangGraph Checkpoint Workflow Interrupts
-                PostgreSQL State end note note right of LinearIssue Custom
-                Fields: - Request Status - Required Action - Risk Level end note
-              </div>
+              <pre class="mermaid">
+stateDiagram-v2
+    [*] --> Supervisor: User Task
+    
+    Supervisor --> RiskAssessment: Analyze Task
+    
+    RiskAssessment --> ApprovalNode: High Risk?
+    RiskAssessment --> FeatureDev: Feature Request
+    RiskAssessment --> CodeReview: Code Quality
+    RiskAssessment --> Infrastructure: Cloud/Infra
+    RiskAssessment --> CICD: Deployment
+    RiskAssessment --> Documentation: Docs Update
+    
+    ApprovalNode --> LinearIssue: Create HITL Sub-Issue
+    LinearIssue --> WaitForApproval: DEV-68 Hub
+    WaitForApproval --> CheckApprovalStatus: User Reviews
+    
+    CheckApprovalStatus --> Approved: ✅ Approved
+    CheckApprovalStatus --> Denied: ❌ Denied
+    CheckApprovalStatus --> MoreInfo: ℹ️ More Info
+    
+    Approved --> FeatureDev: Feature Request
+    Approved --> CodeReview: Code Quality
+    Approved --> Infrastructure: Cloud/Infra
+    Approved --> CICD: Deployment
+    Approved --> Documentation: Docs Update
+    
+    Denied --> [*]: Task Cancelled
+    MoreInfo --> WaitForApproval: User Provides Details
+    
+    FeatureDev --> Supervisor: Task Complete
+    CodeReview --> Supervisor: Task Complete
+    Infrastructure --> Supervisor: Task Complete
+    CICD --> Supervisor: Task Complete
+    Documentation --> Supervisor: Task Complete
+    
+    Supervisor --> [*]: All Steps Done
+    Supervisor --> RiskAssessment: Next Subtask
+
+    note right of ApprovalNode
+        LangGraph Checkpoint
+        Workflow Interrupts
+        PostgreSQL State
+    end note
+    
+    note right of LinearIssue
+        Custom Fields:
+        - Request Status
+        - Required Action
+        - Risk Level
+    end note
+              </pre>
             </div>
 
             <!-- HITL Approval Flow Diagram -->
@@ -563,8 +625,9 @@
               <h3 style="color: #667eea; margin-bottom: 1rem">
                 Human-in-the-Loop Approval Flow
               </h3>
-              <div class="mermaid">
-                sequenceDiagram participant User as 👤 User<br />(VS Code)
+              <pre class="mermaid">
+sequenceDiagram
+    participant User as 👤 User<br/>(VS Code)
                 participant Orchestrator as 🎯 Orchestrator participant
                 RiskAssessor as ⚠️ Risk Assessor participant HITLManager as 🛡️
                 HITL Manager participant LangGraph as 🔄 LangGraph<br />Workflow
@@ -610,47 +673,78 @@
               <h3 style="color: #667eea; margin-bottom: 1rem">
                 MCP Tool Integration
               </h3>
-              <div class="mermaid">
-                graph LR subgraph "Agent Layer" Agent["🤖 Agent Node<br />(Feature-Dev,
-                Code-Review, etc.)"] end subgraph "Progressive Tool Disclosure"
-                Loader["📦 Progressive Loader<br />80-90% Token Reduction"]
-                Strategy["Strategy Selection:<br />- MINIMAL (keyword)<br />-
-                AGENT_PROFILE (manifest)<br />- PROGRESSIVE (hybrid)<br />- FULL
-                (all tools)"] end subgraph "Tool Binding" MCPClient["🔌 MCP
-                Client<br />to_langchain_tools()"] LangChainTools["⚙️ LangChain
-                BaseTool<br />Function Calling"] end subgraph "Gateway - Port
-                8000" MCPGateway["🌐 MCP Gateway<br />Tool Routing"] end
-                subgraph "MCP Servers" Linear["Linear API<br />(Projects,
-                Issues)"] GitHub["GitHub API<br />(Repos, PRs)"]
-                Filesystem["Filesystem<br />(Read/Write)"] Docker["Docker<br />(Containers)"]
-                Playwright["Playwright<br />(Browser Automation)"]
-                Memory["Memory<br />(RAG Context)"] More["... 11 more servers"]
-                end subgraph "LLM Inference" Gradient["⚡ Gradient AI<br />Model-Specific<br />Function
-                Calling"] end Agent -->|Task Request| Loader Loader -->|Filter
-                Tools| Strategy Strategy -->|10-30 Relevant Tools| MCPClient
-                MCPClient -->|Convert to BaseTool| LangChainTools LangChainTools
-                -->|Bind Tools| Gradient Gradient -->|Tool Call Request|
-                MCPGateway MCPGateway -->|Route to Server| Linear MCPGateway
-                -->|Route to Server| GitHub MCPGateway -->|Route to Server|
-                Filesystem MCPGateway -->|Route to Server| Docker MCPGateway
-                -->|Route to Server| Playwright MCPGateway -->|Route to Server|
-                Memory MCPGateway -->|Route to Server| More Linear -->|Tool
-                Response| MCPGateway GitHub -->|Tool Response| MCPGateway
-                Filesystem -->|Tool Response| MCPGateway Docker -->|Tool
-                Response| MCPGateway Playwright -->|Tool Response| MCPGateway
-                Memory -->|Tool Response| MCPGateway More -->|Tool Response|
-                MCPGateway MCPGateway -->|Result| Gradient Gradient -->|Continue
-                Workflow| Agent classDef agent
-                fill:#fff3e0,stroke:#f59e0b,stroke-width:2px classDef loader
-                fill:#e3f2fd,stroke:#2196f3,stroke-width:2px classDef gateway
-                fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px classDef server
-                fill:#e8f5e9,stroke:#4caf50,stroke-width:2px classDef llm
-                fill:#fff9c4,stroke:#fbc02d,stroke-width:2px class Agent agent
-                class Loader,Strategy,MCPClient,LangChainTools loader class
-                MCPGateway gateway class
-                Linear,GitHub,Filesystem,Docker,Playwright,Memory,More server
-                class Gradient llm
-              </div>
+              <pre class="mermaid">
+graph LR
+    subgraph "Agent Layer"
+        Agent["🤖 Agent Node<br/>(Feature-Dev, Code-Review, etc.)"]
+    end
+
+    subgraph "Progressive Tool Disclosure"
+        Loader["📦 Progressive Loader<br/>80-90% Token Reduction"]
+        Strategy["Strategy Selection:<br/>- MINIMAL (keyword)<br/>- AGENT_PROFILE (manifest)<br/>- PROGRESSIVE (hybrid)<br/>- FULL (all tools)"]
+    end
+
+    subgraph "Tool Binding"
+        MCPClient["🔌 MCP Client<br/>to_langchain_tools()"]
+        LangChainTools["⚙️ LangChain BaseTool<br/>Function Calling"]
+    end
+
+    subgraph "Gateway - Port 8000"
+        MCPGateway["🌐 MCP Gateway<br/>Tool Routing"]
+    end
+
+    subgraph "MCP Servers"
+        Linear["Linear API<br/>(Projects, Issues)"]
+        GitHub["GitHub API<br/>(Repos, PRs)"]
+        Filesystem["Filesystem<br/>(Read/Write)"]
+        Docker["Docker<br/>(Containers)"]
+        Playwright["Playwright<br/>(Browser Automation)"]
+        Memory["Memory<br/>(RAG Context)"]
+        More["... 11 more servers"]
+    end
+
+    subgraph "LLM Inference"
+        Gradient["⚡ Gradient AI<br/>Model-Specific<br/>Function Calling"]
+    end
+
+    Agent -->|Task Request| Loader
+    Loader -->|Filter Tools| Strategy
+    Strategy -->|10-30 Relevant Tools| MCPClient
+    MCPClient -->|Convert to BaseTool| LangChainTools
+    LangChainTools -->|Bind Tools| Gradient
+    
+    Gradient -->|Tool Call Request| MCPGateway
+    MCPGateway -->|Route to Server| Linear
+    MCPGateway -->|Route to Server| GitHub
+    MCPGateway -->|Route to Server| Filesystem
+    MCPGateway -->|Route to Server| Docker
+    MCPGateway -->|Route to Server| Playwright
+    MCPGateway -->|Route to Server| Memory
+    MCPGateway -->|Route to Server| More
+    
+    Linear -->|Tool Response| MCPGateway
+    GitHub -->|Tool Response| MCPGateway
+    Filesystem -->|Tool Response| MCPGateway
+    Docker -->|Tool Response| MCPGateway
+    Playwright -->|Tool Response| MCPGateway
+    Memory -->|Tool Response| MCPGateway
+    More -->|Tool Response| MCPGateway
+    
+    MCPGateway -->|Result| Gradient
+    Gradient -->|Continue Workflow| Agent
+
+    classDef agent fill:#fff3e0,stroke:#f59e0b,stroke-width:2px
+    classDef loader fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    classDef gateway fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef server fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    classDef llm fill:#fff9c4,stroke:#fbc02d,stroke-width:2px
+    
+    class Agent agent
+    class Loader,Strategy,MCPClient,LangChainTools loader
+    class MCPGateway gateway
+    class Linear,GitHub,Filesystem,Docker,Playwright,Memory,More server
+    class Gradient llm
+              </pre>
             </div>
           </div>
         </div>
