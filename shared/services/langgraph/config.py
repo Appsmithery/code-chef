@@ -16,7 +16,7 @@ from shared.lib.langchain_gradient import (
     documentation_llm,
     gradient_embeddings,
     get_gradient_llm,
-    get_gradient_embeddings
+    get_gradient_embeddings,
 )
 from shared.lib.qdrant_client import get_qdrant_client
 from shared.lib.langgraph_base import get_postgres_checkpointer
@@ -30,7 +30,7 @@ AGENT_LLMS = {
     "code-review": code_review_llm,
     "infrastructure": infrastructure_llm,
     "cicd": cicd_llm,
-    "documentation": documentation_llm
+    "documentation": documentation_llm,
 }
 
 # Shared components
@@ -38,60 +38,33 @@ EMBEDDINGS = gradient_embeddings
 QDRANT_CLIENT = get_qdrant_client()
 CHECKPOINTER = get_postgres_checkpointer()
 
-# Model metadata (for logging/tracing)
-MODEL_METADATA: Dict[str, Dict[str, Any]] = {
-    "orchestrator": {
-        "model": "llama-3.1-70b-instruct",
-        "provider": "digitalocean-gradient",
-        "use_case": "complex_reasoning",
-        "cost_per_1m_tokens": 0.60,
-        "context_window": 128000
-    },
-    "feature-dev": {
-        "model": "codellama-13b-instruct",
-        "provider": "digitalocean-gradient",
-        "use_case": "code_generation",
-        "cost_per_1m_tokens": 0.30,
-        "context_window": 16000
-    },
-    "code-review": {
-        "model": "llama-3.1-70b-instruct",
-        "provider": "digitalocean-gradient",
-        "use_case": "code_analysis",
-        "cost_per_1m_tokens": 0.60,
-        "context_window": 128000
-    },
-    "infrastructure": {
-        "model": "llama-3.1-8b-instruct",
-        "provider": "digitalocean-gradient",
-        "use_case": "infrastructure_config",
-        "cost_per_1m_tokens": 0.20,
-        "context_window": 128000
-    },
-    "cicd": {
-        "model": "llama-3.1-8b-instruct",
-        "provider": "digitalocean-gradient",
-        "use_case": "pipeline_generation",
-        "cost_per_1m_tokens": 0.20,
-        "context_window": 128000
-    },
-    "documentation": {
-        "model": "mistral-7b-instruct",
-        "provider": "digitalocean-gradient",
-        "use_case": "documentation_generation",
-        "cost_per_1m_tokens": 0.20,
-        "context_window": 8192
-    }
-}
+# Model metadata loaded from YAML config (single source of truth)
+# Lazy-loaded on first access to avoid circular imports
+_CONFIG_LOADER = None
+
+
+def _get_config_loader():
+    """Lazy-load ConfigLoader to avoid circular imports."""
+    global _CONFIG_LOADER
+    if _CONFIG_LOADER is None:
+        try:
+            from lib.config_loader import get_config_loader
+
+            _CONFIG_LOADER = get_config_loader()
+            logger.info("Loaded agent configs from config/agents/models.yaml")
+        except Exception as e:
+            logger.warning(f"Failed to load ConfigLoader: {e}")
+            _CONFIG_LOADER = None
+    return _CONFIG_LOADER
 
 
 def get_agent_llm(agent_name: str):
     """
     Get configured LLM for specific agent
-    
+
     Args:
         agent_name: Name of the agent (orchestrator, feature-dev, etc.)
-        
+
     Returns:
         Configured ChatOpenAI instance or None if not found
     """
@@ -122,21 +95,40 @@ def get_checkpointer():
 
 def get_model_metadata(agent_name: str) -> Optional[Dict[str, Any]]:
     """
-    Get metadata about the model used by an agent
-    
+    Get metadata about the model used by an agent (loaded from YAML config)
+
     Args:
         agent_name: Name of the agent
-        
+
     Returns:
         Dict with model metadata or None if not found
     """
-    return MODEL_METADATA.get(agent_name)
+    config_loader = _get_config_loader()
+    if config_loader is None:
+        logger.warning("ConfigLoader unavailable, returning None for model metadata")
+        return None
+
+    try:
+        agent_config = config_loader.get_agent_config(agent_name)
+        return {
+            "model": agent_config.model,
+            "provider": agent_config.provider,
+            "use_case": agent_config.use_case,
+            "cost_per_1m_tokens": agent_config.cost_per_1m_tokens,
+            "context_window": agent_config.context_window,
+            "temperature": agent_config.temperature,
+            "max_tokens": agent_config.max_tokens,
+            "tags": agent_config.tags,
+        }
+    except KeyError:
+        logger.warning(f"No config found for agent: {agent_name}")
+        return None
 
 
 def is_fully_configured() -> Dict[str, bool]:
     """
     Check configuration status of all components
-    
+
     Returns:
         Dict mapping component name to availability status
     """
@@ -144,9 +136,9 @@ def is_fully_configured() -> Dict[str, bool]:
         "llms": all(llm is not None for llm in AGENT_LLMS.values()),
         "embeddings": EMBEDDINGS is not None,
         "qdrant": QDRANT_CLIENT.is_enabled(),
-        "checkpointer": CHECKPOINTER is not None
+        "checkpointer": CHECKPOINTER is not None,
     }
-    
+
     return status
 
 

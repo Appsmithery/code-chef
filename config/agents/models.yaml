@@ -1,0 +1,89 @@
+# LLM Model Configuration - Single Source of Truth
+# All agent model configurations, cost metadata, and environment overrides
+# Last Updated: November 24, 2025
+
+version: "1.0"
+provider: gradient # Default provider (gradient, claude, mistral, openai)
+
+agents:
+  orchestrator:
+    model: llama3.3-70b-instruct
+    provider: gradient
+    temperature: 0.3
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.60
+    context_window: 128000
+    use_case: complex_reasoning
+    tags: [routing, orchestration, supervisor]
+    langsmith_project: agents-orchestrator
+
+  feature-dev:
+    model: codellama-13b
+    provider: gradient
+    temperature: 0.7
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.30
+    context_window: 16000
+    use_case: code_generation
+    tags: [feature-development, python]
+    langsmith_project: agents-feature-dev
+
+  code-review:
+    model: llama3.3-70b-instruct
+    provider: gradient
+    temperature: 0.3
+    max_tokens: 4000
+    cost_per_1m_tokens: 0.60
+    context_window: 128000
+    use_case: code_analysis
+    tags: [quality-assurance, security]
+    langsmith_project: agents-code-review
+
+  infrastructure:
+    model: llama3-8b-instruct
+    provider: gradient
+    temperature: 0.5
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 128000
+    use_case: infrastructure_config
+    tags: [terraform, kubernetes, docker]
+    langsmith_project: agents-infrastructure
+
+  cicd:
+    model: llama3-8b-instruct
+    provider: gradient
+    temperature: 0.5
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 128000
+    use_case: pipeline_generation
+    tags: [github-actions, jenkins]
+    langsmith_project: agents-cicd
+
+  documentation:
+    model: mistral-nemo-instruct-2407
+    provider: gradient
+    temperature: 0.7
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 8192
+    use_case: documentation_generation
+    tags: [markdown, technical-writing]
+    langsmith_project: agents-documentation
+
+# Optional: Environment-specific overrides
+environments:
+  production:
+    orchestrator:
+      model: llama3.3-70b-instruct
+    code-review:
+      model: llama3.3-70b-instruct
+
+  development:
+    orchestrator:
+      model: llama3-8b-instruct # Cheaper for testing
+    code-review:
+      model: llama3-8b-instruct
+    feature-dev:
+      model: llama3-8b-instruct
