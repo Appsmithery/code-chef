@@ -250,9 +250,9 @@
       </div>
 
       <div class="info-box">
-        <strong>Architecture:</strong> Each agent is a FastAPI microservice with
+        <strong>Architecture:</strong> Each agent is a specialized node in the LangGraph workflow with
         dedicated LLM models, MCP tool access, RAG context, and comprehensive
-        observability via Langfuse + Prometheus.
+        observability via LangSmith + Prometheus.
       </div>
 
       <div class="agent-grid">
@@ -726,10 +726,10 @@
       <div class="info-box" style="margin-top: 3rem">
         <strong>Observability:</strong> All agents automatically trace to
         <a
-          href="https://us.cloud.langfuse.com"
+          href="https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/"
           target="_blank"
-          style="color: #856404"
-          >Langfuse</a
+          style="color: #667eea"
+          >LangSmith</a
         >
         with comprehensive metadata (agent_name, task_id, thread_id, model,
         execution timing, token usage, costs). Prometheus metrics available on
