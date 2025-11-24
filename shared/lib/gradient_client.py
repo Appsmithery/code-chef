@@ -66,11 +66,14 @@ class GradientClient:
         self._enabled = self._default_llm is not None
         if self._enabled:
             logger.info(
-                "[%s] LangChain client initialized for model=%s", agent_name, self._default_llm.model_name
+                "[%s] LangChain client initialized for model=%s",
+                agent_name,
+                self._default_llm.model_name,
             )
         else:
             logger.warning(
-                "[%s] LangChain client unavailable (missing provider credentials)", agent_name
+                "[%s] LangChain client unavailable (missing provider credentials)",
+                agent_name,
             )
 
     def _usage_from_response(self, response) -> Dict[str, int]:
@@ -115,7 +118,7 @@ class GradientClient:
         start_time = time.time()
         response = await llm.ainvoke(messages)
         latency = time.time() - start_time
-        
+
         content = _coerce_text(response.content)
         usage = self._usage_from_response(response)
 
@@ -124,7 +127,7 @@ class GradientClient:
             prompt_tokens=usage["prompt_tokens"],
             completion_tokens=usage["completion_tokens"],
             latency_seconds=latency,
-            model=llm.model_name
+            model=llm.model_name,
         )
 
         return {
@@ -156,38 +159,45 @@ class GradientClient:
             combined_system += "\n\n"
         combined_system += format_instructions
 
-        messages = [SystemMessage(content=combined_system), HumanMessage(content=prompt)]
-        
+        messages = [
+            SystemMessage(content=combined_system),
+            HumanMessage(content=prompt),
+        ]
+
         start_time = time.time()
         response = await llm.ainvoke(messages)
         latency = time.time() - start_time
-        
+
         raw_content = _strip_code_fences(_coerce_text(response.content))
 
         try:
             parsed = parser.parse(raw_content)
         except Exception:
             logger.warning(
-                "[%s] JsonOutputParser failed, attempting manual json.loads", self.agent_name
+                "[%s] JsonOutputParser failed, attempting manual json.loads",
+                self.agent_name,
             )
             try:
                 parsed = json.loads(raw_content)
             except json.JSONDecodeError as exc:
                 logger.error(
-                    "[%s] Failed to parse structured response: %s", self.agent_name, exc, exc_info=True
+                    "[%s] Failed to parse structured response: %s",
+                    self.agent_name,
+                    exc,
+                    exc_info=True,
                 )
                 raise
 
         usage = self._usage_from_response(response)
-        
+
         # Track token usage and cost
         self._track_tokens(
             prompt_tokens=usage["prompt_tokens"],
             completion_tokens=usage["completion_tokens"],
             latency_seconds=latency,
-            model=llm.model_name
+            model=llm.model_name,
         )
-        
+
         result = {
             "content": parsed,
             "raw_content": raw_content,
@@ -196,7 +206,9 @@ class GradientClient:
         }
 
         logger.info(
-            "[%s] Structured completion successful (%s tokens)", self.agent_name, usage["tokens"]
+            "[%s] Structured completion successful (%s tokens)",
+            self.agent_name,
+            usage["tokens"],
         )
         return result
 
@@ -205,7 +217,7 @@ class GradientClient:
         prompt_tokens: int,
         completion_tokens: int,
         latency_seconds: float,
-        model: str
+        model: str,
     ):
         """Calculate cost and track token usage."""
         try:
@@ -213,11 +225,11 @@ class GradientClient:
             config_loader = get_config_loader()
             agent_config = config_loader.get_agent_config(self.agent_name)
             cost_per_1m = agent_config.cost_per_1m_tokens
-            
+
             # Calculate cost for this call
             total_tokens = prompt_tokens + completion_tokens
             cost = (total_tokens / 1_000_000) * cost_per_1m
-            
+
             # Track via TokenTracker
             token_tracker.track(
                 agent_name=self.agent_name,
@@ -225,23 +237,25 @@ class GradientClient:
                 completion_tokens=completion_tokens,
                 cost=cost,
                 latency_seconds=latency_seconds,
-                model=model
+                model=model,
             )
         except Exception as e:
             # Don't fail requests if tracking fails
             logger.warning(f"[{self.agent_name}] Token tracking failed: {e}")
-    
+
     def is_enabled(self) -> bool:
         return self._enabled
 
-    def get_llm_with_tools(self, tools: list, temperature: float = 0.7, max_tokens: int = 2000):
+    def get_llm_with_tools(
+        self, tools: list, temperature: float = 0.7, max_tokens: int = 2000
+    ):
         """Get LLM instance with tools bound for function calling.
-        
+
         Args:
             tools: List of LangChain BaseTool instances
             temperature: Sampling temperature
             max_tokens: Maximum completion tokens
-        
+
         Returns:
             LangChain LLM with tools bound via bind_tools()
         """
