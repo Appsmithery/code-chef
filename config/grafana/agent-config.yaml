@@ -1,0 +1,124 @@
+server:
+  log_level: info
+  log_format: logfmt
+
+metrics:
+  global:
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    external_labels:
+      cluster: dev-tools
+      environment: production
+      collector: grafana-agent
+
+  configs:
+    - name: dev-tools-metrics
+
+      remote_write:
+        - url: https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push
+          basic_auth:
+            username: "1534681"
+            password: "glc_eyJvIjoiMTUzNDY4MSIsIm4iOiJzdGFjay0xMzc2NDc0LWhtLXdyaXRlLWdyYWZhbmFfYXBpX3Rva2VuIiwiayI6IjRydkxVNDY1cnA4NDdWTTYwd1kxY0dYVyIsIm0iOnsiciI6InByb2QtdXMtZWFzdC0wIn19"
+
+      scrape_configs:
+        # Orchestrator - Main coordinator agent
+        - job_name: orchestrator
+          static_configs:
+            - targets: ["localhost:8001"]
+              labels:
+                service: orchestrator
+                agent_type: coordinator
+                role: task-routing
+                type: agent
+
+        # Gateway MCP - Tool routing
+        - job_name: gateway-mcp
+          static_configs:
+            - targets: ["localhost:8000"]
+              labels:
+                service: gateway-mcp
+                role: tool-gateway
+                type: backend
+
+        # RAG Context Service
+        - job_name: rag-context
+          static_configs:
+            - targets: ["localhost:8007"]
+              labels:
+                service: rag-context
+                role: context-retrieval
+                type: backend
+
+        # State Persistence
+        - job_name: state-persistence
+          static_configs:
+            - targets: ["localhost:8008"]
+              labels:
+                service: state-persistence
+                role: workflow-state
+                type: backend
+
+        # Agent Registry
+        - job_name: agent-registry
+          static_configs:
+            - targets: ["localhost:8009"]
+              labels:
+                service: agent-registry
+                role: agent-discovery
+                type: backend
+
+        # Local Prometheus (self-monitoring)
+        - job_name: prometheus
+          static_configs:
+            - targets: ["localhost:9090"]
+              labels:
+                service: prometheus
+                role: metrics-storage
+                type: infrastructure
+
+        # Agent nodes (currently not deployed as separate services)
+        # Uncomment when deployed
+        # - job_name: feature-dev
+        #   static_configs:
+        #     - targets: ["localhost:8002"]
+        #       labels:
+        #         service: feature-dev
+        #         agent_type: developer
+        #         role: feature-implementation
+        #         type: agent
+
+        # - job_name: code-review
+        #   static_configs:
+        #     - targets: ["localhost:8003"]
+        #       labels:
+        #         service: code-review
+        #         agent_type: reviewer
+        #         role: code-quality
+        #         type: agent
+
+        # - job_name: infrastructure
+        #   static_configs:
+        #     - targets: ["localhost:8004"]
+        #       labels:
+        #         service: infrastructure
+        #         agent_type: devops
+        #         role: infrastructure-management
+        #         type: agent
+
+        # - job_name: cicd
+        #   static_configs:
+        #     - targets: ["localhost:8005"]
+        #       labels:
+        #         service: cicd
+        #         agent_type: automation
+        #         role: pipeline-management
+        #         type: agent
+
+        # - job_name: documentation
+        #   static_configs:
+        #     - targets: ["localhost:8006"]
+        #       labels:
+        #         service: documentation
+        #         agent_type: writer
+        #         role: documentation-generation
+        #         type: agent
