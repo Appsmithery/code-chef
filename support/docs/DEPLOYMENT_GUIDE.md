@@ -157,13 +157,126 @@ git push origin main
 
 # Deploy
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType quick
-```
+   ```
 
 ---
 
-## Configuration Requirements
+## LLM Configuration Management
 
-### Required Environment Variables
+### Hot-Reload (No Deployment Required)
+
+**Use Case:** Update model, cost, or context_window without restarting services
+
+**Procedure:**
+
+1. **Edit YAML config:**
+   ```bash
+   # Local machine
+   nano config/agents/models.yaml
+   ```
+
+2. **Example change:**
+   ```yaml
+   agents:
+     orchestrator:
+       model: llama3-8b-instruct  # Changed from llama3.3-70b-instruct
+       cost_per_1m_tokens: 0.20   # Changed from 0.60
+   ```
+
+3. **Commit and push:**
+   ```bash
+   git commit -am "config: Switch orchestrator to 8B model for cost savings"
+   git push origin main
+   ```
+
+4. **Apply to droplet:**
+   ```bash
+   ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull origin main"
+   ```
+
+5. **Restart orchestrator service (30s):**
+   ```bash
+   ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose restart orchestrator"
+   ```
+
+**What gets reloaded:**
+
+- ✅ Model name (LLM inference switches immediately)
+- ✅ Cost per 1M tokens (token tracking updates)
+- ✅ Context window (validation limits change)
+- ✅ Max tokens, temperature (LLM parameters)
+- ❌ New dependencies in requirements.txt (requires `full` deploy)
+- ❌ Python code changes (requires `full` deploy)
+
+**Verification:**
+
+```bash
+# Check health endpoint
+curl http://45.55.173.72:8001/health | jq
+
+# Check token tracking with new cost
+curl http://45.55.173.72:8001/metrics/tokens | jq '.per_agent.orchestrator.total_cost'
+
+# View logs for model switch confirmation
+ssh root@45.55.173.72 "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs orchestrator --tail=20"
+```
+
+### Environment-Specific Overrides
+
+**Use Case:** Use cheaper models in development, production models in prod
+
+**Architecture:**
+
+```yaml
+# config/agents/models.yaml
+agents:
+  orchestrator:
+    model: llama3.3-70b-instruct  # Default (production)
+    cost_per_1m_tokens: 0.60
+
+environments:
+  development:
+    orchestrator:
+      model: llama3-8b-instruct  # Override for dev
+      cost_per_1m_tokens: 0.20
+  staging:
+    orchestrator:
+      model: llama3.1-8b-instruct  # Override for staging
+      cost_per_1m_tokens: 0.20
+```
+
+**ConfigLoader Logic:**
+
+```python
+# shared/lib/config_loader.py
+config = loader.get_agent_config("orchestrator")
+# Returns development config if NODE_ENV=development
+# Returns production config if NODE_ENV=production
+```
+
+**Deployment:**
+
+```bash
+# Development droplet
+export NODE_ENV=development
+docker compose up -d
+
+# Production droplet
+export NODE_ENV=production
+docker compose up -d
+```
+
+**Cost Impact:**
+
+| Environment | Model                   | Cost/1M Tokens | Monthly (100M tokens) |
+| ----------- | ----------------------- | -------------- | --------------------- |
+| Development | llama3-8b-instruct      | $0.20          | $20                   |
+| Staging     | llama3.1-8b-instruct    | $0.20          | $20                   |
+| Production  | llama3.3-70b-instruct   | $0.60          | $60                   |
+
+---
+
+## Configuration Requirements### Required Environment Variables
 
 ```bash
 # LangSmith (LLM Tracing) - REQUIRED

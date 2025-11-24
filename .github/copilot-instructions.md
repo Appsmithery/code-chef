@@ -92,7 +92,15 @@ The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch 
   - **Benefits**: 50% .env reduction, version-controlled structure, type safety, multi-environment ready
   - **See**: `support/docs/LINEAR_INTEGRATION_GUIDE.md` for complete guide
 - **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `support/scripts/setup_secrets.sh` to create.
-- **Agent Models**: Per-agent Gradient model configured in `deploy/docker-compose.yml` via `GRADIENT_MODEL` env var; models optimized for task complexity and cost.
+- **LLM Configuration** (YAML-First Architecture - November 2025):
+  - **Single Source of Truth**: `config/agents/models.yaml` defines models, costs, context windows, parameters for all 6 agents
+  - **Schema Validation**: `shared/lib/agent_config_schema.py` enforces Pydantic v2 validation on YAML load
+  - **Config Loader**: `shared/lib/config_loader.py` provides hot-reload via watchdog, environment-specific overrides
+  - **Token Tracking**: `shared/lib/token_tracker.py` calculates costs from YAML config (cost_per_1m_tokens)
+  - **Hot-Reload**: Edit YAML → Restart orchestrator (30s, no rebuild required)
+  - **Environment Overrides**: Use cheaper models in dev (llama3-8b), production models in prod (llama3.3-70b)
+  - **Observability**: Prometheus metrics + JSON API at `/metrics/tokens` + Grafana dashboards
+  - **Documentation**: See `support/docs/guides/implementation/LLM_CONFIG_REFACTORING_PLAN.md`, `support/docs/OBSERVABILITY_GUIDE.md`
 - **Task Routing**: Rules in `config/routing/task-router.rules.yaml` (if used); orchestrator uses LLM-powered decomposition when `gradient_client.is_enabled()`.
 - **RAG Config**: `config/rag/indexing.yaml` + `config/rag/vectordb.config.yaml` define Qdrant vector DB sources and embedding targets.
 - **State Schema**: PostgreSQL-backed workflow state using `config/state/schema.sql`; migrate by extending schema and rebuilding stack.
