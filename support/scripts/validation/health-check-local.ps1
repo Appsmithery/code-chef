@@ -3,16 +3,16 @@
 
 Write-Host "[HEALTH] Checking local service health..."
 
+# NOTE: Post-DEV-123 LangGraph migration
+# Agent nodes (feature-dev, code-review, infrastructure, cicd, documentation) are NOT separate services
+# They are LangGraph workflow nodes within orchestrator (port 8001)
 $services = @(
     @{Port=8000; Name="gateway-mcp"},
-    @{Port=8001; Name="orchestrator"},
-    @{Port=8002; Name="feature-dev"},
-    @{Port=8003; Name="code-review"},
-    @{Port=8004; Name="infrastructure"},
-    @{Port=8005; Name="cicd"},
-    @{Port=8006; Name="documentation"},
+    @{Port=8001; Name="orchestrator (includes all agent nodes)"},
     @{Port=8007; Name="rag-context"},
-    @{Port=8008; Name="state-persistence"}
+    @{Port=8008; Name="state-persistence"},
+    @{Port=8009; Name="agent-registry"},
+    @{Port=8010; Name="langgraph"}
 )
 
 foreach ($svc in $services) {

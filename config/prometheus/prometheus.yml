@@ -11,6 +11,9 @@ global:
 # Scrape configurations for all services
 scrape_configs:
   # ===== Agent Services =====
+  # NOTE: Post-DEV-123 LangGraph migration - all agents are nodes within orchestrator (port 8001)
+  # Agent nodes (feature-dev, code-review, infrastructure, cicd, documentation) are NOT separate services
+  # They run as workflow nodes within the orchestrator and export metrics via orchestrator:8001/metrics
 
   - job_name: "orchestrator"
     static_configs:
@@ -19,46 +22,9 @@ scrape_configs:
           service: "orchestrator"
           agent_type: "coordinator"
           role: "task-routing"
-
-  - job_name: "feature-dev"
-    static_configs:
-      - targets: ["feature-dev:8002"]
-        labels:
-          service: "feature-dev"
-          agent_type: "generator"
-          role: "code-generation"
-
-  - job_name: "code-review"
-    static_configs:
-      - targets: ["code-review:8003"]
-        labels:
-          service: "code-review"
-          agent_type: "analyzer"
-          role: "quality-assurance"
-
-  - job_name: "infrastructure"
-    static_configs:
-      - targets: ["infrastructure:8004"]
-        labels:
-          service: "infrastructure"
-          agent_type: "provisioner"
-          role: "iac-management"
-
-  - job_name: "cicd"
-    static_configs:
-      - targets: ["cicd:8005"]
-        labels:
-          service: "cicd"
-          agent_type: "pipeline"
-          role: "automation"
-
-  - job_name: "documentation"
-    static_configs:
-      - targets: ["documentation:8006"]
-        labels:
-          service: "documentation"
-          agent_type: "generator"
-          role: "content-creation"
+          architecture: "langgraph-multi-node"
+          # Note: Metrics from all 6 agent nodes (supervisor, feature-dev, code-review,
+          # infrastructure, cicd, documentation) are aggregated and exposed via this endpoint
 
   # ===== Support Services =====
 
