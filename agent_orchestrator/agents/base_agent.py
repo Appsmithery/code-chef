@@ -147,7 +147,23 @@ class BaseAgent:
         return self.llm
 
     def get_system_prompt(self) -> str:
-        """Get agent-specific system prompt from configuration."""
+        """Get agent-specific system prompt from .prompt.md file or YAML config.
+
+        Implements Factor 2 (Own Your Prompts) by loading prompts from version-controlled
+        .prompt.md files first, with fallback to YAML config for backward compatibility.
+
+        Returns:
+            System prompt string for LLM initialization
+        """
+        # Try loading from .prompt.md file first
+        prompt_file = (
+            Path(__file__).parent.parent / "prompts" / f"{self.agent_name}.prompt.md"
+        )
+
+        if prompt_file.exists():
+            return prompt_file.read_text(encoding="utf-8")
+
+        # Fallback to YAML config for backward compatibility
         return self.config["agent"].get(
             "system_prompt", "You are a helpful AI assistant."
         )

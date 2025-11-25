@@ -298,7 +298,7 @@ tasks:
           -H "Content-Type: application/json" \
           -d '{
             "workflow_id": "{{.WORKFLOW_ID}}",
-            "template": "pr-deployment.workflow.yaml",
+            "template": "templates/pr-deployment.workflow.yaml",
             "context": {
               "pr_number": {{.PR_NUMBER}},
               "branch": "{{.BRANCH}}",
@@ -337,7 +337,10 @@ tasks:
   workflow:list-templates:
     desc: List available workflow templates
     cmds:
-      - ls -1 agent_orchestrator/workflows/templates/*.workflow.yaml | xargs -n1 basename
+      - cmd: powershell "Get-ChildItem agent_orchestrator/workflows/templates/*.workflow.yaml | Select-Object -ExpandProperty Name"
+        platforms: [windows]
+      - cmd: ls -1 agent_orchestrator/workflows/templates/*.workflow.yaml | xargs -n1 basename
+        platforms: [linux, darwin]
 
   #============================================================================
   # AGENT PROMPT MANAGEMENT

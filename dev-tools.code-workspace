@@ -1,104 +1,107 @@
 {
-	"folders": [
-		{
-			"path": ".",
-			"name": "Dev-Tools Root"
-		}
-	],
-	"settings": {
-		"files.exclude": {
-			"**/.git": true,
-			"**/__pycache__": true
-		},
-		"workbench.iconTheme": "vs-seti-folder",
-		"workbench.colorTheme": "vira-ocean",
-		"github.copilot.chat.alternateGptPrompt.enabled": true,
-		"github.copilot.chat.anthropic.thinking.enabled": true,
-		"github.copilot.chat.anthropic.tools.websearch.enabled": true,
-		"github.copilot.chat.codesearch.enabled": true,
-		"github.copilot.chat.editor.temporalContext.enabled": true,
-		"github.copilot.chat.edits.temporalContext.enabled": true,
-		"github.copilot.chat.generateTests.codeLens": true,
-		"github.copilot.chat.languageContext.fix.typescript.enabled": true,
-		"github.copilot.chat.languageContext.inline.typescript.enabled": true,
-		"github.copilot.chat.languageContext.typescript.enabled": true,
-		"github.copilot.chat.languageContext.typescript.includeDocumentation": true,
-		"github.copilot.chat.newWorkspace.useContext7": true,
-		"github.copilot.chat.notebook.enhancedNextEditSuggestions.enabled": true,
-		"github.copilot.chat.notebook.followCellExecution.enabled": true,
-		"github.copilot.chat.responsesApiReasoningEffort": "medium",
-		"github.copilot.chat.scopeSelection": true,
-		"github.copilot.chat.tools.memory.enabled": true,
-		"mcp": {
-			"servers": {
-				"Linear": {
-					"type": "stdio",
-					"command": "npx",
-					"args": [
-						"mcp-remote",
-						"https://mcp.linear.app/sse"
-					]
-				}
-			},
-			"inputs": []
-		},
-		"github.copilot.nextEditSuggestions.enabled": true,
-		"github.copilot.chat.responsesApiReasoningSummary": "off",
-		"github.copilot.chat.summarizeAgentConversationHistory.enabled": true,
-		"editor.aiStats.enabled": true,
-		"github-actions.workflows.pinned.workflows": [],
-		"chat.mcp.serverSampling": {
-			"dev-tools.code-workspace: Docs by LangChain": {
-				"allowedModels": [
-					"copilot/claude-sonnet-4.5",
-					"copilot/auto",
-					"copilot/claude-haiku-4.5",
-					"copilot/claude-sonnet-4",
-					"copilot/gemini-2.5-pro",
-					"copilot/gemini-3-pro-preview",
-					"copilot/gpt-4.1",
-					"copilot/gpt-5",
-					"copilot/gpt-5-codex",
-					"copilot/gpt-5.1",
-					"copilot/gpt-5.1-codex",
-					"copilot/gpt-5.1-codex-mini",
-					"copilot/grok-code-fast-1",
-					"copilot/oswe-vscode-prime"
-				]
-			}
-		},
-		"terminal.integrated.cursorStyle": "line",
-		"chat.agent.thinking.collapsedTools": "all",
-		"chat.checkpoints.showFileChanges": false,
-		"chat.customAgentInSubagent.enabled": true,
-		"chat.extensionUnification.enabled": true,
-		"chat.renderRelatedFiles": true,
-		"chat.todoListTool.writeOnly": false,
-		"chat.tools.terminal.autoReplyToPrompts": true,
-		"chat.useNestedAgentsMdFiles": true,
-		"inlineChat.enableV2": true,
-		"inlineChat.notebookAgent": true,
-		"devtools.linearHubIssue": "DEV-68",
-		"devtools.linearWorkspaceSlug": "dev-ops",
-		"devtools.mcpGatewayUrl": "http://45.55.173.72:8000",
-		"devtools.orchestratorUrl": "http://45.55.173.72:8001",
-		"devtools.autoApproveThreshold": "medium"
-	},
-	"extensions": {
-		"recommendations": [
-			"ms-azuretools.vscode-docker",
-			"ms-python.python",
-			"ms-python.black-formatter",
-			"GitHub.copilot",
-			"esbenp.prettier-vscode",
-			"redhat.vscode-yaml",
-			"ms-vscode-remote.remote-ssh",
-			"ms-vscode-remote.remote-containers",
-			"linear.linear-connect",
-			"chrisdias.promptboost",
-			"task.vscode-task",
-			"hfloveyy.langgraphv",
-			"l-igh-t.vscode-theme-seti-folder"
-		]
-	}
+  "folders": [
+    {
+      "path": ".",
+      "name": "Dev-Tools Root"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/.git": true,
+      "**/__pycache__": true
+    },
+    "workbench.iconTheme": "vs-seti-folder",
+    "workbench.colorTheme": "vira-ocean",
+    "github.copilot.chat.alternateGptPrompt.enabled": true,
+    "github.copilot.chat.anthropic.thinking.enabled": true,
+    "github.copilot.chat.anthropic.tools.websearch.enabled": true,
+    "github.copilot.chat.codesearch.enabled": true,
+    "github.copilot.chat.editor.temporalContext.enabled": true,
+    "github.copilot.chat.edits.temporalContext.enabled": true,
+    "github.copilot.chat.generateTests.codeLens": true,
+    "github.copilot.chat.languageContext.fix.typescript.enabled": true,
+    "github.copilot.chat.languageContext.inline.typescript.enabled": true,
+    "github.copilot.chat.languageContext.typescript.enabled": true,
+    "github.copilot.chat.languageContext.typescript.includeDocumentation": true,
+    "github.copilot.chat.newWorkspace.useContext7": true,
+    "github.copilot.chat.notebook.enhancedNextEditSuggestions.enabled": true,
+    "github.copilot.chat.notebook.followCellExecution.enabled": true,
+    "github.copilot.chat.responsesApiReasoningEffort": "medium",
+    "github.copilot.chat.scopeSelection": true,
+    "github.copilot.chat.tools.memory.enabled": true,
+    "mcp": {
+      "servers": {
+        "Linear": {
+          "type": "stdio",
+          "command": "npx",
+          "args": ["mcp-remote", "https://mcp.linear.app/sse"]
+        }
+      },
+      "inputs": []
+    },
+    "github.copilot.nextEditSuggestions.enabled": true,
+    "github.copilot.chat.responsesApiReasoningSummary": "off",
+    "github.copilot.chat.summarizeAgentConversationHistory.enabled": true,
+    "editor.aiStats.enabled": true,
+    "github-actions.workflows.pinned.workflows": [],
+    "chat.mcp.serverSampling": {
+      "dev-tools.code-workspace: Docs by LangChain": {
+        "allowedModels": [
+          "copilot/claude-sonnet-4.5",
+          "copilot/auto",
+          "copilot/claude-haiku-4.5",
+          "copilot/claude-sonnet-4",
+          "copilot/gemini-2.5-pro",
+          "copilot/gemini-3-pro-preview",
+          "copilot/gpt-4.1",
+          "copilot/gpt-5",
+          "copilot/gpt-5-codex",
+          "copilot/gpt-5.1",
+          "copilot/gpt-5.1-codex",
+          "copilot/gpt-5.1-codex-mini",
+          "copilot/grok-code-fast-1",
+          "copilot/oswe-vscode-prime"
+        ]
+      }
+    },
+    "terminal.integrated.cursorStyle": "line",
+    "chat.agent.thinking.collapsedTools": "all",
+    "chat.checkpoints.showFileChanges": true,
+    "chat.customAgentInSubagent.enabled": true,
+    "chat.extensionUnification.enabled": true,
+    "chat.renderRelatedFiles": true,
+    "chat.todoListTool.writeOnly": false,
+    "chat.tools.terminal.autoReplyToPrompts": true,
+    "chat.useNestedAgentsMdFiles": true,
+    "inlineChat.enableV2": true,
+    "inlineChat.notebookAgent": true,
+    "devtools.linearHubIssue": "DEV-68",
+    "devtools.linearWorkspaceSlug": "dev-ops",
+    "devtools.mcpGatewayUrl": "http://45.55.173.72:8000",
+    "devtools.orchestratorUrl": "http://45.55.173.72:8001",
+    "devtools.autoApproveThreshold": "medium",
+    "chat.allowAnonymousAccess": true,
+    "chat.edits2.enabled": true,
+    "chat.mcp.gallery.enabled": true,
+    "chat.promptFilesLocations": {
+      ".agent_orchestrator/prompts": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-azuretools.vscode-docker",
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "GitHub.copilot",
+      "esbenp.prettier-vscode",
+      "redhat.vscode-yaml",
+      "ms-vscode-remote.remote-ssh",
+      "ms-vscode-remote.remote-containers",
+      "linear.linear-connect",
+      "chrisdias.promptboost",
+      "task.vscode-task",
+      "hfloveyy.langgraphv",
+      "l-igh-t.vscode-theme-seti-folder"
+    ]
+  }
 }
