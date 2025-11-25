@@ -24,9 +24,15 @@ async def infrastructure_node(state: AgentState) -> AgentState:
 
     request_payload = normalized.get("infrastructure_request", {})
     infrastructure_type = request_payload.get("infrastructure_type", "docker")
-    task_id = request_payload.get("task_id") or normalized.get("linear_issue_id") or "infra-task"
+    task_id = (
+        request_payload.get("task_id")
+        or normalized.get("linear_issue_id")
+        or "infra-task"
+    )
 
-    logger.info(f"[infrastructure] Processing request: {task_id} ({infrastructure_type})")
+    logger.info(
+        f"[infrastructure] Processing request: {task_id} ({infrastructure_type})"
+    )
 
     # Stub implementation - return success with placeholder data
     content = (
@@ -37,14 +43,14 @@ async def infrastructure_node(state: AgentState) -> AgentState:
     update = agent_response(normalized, agent_name="infrastructure", content=content)
     update["infrastructure_request"] = {
         "task_id": task_id,
-        "infrastructure_type": infrastructure_type
+        "infrastructure_type": infrastructure_type,
     }
     update["infrastructure_response"] = {
         "task_id": task_id,
         "status": "stub",
         "artifacts": [],
         "validation_status": "pending",
-        "message": "Stub implementation - awaiting orchestrator integration"
+        "message": "Stub implementation - awaiting orchestrator integration",
     }
 
     return update

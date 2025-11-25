@@ -24,7 +24,11 @@ async def documentation_node(state: AgentState) -> AgentState:
 
     request_payload = normalized.get("documentation_request", {})
     doc_type = request_payload.get("doc_type", "readme")
-    task_id = request_payload.get("task_id") or normalized.get("linear_issue_id") or "doc-task"
+    task_id = (
+        request_payload.get("task_id")
+        or normalized.get("linear_issue_id")
+        or "doc-task"
+    )
 
     logger.info(f"[documentation] Processing request: {task_id} ({doc_type})")
 
@@ -35,15 +39,12 @@ async def documentation_node(state: AgentState) -> AgentState:
     )
 
     update = agent_response(normalized, agent_name="documentation", content=content)
-    update["documentation_request"] = {
-        "task_id": task_id,
-        "doc_type": doc_type
-    }
+    update["documentation_request"] = {"task_id": task_id, "doc_type": doc_type}
     update["documentation_response"] = {
         "doc_id": task_id,
         "status": "stub",
         "artifacts": [],
-        "message": "Stub implementation - awaiting orchestrator integration"
+        "message": "Stub implementation - awaiting orchestrator integration",
     }
 
     return update
