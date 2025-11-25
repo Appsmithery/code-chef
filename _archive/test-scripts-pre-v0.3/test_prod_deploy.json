@@ -1,5 +1,0 @@
-{
-  "description": "Deploy production database changes",
-  "priority": "high",
-  "project_context": { "environment": "production" }
-}

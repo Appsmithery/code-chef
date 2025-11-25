@@ -1,8 +1,0 @@
-﻿{
-  "description": "Implement GraphQL mutations for Gradient AI model fine-tuning with LangSmith observability integration",
-  "project_context": {
-    "project": "ai-devops-platform",
-    "environment": "development"
-  },
-  "priority": "medium"
-}
