@@ -1,375 +1,91 @@
-# Github Copilot Instructions for Dev-Tools
+# GitHub Copilot Instructions for Dev-Tools
 
-## Architecture snapshot
+## System Overview
 
-**Production Status**: Multi-agent DevOps automation platform running on DigitalOcean (droplet: 45.55.173.72)
+**Production**: Multi-agent DevOps automation platform on DigitalOcean droplet 45.55.173.72
 
-- **Agent Layer**: Single orchestrator FastAPI service (`agent_orchestrator/`) with 5 agent nodes as Python modules in `agent_orchestrator/agents/` (supervisor.py, feature_dev.py, code_review.py, infrastructure.py, cicd.py, documentation.py). LangGraph workflow manages agent coordination via StateGraph with conditional routing. Orchestrator uses LangChain tool binding for function calling.
-- **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; agents use `shared/lib/mcp_client.py` for tool access. Gateway routes to servers in `shared/mcp/servers/`. Orchestrator converts MCP tools to LangChain `BaseTool` instances for function calling via `to_langchain_tools()`.
-- **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
-- **LLM Inference**: DigitalOcean Gradient AI integration via LangChain wrappers (`shared/lib/gradient_client.py`, `shared/lib/langchain_gradient.py`) with per-node model optimization configured in agent node files (llama-3.1-70b for supervisor/code-review nodes, codellama-13b for feature-dev node, llama-3.1-8b for infrastructure/cicd nodes, mistral-7b for documentation node). Orchestrator service uses llama3.3-70b-instruct.
-- **Observability**: LangSmith automatic LLM tracing (orchestrator + all agent nodes + LangGraph workflow) + Prometheus HTTP metrics via Grafana Alloy (orchestrator, gateway-mcp, state-persistence). Complete observability: LLM traces → LangSmith (https://smith.langchain.com), HTTP metrics → Grafana Cloud (appsmithery.grafana.net), workflow state → PostgreSQL checkpointing, vectors → Qdrant.
-- **Notification System**: Event-driven approval notifications via `shared/lib/event_bus.py` (async pub/sub); Linear workspace client posts to PR-68 hub with @mentions; <1s latency; optional email fallback via SMTP.
-- **Copilot Integration**: Natural language task submission via `/chat` endpoint; multi-turn conversations with PostgreSQL session management; real-time approval notifications (<1s latency); OAuth integration with Linear GraphQL API.
-- **Service Ports**: gateway-mcp:8000, orchestrator:8001, rag-context:8007, state-persistence:8008, agent-registry:8009, langgraph:8010, prometheus:9090. Agent nodes (feature-dev, code-review, infrastructure, cicd, documentation) are LangGraph workflow nodes within orchestrator, not separate services.
+**Core Architecture**:
+- Single orchestrator (`agent_orchestrator/`) with 6 agent nodes (supervisor, feature_dev, code_review, infrastructure, cicd, documentation)
+- LangGraph StateGraph workflow with LangChain tool binding
+- MCP gateway (port 8000): 150+ tools across 17 servers, progressive disclosure (80-90% token savings)
+- LLM: DigitalOcean Gradient AI (llama3.3-70b orchestrator, per-node optimization)
+- Observability: LangSmith tracing, Grafana/Prometheus metrics
+- HITL: Risk-based approvals via Linear (DEV-68 hub), LangGraph checkpointing
+- Service ports: gateway:8000, orchestrator:8001, rag:8007, state:8008, langgraph:8010
 
-## Repository structure
+## Repository Navigation
 
 ```
 Dev-Tools/
-├── agent_orchestrator/          # Orchestrator service (FastAPI + LangGraph)
-│   ├── agents/                  # Agent node implementations (Python modules)
-│   │   ├── supervisor.py        # Supervisor node (routing logic)
-│   │   ├── feature_dev.py       # Feature development node
-│   │   ├── code_review.py       # Code review node
-│   │   ├── infrastructure.py    # Infrastructure node
-│   │   ├── cicd.py              # CI/CD node
-│   │   └── documentation.py     # Documentation node
-│   ├── graph.py                 # LangGraph StateGraph definition
-│   ├── workflows.py             # Workflow orchestration
-│   └── main.py                  # FastAPI service
-├── shared/                      # Shared runtime components
-│   ├── lib/                     # Agent runtime libraries (15+ Python modules)
-│   │   ├── progressive_mcp_loader.py  # Progressive tool disclosure (80-90% token savings)
-│   │   ├── mcp_client.py        # MCP gateway client
-│   │   ├── gradient_client.py   # Gradient AI LLM client
-│   │   ├── event_bus.py         # Async pub/sub event routing (notification system)
-│   │   ├── linear_workspace_client.py  # Linear GraphQL API client (OAuth)
-│   │   ├── notifiers/           # Event subscribers (Linear, Email)
-│   │   └── ...                  # Other shared modules
-│   ├── services/                # Backend microservices
-│   │   ├── langgraph/           # LangGraph workflow service (port 8010)
-│   │   ├── rag/                 # RAG context service (port 8007)
-│   │   └── state/               # State persistence service (port 8008)
-│   ├── gateway/                 # MCP gateway for tool routing
-│   ├── mcp/                     # MCP servers (17 servers)
-│   └── context/                 # MCP server context data
-├── deploy/                      # Deployment orchestration
-│   ├── docker-compose.yml       # Service definitions
-│   ├── workflows/               # CI/CD workflows
-│   └── .env.template            # Environment template
-├── config/                      # Runtime configuration
-│   ├── env/                     # Environment variables
-│   ├── caddy/                   # Reverse proxy config
-│   ├── prometheus/              # Metrics config
-│   ├── rag/                     # RAG config
-│   ├── state/                   # State schema
-│   └── routing/                 # Task routing rules
-└── support/                     # Development support
-    ├── scripts/                 # Operational scripts (30+ scripts)
-    ├── docs/                    # Documentation
-    ├── tests/                   # Test suites
-    ├── templates/               # Templates for generation
-    ├── reports/                 # Validation reports
-    ├── pipelines/               # Pipeline templates
-    └── frontend/                # HTML dashboards
+├── agent_orchestrator/      # Orchestrator + 6 agent nodes (graph.py, workflows.py, main.py)
+├── shared/
+│   ├── lib/                 # Core libraries (mcp_client, gradient_client, linear_workspace_client, etc.)
+│   ├── services/            # langgraph:8010, rag:8007, state:8008
+│   ├── gateway/             # MCP gateway:8000
+│   └── mcp/servers/         # 17 MCP servers
+├── config/
+│   ├── env/.env             # Secrets (gitignored, use .env.template)
+│   ├── linear/              # linear-config.yaml, project-registry.yaml
+│   ├── agents/models.yaml   # LLM configuration
+│   ├── hitl/                # risk-assessment-rules.yaml, approval-policies.yaml
+│   └── state/schema.sql     # PostgreSQL schema
+├── deploy/
+│   └── docker-compose.yml   # Service definitions
+└── support/
+    ├── scripts/
+    │   ├── deploy/deploy-to-droplet.ps1  # Deployment (config/full/auto)
+    │   └── linear/agent-linear-update.py # Linear roadmap management
+    ├── docs/                # QUICKSTART.md, ARCHITECTURE.md, DEPLOYMENT.md
+    └── tests/               # Test suites
 ```
 
-## ⚠️ Deprecated Paths (REMOVED - November 20, 2025)
+## Configuration
 
-The `_archive/` directory has been **PERMANENTLY REMOVED** from the main branch as of November 20, 2025.
+- **Secrets**: `config/env/.env` (gitignored) - Copy from `.env.template`, populate API keys
+- **Linear**: `config/linear/linear-config.yaml` (structure), `config/linear/project-registry.yaml` (projects)
+- **LLM**: `config/agents/models.yaml` - All agent models, costs, parameters; hot-reload on restart
+- **HITL**: `config/hitl/risk-assessment-rules.yaml`, `config/hitl/approval-policies.yaml`
+- **State**: `config/state/schema.sql` - PostgreSQL schema for checkpointing
+- **Observability**: LangSmith (`.env` keys), Prometheus (`config/prometheus/prometheus.yml`)
 
-**All imports have been updated to current structure:**
+## Linear Integration
 
-- ✅ `agents._shared.*` → `shared.lib.*`
-- ✅ `agents.<agent>.*` → `agent_<agent>.*` (with sys.path for hyphenated names)
-- ✅ All deprecated paths cleaned up (0 violations)
-- ✅ Docker environment pruned (8GB freed)
-- ✅ Repository optimized (~8.1GB reduction)
+### Roadmap Management (CRITICAL WORKFLOW)
 
-**Historical Reference**: Archive contents moved to `archive/historical` branch for reference.
+**When user says "update linear roadmap" → Update Linear project issues via API, NOT markdown files**
 
-**Never suggest `_archive/`, `agents/`, `containers/`, or `compose/` paths in code generation or documentation.**
+**Commands:**
+```bash
+# Update project descriptions
+python support/scripts/linear/agent-linear-update.py update-project --project-id "UUID"
 
-## Configuration sources
+# Create issue
+python support/scripts/linear/agent-linear-update.py create-issue --project-id "UUID" --title "..." --description "..."
 
-- **Environment**: `config/env/.env` contains secrets only (API keys, OAuth tokens, webhook secrets). Copy from `config/env/.env.template` and populate secrets. Structural config moved to YAML files (see Linear config below).
-- **Linear Configuration** (Multi-Layer Strategy - November 2025):
-  - **Structural Config**: `config/linear/linear-config.yaml` (UUIDs, field IDs, labels, templates, policies) - version controlled
-  - **Secrets**: `config/env/.env` (LINEAR_API_KEY, OAuth tokens, webhook secrets) - gitignored
-  - **Loader**: `shared/lib/linear_config.py` provides type-safe config access with Pydantic validation
-  - **Usage**: `from lib.linear_config import get_linear_config; config = get_linear_config()`
-  - **Benefits**: 50% .env reduction, version-controlled structure, type safety, multi-environment ready
-  - **See**: `support/docs/LINEAR_INTEGRATION_GUIDE.md` for complete guide
-- **Docker Secrets**: Linear OAuth tokens in `config/env/secrets/*.txt` mounted via Docker Compose secrets; run `support/scripts/setup_secrets.sh` to create.
-- **LLM Configuration** (YAML-First Architecture - November 2025):
-  - **Single Source of Truth**: `config/agents/models.yaml` defines models, costs, context windows, parameters for all 6 agents
-  - **Schema Validation**: `shared/lib/agent_config_schema.py` enforces Pydantic v2 validation on YAML load
-  - **Config Loader**: `shared/lib/config_loader.py` provides hot-reload via watchdog, environment-specific overrides
-  - **Token Tracking**: `shared/lib/token_tracker.py` calculates costs from YAML config (cost_per_1m_tokens)
-  - **Hot-Reload**: Edit YAML → Restart orchestrator (30s, no rebuild required)
-  - **Environment Overrides**: Use cheaper models in dev (llama3-8b), production models in prod (llama3.3-70b)
-  - **Observability**: Prometheus metrics + JSON API at `/metrics/tokens` + Grafana dashboards
-  - **Documentation**: See `support/docs/guides/implementation/LLM_CONFIG_REFACTORING_PLAN.md`, `support/docs/OBSERVABILITY_GUIDE.md`
-- **Task Routing**: Rules in `config/routing/task-router.rules.yaml` (if used); orchestrator uses LLM-powered decomposition when `gradient_client.is_enabled()`.
-- **RAG Config**: `config/rag/indexing.yaml` + `config/rag/vectordb.config.yaml` define Qdrant vector DB sources and embedding targets.
-- **State Schema**: PostgreSQL-backed workflow state using `config/state/schema.sql`; migrate by extending schema and rebuilding stack.
-- **Observability**: `config/prometheus/prometheus.yml` defines scrape targets for all agents; LangSmith keys in `.env` enable automatic tracing.
+# Update issue status
+python support/scripts/linear/agent-linear-update.py update-status --issue-id "PR-XX" --status "done"
 
-## Integrations
+# Create sub-issues (3-5 tasks for complex features)
+python support/scripts/linear/agent-linear-update.py create-phase --project-id "UUID"
+```
 
-### Linear (OAuth + Notifications)
+**Environment:** Set `$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"` before running
 
-- Gateway exposes `/oauth/linear/install` (OAuth) and `/oauth/linear/status` (token check); issues via `/api/linear-issues`, projects via `/api/linear-project/:projectId`.
-- Tokens from `LINEAR_*` envs or `*_FILE` Docker secrets; maintain `config/env/secrets/linear_oauth_token.txt` (never commit `.env` secrets).
-- **Linear Integration - Two Separate Workflows**:
-  1. **Roadmap Management (Project-Specific)**: Use `support/scripts/linear/agent-linear-update.py` with `--project-id` parameter. Only orchestrator creates project issues (on behalf of agent nodes).
-  2. **HITL Approvals (Workspace-Wide)**: Agent nodes escalate to orchestrator → Orchestrator emits event via `event_bus.py` → `linear_workspace_client.py` creates sub-issue in DEV-68 with agent context. Workflow interrupts via LangGraph checkpoint, resumes after approval.
-- **Update Linear Roadmap**: When user says "update linear roadmap", they mean update the **Linear project issues** (not the markdown file). Use `agent-linear-update.py` with `--project-id` and `LINEAR_API_KEY` env var (OAuth token: `lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571`).
-- **Sub-Issue Requirements**: Break down complex features into 3-5 sub-tasks using `agent-linear-update.py create-phase --project-id "UUID"`. Always set appropriate status (todo/in_progress/done) when creating/updating issues.
-- **Status Management**: Retrospective updates should be marked "done". Use `agent-linear-update.py update-status --issue-id "PR-XX" --status "done"` for completed work.
-- **Access Control**: Only orchestrator service has Linear API access. Agent nodes escalate requests to orchestrator which creates issues on their behalf. Use `--project-id` for project-scoped issues; orchestrator defaults to AI DevOps Agent Platform project.
-- **Approval Notifications**: Orchestrator posts approval requests to Linear workspace hub (DEV-68) via `linear_workspace_client.py`; events emitted via `event_bus.py`; <1s latency; native Linear notifications (email/mobile/desktop). Configure: `LINEAR_APPROVAL_HUB_ISSUE_ID=DEV-68` in `.env`.
-- **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501` (slug: `78b3b839d36b`)
+**Key Details:**
+- **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501`
 - **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
-- **Approval Hub Issue**: DEV-68 (workspace-level approval notification hub - for HITL only)
-- **Phase 6 Issue**: PR-85 (Multi-Agent Collaboration completion)
-- **Linear Template Configuration** (Post-DEV-123 LangGraph Architecture):
-  - Only orchestrator service creates Linear issues (on behalf of all agent nodes)
-  - Template fallback logic in `shared/lib/linear_workspace_client.py:438-454`:
-    1. Try agent-specific template: `HITL_{AGENT}_TEMPLATE_UUID`
-    2. Fallback to orchestrator template if not found
-    3. All agent nodes inherit orchestrator templates by default
-  - Required `.env` variables (orchestrator only):
-    - `HITL_ORCHESTRATOR_TEMPLATE_UUID` (workspace-scoped HITL approvals)
-    - `TASK_ORCHESTRATOR_TEMPLATE_UUID` (project-scoped task issues)
-    - `LINEAR_ORCHESTRATOR_TEMPLATE_ID` (alias of TASK_ORCHESTRATOR)
-    - `LINEAR_HITL_ORCHESTRATOR_TEMPLATE_ID` (alias of HITL_ORCHESTRATOR)
-  - Agent-specific template variables (feature-dev, code-review, infrastructure, cicd, documentation) are OPTIONAL and will fallback to orchestrator templates
-  - HITL Approval Flow: Agent node escalates → Orchestrator creates sub-issue in DEV-68 using template aa632a46-ea22-4dd0-9403-90b0d1f05aa0 → User approves in Linear → Workflow resumes
+- **HITL Hub**: DEV-68 (workspace-wide approval notifications only)
+- **Status Values**: todo, in_progress, done
+- **Retrospective Updates**: Always mark completed work as "done"
 
-### Human-in-the-Loop (HITL) Approval System
+### HITL Approvals
 
-**Architecture**: Risk-based approval workflow with LangGraph checkpoint integration and Linear UI for approval requests.
+- Risk-based workflow: low (auto-approved) → medium (dev/tech_lead) → high/critical (devops_engineer)
+- Orchestrator creates sub-issues in DEV-68 via `linear_workspace_client.py`
+- LangGraph checkpoint interrupts workflow, resumes on approval
+- Template: `HITL_ORCHESTRATOR_TEMPLATE_UUID=aa632a46-ea22-4dd0-9403-90b0d1f05aa0`
 
-**Core Components**:
 
-- **Risk Assessor** (`shared/lib/risk_assessor.py`): Evaluates task risk (low/medium/high/critical) based on operation type, environment, and impact. Configuration in `config/hitl/risk-assessment-rules.yaml`.
-- **HITL Manager** (`shared/lib/hitl_manager.py`): Creates approval requests, manages lifecycle, enforces role-based policies. Persists state in PostgreSQL `approval_requests` table.
-- **LangGraph Interrupt Nodes** (`shared/services/langgraph/src/interrupt_nodes.py`): `approval_gate` node interrupts workflow, waits for human decision, resumes on approval.
-- **Approval Policies** (`config/hitl/approval-policies.yaml`): Role-based access control (developer/tech_lead/devops_engineer) with max pending limits and escalation rules.
-
-**Risk Levels & Auto-Approval**:
-
-- **Low**: Auto-approved (dev reads, non-critical operations)
-- **Medium**: Requires developer/tech_lead approval (staging deploys, data imports)
-- **High**: Requires tech_lead/devops_engineer approval (production deploys, infrastructure changes)
-- **Critical**: Requires devops_engineer approval with justification (production deletes, secrets management, sensitive data operations)
-
-**HITL Workflow Pattern**:
-
-1. **Risk Assessment**: Orchestrator assesses task risk using `risk_assessor.assess_task(task_dict)`
-2. **Approval Request Creation**: If `requires_approval()`, create request via `hitl_manager.create_approval_request()` with workflow_id/thread_id/checkpoint_id
-3. **Workflow Interrupt**: LangGraph workflow hits `approval_gate` node, checks for `approval_request_id` in state, interrupts if present
-4. **Linear Notification**: Orchestrator creates sub-issue in DEV-68 with approval form (Request Status dropdown, Required Action checkboxes)
-5. **Human Decision**: User reviews in Linear, sets Request Status (Approved/Denied/More info), adds justification
-6. **Webhook Processing**: Linear webhook triggers status check, updates PostgreSQL, emits resume/cancel event
-7. **Workflow Resumption**: LangGraph workflow resumes from checkpoint, conditional router checks status, proceeds if approved
-
-**Custom Fields** (Linear HITL Template `aa632a46-ea22-4dd0-9403-90b0d1f05aa0`):
-
-- **Request Status** (dropdown): Approved, Denied, More information required (user input, not pre-filled)
-- **Required Action** (checkboxes): Pre-filled by orchestrator based on risk level (Review changes, Verify risks, Check implementation, Request modifications)
-
-**Environment Variables**:
-
-```bash
-# Linear HITL Configuration
-LINEAR_APPROVAL_HUB_ISSUE_ID=DEV-68                                    # Workspace hub for approval notifications
-HITL_ORCHESTRATOR_TEMPLATE_UUID=aa632a46-ea22-4dd0-9403-90b0d1f05aa0   # Linear template ID for HITL approvals
-LINEAR_WEBHOOK_SIGNING_SECRET=<secret>                                 # Webhook signature validation
-LINEAR_FIELD_REQUEST_STATUS_ID=<field_uuid>                            # Custom field: Request Status
-LINEAR_FIELD_REQUIRED_ACTION_ID=<field_uuid>                           # Custom field: Required Action
-LINEAR_REQUEST_STATUS_APPROVED=<option_uuid>                           # Request Status option: Approved
-LINEAR_REQUEST_STATUS_DENIED=<option_uuid>                             # Request Status option: Denied
-LINEAR_REQUEST_STATUS_MORE_INFO=<option_uuid>                          # Request Status option: More info required
-```
-
-**Taskfile Commands** (for manual testing/management):
-
-- `task workflow:init-db` - Initialize approval_requests table schema
-- `task workflow:list-pending` - List pending approval requests
-- `task workflow:approve REQUEST_ID=<uuid>` - Approve request (bypasses Linear UI)
-- `task workflow:reject REQUEST_ID=<uuid> REASON="..."` - Reject request
-- `task workflow:status WORKFLOW_ID=<id>` - Show workflow status
-- `task workflow:clean-expired` - Clean up expired requests
-
-**Orchestrator Integration Pattern**:
-
-```python
-from shared.lib.risk_assessor import get_risk_assessor
-from shared.lib.hitl_manager import get_hitl_manager
-
-risk_assessor = get_risk_assessor()
-hitl_manager = get_hitl_manager()
-
-# In /orchestrate endpoint
-risk_level = risk_assessor.assess_task(task_dict)
-if risk_assessor.requires_approval(risk_level):
-    approval_request_id = await hitl_manager.create_approval_request(
-        workflow_id=task_id,
-        thread_id=f"thread-{task_id}",
-        checkpoint_id=f"checkpoint-{task_id}",
-        task=task_dict,
-        agent_name="orchestrator"
-    )
-    # Return early with approval_pending status
-    return {"status": "approval_pending", "approval_request_id": approval_request_id}
-```
-
-**LangGraph Integration Pattern**:
-
-```python
-from shared.services.langgraph.src.interrupt_nodes import approval_gate, conditional_approval_router
-
-workflow = StateGraph(WorkflowState)
-workflow.add_node("approval_gate", approval_gate)
-workflow.add_conditional_edges("approval_gate", conditional_approval_router, {
-    "execute": "execute_operation",
-    "rejected": "handle_rejection"
-})
-compiled = workflow.compile(checkpointer=checkpointer, interrupt_before=["approval_gate"])
-```
-
-**Documentation**: `support/docs/LINEAR_HITL_WORKFLOW.md`, `support/docs/guides/implementation/HITL_IMPLEMENTATION_PHASE2.md`
-
-### Secrets Management
-
-**Architecture**: Modular overlay-based secrets system with provenance tracking, automated validation, and Docker secrets integration.
-
-**Core Components**:
-
-- **Core Schema** (`config/env/schema/secrets.core.json`): Defines fundamental secrets (GITHUB_TOKEN, NODE_ENV, etc.)
-- **Overlay System** (`config/env/schema/overlays/`): Service-specific extensions (agent-ops.json, supabase.json, vercel.json, etc.)
-- **Validation Library** (`scripts/automation/validate-secrets.ts`): Validates secrets against merged schema with provenance tracking
-- **Hydration Script** (`scripts/automation/hydrate-env.ts`): Automated development environment setup
-- **Docker Secrets**: Linear OAuth tokens, GitHub PAT mounted from `config/env/secrets/*.txt` files
-
-**Directory Structure**:
-
-```
-config/env/
-├── .env                          # Runtime secrets (gitignored)
-├── .env.template                 # Tracked template for team setup
-├── secrets/                      # Docker-mounted secret files (gitignored)
-│   ├── linear_oauth_token.txt
-│   ├── github_pat.txt
-│   └── agent-access/             # Per-agent API keys
-│       └── <workspace>/
-│           └── <agent>.txt       # JSON: {workspace, agent_name, api_key_uuid, secret}
-└── schema/                       # Declarative schema + overlays
-    ├── secrets.core.json         # Core secrets
-    └── overlays/                 # Service-specific extensions
-        ├── agent-ops.json        # Agent memory, logging, Playwright
-        ├── supabase.json         # Supabase URL/key
-        ├── supabase-advanced.json # Project refs, JWT tokens
-        └── vercel.json           # Vercel project IDs
-```
-
-**Secrets Categories**:
-
-1. **Stack-Level Credentials** (`.env`): LangSmith API keys, Gradient API keys, Linear OAuth tokens, Supabase URLs, database passwords
-2. **Docker Secrets** (`config/env/secrets/*.txt`): Mounted via Docker Compose secrets; GitHub PAT for git operations, Linear OAuth tokens
-3. **Agent Access Keys** (`config/env/secrets/agent-access/`): Per-agent API keys generated by Gradient, stored as JSON blobs
-4. **Workspace Metadata** (`config/env/workspaces/*.json`): Tracked manifests for Gradient workspaces, knowledge bases, agents
-
-**Environment Variables** (Common Stack-Level Secrets):
-
-```bash
-# LangSmith (LLM Tracing)
-LANGSMITH_API_KEY=lsv2_sk_***                                           # Service key (full org access)
-LANGCHAIN_API_KEY=lsv2_sk_***                                           # Same key (SDK compatibility)
-LANGSMITH_WORKSPACE_ID=5029c640-3f73-480c-82f3-58e402ed4207           # Org ID from URL
-
-# DigitalOcean Gradient AI
-GRADIENT_API_KEY=<gradient_api_key>                                    # DigitalOcean PAT for Gradient
-DIGITALOCEAN_TOKEN=<do_pat>                                            # Alias of GRADIENT_API_KEY
-DIGITAL_OCEAN_PAT=<do_pat>                                             # Alias of GRADIENT_API_KEY
-GRADIENT_MODEL_ACCESS_KEY=<model_key>                                  # Model-specific access key
-
-# Linear (Project Management + HITL)
-LINEAR_API_KEY=lin_oauth_***                                           # OAuth token (full workspace access)
-LINEAR_OAUTH_DEV_TOKEN=lin_oauth_***                                   # Alias for development
-LINEAR_WEBHOOK_SIGNING_SECRET=<secret>                                 # Webhook signature validation
-
-# Database (PostgreSQL)
-DB_PASSWORD=<postgres_password>                                        # PostgreSQL root password
-POSTGRES_PASSWORD=<postgres_password>                                  # Alias for docker-compose
-
-# Supabase (Optional)
-SUPABASE_URL=https://<project>.supabase.co                             # Supabase project URL
-SUPABASE_ANON_KEY=<anon_key>                                           # Anonymous/public key
-SUPABASE_SERVICE_ROLE_KEY=<service_key>                                # Service role key (admin)
-```
-
-**Docker Secrets Pattern** (docker-compose.yml):
-
-```yaml
-secrets:
-  linear_oauth_token:
-    file: ../config/env/secrets/linear_oauth_token.txt
-  github_pat:
-    file: ../config/env/secrets/github_pat.txt
-
-services:
-  orchestrator:
-    secrets:
-      - linear_oauth_token
-      - github_pat
-    environment:
-      LINEAR_OAUTH_TOKEN_FILE: /run/secrets/linear_oauth_token
-      GITHUB_TOKEN_FILE: /run/secrets/github_pat
-```
-
-**Validation Commands**:
-
-```bash
-# Basic validation
-npm run secrets:validate
-
-# With overlay discovery
-npm run secrets:validate:discover
-
-# JSON output (for CI/CD)
-npm run secrets:validate:json
-
-# Environment hydration
-npm run secrets:hydrate
-```
-
-**Deployment Workflow**:
-
-1. **Local Development**: Copy `.env.template` to `.env`, populate secrets, validate with `npm run secrets:validate`
-2. **Create Docker Secrets**: Run `support/scripts/setup_secrets.sh` to create secret files from `.env`
-3. **Deploy to Droplet**: Use `support/scripts/deploy/deploy-to-droplet.ps1 -DeployType config` to sync `.env` and restart services
-4. **Verify**: Check health endpoints, confirm secrets loaded via logs
-
-**Security Best Practices**:
-
-- **Never commit `.env` or `config/env/secrets/` files** (gitignored)
-- **Use GitHub Secrets for CI/CD** (workflow reads secrets from GitHub Actions environment)
-- **Rotate secrets routinely** (see `support/docs/operations/SECRETS_ROTATION.md`)
-- **Use Docker secrets for sensitive values** (mounted as files, not environment variables)
-- **Validate regularly** to catch configuration drift
-
-**Agent Manifest Integration** (`shared/lib/agents-manifest.json`):
-
-```json
-{
-  "name": "orchestrator",
-  "requiredSecrets": [
-    "LINEAR_API_KEY",
-    "LANGSMITH_API_KEY",
-    "GRADIENT_API_KEY"
-  ],
-  "secretsWithProvenance": [
-    { "name": "LINEAR_API_KEY", "provenance": "secrets.core.json" },
-    { "name": "LANGSMITH_API_KEY", "provenance": "secrets.core.json" }
-  ]
-}
-```
-
-**Documentation**: `support/docs/operations/SECRETS_MANAGEMENT.md`, `support/docs/operations/SECRETS_ROTATION.md`, `config/env/README.md`
 
 ## Deployment workflows
 
@@ -440,7 +156,7 @@ curl http://45.55.173.72:8008/health  # State
   - Manual trigger with 3 modes: standard/aggressive/full
   - Includes pre/post metrics and health validation
 
-**Complete Documentation:** See `support/docs/DEPLOYMENT_GUIDE.md` for detailed procedures, troubleshooting, and HITL workflow
+**Complete Documentation:** See `support/docs/DEPLOYMENT.md` for detailed procedures, troubleshooting, and HITL workflow
 
 ### Local Development
 
