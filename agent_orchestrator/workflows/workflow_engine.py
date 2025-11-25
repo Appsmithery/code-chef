@@ -27,7 +27,12 @@ from jinja2 import Template
 from pydantic import BaseModel, Field
 
 from shared.lib.gradient_client import GradientClient
-from shared.services.state.client import StateClient
+
+try:
+    from shared.services.state.client import StateClient
+except ImportError:
+    # Fallback if state service not available
+    StateClient = None
 
 
 class StepType(str, Enum):
@@ -133,11 +138,11 @@ class WorkflowEngine:
         self,
         templates_dir: str = "agent_orchestrator/workflows/templates",
         gradient_client: Optional[GradientClient] = None,
-        state_client: Optional[StateClient] = None,
+        state_client: Optional[Any] = None,
     ):
         self.templates_dir = Path(templates_dir)
-        self.gradient_client = gradient_client or GradientClient()
-        self.state_client = state_client or StateClient()
+        self.gradient_client = gradient_client  # Will be provided by caller
+        self.state_client = state_client  # Will be provided by caller
 
     def load_workflow(self, template_name: str) -> WorkflowDefinition:
         """
@@ -407,11 +412,12 @@ class WorkflowEngine:
         state: WorkflowState,
     ) -> Optional[str]:
         """Evaluate LLM or deterministic decision gate."""
-
+        
         gate = step.decision_gate
-        gate_type = DecisionGateType(gate["type"])
-
-        if gate_type == DecisionGateType.LLM_ASSESSMENT:
+        if not gate:
+            return step.on_success
+        
+        gate_type = DecisionGateType(gate["type"])        if gate_type == DecisionGateType.LLM_ASSESSMENT:
             # Render prompt with current state
             prompt = self._render_template({"prompt": gate["prompt"]}, state)["prompt"]
 

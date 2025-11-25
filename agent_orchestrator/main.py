@@ -3069,16 +3069,17 @@ async def get_workflow_status(workflow_id: str):
         }
     """
     from workflows.workflow_engine import WorkflowEngine
-
+    
+    # Initialize gradient client for workflow engine
+    workflow_gradient_client = GradientClient(agent_name="supervisor")
+    
     engine = WorkflowEngine(
-        gradient_client=get_gradient_client(),
+        gradient_client=workflow_gradient_client,
         state_client=registry_client,
     )
-
+    
     try:
-        workflow_state = await engine.get_workflow_status(workflow_id)
-
-        return WorkflowStatusResponse(
+        workflow_state = await engine.get_workflow_status(workflow_id)        return WorkflowStatusResponse(
             workflow_id=workflow_state.workflow_id,
             status=workflow_state.status.value,
             current_step=workflow_state.current_step,
