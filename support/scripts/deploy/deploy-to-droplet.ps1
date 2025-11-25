@@ -333,6 +333,25 @@ if (-not $SkipTests -and $strategy -in @('full', 'config')) {
     }
 }
 
+# Post-deployment cleanup
+Write-Step "Running post-deployment cleanup..."
+Write-Info "Removing dangling Docker resources..."
+ssh $DROPLET @"
+cd $DEPLOY_PATH/deploy && \
+echo '🧹 Cleaning up Docker resources...' && \
+docker image prune -f && \
+docker builder prune -f && \
+docker container prune -f --filter 'until=1h' && \
+echo '✅ Cleanup complete' && \
+docker system df
+"@
+
+if ($LASTEXITCODE -eq 0) {
+    Write-Success "Docker cleanup completed successfully"
+} else {
+    Write-Failure "Docker cleanup encountered errors (non-fatal)"
+}
+
 # Success summary
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
