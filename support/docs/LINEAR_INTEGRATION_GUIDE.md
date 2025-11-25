@@ -1,8 +1,14 @@
 # Linear Integration Guide
 
-**Version:** v0.3  
+**Version:** v0.3.1  
 **Status:** ✅ Production Ready  
-**Last Updated:** November 22, 2025
+**Last Updated:** November 25, 2025
+
+**Recent Updates:**
+
+- ✅ GitHub permalink configuration added to `linear-config.yaml`
+- ✅ Documentation consolidated (archived duplicate `guides/LINEAR_INTEGRATION.md`)
+- ✅ DEV-180 tracking permalink integration status
 
 ---
 
@@ -215,7 +221,45 @@ python support/scripts/linear/test-linear-config.py
 # ✅ Environment Overrides - Agent-specific overrides working
 ```
 
-### Step 6: Deploy
+### Step 6: Configure GitHub Permalinks (Optional - v0.3.1)
+
+Add GitHub repository configuration to `config/linear/linear-config.yaml`:
+
+```yaml
+github:
+  repository:
+    owner: "Appsmithery"
+    name: "Dev-Tools"
+    url: "https://github.com/Appsmithery/Dev-Tools"
+
+  permalink_generation:
+    enabled: true # Generate permalinks for code references in Linear issues
+    default_branch: "main"
+    include_commit_sha: true # Use commit SHA for stable references
+
+  auto_permalink_agents:
+    - "feature-dev"
+    - "code-review"
+    - "infrastructure"
+    - "cicd"
+```
+
+**Status:** Implementation complete (DEV-180), integration with issue creation pending.
+
+**Available Now:**
+
+```python
+from shared.lib.github_permalink_generator import init_permalink_generator, generate_permalink
+
+# Initialize at startup
+init_permalink_generator("https://github.com/Appsmithery/Dev-Tools")
+
+# Generate permalink
+url = generate_permalink("agent_orchestrator/main.py", line_start=45, line_end=67)
+# Result: https://github.com/Appsmithery/Dev-Tools/blob/abc123/agent_orchestrator/main.py#L45-L67
+```
+
+### Step 7: Deploy
 
 ```powershell
 # Deploy configuration
@@ -590,15 +634,17 @@ Create `.vscode/settings.json`:
 ## Related Documentation
 
 - **HITL Workflow**: `support/docs/LINEAR_HITL_WORKFLOW.md`
-- **Deployment Guide**: `support/docs/DEPLOYMENT_GUIDE.md`
+- **Deployment Guide**: `support/docs/DEPLOYMENT.md`
 - **Secrets Management**: `support/docs/operations/SECRETS_MANAGEMENT.md`
+- **GitHub Permalink Generator**: `shared/lib/github_permalink_generator.py`
 - **Config Loader**: `shared/lib/linear_config.py`
-- **Client**: `shared/lib/linear_workspace_client.py`
+- **Linear Client**: `shared/lib/linear_workspace_client.py`
 - **State Client**: `shared/lib/state_client.py`
 
 ---
 
-**Document Version:** 1.0.0  
+**Document Version:** 1.1.0  
 **Architecture:** LangGraph v0.3  
 **Configuration:** Multi-layer (YAML + .env)  
-**Last Updated:** November 22, 2025
+**Last Updated:** November 25, 2025  
+**Changes:** Added GitHub permalink configuration, consolidated documentation

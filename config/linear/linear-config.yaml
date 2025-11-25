@@ -62,6 +62,41 @@ oauth:
   redirect_uri: "http://localhost:8000/oauth/linear/callback"
   scopes: "read,write,app:mentionable,app:assignable"
 
+# GitHub Integration Configuration
+github:
+  repository:
+    owner: "Appsmithery"
+    name: "Dev-Tools"
+    url: "https://github.com/Appsmithery/Dev-Tools"
+
+  permalink_generation:
+    enabled: true # Generate permalinks for code references in Linear issues
+    default_branch: "main"
+    include_commit_sha: true # Use commit SHA for stable references
+
+  # Automatically generate permalinks when creating issues from these agents
+  auto_permalink_agents:
+    - "feature-dev"
+    - "code-review"
+    - "infrastructure"
+    - "cicd"
+
+  # File extensions to detect for permalink generation
+  code_file_extensions:
+    - "py"
+    - "ts"
+    - "js"
+    - "tsx"
+    - "jsx"
+    - "yaml"
+    - "yml"
+    - "json"
+    - "md"
+    - "sh"
+    - "txt"
+    - "sql"
+    - "env"
+
 # Risk-based approval policies
 approval_policies:
   low:
