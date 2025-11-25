@@ -316,17 +316,20 @@ async def orchestrate_task(request: Request, task: TaskRequest):
 ### ✅ Completed
 
 1. **GitHub Actions Workflow** - `.github/workflows/cleanup-docker-resources.yml`
+
    - Post-deployment cleanup (standard mode)
    - Weekly scheduled cleanup (aggressive mode - Sundays at 3 AM UTC)
    - Manual trigger with 3 modes (standard/aggressive/full)
    - Health validation after cleanup
 
 2. **Deployment Script Enhancement** - `support/scripts/deploy/deploy-to-droplet.ps1`
+
    - Automatic post-deployment cleanup
    - Removes dangling images, build cache, stopped containers
    - Non-blocking (failures are non-fatal)
 
 3. **Cron-Based Maintenance**
+
    - Script: `support/scripts/maintenance/weekly-cleanup.sh`
    - Cron job: `0 3 * * 0` (Sundays at 3 AM)
    - Logs: `/var/log/docker-cleanup.log`
