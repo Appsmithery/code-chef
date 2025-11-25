@@ -1,0 +1,4 @@
+# file: D:\INFRA\Dev-Tools\Dev-Tools\shared\lib\langchain_gradient.py
+# hypothesis_version: 6.148.2
+
+[0.7, 256, 1000, 2000, 'CLAUDE_API_KEY', 'ChatAnthropic', 'ChatMistralAI', 'DIGITAL_OCEAN_PAT', 'EMBEDDING_PROVIDER', 'GRADIENT_API_KEY', 'GRADIENT_BASE_URL', 'LANGCHAIN_TRACING_V2', 'LLM_PROVIDER', 'MISTRAL_API_KEY', 'OPEN_AI_DEVTOOLS_KEY', 'cicd', 'claude', 'code-review', 'documentation', 'false', 'feature-dev', 'gpt-4o-mini', 'gradient', 'infrastructure', 'llama3-8b-instruct', 'mistral', 'mistral-large-latest', 'openai', 'orchestrator', 'true']

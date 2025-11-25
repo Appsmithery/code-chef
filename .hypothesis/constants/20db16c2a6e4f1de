@@ -1,0 +1,4 @@
+# file: D:\INFRA\Dev-Tools\Dev-Tools\shared\lib\agent_config_schema.py
+# hypothesis_version: 6.148.2
+
+[0.0, 1.0, 256, 'LLM provider to use', 'agents', 'agents-', 'cicd', 'claude', 'code-review', 'documentation', 'feature-dev', 'gradient', 'infrastructure', 'langsmith_project', 'max_tokens', 'mistral', 'openai', 'orchestrator', 'provider']

@@ -1,0 +1,4 @@
+# file: D:\INFRA\Dev-Tools\Dev-Tools\shared\lib\gradient_client.py
+# hypothesis_version: 6.148.2
+
+[0.7, 2000, 1000000, '```', 'completion_tokens', 'content', 'finish_reason', 'model', 'prompt_tokens', 'raw_content', 'response_metadata', 'stop', 'text', 'token_usage', 'tokens', 'total_tokens', 'usage']
