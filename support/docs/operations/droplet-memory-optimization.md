@@ -311,13 +311,56 @@ async def orchestrate_task(request: Request, task: TaskRequest):
 
 ---
 
+## Implementation Status (November 25, 2025)
+
+### ✅ Completed
+
+1. **GitHub Actions Workflow** - `.github/workflows/cleanup-docker-resources.yml`
+   - Post-deployment cleanup (standard mode)
+   - Weekly scheduled cleanup (aggressive mode - Sundays at 3 AM UTC)
+   - Manual trigger with 3 modes (standard/aggressive/full)
+   - Health validation after cleanup
+
+2. **Deployment Script Enhancement** - `support/scripts/deploy/deploy-to-droplet.ps1`
+   - Automatic post-deployment cleanup
+   - Removes dangling images, build cache, stopped containers
+   - Non-blocking (failures are non-fatal)
+
+3. **Cron-Based Maintenance**
+   - Script: `support/scripts/maintenance/weekly-cleanup.sh`
+   - Cron job: `0 3 * * 0` (Sundays at 3 AM)
+   - Logs: `/var/log/docker-cleanup.log`
+   - Includes health checks and log rotation
+
+4. **Setup Automation** - `support/scripts/maintenance/setup-cron-job.sh`
+   - One-command installation of cron job
+   - Verifies installation and permissions
+
+### 📊 Current Metrics (Pre-Cleanup)
+
+```bash
+TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE
+Images          59        53        19.45GB   16.85GB (86%)  # 🚨 High reclaimable
+Containers      15        15        3.65MB    0B (0%)
+Local Volumes   18        9         331.4MB   225MB (67%)
+Build Cache     46        8         512.3MB   50.95MB
+```
+
+**Memory Usage**: 929Mi / 1.9Gi (48%) - Improved from 100% saturation
+
+### 🎯 Expected Results
+
+- **Post-deployment cleanup**: Reclaim 16.85GB immediately after next deploy
+- **Weekly maintenance**: Prevent accumulation of unused resources
+- **Sustained memory usage**: Stay below 70% average
+
 ## Recommended Action Plan
 
-### **Today** (30 minutes):
+### ~~**Today** (30 minutes)~~ ✅ COMPLETE:
 
-1. Deploy memory limits (Fix 2)
-2. Add cleanup to deployment script (Fix 1)
-3. Run manual cleanup: `ssh root@45.55.173.72 "docker system prune -af && docker volume prune -f"`
+1. ~~Deploy memory limits (Fix 2)~~ - Pending
+2. ~~Add cleanup to deployment script (Fix 1)~~ ✅ **DONE**
+3. ~~Run manual cleanup~~ ✅ **DONE** (cron job installed and tested)
 
 ### **This Week** (2-4 hours):
 
