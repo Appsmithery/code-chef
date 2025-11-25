@@ -1,111 +1,125 @@
-# Dev-Tools Documentation Index
+# Dev-Tools Documentation
 
-## 📁 Directory Structure
+**Complete documentation for the LangGraph-powered AI agent orchestration platform.**
 
-Documentation is organized into logical categories:
+---
 
-- **architecture/** - System design, agent architecture, event protocols
-- **api/** - API endpoints and reference documentation
-- **guides/** - Implementation and integration guides
-  - **integration/** - External service setup (Linear, LangSmith, etc.)
-  - **implementation/** - Feature implementation guides (HITL, etc.)
-- **operations/** - Deployment, monitoring, maintenance
-- **testing/** - Testing strategies and chaos engineering
-- **\_temp/** - Temporary working files (excluded from Git)
+##  Quick Start
 
-## 📚 Quick Navigation
+| Document | Description |
+|----------|-------------|
+| **[QUICKSTART.md](QUICKSTART.md)** | 15-minute setup guide |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System design + LangGraph workflow |
+| **[DEPLOYMENT.md](DEPLOYMENT.md)** | Production deployment |
+| **[OBSERVABILITY.md](OBSERVABILITY.md)** | Monitoring + tracing |
 
-### Getting Started
+---
 
-- **[Setup Guide](SETUP_GUIDE.md)** - First-time setup instructions
-- **[Architecture Overview](ARCHITECTURE.md)** - System design and components
-- **[Agent Endpoints](api/AGENT_ENDPOINTS.md)** - API reference for all agents
+##  Structure
 
-### Deployment & Operations
+```
+support/docs/
+ QUICKSTART.md
+ ARCHITECTURE.md
+ DEPLOYMENT.md
+ OBSERVABILITY.md
+ LINEAR_HITL_WORKFLOW.md
+ architecture/          # Architecture deep-dives
+ guides/                # Integration guides
+ operations/            # Operational procedures
+```
 
-- **[Docker Hub Deployment](operations/DOCKER_HUB_DEPLOYMENT.md)** - v2.0 architecture with Docker Hub registry
-- **[DigitalOcean Quick Deploy](operations/DIGITALOCEAN_QUICK_DEPLOY.md)** - 45-minute production deployment guide
-- **[Deployment Overview](operations/DEPLOYMENT.md)** - General deployment concepts
-- **[Secrets Management](operations/SECRETS_MANAGEMENT.md)** - Security and configuration
-- **[Prometheus Metrics](operations/PROMETHEUS_METRICS.md)** - HTTP metrics and monitoring
+---
+
+##  Find What You Need
+
+### Setup & Deployment
+
+- Local setup  [QUICKSTART.md](QUICKSTART.md)
+- Production deploy  [DEPLOYMENT.md](DEPLOYMENT.md)
+- Manage secrets  [operations/SECRETS_MANAGEMENT.md](operations/SECRETS_MANAGEMENT.md)
 
 ### Architecture & Design
 
-- **[MCP Integration](architecture/MCP_INTEGRATION.md)** - Model Context Protocol (150+ tools)
-- **[Progressive Tool Disclosure](architecture/PROGRESSIVE_TOOL_DISCLOSURE.md)** - LangChain tool binding (80-90% token savings)
-- **[LangGraph Integration](architecture/LANGGRAPH_INTEGRATION.md)** - Workflow orchestration
-- **[Multi-Agent Workflows](architecture/MULTI_AGENT_WORKFLOWS.md)** - Collaboration patterns
-- **[Task Orchestration](architecture/TASK_ORCHESTRATION.md)** - Workflow engine details
+- System overview  [ARCHITECTURE.md](ARCHITECTURE.md)
+- LangGraph workflow  [architecture/LANGGRAPH_INTEGRATION.md](architecture/LANGGRAPH_INTEGRATION.md)
+- MCP tools (150+)  [architecture/MCP_INTEGRATION.md](architecture/MCP_INTEGRATION.md)
 
-### Integration Guides
+### Integrations
 
-- **[Gradient Quick Start](guides/integration/GRADIENT_AI_QUICK_START.md)** - DigitalOcean AI inference setup
-- **[LangSmith Tracing](guides/integration/LANGSMITH_TRACING.md)** - LLM observability setup
-- **[LangSmith Examples](guides/integration/LANGSMITH_EXAMPLES.md)** - Tracing patterns and queries
-- **[Linear Setup](guides/integration/LINEAR_SETUP.md)** - Linear project management
+- Linear + HITL  [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
+- LangSmith tracing  [guides/LANGSMITH_TRACING.md](guides/LANGSMITH_TRACING.md)
+- Gradient AI  [guides/GRADIENT_AI_SETUP.md](guides/GRADIENT_AI_SETUP.md)
 
-### Development Guides
+### Operations
 
-- **[Frontend Integration](guides/FRONTEND_INTEGRATION.md)** - UI/API integration guide
-- **[Handbook](guides/HANDBOOK.md)** - Development practices and patterns
-- **[Configure Agents UI](guides/CONFIGURE_AGENTS_UI.md)** - Agent UI configuration
+- Monitor services  [OBSERVABILITY.md](OBSERVABILITY.md)
+- Clean Docker  [operations/CLEANUP_QUICK_REFERENCE.md](operations/CLEANUP_QUICK_REFERENCE.md)
+- Disaster recovery  [operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)
 
 ---
 
-## 🎯 By Use Case
+##  System Overview
 
-### I want to...
+**v0.3 Architecture:**
 
-- **Deploy to production** → [Docker Hub Deployment](operations/DOCKER_HUB_DEPLOYMENT.md) (v2.0 recommended)
-- **Set up locally** → [Setup Guide](SETUP_GUIDE.md)
-- **Understand the system** → [Architecture Overview](ARCHITECTURE.md)
-- **Call an agent API** → [Agent Endpoints](api/AGENT_ENDPOINTS.md)
-- **Configure secrets** → [Secrets Management](operations/SECRETS_MANAGEMENT.md)
-- **Add LLM inference** → [Gradient Quick Start](guides/integration/GRADIENT_AI_QUICK_START.md)
-- **Monitor LLM calls** → [LangSmith Tracing](guides/integration/LANGSMITH_TRACING.md)
-- **Track HTTP metrics** → [Prometheus Metrics](operations/PROMETHEUS_METRICS.md)
-- **Access 150+ tools** → [MCP Integration](architecture/MCP_INTEGRATION.md)
+- **1 Orchestrator Service** (FastAPI + LangGraph, port 8001)
+  - 6 Internal Agent Nodes (supervisor, feature-dev, code-review, infrastructure, cicd, documentation)
+- **MCP Gateway** (port 8000): 150+ tools via stdio transport
+- **RAG Context** (port 8007): Vector search with Qdrant
+- **State Persistence** (port 8008): PostgreSQL checkpointing
 
----
+**Key Features:**
 
-## 📊 System Status
-
-**Current Phase:** Phase 7 Complete ✅
-
-- ✅ LangGraph orchestrator with 6 internal agent nodes
-- ✅ 150+ MCP tools available (filesystem, memory, git, sequential-thinking, etc.)
-- ✅ **LangChain tool binding** - Progressive disclosure with function calling (80-90% token savings)
-- ✅ LangSmith LLM tracing infrastructure configured
-- ✅ Prometheus HTTP metrics collection active
-- ✅ DigitalOcean Gradient AI integration complete (llama3-8b-instruct operational)
-- ✅ LLM-powered task decomposition in production (150x cheaper than GPT-4)
-- ✅ RAG service streaming DigitalOcean KB exports into Qdrant Cloud
-- ✅ State persistence with PostgreSQL
-- ✅ E2E workflows validated
-
-**Core Services:**
-
-- MCP Gateway: Port 8000 - 150+ tools, Linear integration, secrets management
-- Orchestrator: Port 8001 - LangGraph workflow engine with agent nodes (feature-dev, code-review, infrastructure, cicd, documentation)
-- RAG: Port 8007 - Vector search
-- State: Port 8008 - Workflow persistence
-- Prometheus: Port 9090 - Metrics dashboard
-- Qdrant: Ports 6333 (HTTP), 6334 (gRPC)
-- PostgreSQL: Port 5432
-
-**Architecture:** Single orchestrator container with LangGraph supervisor routing. All 6 agents are internal nodes within the workflow graph, not separate microservices.
+ LangGraph workflows with PostgreSQL checkpointing  
+ Progressive tool disclosure (80-90% token savings)  
+ LangChain function calling (LLM invokes tools directly)  
+ HITL approvals via Linear integration  
+ LangSmith automatic tracing  
+ Gradient AI inference ($0.20-0.60/1M tokens)
 
 ---
 
-## 📝 Documentation Guidelines
+##  Production Status
 
-This documentation follows a **layered approach**:
+**Environment:**  Running on 45.55.173.72  
+**Version:** v0.3  
+**Updated:** November 25, 2025
 
-1. **Quick Start** - Get running in <15 minutes
-2. **Deep Dive** - Understand architecture and design
-3. **Reference** - API specs, schemas, configurations
-4. **Operations** - Day-to-day management and troubleshooting
+### Services
 
-### Archived Documentation
+- **orchestrator** (8001):  LangGraph + 6 agents
+- **gateway-mcp** (8000):  Linear OAuth + MCP
+- **rag-context** (8007):  Vector search
+- **state** (8008):  Workflow persistence
 
-Obsolete or superseded documents are moved to `archive/` to maintain clarity.
+### Monitoring
+
+- **LangSmith**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207
+- **Grafana**: https://appsmithery.grafana.net
+- **Linear**: https://linear.app/appsmithery
+
+---
+
+##  Recent Changes (November 25, 2025)
+
+**Documentation Consolidation:**
+
+-  Created QUICKSTART.md (all-in-one setup guide)
+-  Rewrote ARCHITECTURE.md (v0.3 LangGraph focus)
+-  Unified DEPLOYMENT.md (all strategies in one doc)
+-  Consolidated LINEAR_INTEGRATION.md (combined 5 Linear docs)
+-  Removed 40+ redundant/outdated files
+-  **Net reduction**: 60+ files  15 essential docs (~75%)
+
+**Deprecated Paths** (update bookmarks):
+
+- ~~WORKSPACE_AWARE_ARCHITECTURE.md~~  [ARCHITECTURE.md](ARCHITECTURE.md)
+- ~~DEPLOYMENT_GUIDE.md~~  [DEPLOYMENT.md](DEPLOYMENT.md)
+- ~~SETUP_GUIDE.md~~  [QUICKSTART.md](QUICKSTART.md)
+- ~~api/AGENT_ENDPOINTS.md~~  [ARCHITECTURE.md](ARCHITECTURE.md)
+- ~~guides/integration/LINEAR_SETUP.md~~  [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
+
+---
+
+*For documentation issues, open an issue on GitHub.*
