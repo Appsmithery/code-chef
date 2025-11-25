@@ -1,0 +1,4 @@
+# file: D:\INFRA\Dev-Tools\Dev-Tools\shared\lib\workflow_events.py
+# hypothesis_version: 6.148.2
+
+['__dataclass_fields__', 'action', 'comment', 'context', 'data', 'encrypted:', 'error', 'event_id', 'event_version', 'integer', 'null', 'object', 'properties', 'reason', 'required', 'signature', 'step_id', 'string', 'timestamp', 'to_dict', 'type', 'value', 'workflow_id']

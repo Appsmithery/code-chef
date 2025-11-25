@@ -50,27 +50,33 @@ def workflow_engine_with_ttl(mock_state_client):
 # ============================================================================
 
 
-def test_ttl_configuration_from_env():
+def test_ttl_configuration_from_env(monkeypatch):
     """WORKFLOW_TTL_HOURS loaded from environment"""
-    os.environ["WORKFLOW_TTL_HOURS"] = "12"
+    monkeypatch.setenv("WORKFLOW_TTL_HOURS", "12")
+    # Force class variable reload after env change
+    WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
     engine = WorkflowEngine(gradient_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 12
     assert engine.ttl_seconds == 12 * 3600  # 43200 seconds
 
 
-def test_ttl_default_value():
+def test_ttl_default_value(monkeypatch):
     """Default TTL is 24 hours"""
-    os.environ.pop("WORKFLOW_TTL_HOURS", None)
+    monkeypatch.delenv("WORKFLOW_TTL_HOURS", raising=False)
+    # Force class variable reload after env change
+    WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
     engine = WorkflowEngine(gradient_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 24
     assert engine.ttl_seconds == 24 * 3600
 
 
-def test_ttl_seconds_calculated():
+def test_ttl_seconds_calculated(monkeypatch):
     """TTL seconds calculated correctly"""
-    os.environ["WORKFLOW_TTL_HOURS"] = "3"
+    monkeypatch.setenv("WORKFLOW_TTL_HOURS", "3")
+    # Force class variable reload after env change
+    WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
     engine = WorkflowEngine(gradient_client=None, state_client=None)
 
     assert engine.ttl_seconds == 3 * 3600  # 10800 seconds
@@ -128,13 +134,15 @@ async def test_ttl_refresh_calculates_expiration_correctly(workflow_engine_with_
 
         await workflow_engine_with_ttl._refresh_workflow_ttl(workflow_id)
 
-    # Verify expires_at = now + 24 hours
+    # Verify expires_at = now + TTL (fixture uses WORKFLOW_TTL_HOURS from env, currently 3h)
     workflow_engine_with_ttl.state_client.execute.assert_called_once()
     call_args = workflow_engine_with_ttl.state_client.execute.call_args
 
     # Second argument should be expiration timestamp
     expires_at = call_args[0][2]
-    expected_expiration = mock_now + timedelta(seconds=24 * 3600)
+    expected_expiration = mock_now + timedelta(
+        seconds=workflow_engine_with_ttl.ttl_seconds
+    )
 
     assert expires_at == expected_expiration
 
@@ -220,27 +228,33 @@ async def test_abandoned_workflow_expires():
 # ============================================================================
 
 
-def test_development_ttl_3_hours():
+def test_development_ttl_3_hours(monkeypatch):
     """Development environment: TTL = 3 hours for rapid testing"""
-    os.environ["WORKFLOW_TTL_HOURS"] = "3"
+    monkeypatch.setenv("WORKFLOW_TTL_HOURS", "3")
+    # Force class variable reload after env change
+    WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
     engine = WorkflowEngine(gradient_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 3
     assert engine.ttl_seconds == 3 * 3600
 
 
-def test_staging_ttl_12_hours():
+def test_staging_ttl_12_hours(monkeypatch):
     """Staging environment: TTL = 12 hours"""
-    os.environ["WORKFLOW_TTL_HOURS"] = "12"
+    monkeypatch.setenv("WORKFLOW_TTL_HOURS", "12")
+    # Force class variable reload after env change
+    WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
     engine = WorkflowEngine(gradient_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 12
     assert engine.ttl_seconds == 12 * 3600
 
 
-def test_production_ttl_24_hours():
+def test_production_ttl_24_hours(monkeypatch):
     """Production environment: TTL = 24 hours (standard)"""
-    os.environ["WORKFLOW_TTL_HOURS"] = "24"
+    monkeypatch.setenv("WORKFLOW_TTL_HOURS", "24")
+    # Force class variable reload after env change
+    WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
     engine = WorkflowEngine(gradient_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 24

@@ -1,0 +1,4 @@
+# file: D:\INFRA\Dev-Tools\Dev-Tools\shared\lib\token_tracker.py
+# hypothesis_version: 6.148.2
+
+[0.0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 'TokenTracker reset', 'agent', 'avg_cost_per_call', 'avg_latency_seconds', 'avg_tokens_per_call', 'call_count', 'completion', 'completion_tokens', 'llm_calls_total', 'llm_cost_usd_total', 'llm_latency_seconds', 'llm_tokens_total', 'model', 'per_agent', 'prompt', 'prompt_tokens', 'total_calls', 'total_cost', 'total_latency', 'total_tokens', 'totals', 'tracking_since', 'type', 'unknown', 'uptime_seconds']
