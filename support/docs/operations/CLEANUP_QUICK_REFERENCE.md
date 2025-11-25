@@ -3,6 +3,7 @@
 ## Automated Cleanup (Hands-Free)
 
 ### 1. GitHub Actions Workflow
+
 **Trigger automatically after deployments** or run manually:
 
 ```bash
@@ -11,6 +12,7 @@
 ```
 
 **Cleanup Types:**
+
 - `standard`: Post-deployment (dangling images, 1h old containers)
 - `aggressive`: Weekly maintenance (7-day retention)
 - `full`: Emergency mode (stops services, cleans all, restarts)
@@ -20,9 +22,11 @@
 ---
 
 ### 2. Deployment Script (Automatic)
+
 **Built into** `support/scripts/deploy/deploy-to-droplet.ps1`
 
 Runs after every successful deployment:
+
 ```powershell
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType auto
 # Cleanup happens automatically at the end
@@ -31,6 +35,7 @@ Runs after every successful deployment:
 ---
 
 ### 3. Cron Job (Weekly)
+
 **Installed on droplet**, runs every Sunday at 3 AM:
 
 ```bash
@@ -49,6 +54,7 @@ ssh root@45.55.173.72 "/opt/Dev-Tools/support/scripts/maintenance/weekly-cleanup
 ## Manual Cleanup Commands
 
 ### Quick Cleanup (Safe)
+
 ```bash
 ssh root@45.55.173.72 << 'EOF'
 docker image prune -f
@@ -59,6 +65,7 @@ EOF
 ```
 
 ### Aggressive Cleanup (Reclaim More Space)
+
 ```bash
 ssh root@45.55.173.72 << 'EOF'
 cd /opt/Dev-Tools/deploy
@@ -71,6 +78,7 @@ EOF
 ```
 
 ### Emergency Full Cleanup (Last Resort)
+
 ```bash
 ssh root@45.55.173.72 << 'EOF'
 cd /opt/Dev-Tools/deploy
@@ -88,6 +96,7 @@ EOF
 ## Monitoring Commands
 
 ### Check Resource Usage
+
 ```bash
 # Docker disk usage
 ssh root@45.55.173.72 "docker system df"
@@ -103,6 +112,7 @@ ssh root@45.55.173.72 "docker system df -v | grep -E '(SIZE|RECLAIMABLE)'"
 ```
 
 ### Health Checks After Cleanup
+
 ```bash
 # Check all service health endpoints
 for port in 8000 8001 8007 8008 8009 8010; do
@@ -119,6 +129,7 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose ps"
 ## Troubleshooting
 
 ### Cron Job Not Running
+
 ```bash
 # Check cron service
 ssh root@45.55.173.72 "systemctl status cron"
@@ -134,6 +145,7 @@ bash support/scripts/maintenance/setup-cron-job.sh
 ```
 
 ### Memory Still High After Cleanup
+
 ```bash
 # 1. Check what's using memory
 ssh root@45.55.173.72 "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}' | sort -k2 -h -r"
@@ -146,6 +158,7 @@ ssh root@45.55.173.72 "docker ps -a --filter 'status=exited'"
 ```
 
 ### Services Unhealthy After Cleanup
+
 ```bash
 # Check logs for errors
 ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose logs --tail=50 | grep ERROR"
@@ -162,16 +175,19 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose down && docker
 ## Expected Results
 
 ### Post-Deployment Cleanup
+
 - **Reclaimed**: 500MB-1GB per deployment
 - **Time**: ~30 seconds
 - **Frequency**: After every deploy
 
 ### Weekly Maintenance
+
 - **Reclaimed**: 1-2GB (7-day accumulation)
 - **Time**: ~2 minutes
 - **Frequency**: Every Sunday 3 AM UTC
 
 ### Emergency Full Cleanup
+
 - **Reclaimed**: Up to 16GB+ (all unused resources)
 - **Time**: ~5 minutes (includes service restart)
 - **Downtime**: ~30 seconds
@@ -180,13 +196,13 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose down && docker
 
 ## Files Reference
 
-| File | Purpose | Location |
-|------|---------|----------|
-| `cleanup-docker-resources.yml` | GitHub Actions workflow | `.github/workflows/` |
-| `deploy-to-droplet.ps1` | Deployment script with cleanup | `support/scripts/deploy/` |
-| `weekly-cleanup.sh` | Cron job script | `support/scripts/maintenance/` |
-| `setup-cron-job.sh` | Cron installation script | `support/scripts/maintenance/` |
-| `docker-cleanup.log` | Cleanup execution logs | `/var/log/` (on droplet) |
+| File                           | Purpose                        | Location                       |
+| ------------------------------ | ------------------------------ | ------------------------------ |
+| `cleanup-docker-resources.yml` | GitHub Actions workflow        | `.github/workflows/`           |
+| `deploy-to-droplet.ps1`        | Deployment script with cleanup | `support/scripts/deploy/`      |
+| `weekly-cleanup.sh`            | Cron job script                | `support/scripts/maintenance/` |
+| `setup-cron-job.sh`            | Cron installation script       | `support/scripts/maintenance/` |
+| `docker-cleanup.log`           | Cleanup execution logs         | `/var/log/` (on droplet)       |
 
 ---
 
