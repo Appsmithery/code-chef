@@ -25,14 +25,10 @@ logger = logging.getLogger(__name__)
 # Add shared modules to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 
-from agents import (
-    SupervisorAgent,
-    FeatureDevAgent,
-    CodeReviewAgent,
-    InfrastructureAgent,
-    CICDAgent,
-    DocumentationAgent,
-)
+# Note: Agent implementations are in shared/services/langgraph/nodes/
+# These are workflow nodes, not separate agent services
+# Importing node functions directly would create circular dependencies,
+# so we'll use dynamic imports or stub implementations
 
 
 # Define workflow state
@@ -61,22 +57,27 @@ _agents = {}
 def get_agent(agent_name: str):
     """Get or create agent instance.
     
+    Note: This is a stub implementation. Actual agent logic should be
+    implemented in shared/services/langgraph/nodes/{agent_name}.py
+    
     Args:
         agent_name: Name of agent (supervisor, feature-dev, code-review, etc.)
     
     Returns:
-        Agent instance
+        Stub agent dict with invoke method
     """
     if agent_name not in _agents:
-        agent_classes = {
-            "supervisor": SupervisorAgent,
-            "feature-dev": FeatureDevAgent,
-            "code-review": CodeReviewAgent,
-            "infrastructure": InfrastructureAgent,
-            "cicd": CICDAgent,
-            "documentation": DocumentationAgent,
-        }
-        _agents[agent_name] = agent_classes[agent_name]()
+        # Create stub agent with minimal invoke method
+        class StubAgent:
+            def __init__(self, name):
+                self.name = name
+            
+            async def invoke(self, messages):
+                # Return stub response
+                from langchain_core.messages import AIMessage
+                return AIMessage(content=f"Stub response from {self.name} agent. Implement actual logic in shared/services/langgraph/nodes/{self.name.replace('-', '_')}.py")
+        
+        _agents[agent_name] = StubAgent(agent_name)
     
     return _agents[agent_name]
 

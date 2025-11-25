@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 # Add paths for imports
+# Note: Agents are now workflow nodes in shared/services/langgraph/nodes/
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "agent_feature-dev"))
 sys.path.insert(0, str(REPO_ROOT / "shared"))
 
 try:

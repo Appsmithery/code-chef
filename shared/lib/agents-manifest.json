@@ -175,9 +175,10 @@
       "name": "feature-dev",
       "mission": "Implements features through code generation, scaffolding, and test creation",
       "status": "active",
-      "health_check": "http://feature-dev:8002/health",
+      "health_check": "http://orchestrator:8001/health",
       "display_name": "Feature Dev",
-      "endpoint": "http://feature-dev:8002"
+      "endpoint": "http://orchestrator:8001",
+      "node_type": "langgraph_workflow_node"
     },
     {
       "mcp_tools": {
@@ -249,9 +250,10 @@
       "name": "code-review",
       "mission": "Analyzes code quality, security, style, and maintainability",
       "status": "active",
-      "health_check": "http://code-review:8003/health",
+      "health_check": "http://orchestrator:8001/health",
       "display_name": "Code Review",
-      "endpoint": "http://code-review:8003"
+      "endpoint": "http://orchestrator:8001",
+      "node_type": "langgraph_workflow_node"
     },
     {
       "mcp_tools": {
@@ -340,9 +342,10 @@
       "name": "infrastructure",
       "mission": "Manages IaC, deployments, environment configuration, and resource provisioning",
       "status": "active",
-      "health_check": "http://infrastructure:8004/health",
+      "health_check": "http://orchestrator:8001/health",
       "display_name": "Infrastructure",
-      "endpoint": "http://infrastructure:8004"
+      "endpoint": "http://orchestrator:8001",
+      "node_type": "langgraph_workflow_node"
     },
     {
       "mcp_tools": {
@@ -426,9 +429,10 @@
       "name": "cicd",
       "mission": "Generates pipelines, orchestrates builds/tests, and manages deployment automation",
       "status": "active",
-      "health_check": "http://cicd:8005/health",
+      "health_check": "http://orchestrator:8001/health",
       "display_name": "Cicd",
-      "endpoint": "http://cicd:8005"
+      "endpoint": "http://orchestrator:8001",
+      "node_type": "langgraph_workflow_node"
     },
     {
       "mcp_tools": {
@@ -523,9 +527,10 @@
       "name": "documentation",
       "mission": "Generates, maintains, and audits technical documentation, diagrams, and knowledge bases",
       "status": "active",
-      "health_check": "http://documentation:8006/health",
+      "health_check": "http://orchestrator:8001/health",
       "display_name": "Documentation",
-      "endpoint": "http://documentation:8006"
+      "endpoint": "http://orchestrator:8001",
+      "node_type": "langgraph_workflow_node"
     }
   ],
   "generatedAt": "2025-11-15T04:45:09.0575498-05:00",
