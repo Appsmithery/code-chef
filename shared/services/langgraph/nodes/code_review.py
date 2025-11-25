@@ -23,7 +23,11 @@ async def code_review_node(state: AgentState) -> AgentState:
     description = normalized["task_description"]
 
     request_payload = normalized.get("code_review_request", {})
-    task_id = request_payload.get("task_id") or normalized.get("linear_issue_id") or "code-review-task"
+    task_id = (
+        request_payload.get("task_id")
+        or normalized.get("linear_issue_id")
+        or "code-review-task"
+    )
 
     logger.info(f"[code-review] Processing review request: {task_id}")
 
@@ -39,7 +43,7 @@ async def code_review_node(state: AgentState) -> AgentState:
         "review_id": task_id,
         "status": "stub",
         "findings": [],
-        "message": "Stub implementation - awaiting orchestrator integration"
+        "message": "Stub implementation - awaiting orchestrator integration",
     }
 
     return update
