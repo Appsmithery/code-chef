@@ -1,0 +1,328 @@
+// Grafana Alloy Configuration for Dev-Tools
+// Documentation: https://grafana.com/docs/alloy/latest/reference/
+
+// Prometheus Remote Write Configuration
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = "https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push"
+    basic_auth {
+      username = "2677183"
+      password = "glc_eyJvIjoiMTUzNDY4MSIsIm4iOiJzdGFjay0xMzc2NDc0LWhtLXdyaXRlLWdyYWZhbmFfYXBpX3Rva2VuIiwiayI6IjRydkxVNDY1cnA4NDdWTTYwd1kxY0dYVyIsIm0iOnsiciI6InByb2QtdXMtZWFzdC0wIn19"
+    }
+  }
+
+  external_labels = {
+    cluster     = "dev-tools",
+    environment = "production",
+    collector   = "alloy",
+  }
+}
+
+// Orchestrator - Main coordinator agent
+prometheus.scrape "orchestrator" {
+  targets = [{
+    __address__ = "localhost:8001",
+  }]
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+
+  job_name = "orchestrator"
+
+  // Add static labels
+  clustering {
+    enabled = false
+  }
+
+  // Relabel to add service labels
+  relabel {
+    target_label = "service"
+    replacement  = "orchestrator"
+  }
+
+  relabel {
+    target_label = "agent_type"
+    replacement  = "coordinator"
+  }
+
+  relabel {
+    target_label = "role"
+    replacement  = "task-routing"
+  }
+
+  relabel {
+    target_label = "type"
+    replacement  = "agent"
+  }
+}
+
+// Gateway MCP - Tool routing
+prometheus.scrape "gateway_mcp" {
+  targets = [{
+    __address__ = "localhost:8000",
+  }]
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+
+  job_name = "gateway-mcp"
+
+  clustering {
+    enabled = false
+  }
+
+  relabel {
+    target_label = "service"
+    replacement  = "gateway-mcp"
+  }
+
+  relabel {
+    target_label = "role"
+    replacement  = "tool-gateway"
+  }
+
+  relabel {
+    target_label = "type"
+    replacement  = "backend"
+  }
+}
+
+// RAG Context Service
+prometheus.scrape "rag_context" {
+  targets = [{
+    __address__ = "localhost:8007",
+  }]
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+
+  job_name = "rag-context"
+
+  clustering {
+    enabled = false
+  }
+
+  relabel {
+    target_label = "service"
+    replacement  = "rag-context"
+  }
+
+  relabel {
+    target_label = "role"
+    replacement  = "context-retrieval"
+  }
+
+  relabel {
+    target_label = "type"
+    replacement  = "backend"
+  }
+}
+
+// State Persistence
+prometheus.scrape "state_persistence" {
+  targets = [{
+    __address__ = "localhost:8008",
+  }]
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+
+  job_name = "state-persistence"
+
+  clustering {
+    enabled = false
+  }
+
+  relabel {
+    target_label = "service"
+    replacement  = "state-persistence"
+  }
+
+  relabel {
+    target_label = "role"
+    replacement  = "workflow-state"
+  }
+
+  relabel {
+    target_label = "type"
+    replacement  = "backend"
+  }
+}
+
+// Agent Registry
+prometheus.scrape "agent_registry" {
+  targets = [{
+    __address__ = "localhost:8009",
+  }]
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+
+  job_name = "agent-registry"
+
+  clustering {
+    enabled = false
+  }
+
+  relabel {
+    target_label = "service"
+    replacement  = "agent-registry"
+  }
+
+  relabel {
+    target_label = "role"
+    replacement  = "agent-discovery"
+  }
+
+  relabel {
+    target_label = "type"
+    replacement  = "backend"
+  }
+}
+
+// Local Prometheus (self-monitoring)
+prometheus.scrape "prometheus" {
+  targets = [{
+    __address__ = "localhost:9090",
+  }]
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+
+  job_name = "prometheus"
+
+  clustering {
+    enabled = false
+  }
+
+  relabel {
+    target_label = "service"
+    replacement  = "prometheus"
+  }
+
+  relabel {
+    target_label = "role"
+    replacement  = "metrics-storage"
+  }
+
+  relabel {
+    target_label = "type"
+    replacement  = "infrastructure"
+  }
+}
+
+// Loki Configuration for Logs
+loki.write "grafana_cloud" {
+  endpoint {
+    url = "https://logs-prod-036.grafana.net/loki/api/v1/push"
+    basic_auth {
+      username = "1334268"
+      password = "glc_eyJvIjoiMTUzNDY4MSIsIm4iOiJzdGFjay0xMzc2NDc0LWhtLXdyaXRlLWdyYWZhbmFfYXBpX3Rva2VuIiwiayI6IjRydkxVNDY1cnA4NDdWTTYwd1kxY0dYVyIsIm0iOnsiciI6InByb2QtdXMtZWFzdC0wIn19"
+    }
+  }
+
+  external_labels = {
+    cluster     = "dev-tools",
+    environment = "production",
+    collector   = "alloy",
+  }
+}
+
+// Docker Logs Discovery
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Loki Scrape for Docker Logs
+loki.source.docker "docker_logs" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.containers.targets
+  forward_to = [loki.process.filter_logs.receiver]
+
+  relabel_rules = loki.relabel.docker_labels.rules
+}
+
+// Docker Labels Relabeling
+loki.relabel "docker_labels" {
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_id"]
+    target_label  = "container_id"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["service"]
+    regex         = "(orchestrator|feature-dev|code-review|infrastructure|cicd|documentation)"
+    target_label  = "service_type"
+    replacement   = "agent"
+  }
+
+  rule {
+    source_labels = ["service"]
+    regex         = "(gateway-mcp|rag-context|state-persistence|agent-registry)"
+    target_label  = "service_type"
+    replacement   = "backend"
+  }
+
+  rule {
+    source_labels = ["service"]
+    regex         = "(postgres|qdrant|prometheus|loki|promtail|grafana|caddy)"
+    target_label  = "service_type"
+    replacement   = "infrastructure"
+  }
+}
+
+// Log Processing Pipeline
+loki.process "filter_logs" {
+  forward_to = [loki.write.grafana_cloud.receiver]
+
+  // Parse JSON logs
+  stage.json {
+    expressions = {
+      level     = "level",
+      msg       = "msg",
+      timestamp = "time",
+    }
+  }
+
+  // Drop healthcheck logs
+  stage.match {
+    selector = "{service=~\".*\"} |~ \"health\""
+    action   = "drop"
+  }
+
+  // Drop metrics scrape logs
+  stage.match {
+    selector = "{service=~\".*\"} |~ \"/metrics\""
+    action   = "drop"
+  }
+
+  // Extract log level
+  stage.labels {
+    values = {
+      level = "level",
+    }
+  }
+}
