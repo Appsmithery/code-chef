@@ -1,0 +1,106 @@
+name: "Hotfix Workflow"
+version: "1.0"
+description: "Fast-track emergency hotfix deployment (bypasses some gates)"
+
+# Hotfix workflow: Minimal steps for urgent production fixes
+steps:
+  - id: "code_review"
+    type: "agent_call"
+    agent: "code-review"
+    deterministic: true
+    payload:
+      branch: "{{ context.branch }}"
+      issue_id: "{{ context.issue_id }}"
+      priority: "urgent"
+      focus: "security" # Security-only review for speed
+
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Hotfix security review:
+        - Critical vulnerabilities: {{ outputs.code_review.critical_issues }}
+        - Security score: {{ outputs.code_review.security_score }}
+
+        This is an URGENT hotfix. Only block if critical security issues found.
+        Respond with: {"decision": "proceed" | "block", "reasoning": "..."}
+
+      on_proceed: "run_critical_tests"
+      on_block: "notify_failure"
+
+  - id: "run_critical_tests"
+    type: "agent_call"
+    agent: "cicd"
+    deterministic: true
+    payload:
+      branch: "{{ context.branch }}"
+      test_suites: ["unit", "integration"] # Skip E2E for speed
+
+    decision_gate:
+      type: "deterministic_check"
+      condition: "outputs.run_critical_tests.passed >= outputs.run_critical_tests.total * 0.9"
+      on_success: "deploy_production"
+      on_failure: "notify_failure"
+
+  - id: "deploy_production"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    resource_lock: "deployment:production"
+    payload:
+      environment: "production"
+      branch: "{{ context.branch }}"
+      hotfix: true
+
+    # Fast health check (30s max)
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Production hotfix deployed:
+        - Health check: {{ outputs.deploy_production.health_check }}
+        - Error rate: {{ outputs.deploy_production.error_rate }}
+        - Response time: {{ outputs.deploy_production.response_time_p95 }}
+
+        Quick assessment (30s window): Keep or rollback?
+        {"decision": "keep" | "rollback", "reasoning": "..."}
+
+      on_keep: "notify_success"
+      on_rollback: "rollback_production"
+
+  - id: "rollback_production"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    payload:
+      action: "rollback"
+      environment: "production"
+      to_version: "{{ context.previous_version }}"
+
+    on_success: "notify_rollback"
+
+# Error handling
+error_handling:
+  - step: "code_review"
+    on_error: "notify_failure"
+
+  - step: "run_critical_tests"
+    on_error: "notify_failure"
+
+  - step: "deploy_production"
+    on_error: "rollback_production"
+
+# Notifications (all channels for hotfixes)
+notifications:
+  - trigger: "notify_success"
+    channels: ["linear", "email", "slack"]
+    template: "hotfix_deployed"
+    priority: "urgent"
+
+  - trigger: "notify_failure"
+    channels: ["linear", "email", "slack"]
+    template: "hotfix_failed"
+    priority: "critical"
+
+  - trigger: "notify_rollback"
+    channels: ["linear", "email", "slack"]
+    template: "hotfix_rollback"
+    priority: "critical"

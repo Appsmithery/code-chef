@@ -18,9 +18,22 @@
 
 ```
 Dev-Tools/
-├── agent_orchestrator/      # Orchestrator + 6 agent nodes (graph.py, workflows.py, main.py)
+├── agent_orchestrator/
+│   ├── agents/              # Agent-centric organization (12-Factor Agents)
+│   │   ├── _shared/         # base_agent.py, tool_guides/*.prompt.md
+│   │   ├── supervisor/      # __init__.py, system.prompt.md, tools.yaml, workflows/
+│   │   ├── feature_dev/     # Code generation agent
+│   │   ├── code_review/     # Security/quality analysis
+│   │   ├── infrastructure/  # IaC generation
+│   │   ├── cicd/            # Pipeline automation
+│   │   └── documentation/   # Technical writing
+│   ├── workflows/           # Multi-agent workflows
+│   │   ├── templates/       # pr-deployment.workflow.yaml, hotfix.workflow.yaml
+│   │   └── *.py             # Workflow implementations
+│   ├── graph.py             # LangGraph StateGraph definition
+│   └── main.py              # Orchestrator FastAPI service
 ├── shared/
-│   ├── lib/                 # Core libraries (mcp_client, gradient_client, linear_workspace_client, etc.)
+│   ├── lib/                 # Core libraries (mcp_client, gradient_client, progressive_mcp_loader)
 │   ├── services/            # langgraph:8010, rag:8007, state:8008
 │   ├── gateway/             # MCP gateway:8000
 │   └── mcp/servers/         # 17 MCP servers
@@ -302,18 +315,49 @@ ufw status                    # Verify rules
 
 ## Extension points
 
-### Adding a New Agent Node
+### Adding a New Agent Node (Agent-Centric Structure)
 
-1. Create `agent_orchestrator/agents/<agent>.py` (Python module, not FastAPI service)
-2. Define agent function with signature: `async def agent_node(state: WorkflowState) -> WorkflowState`
-3. Load agent config from YAML: `config = yaml.safe_load(open(f"tools/{agent}_tools.yaml"))`
-4. Initialize Gradient client: `gradient_client = get_gradient_client(agent_name=agent, model=config["model"])`
-5. Bind MCP tools via progressive loader: `mcp_client.to_langchain_tools(relevant_toolsets)`
-6. Add node to LangGraph StateGraph in `agent_orchestrator/graph.py`
-7. Update conditional edges for supervisor routing
-8. Update `config/mcp-agent-tool-mapping.yaml` with tool access
-9. Create `agent_orchestrator/tools/<agent>_tools.yaml` with model and tool configs
-10. Add LangSmith tracing with project: `agents-<agent>`
+**Directory Structure** (12-Factor Agents):
+
+```
+agent_orchestrator/agents/<agent_name>/
+├── __init__.py              # Agent implementation (inherits from BaseAgent)
+├── system.prompt.md         # System prompt with token budget
+├── tools.yaml               # Tool access configuration
+└── workflows/               # Agent-specific workflows
+```
+
+**Steps:**
+
+1. **Create agent directory**: `agent_orchestrator/agents/<agent_name>/`
+2. **Create `__init__.py`**: Define agent class inheriting from `_shared.base_agent.BaseAgent`
+
+   ```python
+   from pathlib import Path
+   from .._shared.base_agent import BaseAgent
+
+   class NewAgent(BaseAgent):
+       def __init__(self, config_path: str = None):
+           if config_path is None:
+               config_path = str(Path(__file__).parent / "tools.yaml")
+           super().__init__(str(config_path), agent_name="<agent_name>")
+   ```
+
+3. **Create `system.prompt.md`**: Define role, context window budget (8K max), output format, compression rules
+4. **Create `tools.yaml`**: Specify model, temperature, max_tokens, allowed MCP servers
+5. **Add node to LangGraph StateGraph** in `agent_orchestrator/graph.py`
+6. **Update conditional edges** for supervisor routing
+7. **Update `config/mcp-agent-tool-mapping.yaml`** with tool access
+8. **Add LangSmith tracing** with project: `agents-<agent>`
+9. **(Optional) Create agent-specific workflows** in `workflows/` subdirectory
+
+**Key Principles**:
+
+- **Locality of Behavior**: Everything for an agent in one directory
+- **Version-Controlled Prompts**: `system.prompt.md` tracked in git
+- **Tool Configuration**: `tools.yaml` specifies MCP server access
+- **Shared Base**: All agents inherit from `_shared.base_agent.BaseAgent`
+- **Cross-Cutting Tools**: Tool usage guides in `_shared/tool_guides/`
 
 Note: Agent nodes are workflow steps, not separate containers. All nodes run within orchestrator service.
 
