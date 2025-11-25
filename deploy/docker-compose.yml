@@ -175,7 +175,6 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=devtools
       - POSTGRES_USER=devtools
-      - POSTGRES_PASSWORD=
       - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
       - HEARTBEAT_TIMEOUT_SECONDS=60
       - REDIS_URL=redis://redis:6379
