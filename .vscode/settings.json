@@ -20,11 +20,7 @@
   // Python Testing Configuration
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": [
-    "support/tests",
-    "-v",
-    "--tb=short"
-  ],
+  "python.testing.pytestArgs": ["support/tests", "-v", "--tb=short"],
   "python.testing.cwd": "${workspaceFolder}",
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "python.envFile": "${workspaceFolder}/config/env/.env",
@@ -70,5 +66,6 @@
     "Dev-Tools Root/.vscode/mcp.json: Docs by LangChain": {
       "allowedModels": ["copilot/claude-sonnet-4.5"]
     }
-  }
+  },
+  "python.analysis.typeCheckingMode": "standard"
 }

@@ -53,6 +53,7 @@ class WorkflowEvent:
         timestamp: ISO 8601 timestamp of event creation
         event_version: Schema version for backward compatibility
         signature: HMAC-SHA256 signature for tamper detection (computed externally)
+        parent_workflow_id: Parent workflow ID for child workflows (Task 5.1)
     """
 
     event_id: str = field(default_factory=lambda: str(uuid4()))
@@ -63,6 +64,7 @@ class WorkflowEvent:
     timestamp: str = field(default_factory=lambda: datetime.utcnow().isoformat())
     event_version: int = 1
     signature: Optional[str] = None
+    parent_workflow_id: Optional[str] = None  # NEW: Task 5.1 - Parent workflow chains
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert event to dictionary for serialization"""
@@ -120,6 +122,7 @@ def workflow_reducer(state: Dict[str, Any], event: WorkflowEvent) -> Dict[str, A
                 "retries": {},
                 "child_workflows": [],
                 "snapshots": [],
+                "parent_workflow_id": event.parent_workflow_id,  # NEW: Task 5.1 - Track parent workflow
             }
         )
 
@@ -434,3 +437,147 @@ def validate_reducer_idempotency(state: Dict[str, Any], event: WorkflowEvent) ->
         assert (
             state_once_no_events == state_twice_no_events
         ), f"{event.action} should be idempotent!"
+
+
+def get_workflow_chain(
+    workflow_id: str, event_loader: callable
+) -> List[Dict[str, Any]]:
+    """Traverse parent workflows to build complete execution history
+
+    This enables complete audit trails across parent-child workflow relationships.
+    Inspired by Zen MCP Server's conversation threading pattern.
+
+    Use Cases:
+    1. PR deployment workflow spawns hotfix workflow as child
+    2. Infrastructure deployment spawns configuration workflow
+    3. Multi-level rollback chains for complex deployments
+
+    Example:
+        PR deployment (parent) → Hotfix (child) → Rollback (grandchild)
+
+        get_workflow_chain("rollback-456", event_loader) returns:
+        [
+            {"workflow_id": "pr-123", "template_name": "pr-deployment", ...},
+            {"workflow_id": "hotfix-234", "template_name": "hotfix", ...},
+            {"workflow_id": "rollback-456", "template_name": "rollback", ...}
+        ]
+
+    Args:
+        workflow_id: Starting workflow ID (typically child workflow)
+        event_loader: Function that loads events for a workflow_id
+                     Signature: (workflow_id: str) -> List[WorkflowEvent]
+                     Example: lambda wid: db.query("SELECT * FROM events WHERE workflow_id = ?", wid)
+
+    Returns:
+        List of workflow states from root parent to current workflow (chronological order)
+
+    Raises:
+        ValueError: If circular reference detected in workflow chain
+        RuntimeError: If max chain depth (20) exceeded
+
+    Pattern Inspiration:
+        Zen MCP Server's conversation threading uses continuation_id to link
+        related conversations. This function adapts that pattern for workflow
+        composition with parent_workflow_id tracking.
+
+    Task: 5.1 - Parent Workflow Chains (Week 5 Zen Pattern Integration)
+    """
+
+    chain = []
+    current_id = workflow_id
+    seen_ids = set()
+    max_depth = 20  # Prevent infinite loops (Zen pattern: 20 turn limit)
+
+    while current_id and len(chain) < max_depth:
+        # Circular reference detection
+        if current_id in seen_ids:
+            raise ValueError(
+                f"Circular reference detected in workflow chain: {current_id}. "
+                f"Chain so far: {[w['workflow_id'] for w in chain]}"
+            )
+
+        seen_ids.add(current_id)
+
+        # Load events for current workflow
+        try:
+            events = event_loader(current_id)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to load events for workflow {current_id}: {e}"
+            ) from e
+
+        if not events:
+            # Workflow not found - break chain traversal
+            break
+
+        # Reconstruct state from events
+        state = replay_workflow(events)
+
+        # Add to chain
+        chain.append(state)
+
+        # Move to parent workflow
+        current_id = state.get("parent_workflow_id")
+
+    # Check max depth
+    if len(chain) >= max_depth and current_id:
+        raise RuntimeError(
+            f"Workflow chain exceeded max depth of {max_depth}. "
+            f"Possible infinite loop or excessively deep hierarchy. "
+            f"Last workflow: {chain[-1]['workflow_id']}"
+        )
+
+    # Reverse chain so root parent is first (chronological order)
+    # Zen pattern: Present conversation turns chronologically for LLM comprehension
+    chain.reverse()
+
+    return chain
+
+
+def get_workflow_chain_ids(workflow_id: str, event_loader: callable) -> List[str]:
+    """Get workflow IDs in chain without full state reconstruction
+
+    Lightweight alternative to get_workflow_chain() when only IDs are needed.
+
+    Args:
+        workflow_id: Starting workflow ID
+        event_loader: Function that loads events for a workflow_id
+
+    Returns:
+        List of workflow IDs from root parent to current workflow
+
+    Example:
+        >>> get_workflow_chain_ids("rollback-456", event_loader)
+        ["pr-123", "hotfix-234", "rollback-456"]
+    """
+
+    chain = get_workflow_chain(workflow_id, event_loader)
+    return [state["workflow_id"] for state in chain]
+
+
+def get_workflow_depth(workflow_id: str, event_loader: callable) -> int:
+    """Get depth of workflow in parent-child hierarchy
+
+    Useful for workflow composition analytics and depth limits.
+
+    Args:
+        workflow_id: Workflow ID to check
+        event_loader: Function that loads events for a workflow_id
+
+    Returns:
+        Depth in hierarchy (1 = root workflow, 2 = child, 3 = grandchild, etc.)
+
+    Example:
+        >>> # PR deployment (root)
+        >>> get_workflow_depth("pr-123", event_loader)
+        1
+        >>> # Hotfix (child of PR deployment)
+        >>> get_workflow_depth("hotfix-234", event_loader)
+        2
+        >>> # Rollback (grandchild)
+        >>> get_workflow_depth("rollback-456", event_loader)
+        3
+    """
+
+    chain = get_workflow_chain(workflow_id, event_loader)
+    return len(chain)
