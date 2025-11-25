@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS workflow_events (
     -- Event identification
     event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     workflow_id VARCHAR(255) NOT NULL,
+    parent_workflow_id VARCHAR(255),  -- Task 5.1: Parent workflow for child workflows
     
     -- Event metadata
     action VARCHAR(50) NOT NULL,
@@ -61,6 +62,10 @@ CREATE INDEX IF NOT EXISTS idx_workflow_events_timestamp
 -- GIN index for JSONB queries (find events by data content)
 CREATE INDEX IF NOT EXISTS idx_workflow_events_data 
     ON workflow_events USING GIN(data);
+
+-- Task 5.1: Index for parent workflow chain traversal
+CREATE INDEX IF NOT EXISTS idx_workflow_events_parent 
+    ON workflow_events(parent_workflow_id) WHERE parent_workflow_id IS NOT NULL;
 
 
 -- ============================================================================
@@ -373,3 +378,187 @@ COMMENT ON FUNCTION create_workflow_snapshot IS
 
 COMMENT ON VIEW active_workflows IS 
 'Workflows currently running or paused (not completed/failed/cancelled).';
+
+
+-- ============================================================================
+-- TASK 5.3: WORKFLOW TTL MANAGEMENT (Week 5 Zen Pattern Integration)
+-- ============================================================================
+
+-- Workflow TTL tracking table
+CREATE TABLE IF NOT EXISTS workflow_ttl (
+    workflow_id VARCHAR(255) PRIMARY KEY,
+    expires_at TIMESTAMPTZ NOT NULL,
+    refreshed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    refresh_count INTEGER DEFAULT 1,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Index for cleanup queries (find expired workflows)
+CREATE INDEX IF NOT EXISTS idx_workflow_ttl_expires 
+    ON workflow_ttl(expires_at);
+
+-- Function to cleanup expired workflows (run via cron job)
+CREATE OR REPLACE FUNCTION cleanup_expired_workflows()
+RETURNS TABLE(workflow_id VARCHAR, expired_at TIMESTAMPTZ, event_count INTEGER) AS $$
+BEGIN
+    RETURN QUERY
+    WITH expired AS (
+        SELECT t.workflow_id, t.expires_at
+        FROM workflow_ttl t
+        WHERE t.expires_at < NOW()
+    ),
+    archived_events AS (
+        DELETE FROM workflow_events e
+        USING expired x
+        WHERE e.workflow_id = x.workflow_id
+        RETURNING e.workflow_id, COUNT(*) OVER (PARTITION BY e.workflow_id) AS cnt
+    ),
+    deleted_ttl AS (
+        DELETE FROM workflow_ttl t
+        USING expired x
+        WHERE t.workflow_id = x.workflow_id
+        RETURNING t.workflow_id, t.expires_at
+    )
+    SELECT DISTINCT 
+        d.workflow_id, 
+        d.expires_at AS expired_at,
+        COALESCE(a.cnt, 0) AS event_count
+    FROM deleted_ttl d
+    LEFT JOIN archived_events a ON d.workflow_id = a.workflow_id;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- View for active workflows with TTL status
+CREATE OR REPLACE VIEW active_workflows_with_ttl AS
+SELECT 
+    m.workflow_id,
+    m.template_name,
+    m.status,
+    m.started_at,
+    m.total_events,
+    t.expires_at,
+    t.refreshed_at,
+    t.refresh_count,
+    t.expires_at - NOW() AS time_until_expiration,
+    EXTRACT(EPOCH FROM (NOW() - t.refreshed_at)) AS seconds_since_refresh
+FROM workflow_metadata m
+LEFT JOIN workflow_ttl t ON m.workflow_id = t.workflow_id
+WHERE m.status IN ('running', 'paused')
+ORDER BY t.expires_at NULLS LAST;
+
+
+COMMENT ON TABLE workflow_ttl IS 
+'TTL tracking for workflow auto-expiration (Task 5.3 - Week 5 Zen Pattern Integration). Active workflows refresh TTL on every event, abandoned workflows auto-expire.';
+
+COMMENT ON FUNCTION cleanup_expired_workflows IS 
+'Cleanup expired workflows by deleting events and TTL records. Returns list of cleaned up workflows.';
+
+COMMENT ON VIEW active_workflows_with_ttl IS 
+'Active workflows with TTL status (time until expiration, refresh count).';
+
+
+-- ============================================================================
+-- TASK 5.1: PARENT WORKFLOW CHAINS (Week 5 Zen Pattern Integration)
+-- ============================================================================
+
+-- Migration function to add parent_workflow_id column (idempotent)
+CREATE OR REPLACE FUNCTION migrate_parent_workflow_id()
+RETURNS TEXT AS $$
+DECLARE
+    column_exists BOOLEAN;
+BEGIN
+    -- Check if column already exists
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'workflow_events' 
+        AND column_name = 'parent_workflow_id'
+    ) INTO column_exists;
+    
+    IF NOT column_exists THEN
+        -- Add column
+        ALTER TABLE workflow_events 
+        ADD COLUMN parent_workflow_id VARCHAR(255);
+        
+        -- Add index
+        CREATE INDEX idx_workflow_events_parent 
+        ON workflow_events(parent_workflow_id) 
+        WHERE parent_workflow_id IS NOT NULL;
+        
+        RETURN 'Migration complete: Added parent_workflow_id column and index';
+    ELSE
+        RETURN 'Migration skipped: parent_workflow_id column already exists';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- Validation function to check for orphaned parent references
+CREATE OR REPLACE FUNCTION validate_parent_workflow_references()
+RETURNS TABLE(orphaned_workflow_id VARCHAR, parent_workflow_id VARCHAR) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT DISTINCT we1.workflow_id, we1.parent_workflow_id
+    FROM workflow_events we1
+    WHERE we1.parent_workflow_id IS NOT NULL
+    AND NOT EXISTS (
+        SELECT 1 FROM workflow_events we2
+        WHERE we2.workflow_id = we1.parent_workflow_id
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+
+-- View for workflow chains (parent-child relationships)
+CREATE OR REPLACE VIEW workflow_chains AS
+WITH RECURSIVE workflow_hierarchy AS (
+    -- Root workflows (no parent)
+    SELECT 
+        workflow_id,
+        template_name,
+        status,
+        started_at,
+        parent_workflow_id,
+        workflow_id AS root_workflow_id,
+        1 AS depth,
+        ARRAY[workflow_id] AS chain_path
+    FROM workflow_metadata
+    WHERE parent_workflow_id IS NULL
+    
+    UNION ALL
+    
+    -- Child workflows
+    SELECT 
+        m.workflow_id,
+        m.template_name,
+        m.status,
+        m.started_at,
+        m.parent_workflow_id,
+        h.root_workflow_id,
+        h.depth + 1,
+        h.chain_path || m.workflow_id
+    FROM workflow_metadata m
+    INNER JOIN workflow_hierarchy h ON m.parent_workflow_id = h.workflow_id
+    WHERE h.depth < 20  -- Prevent infinite loops
+)
+SELECT 
+    workflow_id,
+    template_name,
+    status,
+    parent_workflow_id,
+    root_workflow_id,
+    depth,
+    chain_path,
+    ARRAY_LENGTH(chain_path, 1) AS chain_length
+FROM workflow_hierarchy
+ORDER BY root_workflow_id, depth;
+
+
+COMMENT ON COLUMN workflow_events.parent_workflow_id IS 
+'Parent workflow ID for child workflows (Task 5.1 - Week 5 Zen Pattern Integration). Enables complete audit trails across workflow composition.';
+
+COMMENT ON FUNCTION validate_parent_workflow_references IS 
+'Check for orphaned parent references (workflows referencing non-existent parents).';
+
+COMMENT ON VIEW workflow_chains IS 
+'Hierarchical view of parent-child workflow relationships with depth and chain path.';
