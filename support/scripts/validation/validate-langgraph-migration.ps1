@@ -3,7 +3,8 @@
 
 Write-Host "[Validation] Starting LangGraph migration validation..."
 
-# 1. Check no old agent directories exist
+# 1. Check no old agent directories exist (consolidated into agent_orchestrator/agents/)
+# Note: Agents are now LangGraph workflow nodes, not separate services
 $oldAgents = @(
     "agent_feature-dev",
     "agent_code-review",
@@ -50,8 +51,8 @@ foreach ($var in $envVars) {
 }
 if (-not $foundEnv) { Write-Host "[PASS] No deprecated agent URLs in .env." -ForegroundColor Green }
 
-# 4. Validate all docs updated (keyword scan)
-$docs = Get-ChildItem -Path "../../support/docs" -Filter "*.md" -Recurse
+# 4. Validate all docs updated (keyword scan - excluding historical archives)
+$docs = Get-ChildItem -Path "../../support/docs" -Filter "*.md" -Recurse | Where-Object { $_.FullName -notmatch "_archive" }
 $keywords = @(
     "microservice",
     "agent_feature-dev",
