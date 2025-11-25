@@ -427,6 +427,7 @@ curl http://45.55.173.72:8008/health  # State
 | Not sure                | `auto`   | varies   | `...\deploy-to-droplet.ps1 -DeployType auto`   |
 
 **GitHub Actions:**
+
 - **Deployment**: `.github/workflows/deploy-intelligent.yml`
   - Automatic on push to `main` branch
   - Detects file changes and selects optimal strategy (config/full/quick)
@@ -518,6 +519,7 @@ ufw status                    # Verify rules
 ### Container Hygiene & Cleanup (Automated)
 
 **Automated Cleanup System** (DEV-169 - November 2025):
+
 - **Post-deployment**: Automatic cleanup after every deploy via `deploy-to-droplet.ps1` (dangling images, build cache, 1h old containers)
 - **Weekly maintenance**: Cron job runs Sundays at 3 AM UTC via `weekly-cleanup.sh` (7-day retention policy)
 - **GitHub Actions**: `cleanup-docker-resources.yml` workflow with 3 modes (standard/aggressive/full)
@@ -525,6 +527,7 @@ ufw status                    # Verify rules
 - **Monitoring**: Logs at `/var/log/docker-cleanup.log` on droplet
 
 **Manual Cleanup** (when needed):
+
 - **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
 - **Quick cleanup**: `ssh root@45.55.173.72 "docker image prune -f && docker builder prune -f"`
 - **Emergency cleanup**: Use GitHub Actions workflow with "full" mode (stops services, cleans all, restarts)
