@@ -3158,6 +3158,517 @@ async def resume_workflow(workflow_id: str, request: WorkflowResumeRequest):
         raise HTTPException(status_code=500, detail=f"Workflow resume failed: {str(e)}")
 
 
+# ============================================================================
+# EVENT SOURCING ENDPOINTS (Week 4 - DEV-174)
+# ============================================================================
+
+@app.get("/workflow/{workflow_id}/events")
+async def get_workflow_events(
+    workflow_id: str,
+    offset: int = 0,
+    limit: int = 100,
+    action: Optional[str] = None,
+):
+    """
+    Get all events for a workflow (with pagination).
+
+    Args:
+        workflow_id: Workflow to get events for
+        offset: Number of events to skip (for pagination)
+        limit: Maximum events to return (default: 100, max: 1000)
+        action: Optional filter by action type (e.g., "complete_step")
+
+    Returns:
+        List of workflow events with metadata
+
+    Example:
+        GET /workflow/abc-123/events?limit=10&action=complete_step
+        {
+            "workflow_id": "abc-123",
+            "total_events": 42,
+            "events": [
+                {
+                    "event_id": "uuid",
+                    "action": "complete_step",
+                    "step_id": "code_review",
+                    "timestamp": "2024-01-15T10:30:00Z",
+                    "data": {...}
+                },
+                ...
+            ]
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+
+    engine = WorkflowEngine(
+        gradient_client=gradient_client,
+        state_client=state_client,
+    )
+
+    try:
+        # Load all events
+        all_events = await engine._load_events(workflow_id)
+
+        # Filter by action if specified
+        if action:
+            all_events = [e for e in all_events if e.action == action]
+
+        # Apply pagination
+        paginated_events = all_events[offset : offset + min(limit, 1000)]
+
+        return {
+            "workflow_id": workflow_id,
+            "total_events": len(all_events),
+            "offset": offset,
+            "limit": limit,
+            "events": [e.to_dict() for e in paginated_events],
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get events for workflow {workflow_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/workflow/{workflow_id}/events/export")
+async def export_workflow_events(
+    workflow_id: str,
+    format: str = "json",
+):
+    """
+    Export workflow events as JSON, CSV, or PDF audit report.
+
+    Args:
+        workflow_id: Workflow to export
+        format: Export format (json, csv, pdf)
+
+    Returns:
+        File download with events in requested format
+
+    Example:
+        GET /workflow/abc-123/events/export?format=pdf
+        (Downloads audit-report-abc-123.pdf)
+    """
+    from workflows.workflow_engine import WorkflowEngine
+    from shared.lib.workflow_events import export_events_to_json, export_events_to_csv
+
+    engine = WorkflowEngine(
+        gradient_client=gradient_client,
+        state_client=state_client,
+    )
+
+    try:
+        # Load events
+        events = await engine._load_events(workflow_id)
+        event_dicts = [e.to_dict() for e in events]
+
+        if format == "json":
+            content = export_events_to_json(event_dicts)
+            media_type = "application/json"
+            filename = f"workflow-events-{workflow_id}.json"
+
+        elif format == "csv":
+            content = export_events_to_csv(event_dicts)
+            media_type = "text/csv"
+            filename = f"workflow-events-{workflow_id}.csv"
+
+        elif format == "pdf":
+            # TODO: Implement PDF generation with reportlab
+            # For now, return JSON
+            content = export_events_to_json(event_dicts)
+            media_type = "application/json"
+            filename = f"workflow-events-{workflow_id}.json"
+            logger.warning("PDF export not yet implemented, returning JSON")
+
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown format: {format}")
+
+        from fastapi.responses import Response
+
+        return Response(
+            content=content,
+            media_type=media_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to export events for workflow {workflow_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/workflow/{workflow_id}/replay")
+async def replay_workflow_events(workflow_id: str):
+    """
+    Replay all events to reconstruct workflow state (time-travel debugging).
+
+    Args:
+        workflow_id: Workflow to replay
+
+    Returns:
+        Reconstructed state from events
+
+    Example:
+        POST /workflow/abc-123/replay
+        {
+            "workflow_id": "abc-123",
+            "total_events": 42,
+            "final_state": {
+                "status": "completed",
+                "steps_completed": ["code_review", "run_tests", ...],
+                "outputs": {...}
+            }
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+
+    engine = WorkflowEngine(
+        gradient_client=gradient_client,
+        state_client=state_client,
+    )
+
+    try:
+        # Load events
+        events = await engine._load_events(workflow_id)
+
+        # Replay to reconstruct state
+        final_state = await engine._reconstruct_state_from_events(workflow_id)
+
+        return {
+            "workflow_id": workflow_id,
+            "total_events": len(events),
+            "final_state": final_state,
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to replay workflow {workflow_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/workflow/{workflow_id}/state-at/{timestamp}")
+async def get_workflow_state_at_timestamp(workflow_id: str, timestamp: str):
+    """
+    Get workflow state at a specific timestamp (time-travel debugging).
+
+    Args:
+        workflow_id: Workflow to query
+        timestamp: ISO 8601 timestamp (e.g., "2024-01-15T10:30:00Z")
+
+    Returns:
+        Workflow state as it was at the specified timestamp
+
+    Example:
+        GET /workflow/abc-123/state-at/2024-01-15T10:30:00Z
+        {
+            "workflow_id": "abc-123",
+            "timestamp": "2024-01-15T10:30:00Z",
+            "state": {
+                "status": "running",
+                "current_step": "run_tests",
+                "steps_completed": ["code_review"],
+                ...
+            }
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+    from shared.lib.workflow_reducer import get_state_at_timestamp
+
+    engine = WorkflowEngine(
+        gradient_client=gradient_client,
+        state_client=state_client,
+    )
+
+    try:
+        # Load events
+        events = await engine._load_events(workflow_id)
+
+        # Reconstruct state at timestamp
+        state_at_time = get_state_at_timestamp(events, timestamp)
+
+        return {
+            "workflow_id": workflow_id,
+            "timestamp": timestamp,
+            "state": state_at_time,
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get state at timestamp for workflow {workflow_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/workflow/{workflow_id}/snapshots")
+async def get_workflow_snapshots(workflow_id: str):
+    """
+    Get all state snapshots for a workflow.
+
+    Snapshots are created every 10 events for performance optimization.
+
+    Args:
+        workflow_id: Workflow to get snapshots for
+
+    Returns:
+        List of snapshots with metadata
+
+    Example:
+        GET /workflow/abc-123/snapshots
+        {
+            "workflow_id": "abc-123",
+            "snapshots": [
+                {
+                    "snapshot_id": "uuid",
+                    "event_count": 10,
+                    "created_at": "2024-01-15T10:30:00Z"
+                },
+                ...
+            ]
+        }
+    """
+    try:
+        # Query snapshots from database
+        snapshots = await state_client.fetch(
+            """
+            SELECT snapshot_id, event_count, created_at
+            FROM workflow_snapshots
+            WHERE workflow_id = $1
+            ORDER BY created_at DESC
+            """,
+            workflow_id,
+        )
+
+        return {
+            "workflow_id": workflow_id,
+            "snapshots": [
+                {
+                    "snapshot_id": str(row["snapshot_id"]),
+                    "event_count": row["event_count"],
+                    "created_at": row["created_at"].isoformat(),
+                }
+                for row in snapshots
+            ],
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to get snapshots for workflow {workflow_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/workflow/{workflow_id}/annotate")
+async def annotate_workflow_event(
+    workflow_id: str,
+    annotation: Dict[str, Any],
+):
+    """
+    Add operator annotation/comment to workflow event log.
+
+    Useful for incident tracking and post-mortems.
+
+    Args:
+        workflow_id: Workflow to annotate
+        annotation: Annotation data
+            - operator: Name of operator
+            - comment: Annotation text
+            - event_id: Optional specific event to annotate
+
+    Returns:
+        Created annotation event
+
+    Example:
+        POST /workflow/abc-123/annotate
+        {
+            "operator": "alice@example.com",
+            "comment": "Manually approved due to emergency deployment",
+            "event_id": "uuid-of-approval-event"
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+
+    engine = WorkflowEngine(
+        gradient_client=gradient_client,
+        state_client=state_client,
+    )
+
+    try:
+        # Emit annotation event (stored in workflow_events table)
+        from shared.lib.workflow_reducer import WorkflowAction, WorkflowEvent
+
+        annotation_event = await engine._emit_event(
+            workflow_id=workflow_id,
+            action=WorkflowAction.ANNOTATE,  # New action type
+            step_id=annotation.get("event_id"),
+            data={
+                "operator": annotation.get("operator", "unknown"),
+                "comment": annotation.get("comment", ""),
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
+        return {
+            "workflow_id": workflow_id,
+            "annotation": annotation_event.to_dict(),
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to annotate workflow {workflow_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/workflow/{workflow_id}")
+async def cancel_workflow(
+    workflow_id: str,
+    reason: str = "User requested cancellation",
+    cancelled_by: Optional[str] = None,
+):
+    """
+    Cancel a running or paused workflow with cleanup.
+    
+    Cleanup includes:
+    - Release all resource locks
+    - Mark Linear approval issues as complete
+    - Notify participating agents
+    - Cascade cancellation to child workflows
+    
+    Args:
+        workflow_id: Workflow to cancel
+        reason: Cancellation reason
+        cancelled_by: User who requested cancellation
+    
+    Returns:
+        Cancellation summary with cleanup details
+    
+    Example:
+        DELETE /workflow/abc-123?reason=Emergency+fix+deployed&cancelled_by=alice@example.com
+        {
+            "workflow_id": "abc-123",
+            "status": "cancelled",
+            "reason": "Emergency fix deployed",
+            "cancelled_by": "alice@example.com",
+            "cleanup": {
+                "locks_released": 2,
+                "linear_issues_closed": 1,
+                "agents_notified": 3,
+                "child_workflows_cancelled": 0
+            }
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+    
+    engine = WorkflowEngine(
+        gradient_client=gradient_client,
+        state_client=state_client,
+    )
+    
+    try:
+        result = await engine.cancel_workflow(
+            workflow_id=workflow_id,
+            reason=reason,
+            cancelled_by=cancelled_by or "unknown",
+        )
+        
+        return result
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Failed to cancel workflow {workflow_id}: {e}\")")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/workflow/{workflow_id}/retry-from/{step_id}")
+async def retry_workflow_from_step(
+    workflow_id: str,
+    step_id: str,
+    max_retries: int = 3,
+):
+    """
+    Retry a failed workflow from a specific step.
+    
+    Uses exponential backoff and error classification to determine
+    if retries are appropriate.
+    
+    Args:
+        workflow_id: Workflow to retry
+        step_id: Step to retry from
+        max_retries: Maximum retry attempts (default: 3)
+    
+    Returns:
+        Retry result with status
+    
+    Example:
+        POST /workflow/abc-123/retry-from/deploy_staging?max_retries=5
+        {
+            "workflow_id": "abc-123",
+            "step_id": "deploy_staging",
+            "retry_attempt": 1,
+            "status": "retrying",
+            "next_retry_at": "2024-01-15T10:30:02Z"
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+    from shared.lib.retry_logic import RetryConfig
+    
+    engine = WorkflowEngine(
+        gradient_client=gradient_client,
+        state_client=state_client,
+    )
+    
+    try:
+        # Reconstruct state from events
+        state_dict = await engine._reconstruct_state_from_events(workflow_id)
+        
+        if state_dict.get("status") != "failed":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot retry workflow with status {state_dict.get('status')}. Only failed workflows can be retried."
+            )
+        
+        # Check retry count
+        retry_count = state_dict.get("retries", {}).get(step_id, 0)
+        
+        if retry_count >= max_retries:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Maximum retries ({max_retries}) exceeded for step {step_id}"
+            )
+        
+        # Emit RETRY_STEP event
+        from shared.lib.workflow_reducer import WorkflowAction
+        from shared.lib.retry_logic import calculate_backoff, RetryConfig
+        
+        config = RetryConfig(max_retries=max_retries)
+        backoff_delay = calculate_backoff(retry_count, config)
+        
+        await engine._emit_event(
+            workflow_id=workflow_id,
+            action=WorkflowAction.RETRY_STEP,
+            step_id=step_id,
+            data={
+                "retry_attempt": retry_count + 1,
+                "max_retries": max_retries,
+                "backoff_delay": backoff_delay,
+            },
+        )
+        
+        # Resume workflow execution from failed step
+        # (In production, this would be done asynchronously via task queue)
+        return {
+            "workflow_id": workflow_id,
+            "step_id": step_id,
+            "retry_attempt": retry_count + 1,
+            "max_retries": max_retries,
+            "status": "retrying",
+            "backoff_delay": backoff_delay,
+            "message": "Retry scheduled. Workflow will resume after backoff delay.",
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retry workflow {workflow_id} from step {step_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# WORKFLOW TEMPLATES
+# ============================================================================
+
 @app.get("/workflow/templates")
 async def list_workflow_templates():
     """

@@ -3,6 +3,9 @@
     {
       "path": ".",
       "name": "Dev-Tools Root"
+    },
+    {
+      "path": "../zen-mcp-server"
     }
   ],
   "settings": {
