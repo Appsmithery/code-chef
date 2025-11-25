@@ -1,0 +1,85 @@
+// Grafana Alloy Configuration for Dev-Tools (Instrumented Services Only)
+// Only scrapes services with Prometheus /metrics endpoints implemented
+// Documentation: https://grafana.com/docs/alloy/latest/reference/
+
+// Prometheus Remote Write Configuration
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = "https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push"
+    
+    basic_auth {
+      username = "2677183"
+      password = "glc_eyJvIjoiMTUzNDY4MSIsIm4iOiJzdGFjay0xMzc2NDc0LWhtLXdyaXRlLWdyYWZhbmFfYXBpX3Rva2VuIiwiayI6IjRydkxVNDY1cnA4NDdWTTYwd1kxY0dYVyIsIm0iOnsiciI6InByb2QtdXMtZWFzdC0wIn19"
+    }
+  }
+  
+  external_labels = {
+    cluster     = "dev-tools",
+    environment = "production",
+    collector   = "alloy",
+  }
+}
+
+// Orchestrator - Main coordinator agent (HAS METRICS ✅)
+prometheus.scrape "orchestrator" {
+  targets = [
+    {"__address__" = "localhost:8001", "service" = "orchestrator", "agent_type" = "coordinator"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "orchestrator"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// Gateway MCP - Tool routing (HAS METRICS ✅ after rebuild)
+prometheus.scrape "gateway_mcp" {
+  targets = [
+    {"__address__" = "localhost:8000", "service" = "gateway-mcp", "role" = "tool-gateway"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "gateway-mcp"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// State Persistence (HAS METRICS ✅ after rebuild)
+prometheus.scrape "state_persistence" {
+  targets = [
+    {"__address__" = "localhost:8008", "service" = "state-persistence", "role" = "workflow-state"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "state-persistence"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// Local Prometheus (self-monitoring) (HAS METRICS ✅)
+prometheus.scrape "prometheus" {
+  targets = [
+    {"__address__" = "localhost:9090", "service" = "prometheus", "role" = "metrics-storage"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "prometheus"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// REMOVED SCRAPES (not instrumented):
+// - rag-context (port 8007) - Service not deployed
+// - agent-registry (port 8009) - Database connection issues, not instrumented yet
