@@ -426,12 +426,18 @@ curl http://45.55.173.72:8008/health  # State
 | Documentation, README   | `quick`  | 15s      | `...\deploy-to-droplet.ps1 -DeployType quick`  |
 | Not sure                | `auto`   | varies   | `...\deploy-to-droplet.ps1 -DeployType auto`   |
 
-**GitHub Action:** `.github/workflows/deploy-intelligent.yml`
-
-- Automatic on push to `main` branch
-- Detects file changes and selects optimal strategy
-- Manual trigger with strategy override via workflow_dispatch
-- Health validation and automatic cleanup on failure
+**GitHub Actions:**
+- **Deployment**: `.github/workflows/deploy-intelligent.yml`
+  - Automatic on push to `main` branch
+  - Detects file changes and selects optimal strategy (config/full/quick)
+  - Manual trigger with strategy override via workflow_dispatch
+  - Health validation and automatic cleanup on failure
+  - Triggers cleanup workflow after successful deploys
+- **Cleanup**: `.github/workflows/cleanup-docker-resources.yml`
+  - Runs after successful deployments (standard cleanup)
+  - Weekly schedule: Sundays at 3 AM UTC (aggressive cleanup)
+  - Manual trigger with 3 modes: standard/aggressive/full
+  - Includes pre/post metrics and health validation
 
 **Complete Documentation:** See `support/docs/DEPLOYMENT_GUIDE.md` for detailed procedures, troubleshooting, and HITL workflow
 
@@ -509,12 +515,23 @@ ufw allow 443/tcp             # HTTPS (Caddy with Let's Encrypt)
 ufw status                    # Verify rules
 ```
 
-### Container Hygiene & Cleanup (Required)
+### Container Hygiene & Cleanup (Automated)
 
+**Automated Cleanup System** (DEV-169 - November 2025):
+- **Post-deployment**: Automatic cleanup after every deploy via `deploy-to-droplet.ps1` (dangling images, build cache, 1h old containers)
+- **Weekly maintenance**: Cron job runs Sundays at 3 AM UTC via `weekly-cleanup.sh` (7-day retention policy)
+- **GitHub Actions**: `cleanup-docker-resources.yml` workflow with 3 modes (standard/aggressive/full)
+- **Expected savings**: 500MB-1GB per deploy, 1-2GB weekly, prevents 100% memory saturation
+- **Monitoring**: Logs at `/var/log/docker-cleanup.log` on droplet
+
+**Manual Cleanup** (when needed):
 - **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
-- **Prune on errors.** If a compose build/push/deploy fails, follow up with `docker builder prune -f`, `docker image prune -f`, and (when on the droplet) `docker system prune --volumes --force` unless the user explicitly says otherwise.
+- **Quick cleanup**: `ssh root@45.55.173.72 "docker image prune -f && docker builder prune -f"`
+- **Emergency cleanup**: Use GitHub Actions workflow with "full" mode (stops services, cleans all, restarts)
 - **Verify health after cleanup.** Re-run `support/scripts/validation/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
 - **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
+
+**Documentation**: `support/docs/operations/CLEANUP_QUICK_REFERENCE.md`, `support/docs/operations/droplet-memory-optimization.md`
 
 ### LangSmith (LLM Tracing)
 
