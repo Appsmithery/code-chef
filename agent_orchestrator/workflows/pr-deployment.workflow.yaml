@@ -1,0 +1,147 @@
+name: "PR Deployment Workflow"
+version: "1.0"
+description: "Automated PR review, test, and deployment pipeline"
+
+# Deterministic steps with LLM decision gates at strategic points
+steps:
+  - id: "code_review"
+    type: "agent_call"
+    agent: "code-review"
+    deterministic: true
+    payload:
+      pr_number: "{{ context.pr_number }}"
+      repo_url: "{{ context.repo_url }}"
+
+    # LLM decision gate: Should we proceed?
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Review results:
+        - Security issues: {{ outputs.code_review.security_issues }}
+        - Quality score: {{ outputs.code_review.quality_score }}
+        - Critical blockers: {{ outputs.code_review.blockers }}
+
+        Should we proceed to testing? Respond with:
+        {"decision": "proceed" | "block", "reasoning": "..."}
+
+      on_proceed: "run_tests"
+      on_block: "notify_failure"
+
+  - id: "run_tests"
+    type: "agent_call"
+    agent: "cicd"
+    deterministic: true
+    payload:
+      branch: "{{ context.branch }}"
+      test_suites: ["unit", "integration", "e2e"]
+
+    decision_gate:
+      type: "deterministic_check"
+      condition: "outputs.run_tests.passed >= outputs.run_tests.total * 0.95"
+      on_success: "deploy_staging"
+      on_failure: "notify_failure"
+
+  - id: "deploy_staging"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    resource_lock: "deployment:staging" # Prevent concurrent deploys
+    payload:
+      environment: "staging"
+      branch: "{{ context.branch }}"
+
+    # No LLM decision - always proceed if successful
+    on_success: "approval_gate"
+
+  - id: "approval_gate"
+    type: "hitl_approval"
+    deterministic: true
+    risk_assessment:
+      type: "llm_assessment"
+      prompt: |
+        Deployment ready for production:
+        - Review score: {{ outputs.code_review.quality_score }}
+        - Tests passed: {{ outputs.run_tests.passed }}/{{ outputs.run_tests.total }}
+        - Staging URL: {{ outputs.deploy_staging.url }}
+
+        Assess risk level (low/medium/high) and required approver role.
+
+        Response format:
+        {"risk_level": "medium", "approver_role": "tech_lead", "reasoning": "..."}
+
+    # Pause workflow, await approval
+    on_approved: "deploy_production"
+    on_rejected: "notify_failure"
+
+  - id: "deploy_production"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    resource_lock: "deployment:production"
+    payload:
+      environment: "production"
+      branch: "{{ context.branch }}"
+
+    # LLM health assessment after deploy
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Production deployment metrics:
+        - Health check: {{ outputs.deploy_production.health_check }}
+        - Error rate: {{ outputs.deploy_production.error_rate }}
+        - Response time: {{ outputs.deploy_production.response_time_p95 }}
+
+        Should we rollback? Respond with:
+        {"decision": "keep" | "rollback", "reasoning": "..."}
+
+      on_keep: "update_docs"
+      on_rollback: "rollback_production"
+
+  - id: "update_docs"
+    type: "agent_call"
+    agent: "documentation"
+    deterministic: true
+    payload:
+      pr_number: "{{ context.pr_number }}"
+      deployment_id: "{{ outputs.deploy_production.deployment_id }}"
+
+    on_success: "workflow_complete"
+
+  - id: "rollback_production"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    payload:
+      action: "rollback"
+      environment: "production"
+      to_version: "{{ context.previous_version }}"
+
+    on_success: "notify_rollback"
+
+# Error handling
+error_handling:
+  - step: "code_review"
+    on_error: "notify_failure"
+
+  - step: "run_tests"
+    on_error: "notify_failure"
+
+  - step: "deploy_staging"
+    on_error: "notify_failure"
+
+  - step: "deploy_production"
+    on_error: "rollback_production"
+
+# Notifications
+notifications:
+  - trigger: "workflow_complete"
+    channels: ["linear", "email"]
+    template: "deployment_success"
+
+  - trigger: "notify_failure"
+    channels: ["linear", "email", "slack"]
+    template: "deployment_failed"
+
+  - trigger: "notify_rollback"
+    channels: ["linear", "email", "slack"]
+    template: "deployment_rollback"
