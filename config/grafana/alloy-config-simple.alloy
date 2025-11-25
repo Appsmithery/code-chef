@@ -1,0 +1,110 @@
+// Grafana Alloy Configuration for Dev-Tools (Simplified - No Relabeling)
+// Documentation: https://grafana.com/docs/alloy/latest/reference/
+
+// Prometheus Remote Write Configuration
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = "https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push"
+    
+    basic_auth {
+      username = "2677183"
+      password = "glc_eyJvIjoiMTUzNDY4MSIsIm4iOiJzdGFjay0xMzc2NDc0LWhtLXdyaXRlLWdyYWZhbmFfYXBpX3Rva2VuIiwiayI6IjRydkxVNDY1cnA4NDdWTTYwd1kxY0dYVyIsIm0iOnsiciI6InByb2QtdXMtZWFzdC0wIn19"
+    }
+  }
+  
+  external_labels = {
+    cluster     = "dev-tools",
+    environment = "production",
+    collector   = "alloy",
+  }
+}
+
+// Orchestrator - Main coordinator agent
+prometheus.scrape "orchestrator" {
+  targets = [
+    {"__address__" = "localhost:8001", "service" = "orchestrator", "agent_type" = "coordinator"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "orchestrator"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// Gateway MCP - Tool routing
+prometheus.scrape "gateway_mcp" {
+  targets = [
+    {"__address__" = "localhost:8000", "service" = "gateway-mcp", "role" = "tool-gateway"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "gateway-mcp"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// RAG Context Service
+prometheus.scrape "rag_context" {
+  targets = [
+    {"__address__" = "localhost:8007", "service" = "rag-context", "role" = "context-retrieval"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "rag-context"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// State Persistence
+prometheus.scrape "state_persistence" {
+  targets = [
+    {"__address__" = "localhost:8008", "service" = "state-persistence", "role" = "workflow-state"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "state-persistence"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// Agent Registry
+prometheus.scrape "agent_registry" {
+  targets = [
+    {"__address__" = "localhost:8009", "service" = "agent-registry", "role" = "agent-discovery"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "agent-registry"
+  
+  clustering {
+    enabled = false
+  }
+}
+
+// Local Prometheus (self-monitoring)
+prometheus.scrape "prometheus" {
+  targets = [
+    {"__address__" = "localhost:9090", "service" = "prometheus", "role" = "metrics-storage"},
+  ]
+  forward_to      = [prometheus.remote_write.grafana_cloud.receiver]
+  scrape_interval = "15s"
+  scrape_timeout  = "10s"
+  job_name        = "prometheus"
+  
+  clustering {
+    enabled = false
+  }
+}
