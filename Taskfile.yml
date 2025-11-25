@@ -305,8 +305,8 @@ tasks:
               "repo_url": "git@github.com:appsmithery/dev-tools.git"
             }
           }'
-      - echo "Workflow started: {{.WORKFLOW_ID}}"
-      - echo "Monitor: http://localhost:8001/workflow/status/{{.WORKFLOW_ID}}"
+      - echo "Workflow started with ID from response"
+      - echo "Monitor at http://localhost:8001/workflow/status/"
 
   workflow:hotfix:
     desc: Execute emergency hotfix workflow (fast-track)
