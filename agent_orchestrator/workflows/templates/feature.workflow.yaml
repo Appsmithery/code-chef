@@ -1,0 +1,209 @@
+name: "Feature Development Workflow"
+version: "1.0"
+description: "Standard feature development with code review, testing, and deployment"
+
+# Full development lifecycle for new features
+steps:
+  - id: "analyze_requirements"
+    type: "agent_call"
+    agent: "supervisor"
+    deterministic: true
+    payload:
+      task_description: "{{ context.task_description }}"
+      project_context: "{{ context.project_context }}"
+
+    # LLM decision: What agents are needed?
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Task analysis:
+        - Description: {{ context.task_description }}
+        - Decomposition: {{ outputs.analyze_requirements.subtasks }}
+        - Required agents: {{ outputs.analyze_requirements.agents }}
+
+        Determine workflow path:
+        - "code_only": Feature dev + code review + tests
+        - "full_stack": Feature dev + infrastructure + cicd + docs
+        - "docs_only": Documentation updates only
+
+        Response format:
+        {"path": "code_only" | "full_stack" | "docs_only", "reasoning": "..."}
+
+      on_code_only: "implement_feature"
+      on_full_stack: "implement_feature"
+      on_docs_only: "update_documentation"
+
+  - id: "implement_feature"
+    type: "agent_call"
+    agent: "feature-dev"
+    deterministic: true
+    payload:
+      requirements: "{{ outputs.analyze_requirements.requirements }}"
+      project_path: "{{ context.project_path }}"
+      language: "{{ context.language }}" # Auto-detected by Context7
+
+    on_success: "code_review"
+
+  - id: "code_review"
+    type: "agent_call"
+    agent: "code-review"
+    deterministic: true
+    payload:
+      files_changed: "{{ outputs.implement_feature.files }}"
+      language: "{{ context.language }}"
+
+    # LLM decision: Quality gate
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Code review results:
+        - Security issues: {{ outputs.code_review.security_issues }}
+        - Quality score: {{ outputs.code_review.quality_score }}
+        - Complexity: {{ outputs.code_review.complexity }}
+        - Test coverage: {{ outputs.code_review.coverage }}%
+
+        Decision criteria:
+        - Critical security issues = 0
+        - Quality score >= 8/10
+        - Complexity <= 10
+        - Coverage >= 80%
+
+        Should we proceed? Respond with:
+        {"decision": "proceed" | "revise" | "block", "reasoning": "..."}
+
+      on_proceed: "run_tests"
+      on_revise: "implement_feature" # Loop back for fixes
+      on_block: "notify_failure"
+
+  - id: "run_tests"
+    type: "agent_call"
+    agent: "cicd"
+    deterministic: true
+    payload:
+      branch: "{{ context.branch }}"
+      test_suites: ["unit", "integration"]
+
+    decision_gate:
+      type: "deterministic_check"
+      condition: "outputs.run_tests.passed == outputs.run_tests.total"
+      on_success: "check_infrastructure_needed"
+      on_failure: "notify_test_failure"
+
+  - id: "check_infrastructure_needed"
+    type: "conditional"
+    deterministic: true
+    condition: "outputs.analyze_requirements.path == 'full_stack'"
+    on_true: "update_infrastructure"
+    on_false: "update_documentation"
+
+  - id: "update_infrastructure"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    payload:
+      requirements: "{{ outputs.analyze_requirements.infrastructure_needs }}"
+      cloud_provider: "{{ context.cloud_provider }}" # Auto-detected
+
+    on_success: "update_cicd"
+
+  - id: "update_cicd"
+    type: "agent_call"
+    agent: "cicd"
+    deterministic: true
+    payload:
+      pipeline_changes: "{{ outputs.analyze_requirements.cicd_needs }}"
+      platform: "{{ context.cicd_platform }}" # Auto-detected
+
+    on_success: "update_documentation"
+
+  - id: "update_documentation"
+    type: "agent_call"
+    agent: "documentation"
+    deterministic: true
+    payload:
+      feature_description: "{{ context.task_description }}"
+      files_changed: "{{ outputs.implement_feature.files }}"
+      language: "{{ context.language }}"
+
+    on_success: "approval_gate"
+
+  - id: "approval_gate"
+    type: "hitl_approval"
+    deterministic: true
+    risk_assessment:
+      type: "llm_assessment"
+      prompt: |
+        Feature development complete:
+        - Quality score: {{ outputs.code_review.quality_score }}
+        - Tests: {{ outputs.run_tests.passed }}/{{ outputs.run_tests.total }}
+        - Coverage: {{ outputs.code_review.coverage }}%
+        - Infrastructure changes: {{ outputs.update_infrastructure.changes }}
+        - Documentation: {{ outputs.update_documentation.files_updated }}
+
+        Assess risk and determine if approval needed:
+        - Low risk: Auto-approve if all tests pass
+        - Medium risk: Require tech_lead approval
+        - High risk: Require devops_engineer approval
+
+        Response format:
+        {"risk_level": "low" | "medium" | "high", "approver_role": "...", "reasoning": "..."}
+
+    on_approved: "merge_feature"
+    on_auto_approved: "merge_feature"
+    on_rejected: "notify_failure"
+
+  - id: "merge_feature"
+    type: "agent_call"
+    agent: "cicd"
+    deterministic: true
+    payload:
+      branch: "{{ context.branch }}"
+      target: "main"
+      pr_number: "{{ context.pr_number }}"
+
+    on_success: "workflow_complete"
+
+# Error handling
+error_handling:
+  - step: "implement_feature"
+    on_error: "notify_failure"
+    max_retries: 2
+
+  - step: "code_review"
+    on_error: "notify_failure"
+
+  - step: "run_tests"
+    on_error: "notify_test_failure"
+
+  - step: "update_infrastructure"
+    on_error: "notify_failure"
+    rollback: true
+
+  - step: "merge_feature"
+    on_error: "notify_failure"
+
+# Notifications
+notifications:
+  - trigger: "workflow_complete"
+    channels: ["linear", "email"]
+    template: "feature_complete"
+    payload:
+      feature: "{{ context.task_description }}"
+      pr_url: "{{ outputs.merge_feature.pr_url }}"
+      quality_score: "{{ outputs.code_review.quality_score }}"
+      test_results: "{{ outputs.run_tests.passed }}/{{ outputs.run_tests.total }}"
+
+  - trigger: "notify_failure"
+    channels: ["linear", "email", "slack"]
+    template: "feature_failed"
+    payload:
+      feature: "{{ context.task_description }}"
+      failed_step: "{{ workflow.failed_step }}"
+      error_message: "{{ workflow.error_message }}"
+
+  - trigger: "notify_test_failure"
+    channels: ["linear", "slack"]
+    template: "tests_failed"
+    payload:
+      failed_tests: "{{ outputs.run_tests.failed_tests }}"
+      branch: "{{ context.branch }}"

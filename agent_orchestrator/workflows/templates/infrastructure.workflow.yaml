@@ -1,0 +1,214 @@
+name: "Infrastructure Change Workflow"
+version: "1.0"
+description: "Safe IaC deployment with plan, approval, apply, and automatic rollback"
+
+# Terraform/Pulumi-style workflow with preview and apply
+steps:
+  - id: "analyze_changes"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    payload:
+      changes_description: "{{ context.changes_description }}"
+      cloud_provider: "{{ context.cloud_provider }}" # Auto-detected (AWS, Azure, GCP, DigitalOcean)
+      iac_tool: "{{ context.iac_tool }}" # Auto-detected (terraform, pulumi, cloudformation, etc.)
+
+    on_success: "generate_plan"
+
+  - id: "generate_plan"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    payload:
+      action: "plan"
+      environment: "{{ context.environment }}"
+      iac_files: "{{ outputs.analyze_changes.iac_files }}"
+
+    # LLM assessment of plan safety
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Infrastructure plan:
+        - Resources to create: {{ outputs.generate_plan.resources_to_create }}
+        - Resources to modify: {{ outputs.generate_plan.resources_to_modify }}
+        - Resources to destroy: {{ outputs.generate_plan.resources_to_destroy }}
+        - Estimated cost change: {{ outputs.generate_plan.cost_delta }}
+        - Breaking changes: {{ outputs.generate_plan.breaking_changes }}
+
+        Risk assessment criteria:
+        - Low risk: Only creates new resources, no destroys, cost delta < $50/month
+        - Medium risk: Modifies existing resources, cost delta < $200/month
+        - High risk: Destroys resources, breaking changes, cost delta > $200/month
+        - Critical risk: Production database/storage destruction
+
+        Response format:
+        {"risk_level": "low" | "medium" | "high" | "critical", "approver_role": "...", "reasoning": "...", "concerns": [...]}
+
+      on_low: "approval_gate"
+      on_medium: "approval_gate"
+      on_high: "approval_gate"
+      on_critical: "escalate_approval"
+
+  - id: "approval_gate"
+    type: "hitl_approval"
+    deterministic: true
+    resource_lock: "infrastructure:{{ context.environment }}" # Prevent concurrent changes
+    risk_assessment:
+      use_previous: "generate_plan" # Use LLM assessment from previous step
+
+    # Create Linear issue with plan details
+    approval_payload:
+      plan_summary: "{{ outputs.generate_plan.summary }}"
+      resources_affected: "{{ outputs.generate_plan.resources_to_create + outputs.generate_plan.resources_to_modify + outputs.generate_plan.resources_to_destroy }}"
+      cost_impact: "{{ outputs.generate_plan.cost_delta }}"
+      estimated_downtime: "{{ outputs.generate_plan.downtime }}"
+
+    on_approved: "apply_changes"
+    on_rejected: "notify_rejected"
+
+  - id: "escalate_approval"
+    type: "hitl_approval"
+    deterministic: true
+    resource_lock: "infrastructure:{{ context.environment }}"
+    risk_assessment:
+      type: "override"
+      risk_level: "critical"
+      approver_role: "devops_engineer" # Only senior engineers can approve critical changes
+      requires_multiple_approvals: true
+      approval_count: 2
+
+    on_approved: "apply_changes"
+    on_rejected: "notify_rejected"
+
+  - id: "apply_changes"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    resource_lock: "infrastructure:{{ context.environment }}"
+    payload:
+      action: "apply"
+      environment: "{{ context.environment }}"
+      plan_id: "{{ outputs.generate_plan.plan_id }}"
+
+    # Post-deployment health check
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Infrastructure deployment results:
+        - Status: {{ outputs.apply_changes.status }}
+        - Resources created: {{ outputs.apply_changes.created }}
+        - Resources modified: {{ outputs.apply_changes.modified }}
+        - Resources destroyed: {{ outputs.apply_changes.destroyed }}
+        - Health checks: {{ outputs.apply_changes.health_checks }}
+        - Error rate: {{ outputs.apply_changes.error_rate }}
+
+        Post-deployment validation:
+        - All health checks passing
+        - Error rate < 1%
+        - No unexpected resource failures
+
+        Response format:
+        {"decision": "success" | "rollback", "reasoning": "...", "issues": [...]}
+
+      on_success: "update_documentation"
+      on_rollback: "rollback_changes"
+
+  - id: "update_documentation"
+    type: "agent_call"
+    agent: "documentation"
+    deterministic: true
+    payload:
+      infrastructure_changes: "{{ outputs.apply_changes.changes }}"
+      environment: "{{ context.environment }}"
+
+    on_success: "workflow_complete"
+
+  - id: "rollback_changes"
+    type: "agent_call"
+    agent: "infrastructure"
+    deterministic: true
+    resource_lock: "infrastructure:{{ context.environment }}"
+    payload:
+      action: "rollback"
+      environment: "{{ context.environment }}"
+      to_state: "{{ outputs.generate_plan.previous_state }}"
+
+    on_success: "notify_rollback"
+    on_failure: "notify_rollback_failed"
+
+  - id: "notify_rejected"
+    type: "notification"
+    deterministic: true
+    channels: ["linear", "email"]
+    template: "infrastructure_rejected"
+    payload:
+      plan_summary: "{{ outputs.generate_plan.summary }}"
+      rejection_reason: "{{ workflow.rejection_reason }}"
+
+    on_complete: "workflow_failed"
+
+  - id: "notify_rollback"
+    type: "notification"
+    deterministic: true
+    channels: ["linear", "email", "slack"]
+    template: "infrastructure_rollback"
+    payload:
+      reason: "{{ outputs.apply_changes.issues }}"
+      environment: "{{ context.environment }}"
+
+    on_complete: "workflow_failed"
+
+  - id: "notify_rollback_failed"
+    type: "notification"
+    deterministic: true
+    channels: ["linear", "email", "slack", "pagerduty"]
+    template: "infrastructure_rollback_failed"
+    priority: "critical"
+    payload:
+      environment: "{{ context.environment }}"
+      error: "{{ outputs.rollback_changes.error }}"
+      manual_intervention_required: true
+
+    on_complete: "workflow_failed"
+
+# Error handling
+error_handling:
+  - step: "analyze_changes"
+    on_error: "notify_failure"
+
+  - step: "generate_plan"
+    on_error: "notify_failure"
+
+  - step: "apply_changes"
+    on_error: "rollback_changes"
+    max_retries: 0 # No retries for infrastructure apply
+
+  - step: "rollback_changes"
+    on_error: "notify_rollback_failed"
+    max_retries: 2 # Try rollback twice
+
+# Notifications
+notifications:
+  - trigger: "workflow_complete"
+    channels: ["linear", "email"]
+    template: "infrastructure_applied"
+    payload:
+      environment: "{{ context.environment }}"
+      resources_changed: "{{ outputs.apply_changes.created + outputs.apply_changes.modified }}"
+      cost_impact: "{{ outputs.generate_plan.cost_delta }}"
+      documentation_updated: "{{ outputs.update_documentation.files }}"
+
+  - trigger: "workflow_failed"
+    channels: ["linear", "email", "slack"]
+    template: "infrastructure_failed"
+    payload:
+      failed_step: "{{ workflow.failed_step }}"
+      error_message: "{{ workflow.error_message }}"
+      plan_id: "{{ outputs.generate_plan.plan_id }}"
+
+  - trigger: "notify_failure"
+    channels: ["linear", "slack"]
+    template: "workflow_error"
+    payload:
+      failed_step: "{{ workflow.failed_step }}"
+      error_message: "{{ workflow.error_message }}"

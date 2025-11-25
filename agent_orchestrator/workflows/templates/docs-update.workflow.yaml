@@ -1,0 +1,153 @@
+name: "Documentation Update Workflow"
+version: "1.0"
+description: "Fast-track workflow for documentation-only changes (no tests/staging required)"
+
+# Lightweight workflow for docs-only PRs
+steps:
+  - id: "validate_docs_only"
+    type: "agent_call"
+    agent: "supervisor"
+    deterministic: true
+    payload:
+      files_changed: "{{ context.files_changed }}"
+
+    # LLM decision: Are these truly docs-only changes?
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Files changed:
+        {{ context.files_changed }}
+
+        Determine if these are documentation-only changes:
+        - README.md, docs/*.md, *.rst, API_DOCS.md = docs-only
+        - Code files (.py, .js, .java, .go, etc.) = NOT docs-only
+        - Config files (.yaml, .json, Dockerfile) = NOT docs-only
+
+        Response format:
+        {"is_docs_only": true | false, "reasoning": "...", "non_doc_files": [...]}
+
+      on_true: "review_documentation"
+      on_false: "reject_workflow"
+
+  - id: "review_documentation"
+    type: "agent_call"
+    agent: "documentation"
+    deterministic: true
+    payload:
+      files_changed: "{{ context.files_changed }}"
+      pr_number: "{{ context.pr_number }}"
+
+    # LLM quality check
+    decision_gate:
+      type: "llm_assessment"
+      prompt: |
+        Documentation review:
+        - Clarity score: {{ outputs.review_documentation.clarity_score }}
+        - Completeness: {{ outputs.review_documentation.completeness }}
+        - Grammar issues: {{ outputs.review_documentation.grammar_issues }}
+        - Broken links: {{ outputs.review_documentation.broken_links }}
+        - Code examples validated: {{ outputs.review_documentation.examples_valid }}
+
+        Quality gate:
+        - Clarity >= 8/10
+        - No broken links
+        - All code examples valid
+
+        Response format:
+        {"decision": "approve" | "revise", "reasoning": "...", "required_changes": [...]}
+
+      on_approve: "check_approval_needed"
+      on_revise: "request_changes"
+
+  - id: "check_approval_needed"
+    type: "hitl_approval"
+    deterministic: true
+    risk_assessment:
+      type: "llm_assessment"
+      prompt: |
+        Documentation changes:
+        - Files: {{ context.files_changed }}
+        - Scope: {{ outputs.review_documentation.scope }}
+        - Impact: {{ outputs.review_documentation.impact }}
+
+        Determine if approval needed:
+        - Typo fixes, grammar corrections = auto-approve (low risk)
+        - New documentation sections = tech_lead approval (medium risk)
+        - Architecture/API documentation = devops_engineer approval (high risk)
+
+        Response format:
+        {"risk_level": "low" | "medium" | "high", "approver_role": "none" | "tech_lead" | "devops_engineer", "reasoning": "..."}
+
+    on_auto_approved: "merge_documentation"
+    on_approved: "merge_documentation"
+    on_rejected: "request_changes"
+
+  - id: "merge_documentation"
+    type: "agent_call"
+    agent: "cicd"
+    deterministic: true
+    payload:
+      branch: "{{ context.branch }}"
+      target: "main"
+      pr_number: "{{ context.pr_number }}"
+      skip_tests: true # Docs-only, no tests needed
+      skip_staging: true # Deploy directly to production
+
+    on_success: "workflow_complete"
+
+  - id: "reject_workflow"
+    type: "notification"
+    deterministic: true
+    channels: ["linear", "email"]
+    template: "workflow_rejected"
+    payload:
+      reason: "Not a documentation-only PR"
+      non_doc_files: "{{ outputs.validate_docs_only.non_doc_files }}"
+      suggested_workflow: "feature.workflow.yaml"
+
+    on_complete: "workflow_failed"
+
+  - id: "request_changes"
+    type: "notification"
+    deterministic: true
+    channels: ["linear", "github"]
+    template: "docs_changes_requested"
+    payload:
+      required_changes: "{{ outputs.review_documentation.required_changes }}"
+      pr_number: "{{ context.pr_number }}"
+
+    on_complete: "workflow_paused"
+
+# Error handling
+error_handling:
+  - step: "validate_docs_only"
+    on_error: "notify_failure"
+
+  - step: "review_documentation"
+    on_error: "notify_failure"
+
+  - step: "merge_documentation"
+    on_error: "notify_failure"
+
+# Notifications
+notifications:
+  - trigger: "workflow_complete"
+    channels: ["linear", "email"]
+    template: "docs_merged"
+    payload:
+      files_changed: "{{ context.files_changed }}"
+      pr_url: "{{ outputs.merge_documentation.pr_url }}"
+      clarity_score: "{{ outputs.review_documentation.clarity_score }}"
+
+  - trigger: "workflow_failed"
+    channels: ["linear", "email"]
+    template: "docs_workflow_failed"
+    payload:
+      reason: "{{ workflow.failure_reason }}"
+
+  - trigger: "notify_failure"
+    channels: ["linear", "slack"]
+    template: "workflow_error"
+    payload:
+      failed_step: "{{ workflow.failed_step }}"
+      error_message: "{{ workflow.error_message }}"

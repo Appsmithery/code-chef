@@ -2933,6 +2933,279 @@ async def langgraph_status():
         return {"status": "error", "error": str(e)}
 
 
+# ============================================================================
+# DECLARATIVE WORKFLOW ENGINE ENDPOINTS (Week 2 - DEV-172)
+# ============================================================================
+
+
+class WorkflowExecuteRequest(BaseModel):
+    """Request to execute a declarative workflow."""
+
+    template_name: str = Field(
+        ...,
+        description="Workflow template filename (e.g., 'pr-deployment.workflow.yaml')",
+    )
+    context: Dict[str, Any] = Field(
+        ...,
+        description="Initial context variables (pr_number, branch, environment, etc.)",
+    )
+
+
+class WorkflowStatusResponse(BaseModel):
+    """Workflow execution status response."""
+
+    workflow_id: str
+    status: str
+    current_step: Optional[str] = None
+    started_at: datetime
+    completed_at: Optional[datetime] = None
+    step_statuses: Dict[str, str] = Field(default_factory=dict)
+    error_message: Optional[str] = None
+
+
+class WorkflowResumeRequest(BaseModel):
+    """Request to resume a paused workflow."""
+
+    approval_decision: str = Field(..., description="'approved' or 'rejected'")
+
+
+@app.post("/workflow/execute", response_model=Dict[str, Any])
+@traceable(name="workflow_execute", tags=["workflow", "declarative", "yaml"])
+async def execute_workflow(request: WorkflowExecuteRequest):
+    """
+    Execute a declarative workflow from YAML template.
+
+    Workflows:
+    - pr-deployment.workflow.yaml: Full PR review, test, staging, approval, production
+    - hotfix.workflow.yaml: Fast-track emergency fixes (skip staging)
+    - feature.workflow.yaml: Standard feature development lifecycle
+    - docs-update.workflow.yaml: Documentation-only changes (skip tests)
+    - infrastructure.workflow.yaml: IaC changes with plan, approval, apply, rollback
+
+    Features:
+    - Sequential step execution with state persistence
+    - LLM decision gates for dynamic routing
+    - HITL approval integration with Linear
+    - Resource locking to prevent concurrent operations
+    - Jinja2 template rendering for dynamic payloads
+
+    Example:
+        POST /workflow/execute
+        {
+            "template_name": "pr-deployment.workflow.yaml",
+            "context": {
+                "pr_number": 123,
+                "repo_url": "github.com/org/repo",
+                "branch": "feature/new-api",
+                "environment": "production"
+            }
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+
+    engine = WorkflowEngine(
+        gradient_client=get_gradient_client(),
+        state_client=registry_client,
+    )
+
+    try:
+        workflow_state = await engine.execute_workflow(
+            template_name=request.template_name,
+            context=request.context,
+        )
+
+        return {
+            "workflow_id": workflow_state.workflow_id,
+            "status": workflow_state.status.value,
+            "current_step": workflow_state.current_step,
+            "step_statuses": {
+                k: v.value for k, v in workflow_state.step_statuses.items()
+            },
+            "outputs": workflow_state.outputs,
+            "started_at": workflow_state.started_at.isoformat(),
+            "completed_at": (
+                workflow_state.completed_at.isoformat()
+                if workflow_state.completed_at
+                else None
+            ),
+        }
+
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"Workflow execution failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Workflow execution failed: {str(e)}"
+        )
+
+
+@app.get("/workflow/status/{workflow_id}", response_model=WorkflowStatusResponse)
+@traceable(name="workflow_status", tags=["workflow", "status"])
+async def get_workflow_status(workflow_id: str):
+    """
+    Get current status of a workflow execution.
+
+    Returns:
+    - workflow_id: Unique workflow identifier
+    - status: pending, running, paused (awaiting approval), completed, failed, rolled_back
+    - current_step: ID of currently executing step
+    - step_statuses: Status of each step (pending, running, completed, failed, skipped)
+    - outputs: Outputs from completed steps
+    - error_message: Error details if workflow failed
+
+    Example:
+        GET /workflow/status/abc123
+        {
+            "workflow_id": "abc123",
+            "status": "paused",
+            "current_step": "approval_gate",
+            "step_statuses": {
+                "code_review": "completed",
+                "run_tests": "completed",
+                "deploy_staging": "completed",
+                "approval_gate": "running",
+                "deploy_production": "pending"
+            }
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+
+    engine = WorkflowEngine(
+        gradient_client=get_gradient_client(),
+        state_client=registry_client,
+    )
+
+    try:
+        workflow_state = await engine.get_workflow_status(workflow_id)
+
+        return WorkflowStatusResponse(
+            workflow_id=workflow_state.workflow_id,
+            status=workflow_state.status.value,
+            current_step=workflow_state.current_step,
+            started_at=workflow_state.started_at,
+            completed_at=workflow_state.completed_at,
+            step_statuses={k: v.value for k, v in workflow_state.step_statuses.items()},
+            error_message=workflow_state.error_message,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=404, detail=f"Workflow not found: {workflow_id}"
+        )
+
+
+@app.post("/workflow/resume/{workflow_id}", response_model=Dict[str, Any])
+@traceable(name="workflow_resume", tags=["workflow", "hitl", "approval"])
+async def resume_workflow(workflow_id: str, request: WorkflowResumeRequest):
+    """
+    Resume a paused workflow after HITL approval.
+
+    When a workflow reaches an HITL approval step, it pauses and creates a Linear issue.
+    Once the issue is approved/rejected, call this endpoint to resume execution.
+
+    Args:
+    - workflow_id: Workflow to resume
+    - approval_decision: "approved" or "rejected"
+
+    Example:
+        POST /workflow/resume/abc123
+        {
+            "approval_decision": "approved"
+        }
+
+    The workflow will continue from the next step based on the approval decision:
+    - "approved" → Proceeds to on_approved step (e.g., deploy_production)
+    - "rejected" → Proceeds to on_rejected step (e.g., notify_failure)
+    """
+    from workflows.workflow_engine import WorkflowEngine
+
+    engine = WorkflowEngine(
+        gradient_client=get_gradient_client(),
+        state_client=registry_client,
+    )
+
+    if request.approval_decision not in ["approved", "rejected"]:
+        raise HTTPException(
+            status_code=400, detail="approval_decision must be 'approved' or 'rejected'"
+        )
+
+    try:
+        workflow_state = await engine.resume_workflow(
+            workflow_id=workflow_id,
+            approval_decision=request.approval_decision,
+        )
+
+        return {
+            "workflow_id": workflow_state.workflow_id,
+            "status": workflow_state.status.value,
+            "current_step": workflow_state.current_step,
+            "approval_decision": request.approval_decision,
+            "step_statuses": {
+                k: v.value for k, v in workflow_state.step_statuses.items()
+            },
+            "completed_at": (
+                workflow_state.completed_at.isoformat()
+                if workflow_state.completed_at
+                else None
+            ),
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"Workflow resume failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Workflow resume failed: {str(e)}")
+
+
+@app.get("/workflow/templates")
+async def list_workflow_templates():
+    """
+    List available workflow templates.
+
+    Returns:
+    - template_name: Filename of workflow template
+    - name: Human-readable workflow name
+    - description: What the workflow does
+    - version: Template version
+
+    Example:
+        GET /workflow/templates
+        {
+            "templates": [
+                {
+                    "template_name": "pr-deployment.workflow.yaml",
+                    "name": "PR Deployment Workflow",
+                    "description": "Automated PR review, test, and deployment pipeline",
+                    "version": "1.0"
+                },
+                ...
+            ]
+        }
+    """
+    from workflows.workflow_engine import WorkflowEngine
+    from pathlib import Path
+
+    engine = WorkflowEngine()
+    templates_dir = Path(engine.templates_dir)
+
+    templates = []
+    for template_file in templates_dir.glob("*.workflow.yaml"):
+        try:
+            definition = engine.load_workflow(template_file.name)
+            templates.append(
+                {
+                    "template_name": template_file.name,
+                    "name": definition.name,
+                    "description": definition.description,
+                    "version": definition.version,
+                }
+            )
+        except Exception as e:
+            logger.warning(f"Failed to load template {template_file.name}: {e}")
+
+    return {"templates": templates}
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "8001"))
     uvicorn.run(app, host="0.0.0.0", port=port)
