@@ -71,6 +71,7 @@ docker-compose.override.yml
 # Backups
 backups/
 *.bak
+*.backup-*
 
 # Temporary files
 *.tmp
@@ -78,6 +79,7 @@ temp/
 .bin/
 support/docs/_temp/*
 !support/docs/_temp/.gitkeep
+pytest.log
 
 # Gradient knowledge base exports
 support/scripts/tmp/
