@@ -34,10 +34,13 @@ POSTGRES_USER = os.getenv("POSTGRES_USER", "devtools")
 # Read password from Docker secret file or environment variable
 POSTGRES_PASSWORD_FILE = os.getenv("POSTGRES_PASSWORD_FILE")
 if POSTGRES_PASSWORD_FILE and os.path.exists(POSTGRES_PASSWORD_FILE):
-    with open(POSTGRES_PASSWORD_FILE, 'r') as f:
+    with open(POSTGRES_PASSWORD_FILE, "r") as f:
         POSTGRES_PASSWORD = f.read().strip()
+        # If secret file is empty, try environment variable
+        if not POSTGRES_PASSWORD:
+            POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 else:
-    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "changeme")
+    POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "")
 
 DATABASE_URL = f"postgresql://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
@@ -48,42 +51,45 @@ HEARTBEAT_TIMEOUT_SECONDS = int(os.getenv("HEARTBEAT_TIMEOUT_SECONDS", "60"))
 # Pydantic Models
 # ============================================================================
 
+
 class AgentCapability(BaseModel):
     """Agent capability definition"""
+
     name: str = Field(..., description="Capability identifier (e.g., 'code_review')")
     description: str = Field(..., description="Human-readable description")
     parameters: Dict[str, str] = Field(
         default_factory=dict,
-        description="Parameter schema (e.g., {'repo_url': 'str', 'pr_number': 'int'})"
+        description="Parameter schema (e.g., {'repo_url': 'str', 'pr_number': 'int'})",
     )
     cost_estimate: str = Field(
-        ...,
-        description="Estimated cost (e.g., '~100 tokens' or '~30s compute')"
+        ..., description="Estimated cost (e.g., '~100 tokens' or '~30s compute')"
     )
     tags: List[str] = Field(
         default_factory=list,
-        description="Capability tags for search (e.g., ['git', 'security'])"
+        description="Capability tags for search (e.g., ['git', 'security'])",
     )
 
 
 class AgentRegistration(BaseModel):
     """Agent registration data"""
+
     agent_id: str = Field(..., description="Unique agent identifier")
     agent_name: str = Field(..., description="Human-readable agent name")
-    base_url: str = Field(..., description="Agent base URL (e.g., 'http://code-review:8003')")
+    base_url: str = Field(
+        ..., description="Agent base URL (e.g., 'http://code-review:8003')"
+    )
     capabilities: List[AgentCapability] = Field(..., description="Agent capabilities")
     status: str = Field(
-        default="active",
-        description="Agent status: active, busy, offline"
+        default="active", description="Agent status: active, busy, offline"
     )
     metadata: Optional[Dict] = Field(
-        default_factory=dict,
-        description="Additional metadata"
+        default_factory=dict, description="Additional metadata"
     )
 
 
 class AgentInfo(AgentRegistration):
     """Agent info with timestamps"""
+
     last_heartbeat: datetime
     created_at: datetime
     updated_at: datetime
@@ -91,6 +97,7 @@ class AgentInfo(AgentRegistration):
 
 class HeartbeatResponse(BaseModel):
     """Heartbeat response"""
+
     status: str
     agent_id: str
     last_heartbeat: datetime
@@ -98,6 +105,7 @@ class HeartbeatResponse(BaseModel):
 
 class CapabilityMatch(BaseModel):
     """Capability search match"""
+
     agent_id: str
     agent_name: str
     capability: str
@@ -108,6 +116,7 @@ class CapabilityMatch(BaseModel):
 
 class HealthStatus(BaseModel):
     """Agent health status"""
+
     agent_id: str
     agent_name: str
     status: str
@@ -128,10 +137,7 @@ async def get_db_pool() -> asyncpg.Pool:
     global db_pool
     if db_pool is None:
         db_pool = await asyncpg.create_pool(
-            DATABASE_URL,
-            min_size=2,
-            max_size=10,
-            command_timeout=30
+            DATABASE_URL, min_size=2, max_size=10, command_timeout=30
         )
     return db_pool
 
@@ -148,6 +154,7 @@ async def close_db_pool():
 # Lifespan Management
 # ============================================================================
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan context manager for startup/shutdown"""
@@ -155,12 +162,12 @@ async def lifespan(app: FastAPI):
     print("🚀 Agent Registry Service starting...")
     await get_db_pool()
     print("✅ Database pool initialized")
-    
+
     # Start cleanup task
     cleanup_task = asyncio.create_task(cleanup_stale_agents())
-    
+
     yield
-    
+
     # Shutdown
     print("🛑 Agent Registry Service shutting down...")
     cleanup_task.cancel()
@@ -180,7 +187,7 @@ app = FastAPI(
     title="Agent Registry Service",
     description="Centralized registry for agent discovery and health monitoring",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Prometheus metrics
@@ -191,29 +198,32 @@ Instrumentator().instrument(app).expose(app)
 # Background Tasks
 # ============================================================================
 
+
 async def cleanup_stale_agents():
     """Periodically mark stale agents as offline"""
     while True:
         try:
             await asyncio.sleep(30)  # Run every 30 seconds
-            
+
             pool = await get_db_pool()
             async with pool.acquire() as conn:
                 # Mark agents offline if no heartbeat in HEARTBEAT_TIMEOUT_SECONDS
-                cutoff = datetime.utcnow() - timedelta(seconds=HEARTBEAT_TIMEOUT_SECONDS)
-                
+                cutoff = datetime.utcnow() - timedelta(
+                    seconds=HEARTBEAT_TIMEOUT_SECONDS
+                )
+
                 result = await conn.execute(
                     """
                     UPDATE agent_registry
                     SET status = 'offline', updated_at = NOW()
                     WHERE last_heartbeat < $1 AND status != 'offline'
                     """,
-                    cutoff
+                    cutoff,
                 )
-                
+
                 if result != "UPDATE 0":
                     print(f"⚠️  Marked stale agents offline: {result}")
-                    
+
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -224,6 +234,7 @@ async def cleanup_stale_agents():
 # API Endpoints
 # ============================================================================
 
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
@@ -231,18 +242,18 @@ async def health_check():
         pool = await get_db_pool()
         async with pool.acquire() as conn:
             await conn.fetchval("SELECT 1")
-        
+
         return {
             "status": "healthy",
             "service": "agent-registry",
-            "database": "connected"
+            "database": "connected",
         }
     except Exception as e:
         return {
             "status": "unhealthy",
             "service": "agent-registry",
             "database": "disconnected",
-            "error": str(e)
+            "error": str(e),
         }
 
 
@@ -253,12 +264,15 @@ async def register_agent(registration: AgentRegistration):
         pool = await get_db_pool()
         async with pool.acquire() as conn:
             now = datetime.utcnow()
-            
+
             # Serialize capabilities to JSON
             import json as json_lib
-            capabilities_json = json_lib.dumps([cap.model_dump() for cap in registration.capabilities])
+
+            capabilities_json = json_lib.dumps(
+                [cap.model_dump() for cap in registration.capabilities]
+            )
             metadata_json = json_lib.dumps(registration.metadata or {})
-            
+
             # Upsert agent registration
             await conn.execute(
                 """
@@ -283,22 +297,24 @@ async def register_agent(registration: AgentRegistration):
                 capabilities_json,
                 metadata_json,
                 now,
-                now
+                now,
             )
-            
+
             return {
                 "status": "registered",
                 "agent_id": registration.agent_id,
-                "timestamp": now.isoformat()
+                "timestamp": now.isoformat(),
             }
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Registration failed: {str(e)}")
 
 
 @app.get("/agents", response_model=List[AgentInfo])
 async def list_agents(
-    status: Optional[str] = Query(None, description="Filter by status: active, busy, offline")
+    status: Optional[str] = Query(
+        None, description="Filter by status: active, busy, offline"
+    )
 ):
     """List all registered agents"""
     try:
@@ -313,7 +329,7 @@ async def list_agents(
                     WHERE status = $1
                     ORDER BY agent_name
                     """,
-                    status
+                    status,
                 )
             else:
                 rows = await conn.fetch(
@@ -324,37 +340,38 @@ async def list_agents(
                     ORDER BY agent_name
                     """
                 )
-            
+
             agents = []
             for row in rows:
                 # Parse capabilities from JSON (already deserialized by asyncpg)
                 import json as json_lib
+
                 caps_data = row["capabilities"]
                 if isinstance(caps_data, str):
                     caps_data = json_lib.loads(caps_data)
-                
-                capabilities = [
-                    AgentCapability(**cap) for cap in caps_data
-                ]
-                
+
+                capabilities = [AgentCapability(**cap) for cap in caps_data]
+
                 metadata = row["metadata"]
                 if isinstance(metadata, str):
                     metadata = json_lib.loads(metadata)
-                
-                agents.append(AgentInfo(
-                    agent_id=row["agent_id"],
-                    agent_name=row["agent_name"],
-                    base_url=row["base_url"],
-                    status=row["status"],
-                    capabilities=capabilities,
-                    metadata=metadata,
-                    last_heartbeat=row["last_heartbeat"],
-                    created_at=row["created_at"],
-                    updated_at=row["updated_at"]
-                ))
-            
+
+                agents.append(
+                    AgentInfo(
+                        agent_id=row["agent_id"],
+                        agent_name=row["agent_name"],
+                        base_url=row["base_url"],
+                        status=row["status"],
+                        capabilities=capabilities,
+                        metadata=metadata,
+                        last_heartbeat=row["last_heartbeat"],
+                        created_at=row["created_at"],
+                        updated_at=row["updated_at"],
+                    )
+                )
+
             return agents
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to list agents: {str(e)}")
 
@@ -372,26 +389,27 @@ async def get_agent(agent_id: str):
                 FROM agent_registry
                 WHERE agent_id = $1
                 """,
-                agent_id
+                agent_id,
             )
-            
+
             if not row:
-                raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
-            
+                raise HTTPException(
+                    status_code=404, detail=f"Agent '{agent_id}' not found"
+                )
+
             # Parse capabilities from JSON
             import json as json_lib
+
             caps_data = row["capabilities"]
             if isinstance(caps_data, str):
                 caps_data = json_lib.loads(caps_data)
-            
-            capabilities = [
-                AgentCapability(**cap) for cap in caps_data
-            ]
-            
+
+            capabilities = [AgentCapability(**cap) for cap in caps_data]
+
             metadata = row["metadata"]
             if isinstance(metadata, str):
                 metadata = json_lib.loads(metadata)
-            
+
             return AgentInfo(
                 agent_id=row["agent_id"],
                 agent_name=row["agent_name"],
@@ -401,9 +419,9 @@ async def get_agent(agent_id: str):
                 metadata=metadata,
                 last_heartbeat=row["last_heartbeat"],
                 created_at=row["created_at"],
-                updated_at=row["updated_at"]
+                updated_at=row["updated_at"],
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -417,7 +435,7 @@ async def agent_heartbeat(agent_id: str):
         pool = await get_db_pool()
         async with pool.acquire() as conn:
             now = datetime.utcnow()
-            
+
             result = await conn.execute(
                 """
                 UPDATE agent_registry
@@ -425,21 +443,17 @@ async def agent_heartbeat(agent_id: str):
                 WHERE agent_id = $2
                 """,
                 now,
-                agent_id
+                agent_id,
             )
-            
+
             if result == "UPDATE 0":
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Agent '{agent_id}' not registered. Please register first."
+                    detail=f"Agent '{agent_id}' not registered. Please register first.",
                 )
-            
-            return HeartbeatResponse(
-                status="ok",
-                agent_id=agent_id,
-                last_heartbeat=now
-            )
-            
+
+            return HeartbeatResponse(status="ok", agent_id=agent_id, last_heartbeat=now)
+
     except HTTPException:
         raise
     except Exception as e:
@@ -461,34 +475,39 @@ async def search_capabilities(
                 WHERE status = 'active'
                 """
             )
-            
+
             matches = []
             query_lower = q.lower()
-            
+
             import json as json_lib
+
             for row in rows:
                 caps_data = row["capabilities"]
                 if isinstance(caps_data, str):
                     caps_data = json_lib.loads(caps_data)
-                
+
                 for cap in caps_data:
                     # Search in name, description, and tags
                     name_match = query_lower in cap["name"].lower()
                     desc_match = query_lower in cap["description"].lower()
-                    tags_match = any(query_lower in tag.lower() for tag in cap.get("tags", []))
-                    
+                    tags_match = any(
+                        query_lower in tag.lower() for tag in cap.get("tags", [])
+                    )
+
                     if name_match or desc_match or tags_match:
-                        matches.append(CapabilityMatch(
-                            agent_id=row["agent_id"],
-                            agent_name=row["agent_name"],
-                            capability=cap["name"],
-                            description=cap["description"],
-                            base_url=row["base_url"],
-                            tags=cap.get("tags", [])
-                        ))
-            
+                        matches.append(
+                            CapabilityMatch(
+                                agent_id=row["agent_id"],
+                                agent_name=row["agent_name"],
+                                capability=cap["name"],
+                                description=cap["description"],
+                                base_url=row["base_url"],
+                                tags=cap.get("tags", []),
+                            )
+                        )
+
             return matches
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
@@ -505,25 +524,27 @@ async def check_agent_health(agent_id: str):
                 FROM agent_registry
                 WHERE agent_id = $1
                 """,
-                agent_id
+                agent_id,
             )
-            
+
             if not row:
-                raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
-            
+                raise HTTPException(
+                    status_code=404, detail=f"Agent '{agent_id}' not found"
+                )
+
             now = datetime.utcnow()
             seconds_since_heartbeat = (now - row["last_heartbeat"]).total_seconds()
             is_healthy = seconds_since_heartbeat < HEARTBEAT_TIMEOUT_SECONDS
-            
+
             return HealthStatus(
                 agent_id=row["agent_id"],
                 agent_name=row["agent_name"],
                 status=row["status"],
                 last_heartbeat=row["last_heartbeat"],
                 is_healthy=is_healthy,
-                seconds_since_heartbeat=seconds_since_heartbeat
+                seconds_since_heartbeat=seconds_since_heartbeat,
             )
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -536,12 +557,7 @@ async def check_agent_health(agent_id: str):
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     print(f"🚀 Starting Agent Registry on port {PORT}")
-    
-    uvicorn.run(
-        app,
-        host="0.0.0.0",
-        port=PORT,
-        log_level="info"
-    )
+
+    uvicorn.run(app, host="0.0.0.0", port=PORT, log_level="info")

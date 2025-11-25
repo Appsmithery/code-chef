@@ -13,6 +13,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor, Json
 import os
 import json
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI(title="State Persistence Layer", version="1.0.0")
 
@@ -25,7 +26,7 @@ PG_USER = os.getenv("POSTGRES_USER", "admin")
 # Read password from file if POSTGRES_PASSWORD_FILE is set (Docker secrets)
 PG_PASSWORD_FILE = os.getenv("POSTGRES_PASSWORD_FILE")
 if PG_PASSWORD_FILE and os.path.exists(PG_PASSWORD_FILE):
-    with open(PG_PASSWORD_FILE, 'r') as f:
+    with open(PG_PASSWORD_FILE, "r") as f:
         PG_PASSWORD = f.read().strip()
 else:
     PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "changeme")
@@ -40,7 +41,7 @@ def get_db_connection():
             database=PG_DB,
             user=PG_USER,
             password=PG_PASSWORD,
-            cursor_factory=RealDictCursor
+            cursor_factory=RealDictCursor,
         )
         return conn
     except Exception as e:
@@ -51,6 +52,7 @@ def get_db_connection():
 # Request/Response Models
 class TaskCreate(BaseModel):
     """Create new task"""
+
     task_id: str
     type: str
     status: str = "pending"
@@ -60,6 +62,7 @@ class TaskCreate(BaseModel):
 
 class TaskUpdate(BaseModel):
     """Update existing task"""
+
     status: Optional[str] = None
     assigned_agent: Optional[str] = None
     result: Optional[Dict[str, Any]] = None
@@ -67,6 +70,7 @@ class TaskUpdate(BaseModel):
 
 class Task(BaseModel):
     """Task representation"""
+
     id: int
     task_id: str
     type: str
@@ -80,6 +84,7 @@ class Task(BaseModel):
 
 class AgentLogCreate(BaseModel):
     """Create agent log entry"""
+
     task_id: str
     agent: str
     log_level: str
@@ -89,6 +94,7 @@ class AgentLogCreate(BaseModel):
 
 class AgentLog(BaseModel):
     """Agent log entry"""
+
     id: int
     task_id: str
     agent: str
@@ -100,6 +106,7 @@ class AgentLog(BaseModel):
 
 class WorkflowCreate(BaseModel):
     """Create workflow"""
+
     workflow_id: str
     name: str
     steps: List[Dict[str, Any]]
@@ -108,12 +115,14 @@ class WorkflowCreate(BaseModel):
 
 class WorkflowUpdate(BaseModel):
     """Update workflow"""
+
     status: Optional[str] = None
     completed_at: Optional[datetime] = None
 
 
 class Workflow(BaseModel):
     """Workflow representation"""
+
     id: int
     workflow_id: str
     name: str
@@ -152,13 +161,13 @@ async def health_check():
     db_status = "connected" if conn else "disconnected"
     if conn:
         conn.close()
-    
+
     return {
         "status": "ok",
         "service": "state-persistence",
         "version": "1.0.0",
         "database_status": db_status,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
     }
 
 
@@ -169,48 +178,47 @@ async def initialize_schema():
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         # Read schema file
         schema_path = "/app/schema.sql"
         if not os.path.exists(schema_path):
             schema_path = "../../config/state/schema.sql"
-        
-        with open(schema_path, 'r') as f:
+
+        with open(schema_path, "r") as f:
             schema_sql = f.read()
-            
+
         # Read workflow state schema (Phase 6)
         workflow_schema_path = "/app/workflow_state.sql"
         if not os.path.exists(workflow_schema_path):
             workflow_schema_path = "../../config/state/workflow_state.sql"
-            
+
         if os.path.exists(workflow_schema_path):
-            with open(workflow_schema_path, 'r') as f:
+            with open(workflow_schema_path, "r") as f:
                 schema_sql += "\n" + f.read()
-                
+
         # Read resource locks schema (Phase 6)
         locks_schema_path = "/app/resource_locks.sql"
         if not os.path.exists(locks_schema_path):
             locks_schema_path = "../../config/state/resource_locks.sql"
-            
+
         if os.path.exists(locks_schema_path):
-            with open(locks_schema_path, 'r') as f:
+            with open(locks_schema_path, "r") as f:
                 schema_sql += "\n" + f.read()
-        
+
         cursor = conn.cursor()
         cursor.execute(schema_sql)
         conn.commit()
         cursor.close()
         conn.close()
-        
-        return {
-            "success": True,
-            "message": "Database schema initialized successfully"
-        }
+
+        return {"success": True, "message": "Database schema initialized successfully"}
     except Exception as e:
         if conn:
             conn.close()
-        raise HTTPException(status_code=500, detail=f"Schema initialization failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Schema initialization failed: {str(e)}"
+        )
 
 
 # Task endpoints
@@ -220,7 +228,7 @@ async def create_task(task: TaskCreate):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -229,13 +237,19 @@ async def create_task(task: TaskCreate):
             VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
             RETURNING *
             """,
-            (task.task_id, task.type, task.status, task.assigned_agent, Json(task.payload))
+            (
+                task.task_id,
+                task.type,
+                task.status,
+                task.assigned_agent,
+                Json(task.payload),
+            ),
         )
         result = cursor.fetchone()
         conn.commit()
         cursor.close()
         conn.close()
-        
+
         return Task(**result)
     except Exception as e:
         if conn:
@@ -249,17 +263,17 @@ async def get_task(task_id: str):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM tasks WHERE task_id = %s", (task_id,))
         result = cursor.fetchone()
         cursor.close()
         conn.close()
-        
+
         if not result:
             raise HTTPException(status_code=404, detail="Task not found")
-        
+
         return Task(**result)
     except HTTPException:
         raise
@@ -275,14 +289,14 @@ async def update_task(task_id: str, update: TaskUpdate):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
-        
+
         # Build update query dynamically
         updates = []
         values = []
-        
+
         if update.status:
             updates.append("status = %s")
             values.append(update.status)
@@ -292,20 +306,20 @@ async def update_task(task_id: str, update: TaskUpdate):
         if update.result:
             updates.append("result = %s")
             values.append(Json(update.result))
-        
+
         updates.append("updated_at = CURRENT_TIMESTAMP")
         values.append(task_id)
-        
+
         query = f"UPDATE tasks SET {', '.join(updates)} WHERE task_id = %s RETURNING *"
         cursor.execute(query, values)
         result = cursor.fetchone()
         conn.commit()
         cursor.close()
         conn.close()
-        
+
         if not result:
             raise HTTPException(status_code=404, detail="Task not found")
-        
+
         return Task(**result)
     except HTTPException:
         raise
@@ -321,25 +335,24 @@ async def list_tasks(status: Optional[str] = None, limit: int = 100):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
-        
+
         if status:
             cursor.execute(
                 "SELECT * FROM tasks WHERE status = %s ORDER BY created_at DESC LIMIT %s",
-                (status, limit)
+                (status, limit),
             )
         else:
             cursor.execute(
-                "SELECT * FROM tasks ORDER BY created_at DESC LIMIT %s",
-                (limit,)
+                "SELECT * FROM tasks ORDER BY created_at DESC LIMIT %s", (limit,)
             )
-        
+
         results = cursor.fetchall()
         cursor.close()
         conn.close()
-        
+
         return [Task(**row) for row in results]
     except Exception as e:
         if conn:
@@ -354,7 +367,7 @@ async def create_log(log: AgentLogCreate):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -363,13 +376,19 @@ async def create_log(log: AgentLogCreate):
             VALUES (%s, %s, %s, %s, %s)
             RETURNING *
             """,
-            (log.task_id, log.agent, log.log_level, log.message, Json(log.metadata) if log.metadata else None)
+            (
+                log.task_id,
+                log.agent,
+                log.log_level,
+                log.message,
+                Json(log.metadata) if log.metadata else None,
+            ),
         )
         result = cursor.fetchone()
         conn.commit()
         cursor.close()
         conn.close()
-        
+
         return AgentLog(**result)
     except Exception as e:
         if conn:
@@ -383,17 +402,17 @@ async def get_task_logs(task_id: str):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
             "SELECT * FROM agent_logs WHERE task_id = %s ORDER BY timestamp ASC",
-            (task_id,)
+            (task_id,),
         )
         results = cursor.fetchall()
         cursor.close()
         conn.close()
-        
+
         return [AgentLog(**row) for row in results]
     except Exception as e:
         if conn:
@@ -408,7 +427,7 @@ async def create_workflow(workflow: WorkflowCreate):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute(
@@ -417,18 +436,25 @@ async def create_workflow(workflow: WorkflowCreate):
             VALUES (%s, %s, %s, %s)
             RETURNING *
             """,
-            (workflow.workflow_id, workflow.name, Json(workflow.steps), workflow.status)
+            (
+                workflow.workflow_id,
+                workflow.name,
+                Json(workflow.steps),
+                workflow.status,
+            ),
         )
         result = cursor.fetchone()
         conn.commit()
         cursor.close()
         conn.close()
-        
+
         return Workflow(**result)
     except Exception as e:
         if conn:
             conn.close()
-        raise HTTPException(status_code=500, detail=f"Workflow creation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Workflow creation failed: {str(e)}"
+        )
 
 
 @app.get("/workflows/{workflow_id}", response_model=Workflow)
@@ -437,24 +463,26 @@ async def get_workflow(workflow_id: str):
     conn = get_db_connection()
     if not conn:
         raise HTTPException(status_code=503, detail="Database connection failed")
-    
+
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM workflows WHERE workflow_id = %s", (workflow_id,))
         result = cursor.fetchone()
         cursor.close()
         conn.close()
-        
+
         if not result:
             raise HTTPException(status_code=404, detail="Workflow not found")
-        
+
         return Workflow(**result)
     except HTTPException:
         raise
     except Exception as e:
         if conn:
             conn.close()
-        raise HTTPException(status_code=500, detail=f"Workflow retrieval failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Workflow retrieval failed: {str(e)}"
+        )
 
 
 @app.post("/compliance", response_model=ComplianceRun)
@@ -494,7 +522,9 @@ async def create_compliance_run(run: ComplianceRunCreate):
     except Exception as e:
         if conn:
             conn.close()
-        raise HTTPException(status_code=500, detail=f"Compliance run creation failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Compliance run creation failed: {str(e)}"
+        )
 
 
 @app.get("/compliance/{run_id}", response_model=ComplianceRun)
@@ -521,11 +551,15 @@ async def get_compliance_run(run_id: str):
     except Exception as e:
         if conn:
             conn.close()
-        raise HTTPException(status_code=500, detail=f"Compliance run retrieval failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Compliance run retrieval failed: {str(e)}"
+        )
 
 
 @app.get("/compliance", response_model=List[ComplianceRun])
-async def list_compliance_runs(agent: Optional[str] = None, status: Optional[str] = None, limit: int = 100):
+async def list_compliance_runs(
+    agent: Optional[str] = None, status: Optional[str] = None, limit: int = 100
+):
     """List compliance runs with optional agent and status filters."""
 
     conn = get_db_connection()
@@ -561,9 +595,16 @@ async def list_compliance_runs(agent: Optional[str] = None, status: Optional[str
     except Exception as e:
         if conn:
             conn.close()
-        raise HTTPException(status_code=500, detail=f"Compliance run listing failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Compliance run listing failed: {str(e)}"
+        )
+
+
+# Prometheus metrics instrumentation
+Instrumentator().instrument(app).expose(app)
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8008)
