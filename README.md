@@ -10,7 +10,7 @@ Dev-Tools is a unified AI DevOps automation platform built on a single orchestra
 - **MCP Direct Access**: 150+ tools across 17 servers via stdio transport (memory, filesystem, git, playwright, notion, etc.)
 - **Linear Integration**: Direct SDK access for issue management with OAuth support
 - **LLM Inference**: DigitalOcean Gradient AI with per-agent model optimization
-- **Observability**: LangSmith LLM tracing + Prometheus HTTP metrics
+- **Observability**: LangSmith LLM tracing + Grafana Cloud metrics (Prometheus + Alloy)
 - **State Management**: PostgreSQL-backed workflow state
 - **RAG Configuration**: Qdrant vector database and indexing for context-aware agents
 - **Backup & Restore**: Volume management scripts for data persistence
@@ -37,10 +37,11 @@ Dev-Tools is a unified AI DevOps automation platform built on a single orchestra
 **Observability Stack:**
 
 - LLM Traces → LangSmith (https://smith.langchain.com)
-- HTTP Metrics → Prometheus → Grafana
+- HTTP Metrics → Grafana Alloy → Grafana Cloud (https://appsmithery.grafana.net)
 - Workflow State → PostgreSQL
 - Vector Operations → Qdrant Cloud
 - Notifications → Linear + Email
+- Service Instrumentation: 4 services (orchestrator, gateway-mcp, state-persistence, prometheus)
 
 **Deploy Now:** `./support/scripts/deploy.ps1 -Target remote` (see validation report: `support/reports/LANGSMITH_INTEGRATION_VALIDATION.md`)
 
@@ -156,7 +157,8 @@ Dev-Tools (LangGraph Multi-Agent Orchestrator)
 - **Direct Stdio Transport**: Agents invoke MCP tools via subprocess (no HTTP overhead)
 - **Linear Hybrid**: OAuth via Node.js gateway, programmatic access via Python SDK
 - **Per-Agent Models**: Optimized LLM selection (70b for orchestrator, codellama-13b for feature-dev, etc.)
-- **Observability**: Automatic Langfuse tracing + Prometheus metrics on all agents
+- **Observability**: LangSmith LLM tracing + Grafana Cloud metrics (4 instrumented services)
+- **Metrics Collection**: Grafana Alloy v1.11.3 scrapes every 15s, pushes to Grafana Cloud remote write endpoint
 
 For detailed architecture, see [support/docs/ARCHITECTURE.md](support/docs/ARCHITECTURE.md) and [support/docs/archive/IMPLEMENTATION_SUMMARY_MCP_LINEAR.md](support/docs/archive/IMPLEMENTATION_SUMMARY_MCP_LINEAR.md).
 

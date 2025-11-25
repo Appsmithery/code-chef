@@ -214,8 +214,15 @@ Invoke-WebRequest -Uri "http://localhost:8001/approve/<approval-id>?approver_id=
 ## Observability
 
 - Emits structured logs to `logs/orchestrator.log` with correlation IDs per `task_id` and `subtask_id`.
-- Publishes Prometheus metrics: `orchestrator_tasks_active`, `orchestrator_subtask_failures_total`, `orchestrator_latency_seconds`.
-- Integrates with OpenTelemetry tracing; span names follow `orchestrator.plan`, `orchestrator.dispatch`, `orchestrator.aggregate`.
+- **LangSmith Tracing**: Automatic LLM tracing for all LangGraph workflows and agent nodes (project: "agents", workspace: 5029c640-3f73-480c-82f3-58e402ed4207).
+- **Prometheus Metrics**: Exposed at `http://localhost:8001/metrics` via prometheus-fastapi-instrumentator. Metrics include:
+  - `http_request_duration_seconds`: HTTP request latencies
+  - `http_requests_total`: Total HTTP requests by method/status
+  - `python_gc_objects_collected_total`: Python garbage collection metrics
+  - `process_cpu_seconds_total`: CPU usage
+  - `process_resident_memory_bytes`: Memory usage
+- **Grafana Cloud**: Metrics collected by Grafana Alloy (15s scrape interval) and pushed to https://appsmithery.grafana.net.
+- **Health Endpoint**: `GET /health` returns service status and timestamp.
 
 ## Integration Notes
 

@@ -8,7 +8,7 @@
 - **MCP Integration**: 150+ tools across 17 servers via MCP gateway at port 8000; agents use `shared/lib/mcp_client.py` for tool access. Gateway routes to servers in `shared/mcp/servers/`. Orchestrator converts MCP tools to LangChain `BaseTool` instances for function calling via `to_langchain_tools()`.
 - **Progressive Tool Disclosure**: Orchestrator implements lazy loading of MCP tools (80-90% token reduction) via `shared/lib/progressive_mcp_loader.py`; 4 strategies (minimal, agent_profile, progressive, full) with keyword-based server matching and runtime configuration endpoints.
 - **LLM Inference**: DigitalOcean Gradient AI integration via LangChain wrappers (`shared/lib/gradient_client.py`, `shared/lib/langchain_gradient.py`) with per-node model optimization configured in agent node files (llama-3.1-70b for supervisor/code-review nodes, codellama-13b for feature-dev node, llama-3.1-8b for infrastructure/cicd nodes, mistral-7b for documentation node). Orchestrator service uses llama3.3-70b-instruct.
-- **Observability**: LangSmith automatic LLM tracing (orchestrator + all agent nodes + LangGraph workflow) + Prometheus HTTP metrics (prometheus-fastapi-instrumentator) on orchestrator service. Complete observability: LLM traces → LangSmith, HTTP metrics → Prometheus, workflow state → PostgreSQL checkpointing, vectors → Qdrant.
+- **Observability**: LangSmith automatic LLM tracing (orchestrator + all agent nodes + LangGraph workflow) + Prometheus HTTP metrics via Grafana Alloy (orchestrator, gateway-mcp, state-persistence). Complete observability: LLM traces → LangSmith (https://smith.langchain.com), HTTP metrics → Grafana Cloud (appsmithery.grafana.net), workflow state → PostgreSQL checkpointing, vectors → Qdrant.
 - **Notification System**: Event-driven approval notifications via `shared/lib/event_bus.py` (async pub/sub); Linear workspace client posts to PR-68 hub with @mentions; <1s latency; optional email fallback via SMTP.
 - **Copilot Integration**: Natural language task submission via `/chat` endpoint; multi-turn conversations with PostgreSQL session management; real-time approval notifications (<1s latency); OAuth integration with Linear GraphQL API.
 - **Service Ports**: gateway-mcp:8000, orchestrator:8001, rag-context:8007, state-persistence:8008, agent-registry:8009, langgraph:8010, prometheus:9090. Agent nodes (feature-dev, code-review, infrastructure, cicd, documentation) are LangGraph workflow nodes within orchestrator, not separate services.
@@ -535,7 +535,33 @@ ufw status                    # Verify rules
   - **Workspace ID** is REQUIRED for org-scoped service keys (extract from URL: `/o/{workspace-id}/`)
   - Both `LANGCHAIN_API_KEY` and `LANGSMITH_API_KEY` must be set (SDK compatibility)
 - **Deployment**: After changing tracing config, must run `docker compose down && docker compose up -d` (restart alone won't reload `.env`)
-- **Deprecation Note**: Langfuse has been replaced by LangSmith for all tracing functionality. Remove any `LANGFUSE_*` environment variables.
+- **Deprecation Note**: Langfuse has been completely removed (November 2025). All tracing now uses LangSmith only. No `LANGFUSE_*` environment variables should be present. Gateway instrumentation.js contains only OpenTelemetry, no Langfuse imports.
+
+### Grafana Cloud (Prometheus Metrics)
+
+- **Metrics Collection**: Grafana Alloy v1.11.3 installed on droplet (45.55.173.72), scrapes 4 services every 15s
+- **Dashboard**: https://appsmithery.grafana.net (Stack 1376474-hm, Org ID 1534681, User ID 2677183)
+- **Remote Write**: https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push
+- **Configuration** (on droplet at `/etc/alloy/config.alloy`):
+  - **Instrumented Services**: orchestrator:8001, gateway-mcp:8000, state-persistence:8008, prometheus:9090
+  - **Scrape Interval**: 15s
+  - **Metrics Exposed**: `/metrics` endpoints on all 4 services
+  - **Gateway (Node.js)**: prom-client with default metrics (CPU, memory, event loop, GC)
+  - **State/Orchestrator (Python)**: prometheus-fastapi-instrumentator with HTTP request metrics
+- **Alloy Service Management**:
+
+  ```bash
+  # Check status
+  ssh root@45.55.173.72 "sudo systemctl status alloy"
+
+  # Restart after config changes
+  ssh root@45.55.173.72 "sudo systemctl restart alloy"
+
+  # View logs
+  ssh root@45.55.173.72 "sudo journalctl -u alloy -f"
+  ```
+
+- **Dashboard Access**: Navigate to https://appsmithery.grafana.net/explore, select datasource "grafanacloud-appsmithery-prom", query `up{cluster="dev-tools"}` to verify all services reporting
 
 ## Extension points
 
