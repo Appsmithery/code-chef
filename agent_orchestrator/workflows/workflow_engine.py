@@ -1,5 +1,5 @@
 """
-Workflow Engine for declarative multi-agent workflows.
+Workflow Engine for declarative multi-agent workflows with Event Sourcing.
 
 This module implements a workflow engine that:
 1. Loads workflow YAML templates
@@ -8,14 +8,17 @@ This module implements a workflow engine that:
 4. Integrates with LangGraph checkpointing for HITL approvals
 5. Supports resource locking to prevent concurrent operations
 6. Renders Jinja2-style templates for dynamic payloads
+7. Event Sourcing: All state transitions via immutable events (Week 4)
 
 Architecture:
 - Pure Python orchestration (no LangGraph for workflow logic)
 - LangGraph only for HITL checkpointing
 - Deterministic step execution with LLM decision gates at strategic points
+- Event-sourced state: Events are source of truth, state is derived
 """
 
 import asyncio
+import os
 import uuid
 from datetime import datetime
 from enum import Enum
@@ -27,6 +30,16 @@ from jinja2 import Template
 from pydantic import BaseModel, Field
 
 from shared.lib.gradient_client import GradientClient
+from shared.lib.workflow_reducer import (
+    WorkflowAction,
+    WorkflowEvent,
+    workflow_reducer,
+    replay_workflow,
+)
+from shared.lib.workflow_events import (
+    serialize_event,
+    sign_event,
+)
 
 try:
     from shared.services.state.client import StateClient
@@ -180,7 +193,7 @@ class WorkflowEngine:
         context: Dict[str, Any],
     ) -> WorkflowState:
         """
-        Execute a workflow from start to completion.
+        Execute a workflow from start to completion using event sourcing.
 
         Args:
             template_name: Name of workflow template
@@ -192,61 +205,84 @@ class WorkflowEngine:
         workflow_id = str(uuid.uuid4())
         definition = self.load_workflow(template_name)
 
-        # Initialize workflow state
+        # Emit START_WORKFLOW event (event sourcing starts here)
+        first_step_id = definition.steps[0].id if definition.steps else None
+        await self._emit_event(
+            workflow_id=workflow_id,
+            action=WorkflowAction.START_WORKFLOW,
+            step_id=first_step_id,
+            data={
+                "context": context,
+                "template_name": template_name,
+                "template_version": definition.version,
+                "participating_agents": [
+                    step.agent for step in definition.steps if step.agent
+                ],
+            },
+        )
+
+        # Reconstruct state from events (event sourcing: state is derived)
+        state_dict = await self._reconstruct_state_from_events(workflow_id)
+
+        # Convert to WorkflowState model for backward compatibility
         state = WorkflowState(
             workflow_id=workflow_id,
             definition=definition,
-            status=WorkflowStatus.RUNNING,
+            status=WorkflowStatus(state_dict.get("status", "running")),
             context=context,
+            current_step=first_step_id,
             step_statuses={step.id: StepStatus.PENDING for step in definition.steps},
         )
 
-        # Persist initial state
-        await self.state_client.save_workflow_state(state)
-
         # Execute steps sequentially
         try:
-            current_step_id = definition.steps[0].id if definition.steps else None
+            current_step_id = first_step_id
 
-            while current_step_id:
+            while current_step_id and current_step_id != "workflow_complete":
                 step = self._get_step_by_id(definition, current_step_id)
 
                 # Execute step
-                state.current_step = current_step_id
-                state.step_statuses[current_step_id] = StepStatus.RUNNING
-                await self.state_client.save_workflow_state(state)
-
                 step_output = await self._execute_step(step, state)
 
-                # Store output
-                state.outputs[current_step_id] = step_output
-                state.step_statuses[current_step_id] = StepStatus.COMPLETED
-
-                # Determine next step
-                current_step_id = await self._determine_next_step(
-                    step, step_output, state
+                # Emit COMPLETE_STEP event (instead of direct mutation)
+                next_step_id = await self._determine_next_step(step, step_output, state)
+                await self._emit_event(
+                    workflow_id=workflow_id,
+                    action=WorkflowAction.COMPLETE_STEP,
+                    step_id=current_step_id,
+                    data={"result": step_output, "next_step": next_step_id},
                 )
+
+                # Reconstruct state from events
+                state_dict = await self._reconstruct_state_from_events(workflow_id)
+                state.outputs = state_dict.get("outputs", {})
+                state.status = WorkflowStatus(state_dict.get("status", "running"))
 
                 # Check for HITL pause
                 if state.status == WorkflowStatus.PAUSED:
-                    await self.state_client.save_workflow_state(state)
                     return state
 
-                await self.state_client.save_workflow_state(state)
+                # Create snapshot every 10 events for performance
+                if await self._should_create_snapshot(workflow_id):
+                    await self._create_snapshot(workflow_id, state_dict)
 
-            # Workflow completed
-            state.status = WorkflowStatus.COMPLETED
-            state.completed_at = datetime.utcnow()
-            await self.state_client.save_workflow_state(state)
+                current_step_id = next_step_id
 
+            # Workflow completed - state is already updated via events
             return state
 
         except Exception as e:
-            # Handle workflow failure
-            state.status = WorkflowStatus.FAILED
-            state.error_message = str(e)
-            state.completed_at = datetime.utcnow()
-            await self.state_client.save_workflow_state(state)
+            # Emit FAIL_STEP event (instead of direct mutation)
+            await self._emit_event(
+                workflow_id=workflow_id,
+                action=WorkflowAction.FAIL_STEP,
+                step_id=current_step_id,
+                data={
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "retriable": isinstance(e, (TimeoutError, ConnectionError)),
+                },
+            )
 
             # Attempt error handling
             await self._handle_error(state, step, e)
@@ -343,7 +379,7 @@ class WorkflowEngine:
         step: WorkflowStep,
         state: WorkflowState,
     ) -> Dict[str, Any]:
-        """Execute HITL approval step."""
+        """Execute HITL approval step with event sourcing."""
 
         # Evaluate risk assessment
         risk_assessment = await self._evaluate_risk_assessment(step, state)
@@ -353,6 +389,18 @@ class WorkflowEngine:
             risk_assessment.get("risk_level") == "low"
             and risk_assessment.get("approver_role") == "none"
         ):
+            # Emit APPROVE_GATE event (auto-approved)
+            await self._emit_event(
+                workflow_id=state.workflow_id,
+                action=WorkflowAction.APPROVE_GATE,
+                step_id=step.id,
+                data={
+                    "approver": "system",
+                    "approver_role": "auto",
+                    "comment": "Auto-approved due to low risk assessment",
+                },
+            )
+
             return {
                 "approval_status": "auto_approved",
                 "risk_assessment": risk_assessment,
@@ -361,8 +409,21 @@ class WorkflowEngine:
         # Create Linear approval issue
         approval_issue = await self._create_approval_issue(step, state, risk_assessment)
 
-        # Pause workflow for approval
-        state.status = WorkflowStatus.PAUSED
+        # Emit PAUSE_WORKFLOW event (instead of direct mutation)
+        await self._emit_event(
+            workflow_id=state.workflow_id,
+            action=WorkflowAction.PAUSE_WORKFLOW,
+            step_id=step.id,
+            data={
+                "reason": "awaiting_approval",
+                "approval_issue_id": approval_issue["id"],
+                "risk_assessment": risk_assessment,
+            },
+        )
+
+        # Update state from events
+        state_dict = await self._reconstruct_state_from_events(state.workflow_id)
+        state.status = WorkflowStatus(state_dict.get("status", "paused"))
 
         return {
             "approval_status": "pending",
@@ -769,64 +830,485 @@ class WorkflowEngine:
         self,
         workflow_id: str,
         approval_decision: str,  # "approved" or "rejected"
+        approver: Optional[str] = None,
+        comment: Optional[str] = None,
     ) -> WorkflowState:
         """
-        Resume a paused workflow after HITL approval.
+        Resume a paused workflow after HITL approval using event sourcing.
 
         Args:
             workflow_id: Workflow to resume
             approval_decision: "approved" or "rejected"
+            approver: User who approved/rejected
+            comment: Approval/rejection comment
 
         Returns:
             WorkflowState: Updated workflow state
         """
-        # Load workflow state
-        state = await self.state_client.load_workflow_state(workflow_id)
+        # Reconstruct state from events
+        state_dict = await self._reconstruct_state_from_events(workflow_id)
 
-        if state.status != WorkflowStatus.PAUSED:
-            raise ValueError(f"Workflow {workflow_id} is not paused")
+        if state_dict.get("status") != "paused":
+            raise ValueError(
+                f"Workflow {workflow_id} is not paused (status: {state_dict.get('status')})"
+            )
+
+        # Get workflow definition
+        template_name = state_dict.get("template_name")
+        definition = self.load_workflow(template_name)
+
+        # Convert to WorkflowState for execution
+        state = WorkflowState(
+            workflow_id=workflow_id,
+            definition=definition,
+            status=WorkflowStatus.PAUSED,
+            context=state_dict.get("context", {}),
+            outputs=state_dict.get("outputs", {}),
+            current_step=state_dict.get("current_step"),
+        )
 
         # Get current step (should be HITL approval)
         step = self._get_step_by_id(state.definition, state.current_step)
 
-        # Determine next step based on approval decision
+        # Emit approval or rejection event
         if approval_decision == "approved":
+            await self._emit_event(
+                workflow_id=workflow_id,
+                action=WorkflowAction.APPROVE_GATE,
+                step_id=step.id,
+                data={
+                    "approver": approver or "unknown",
+                    "approver_role": "manual",
+                    "comment": comment,
+                },
+            )
             next_step_id = step.on_approved or step.on_success
         else:
+            await self._emit_event(
+                workflow_id=workflow_id,
+                action=WorkflowAction.REJECT_GATE,
+                step_id=step.id,
+                data={
+                    "rejector": approver or "unknown",
+                    "rejector_role": "manual",
+                    "reason": comment,
+                },
+            )
             next_step_id = step.on_rejected or step.on_failure
 
-        # Resume execution
-        state.status = WorkflowStatus.RUNNING
+        # Emit RESUME_WORKFLOW event
+        await self._emit_event(
+            workflow_id=workflow_id,
+            action=WorkflowAction.RESUME_WORKFLOW,
+            step_id=step.id,
+            data={"decision": approval_decision},
+        )
+
+        # Reconstruct state to get updated status
+        state_dict = await self._reconstruct_state_from_events(workflow_id)
+        state.status = WorkflowStatus(state_dict.get("status", "running"))
 
         # Continue from next step
-        while next_step_id:
+        while next_step_id and next_step_id != "workflow_complete":
             step = self._get_step_by_id(state.definition, next_step_id)
-
-            state.current_step = next_step_id
-            state.step_statuses[next_step_id] = StepStatus.RUNNING
-            await self.state_client.save_workflow_state(state)
 
             step_output = await self._execute_step(step, state)
 
-            state.outputs[next_step_id] = step_output
-            state.step_statuses[next_step_id] = StepStatus.COMPLETED
+            # Emit COMPLETE_STEP event
+            await self._emit_event(
+                workflow_id=workflow_id,
+                action=WorkflowAction.COMPLETE_STEP,
+                step_id=next_step_id,
+                data={
+                    "result": step_output,
+                    "next_step": await self._determine_next_step(
+                        step, step_output, state
+                    ),
+                },
+            )
+
+            # Reconstruct state
+            state_dict = await self._reconstruct_state_from_events(workflow_id)
+            state.outputs = state_dict.get("outputs", {})
+            state.status = WorkflowStatus(state_dict.get("status", "running"))
 
             next_step_id = await self._determine_next_step(step, step_output, state)
 
             # Check for another pause
             if state.status == WorkflowStatus.PAUSED:
-                await self.state_client.save_workflow_state(state)
                 return state
 
-            await self.state_client.save_workflow_state(state)
+            # Create snapshot if needed
+            if await self._should_create_snapshot(workflow_id):
+                await self._create_snapshot(workflow_id, state_dict)
 
-        # Workflow completed
-        state.status = WorkflowStatus.COMPLETED
-        state.completed_at = datetime.utcnow()
-        await self.state_client.save_workflow_state(state)
-
+        # Workflow completed - state already updated via events
         return state
 
     async def get_workflow_status(self, workflow_id: str) -> WorkflowState:
         """Get current status of a workflow."""
         return await self.state_client.load_workflow_state(workflow_id)
+
+    async def cancel_workflow(
+        self,
+        workflow_id: str,
+        reason: str,
+        cancelled_by: str = "unknown",
+    ) -> Dict[str, Any]:
+        """Cancel a running or paused workflow with cleanup.
+
+        Cleanup includes:
+        1. Release all resource locks
+        2. Mark Linear approval issues as complete
+        3. Notify participating agents
+        4. Cascade to child workflows
+
+        Args:
+            workflow_id: Workflow to cancel
+            reason: Cancellation reason
+            cancelled_by: User who cancelled
+
+        Returns:
+            Cancellation summary
+        """
+
+        # Reconstruct state from events
+        state_dict = await self._reconstruct_state_from_events(workflow_id)
+
+        if state_dict.get("status") in ["completed", "failed", "cancelled"]:
+            raise ValueError(
+                f"Cannot cancel workflow {workflow_id} with status {state_dict.get('status')}"
+            )
+
+        # Emit CANCEL_WORKFLOW event
+        await self._emit_event(
+            workflow_id=workflow_id,
+            action=WorkflowAction.CANCEL_WORKFLOW,
+            step_id=state_dict.get("current_step"),
+            data={
+                "reason": reason,
+                "cancelled_by": cancelled_by,
+            },
+        )
+
+        # Cleanup: Release resource locks
+        resource_locks = state_dict.get("resource_locks", [])
+        for lock_name in resource_locks:
+            try:
+                import hashlib
+
+                lock_id = int(hashlib.md5(lock_name.encode()).hexdigest()[:8], 16)
+                await self.state_client.execute(
+                    "SELECT pg_advisory_unlock($1)",
+                    lock_id,
+                )
+            except Exception as e:
+                print(f"Warning: Failed to release lock {lock_name}: {e}")
+
+        # Cleanup: Mark Linear approval issues complete
+        try:
+            from lib.linear_workspace_client import LinearWorkspaceClient
+            import os
+
+            linear_client = LinearWorkspaceClient(
+                api_key=os.getenv("LINEAR_API_KEY"),
+                team_id=os.getenv(
+                    "LINEAR_TEAM_ID", "f5b610be-ac34-4983-918b-2c9d00aa9b7a"
+                ),
+            )
+
+            # Find approval issues for this workflow (stored in event data)
+            events = await self._load_events(workflow_id)
+            approval_issues = []
+            for event in events:
+                if event.action == WorkflowAction.PAUSE_WORKFLOW:
+                    issue_id = event.data.get("approval_issue_id")
+                    if issue_id:
+                        approval_issues.append(issue_id)
+
+            # Mark issues as cancelled
+            for issue_id in approval_issues:
+                try:
+                    await linear_client.update_issue(
+                        issue_identifier=issue_id,
+                        state_name="cancelled",
+                        comment=f"Workflow {workflow_id} cancelled: {reason}",
+                    )
+                except Exception as e:
+                    print(f"Warning: Failed to update Linear issue {issue_id}: {e}")
+
+        except Exception as e:
+            print(f"Warning: Failed to cleanup Linear issues: {e}")
+
+        # Cleanup: Notify participating agents (emit notification events)
+        participating_agents = state_dict.get("participating_agents", [])
+        for agent_name in participating_agents:
+            # Could send notifications via Linear, email, etc.
+            print(f"Notifying agent {agent_name} of workflow cancellation")
+
+        # Cleanup: Cancel child workflows
+        child_workflows = state_dict.get("child_workflows", [])
+        for child in child_workflows:
+            if child.get("status") == "running":
+                try:
+                    await self.cancel_workflow(
+                        workflow_id=child["child_workflow_id"],
+                        reason=f"Parent workflow {workflow_id} cancelled",
+                        cancelled_by=cancelled_by,
+                    )
+                except Exception as e:
+                    print(
+                        f"Warning: Failed to cancel child workflow {child['child_workflow_id']}: {e}"
+                    )
+
+        return {
+            "workflow_id": workflow_id,
+            "status": "cancelled",
+            "reason": reason,
+            "cancelled_by": cancelled_by,
+            "cleanup": {
+                "locks_released": len(resource_locks),
+                "linear_issues_closed": (
+                    len(approval_issues) if "approval_issues" in locals() else 0
+                ),
+                "agents_notified": len(participating_agents),
+                "child_workflows_cancelled": len(
+                    [c for c in child_workflows if c.get("status") == "running"]
+                ),
+            },
+        }
+
+    # ========================================================================
+    # EVENT SOURCING METHODS (Week 4)
+    # ========================================================================
+
+    async def _emit_event(
+        self,
+        workflow_id: str,
+        action: WorkflowAction,
+        step_id: Optional[str] = None,
+        data: Optional[Dict[str, Any]] = None,
+    ) -> WorkflowEvent:
+        """Emit workflow event and persist to database.
+
+        All state transitions MUST go through this method to ensure
+        events are the single source of truth.
+
+        Args:
+            workflow_id: Workflow this event belongs to
+            action: Type of state transition
+            step_id: Step this event relates to (optional)
+            data: Event-specific data
+
+        Returns:
+            WorkflowEvent: Persisted event
+        """
+
+        # Create event
+        event = WorkflowEvent(
+            workflow_id=workflow_id,
+            action=action,
+            step_id=step_id,
+            data=data or {},
+        )
+
+        # Sign event for tamper detection
+        secret_key = os.getenv(
+            "WORKFLOW_EVENT_SECRET_KEY", "default-secret-key-change-me"
+        )
+        event_dict = event.to_dict()
+        signature = sign_event(event_dict, secret_key)
+
+        # Create signed event
+        signed_event = WorkflowEvent(**{**event_dict, "signature": signature})
+
+        # Persist event to database
+        if self.state_client:
+            await self._persist_event(signed_event)
+
+        return signed_event
+
+    async def _persist_event(self, event: WorkflowEvent) -> None:
+        """Persist event to workflow_events table.
+
+        Args:
+            event: Event to persist
+        """
+
+        if not self.state_client:
+            return
+
+        try:
+            # Serialize event data to JSON
+            event_dict = event.to_dict()
+
+            # Insert into workflow_events table
+            await self.state_client.execute(
+                """
+                INSERT INTO workflow_events 
+                (event_id, workflow_id, action, step_id, data, timestamp, signature, event_version)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                """,
+                event_dict["event_id"],
+                event_dict["workflow_id"],
+                event_dict["action"],
+                event_dict.get("step_id"),
+                event_dict.get("data", {}),
+                event_dict["timestamp"],
+                event_dict.get("signature"),
+                event_dict.get("event_version", 2),
+            )
+
+        except Exception as e:
+            # Log error but don't fail workflow execution
+            print(f"Warning: Failed to persist event: {e}")
+
+    async def _load_events(self, workflow_id: str) -> List[WorkflowEvent]:
+        """Load all events for a workflow.
+
+        Args:
+            workflow_id: Workflow to load events for
+
+        Returns:
+            List of WorkflowEvent instances
+        """
+
+        if not self.state_client:
+            return []
+
+        try:
+            # Query events from database
+            rows = await self.state_client.fetch(
+                """
+                SELECT event_id, workflow_id, action, step_id, data, timestamp, signature, event_version
+                FROM workflow_events
+                WHERE workflow_id = $1
+                ORDER BY timestamp ASC
+                """,
+                workflow_id,
+            )
+
+            # Convert rows to WorkflowEvent instances
+            events = []
+            for row in rows:
+                event = WorkflowEvent(
+                    event_id=row["event_id"],
+                    workflow_id=row["workflow_id"],
+                    action=WorkflowAction(row["action"]),
+                    step_id=row.get("step_id"),
+                    data=row.get("data", {}),
+                    timestamp=(
+                        row["timestamp"].isoformat()
+                        if hasattr(row["timestamp"], "isoformat")
+                        else row["timestamp"]
+                    ),
+                    signature=row.get("signature"),
+                    event_version=row.get("event_version", 2),
+                )
+                events.append(event)
+
+            return events
+
+        except Exception as e:
+            print(f"Warning: Failed to load events: {e}")
+            return []
+
+    async def _reconstruct_state_from_events(self, workflow_id: str) -> Dict[str, Any]:
+        """Reconstruct workflow state by replaying all events.
+
+        This is the core of event sourcing: state is derived from events,
+        not stored directly.
+
+        Args:
+            workflow_id: Workflow to reconstruct
+
+        Returns:
+            Reconstructed state dictionary
+        """
+
+        # Load all events
+        events = await self._load_events(workflow_id)
+
+        # Replay events through reducer
+        if events:
+            state = replay_workflow(events)
+            return state
+
+        return {"status": "not_found"}
+
+    async def _create_snapshot(self, workflow_id: str, state: Dict[str, Any]) -> None:
+        """Create state snapshot for performance optimization.
+
+        Snapshots enable fast state reconstruction: snapshot + delta events
+        instead of replaying all events.
+
+        Args:
+            workflow_id: Workflow to snapshot
+            state: Current state to snapshot
+        """
+
+        if not self.state_client:
+            return
+
+        try:
+            # Count events for this workflow
+            event_count = await self.state_client.fetchval(
+                "SELECT COUNT(*) FROM workflow_events WHERE workflow_id = $1",
+                workflow_id,
+            )
+
+            # Create snapshot
+            snapshot_id = str(uuid.uuid4())
+            await self.state_client.execute(
+                """
+                INSERT INTO workflow_snapshots (snapshot_id, workflow_id, state, event_count)
+                VALUES ($1, $2, $3, $4)
+                """,
+                snapshot_id,
+                workflow_id,
+                state,
+                event_count,
+            )
+
+            # Emit snapshot event
+            await self._emit_event(
+                workflow_id=workflow_id,
+                action=WorkflowAction.CREATE_SNAPSHOT,
+                data={"snapshot_id": snapshot_id, "event_count": event_count},
+            )
+
+        except Exception as e:
+            print(f"Warning: Failed to create snapshot: {e}")
+
+    async def _should_create_snapshot(self, workflow_id: str) -> bool:
+        """Check if snapshot should be created (every 10 events).
+
+        Args:
+            workflow_id: Workflow to check
+
+        Returns:
+            True if snapshot should be created
+        """
+
+        if not self.state_client:
+            return False
+
+        try:
+            # Get event count since last snapshot
+            event_count = await self.state_client.fetchval(
+                """
+                SELECT COUNT(*) FROM workflow_events e
+                WHERE e.workflow_id = $1
+                AND e.timestamp > COALESCE(
+                    (SELECT MAX(created_at) FROM workflow_snapshots WHERE workflow_id = $1),
+                    '1970-01-01'::timestamptz
+                )
+                """,
+                workflow_id,
+            )
+
+            # Create snapshot every 10 events
+            return event_count >= 10
+
+        except Exception as e:
+            return False
