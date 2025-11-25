@@ -367,23 +367,24 @@ async def query_context(request: QueryRequest):
 
         search_filter = build_metadata_filter(request.metadata_filter)
         
-        # Call search without filter parameter to avoid API issues
-        # Qdrant client API has changed - filter parameter causes errors
+        # Use query_points method for Qdrant client search
+        from qdrant_client.models import SearchRequest
+        
         if search_filter is not None:
-            search_results = qdrant_client.search(
+            search_results = qdrant_client.query_points(
                 collection_name=request.collection,
-                query_vector=embeddings[0],
+                query=embeddings[0],
                 limit=request.n_results,
                 with_payload=True,
                 query_filter=search_filter
-            )
+            ).points
         else:
-            search_results = qdrant_client.search(
+            search_results = qdrant_client.query_points(
                 collection_name=request.collection,
-                query_vector=embeddings[0],
+                query=embeddings[0],
                 limit=request.n_results,
                 with_payload=True
-            )
+            ).points
 
         context_items: List[ContextItem] = []
         for point in search_results:
