@@ -276,3 +276,91 @@ tasks:
       cleanup actions. Runs as maintenance task.
     cmds:
       - pwsh -File ./support/scripts/workflow/clean-expired-approvals.ps1
+
+  #============================================================================
+  # WORKFLOW EXECUTION (12-Factor Agents)
+  #============================================================================
+
+  workflow:pr-deploy:
+    desc: Execute PR deployment workflow
+    summary: |
+      Run full PR deployment workflow: review → test → deploy → approve
+      
+      Usage:
+        task workflow:pr-deploy PR_NUMBER=123 BRANCH=feature/auth
+    vars:
+      PR_NUMBER: '{{.PR_NUMBER}}'
+      BRANCH: '{{.BRANCH}}'
+      WORKFLOW_ID: 'pr-deploy-{{.PR_NUMBER}}-{{now | date "20060102-150405"}}'
+    cmds:
+      - |
+        curl -X POST http://localhost:8001/workflow/execute \
+          -H "Content-Type: application/json" \
+          -d '{
+            "workflow_id": "{{.WORKFLOW_ID}}",
+            "template": "pr-deployment.workflow.yaml",
+            "context": {
+              "pr_number": {{.PR_NUMBER}},
+              "branch": "{{.BRANCH}}",
+              "repo_url": "git@github.com:appsmithery/dev-tools.git"
+            }
+          }'
+      - echo "Workflow started: {{.WORKFLOW_ID}}"
+      - echo "Monitor: http://localhost:8001/workflow/status/{{.WORKFLOW_ID}}"
+
+  workflow:hotfix:
+    desc: Execute emergency hotfix workflow (fast-track)
+    vars:
+      BRANCH: '{{.BRANCH}}'
+      ISSUE_ID: '{{.ISSUE_ID}}'
+    cmds:
+      - |
+        curl -X POST http://localhost:8001/workflow/execute \
+          -H "Content-Type: application/json" \
+          -d '{
+            "workflow_id": "hotfix-{{.ISSUE_ID}}-{{now | date "20060102-150405"}}",
+            "template": "hotfix.workflow.yaml",
+            "context": {
+              "branch": "{{.BRANCH}}",
+              "issue_id": "{{.ISSUE_ID}}",
+              "priority": "urgent"
+            }
+          }'
+
+  workflow:status:
+    desc: Check workflow status
+    vars:
+      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+    cmds:
+      - curl -s http://localhost:8001/workflow/status/{{.WORKFLOW_ID}} | jq .
+
+  workflow:list-templates:
+    desc: List available workflow templates
+    cmds:
+      - ls -1 agent_orchestrator/workflows/templates/*.workflow.yaml | xargs -n1 basename
+
+  #============================================================================
+  # AGENT PROMPT MANAGEMENT
+  #============================================================================
+
+  prompts:validate:
+    desc: Validate all agent prompt files
+    cmds:
+      - |
+        for prompt in agent_orchestrator/prompts/*.prompt.md; do
+          echo "Validating: $prompt"
+          # Check for required sections
+          grep -q "## Role" "$prompt" || echo "  ❌ Missing Role section"
+          grep -q "## Context Window Budget" "$prompt" || echo "  ❌ Missing Context Budget"
+          grep -q "## Output Format" "$prompt" || echo "  ✅ Valid"
+        done
+
+  prompts:token-count:
+    desc: Estimate token count for agent prompts
+    cmds:
+      - |
+        for prompt in agent_orchestrator/prompts/*.prompt.md; do
+          words=$(wc -w < "$prompt")
+          tokens=$((words * 4 / 3))  # Rough estimate: 1.33 tokens per word
+          echo "$(basename $prompt): ~$tokens tokens"
+        done
