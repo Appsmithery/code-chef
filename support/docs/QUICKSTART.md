@@ -120,13 +120,13 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide.
 
 ### Services
 
-| Service        | Port | Purpose                          |
-| -------------- | ---- | -------------------------------- |
-| orchestrator   | 8001 | LangGraph workflow with 6 agents |
-| gateway-mcp    | 8000 | MCP tool routing (150+ tools)    |
-| rag-context    | 8007 | Vector search (Qdrant)           |
-| state          | 8008 | Workflow persistence (Postgres)  |
-| postgres       | 5432 | Database                         |
+| Service      | Port | Purpose                          |
+| ------------ | ---- | -------------------------------- |
+| orchestrator | 8001 | LangGraph workflow with 6 agents |
+| gateway-mcp  | 8000 | MCP tool routing (150+ tools)    |
+| rag-context  | 8007 | Vector search (Qdrant)           |
+| state        | 8008 | Workflow persistence (Postgres)  |
+| postgres     | 5432 | Database                         |
 
 ### Agent Nodes (within Orchestrator)
 
