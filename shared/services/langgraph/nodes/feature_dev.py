@@ -20,7 +20,7 @@ async def feature_dev_node(state: AgentState) -> AgentState:
     """Run feature implementation workflow (stub implementation)."""
 
     normalized = ensure_agent_state(state)
-    description = normalized.get("task_description", "")
+    description = normalized.get("task_description") if "task_description" in normalized else ""
 
     request_payload = normalized.get("feature_request", {})
     task_id = (
