@@ -5,6 +5,7 @@
 **Production**: Multi-agent DevOps automation platform on DigitalOcean droplet 45.55.173.72
 
 **Core Architecture**:
+
 - Single orchestrator (`agent_orchestrator/`) with 6 agent nodes (supervisor, feature_dev, code_review, infrastructure, cicd, documentation)
 - LangGraph StateGraph workflow with LangChain tool binding
 - MCP gateway (port 8000): 150+ tools across 17 servers, progressive disclosure (80-90% token savings)
@@ -55,6 +56,7 @@ Dev-Tools/
 **When user says "update linear roadmap" → Update Linear project issues via API, NOT markdown files**
 
 **Commands:**
+
 ```bash
 # Update project descriptions
 python support/scripts/linear/agent-linear-update.py update-project --project-id "UUID"
@@ -72,6 +74,7 @@ python support/scripts/linear/agent-linear-update.py create-phase --project-id "
 **Environment:** Set `$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"` before running
 
 **Key Details:**
+
 - **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501`
 - **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
 - **HITL Hub**: DEV-68 (workspace-wide approval notifications only)
@@ -84,8 +87,6 @@ python support/scripts/linear/agent-linear-update.py create-phase --project-id "
 - Orchestrator creates sub-issues in DEV-68 via `linear_workspace_client.py`
 - LangGraph checkpoint interrupts workflow, resumes on approval
 - Template: `HITL_ORCHESTRATOR_TEMPLATE_UUID=aa632a46-ea22-4dd0-9403-90b0d1f05aa0`
-
-
 
 ## Deployment workflows
 
