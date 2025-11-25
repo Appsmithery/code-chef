@@ -6,13 +6,10 @@ echo "[HEALTH] Checking local service health..."
 services=(
   "8000:gateway-mcp"
   "8001:orchestrator"
-  "8002:feature-dev"
-  "8003:code-review"
-  "8004:infrastructure"
-  "8005:cicd"
-  "8006:documentation"
   "8007:rag-context"
   "8008:state-persistence"
+  "8009:agent-registry"
+  "8010:langgraph"
 )
 
 for svc in "${services[@]}"; do

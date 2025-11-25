@@ -55,7 +55,7 @@ def route_task(state: AgentState) -> str:
 
     # If another agent has already processed the task, finish for now. This keeps the
     # scaffolding deterministic while we flesh out multi-hop flows later.
-    if normalized["current_agent"] != "orchestrator":
+    if normalized.get("current_agent") != "orchestrator":
         return COMPLETE_ROUTE
 
-    return classify_task(normalized["task_description"])
+    return classify_task(normalized.get("task_description", ""))

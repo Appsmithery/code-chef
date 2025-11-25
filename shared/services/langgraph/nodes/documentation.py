@@ -20,7 +20,7 @@ async def documentation_node(state: AgentState) -> AgentState:
     """Generate documentation artifacts (stub implementation)."""
 
     normalized = ensure_agent_state(state)
-    description = normalized["task_description"]
+    description = normalized.get("task_description", "")
 
     request_payload = normalized.get("documentation_request", {})
     doc_type = request_payload.get("doc_type", "readme")

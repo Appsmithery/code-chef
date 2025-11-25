@@ -20,7 +20,7 @@ async def infrastructure_node(state: AgentState) -> AgentState:
     """Generate infrastructure artifacts (stub implementation)."""
 
     normalized = ensure_agent_state(state)
-    description = normalized["task_description"]
+    description = normalized.get("task_description", "")
 
     request_payload = normalized.get("infrastructure_request", {})
     infrastructure_type = request_payload.get("infrastructure_type", "docker")

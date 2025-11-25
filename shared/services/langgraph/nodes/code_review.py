@@ -20,7 +20,7 @@ async def code_review_node(state: AgentState) -> AgentState:
     """Execute code review workflow (stub implementation)."""
 
     normalized = ensure_agent_state(state)
-    description = normalized["task_description"]
+    description = normalized.get("task_description", "")
 
     request_payload = normalized.get("code_review_request", {})
     task_id = (
