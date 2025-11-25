@@ -5,7 +5,7 @@ Handles workspace-level operations like:
 - Posting to approval hub (workspace-wide issue)
 - Creating new projects
 - Reading all projects for routing
-- GitHub permalink generation
+- GitHub permalink generation (automatic with config)
 - Issue documents (rich markdown attachments)
 - Template-based issue creation
 
@@ -19,8 +19,10 @@ from gql import gql, Client
 from gql.transport.requests import RequestsHTTPTransport
 from urllib.parse import quote
 from langsmith import traceable
+from pathlib import Path
 
 from lib.linear_config import get_linear_config, LinearConfig
+from lib.github_permalink_generator import GitHubPermalinkGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +66,24 @@ class LinearWorkspaceClient:
         )
 
         self.client = Client(transport=transport, fetch_schema_from_transport=True)
+
+        # Initialize GitHub permalink generator if configured
+        self.permalink_generator: Optional[GitHubPermalinkGenerator] = None
+        if self.config.github and self.config.github.permalink_generation.enabled:
+            try:
+                # Get repository root (assume we're running from repo root)
+                repo_path = Path.cwd()
+                self.permalink_generator = GitHubPermalinkGenerator(
+                    repo_url=self.config.github.repository.url,
+                    repo_path=str(repo_path),
+                )
+                logger.info(
+                    f"GitHub permalink generator initialized for {self.config.github.repository.url}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to initialize permalink generator: {e}. Continuing without permalinks."
+                )
 
         logger.info("Linear workspace client initialized")
 
@@ -370,11 +390,35 @@ class LinearWorkspaceClient:
         """
         )
 
+        # Enrich description and document with GitHub permalinks if enabled
+        enriched_description = description
+        enriched_document = document_markdown
+
+        if self.permalink_generator:
+            try:
+                enriched_description = (
+                    self.permalink_generator.enrich_markdown_with_permalinks(
+                        description
+                    )
+                )
+                enriched_document = (
+                    self.permalink_generator.enrich_markdown_with_permalinks(
+                        document_markdown
+                    )
+                )
+                logger.info(
+                    "Enriched issue description and document with GitHub permalinks"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Failed to enrich with permalinks: {e}. Using original content."
+                )
+
         input_data = {
             "title": title,
-            "description": description,
+            "description": enriched_description,
             "projectId": project_id,
-            "document": {"content": document_markdown},
+            "document": {"content": enriched_document},
         }
 
         if labels:
@@ -611,6 +655,25 @@ class LinearWorkspaceClient:
                 )
 
             input_data["description"] = "\n\n".join(description_parts)
+
+        # Enrich description with GitHub permalinks if enabled
+        if (
+            self.permalink_generator
+            and "description" in input_data
+            and input_data["description"]
+        ):
+            try:
+                enriched_description = (
+                    self.permalink_generator.enrich_markdown_with_permalinks(
+                        input_data["description"]
+                    )
+                )
+                input_data["description"] = enriched_description
+                logger.info("Enriched issue description with GitHub permalinks")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to enrich description with permalinks: {e}. Using original description."
+                )
 
         try:
             result = self.client.execute(

@@ -92,6 +92,31 @@ class ApprovalPolicyConfig(BaseModel):
     priority: int
 
 
+class GitHubRepositoryConfig(BaseModel):
+    """GitHub repository configuration."""
+
+    owner: str
+    name: str
+    url: str
+
+
+class GitHubPermalinkConfig(BaseModel):
+    """GitHub permalink generation configuration."""
+
+    enabled: bool = True
+    default_branch: str = "main"
+    include_commit_sha: bool = True
+
+
+class GitHubConfig(BaseModel):
+    """GitHub integration configuration."""
+
+    repository: GitHubRepositoryConfig
+    permalink_generation: GitHubPermalinkConfig
+    auto_permalink_agents: List[str] = Field(default_factory=list)
+    code_file_extensions: List[str] = Field(default_factory=list)
+
+
 class LinearConfig(BaseModel):
     """Linear integration configuration."""
 
@@ -119,6 +144,9 @@ class LinearConfig(BaseModel):
 
     # Approval policies
     approval_policies: Dict[str, ApprovalPolicyConfig]
+
+    # GitHub integration (optional)
+    github: Optional[GitHubConfig] = None
 
     # Secrets (loaded from .env)
     api_key: str
@@ -181,6 +209,11 @@ class LinearConfig(BaseModel):
             for level, policy_data in config_data["approval_policies"].items()
         }
 
+        # Load GitHub config (optional)
+        github_config = None
+        if "github" in config_data:
+            github_config = GitHubConfig(**config_data["github"])
+
         # Load secrets from .env
         api_key = os.getenv("LINEAR_API_KEY", "")
         if not api_key:
@@ -196,6 +229,7 @@ class LinearConfig(BaseModel):
             webhooks=webhooks,
             oauth=oauth,
             approval_policies=approval_policies,
+            github=github_config,
             # Secrets from .env
             api_key=api_key,
             oauth_client_id=os.getenv("LINEAR_OAUTH_CLIENT_ID"),
