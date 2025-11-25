@@ -352,12 +352,13 @@ class ProgressiveMCPLoader:
             prompt_name = server_to_prompt.get(toolset.server)
 
             if prompt_name:
-                # Try loading tool usage guide
+                # Try loading tool usage guide from _shared/tool_guides
                 prompt_file = (
                     Path(__file__).parent.parent.parent
                     / "agent_orchestrator"
-                    / "prompts"
-                    / "tools"
+                    / "agents"
+                    / "_shared"
+                    / "tool_guides"
                     / f"{prompt_name}.prompt.md"
                 )
 

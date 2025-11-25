@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import Optional
-from .base_agent import BaseAgent
+from .._shared.base_agent import BaseAgent
 
 
 class SupervisorAgent(BaseAgent):
@@ -16,11 +16,9 @@ class SupervisorAgent(BaseAgent):
         """Initialize supervisor agent.
 
         Args:
-            config_path: Path to supervisor config (defaults to tools/supervisor_tools.yaml)
+            config_path: Path to supervisor config (defaults to tools.yaml in agent directory)
         """
         if config_path is None:
-            config_path = str(
-                Path(__file__).parent.parent / "tools" / "supervisor_tools.yaml"
-            )
+            config_path = str(Path(__file__).parent / "tools.yaml")
 
         super().__init__(str(config_path), agent_name="supervisor")

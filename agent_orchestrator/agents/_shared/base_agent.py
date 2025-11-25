@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.language_models import BaseChatModel
 
 # Add shared modules to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "shared"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 
 from lib.mcp_client import MCPClient
 from lib.gradient_client import get_gradient_client
@@ -147,17 +147,19 @@ class BaseAgent:
         return self.llm
 
     def get_system_prompt(self) -> str:
-        """Get agent-specific system prompt from .prompt.md file or YAML config.
+        """Get agent-specific system prompt from system.prompt.md file or YAML config.
 
         Implements Factor 2 (Own Your Prompts) by loading prompts from version-controlled
-        .prompt.md files first, with fallback to YAML config for backward compatibility.
+        system.prompt.md files in agent directory, with fallback to YAML config for
+        backward compatibility.
 
         Returns:
             System prompt string for LLM initialization
         """
-        # Try loading from .prompt.md file first
+        # Try loading from system.prompt.md in agent directory
+        # Path structure: agents/{agent_name}/system.prompt.md
         prompt_file = (
-            Path(__file__).parent.parent / "prompts" / f"{self.agent_name}.prompt.md"
+            Path(__file__).parent.parent / self.agent_name / "system.prompt.md"
         )
 
         if prompt_file.exists():

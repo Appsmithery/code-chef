@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import Optional
-from .base_agent import BaseAgent
+from .._shared.base_agent import BaseAgent
 
 
 class CICDAgent(BaseAgent):
@@ -19,8 +19,6 @@ class CICDAgent(BaseAgent):
             config_path: Path to cicd config (defaults to tools/cicd_tools.yaml)
         """
         if config_path is None:
-            config_path = str(
-                Path(__file__).parent.parent / "tools" / "cicd_tools.yaml"
-            )
+            config_path = str(Path(__file__).parent / "tools.yaml")
 
         super().__init__(str(config_path), agent_name="cicd")
