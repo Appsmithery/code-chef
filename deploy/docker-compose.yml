@@ -248,6 +248,26 @@ services:
         limits:
           cpus: "0.5"
           memory: 512M
+
+  # Ollama - Self-hosted embedding service (fallback for OpenAI)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    networks:
+      - devtools-network
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
         reservations:
           cpus: "0.25"
           memory: 128M
@@ -478,6 +498,7 @@ volumes:
   prometheus-data:
   grafana-data:
   caddy-data:
+  ollama-models:
   caddy-config:
   loki-data:
 
