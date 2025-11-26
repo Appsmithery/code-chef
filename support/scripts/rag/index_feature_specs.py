@@ -29,61 +29,25 @@ LINEAR_TEAM_ID = os.getenv(
 
 
 PROJECTS_QUERY = """
-query GetProjects($teamId: String!) {
-  team(id: $teamId) {
-    projects(first: 50) {
-      nodes {
+query GetProjects {
+  projects(first: 50) {
+    nodes {
+      id
+      name
+      description
+      state
+      priority
+      startDate
+      targetDate
+      completedAt
+      createdAt
+      updatedAt
+      lead {
         id
         name
-        description
-        state
-        priority
-        startDate
-        targetDate
-        completedAt
-        createdAt
-        updatedAt
-        lead {
-          id
-          name
-          email
-        }
-        members {
-          nodes {
-            id
-            name
-          }
-        }
-        issues {
-          nodes {
-            id
-            title
-            description
-            state {
-              name
-              type
-            }
-            priority
-            estimate
-            labels {
-              nodes {
-                name
-              }
-            }
-          }
-        }
-        documents {
-          nodes {
-            id
-            title
-            content
-            contentData
-            createdAt
-            updatedAt
-          }
-        }
-        url
+        email
       }
+      url
     }
   }
 }
@@ -96,14 +60,14 @@ async def fetch_linear_projects() -> List[Dict[str, Any]]:
         print("❌ LINEAR_API_KEY not found in environment")
         sys.exit(1)
 
-    print(f"📡 Fetching projects from Linear (Team: {LINEAR_TEAM_ID})...")
+    print(f"📡 Fetching projects from Linear...")
 
     headers = {
         "Authorization": LINEAR_API_KEY,
         "Content-Type": "application/json",
     }
 
-    payload = {"query": PROJECTS_QUERY, "variables": {"teamId": LINEAR_TEAM_ID}}
+    payload = {"query": PROJECTS_QUERY}
 
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -117,7 +81,7 @@ async def fetch_linear_projects() -> List[Dict[str, Any]]:
 
             projects = (
                 data.get("data", {})
-                .get("team", {})
+                .get("projects", {})
                 .get("projects", {})
                 .get("nodes", [])
             )
@@ -141,29 +105,9 @@ def project_to_document(project: Dict[str, Any]) -> Dict[str, Any]:
     priority = project.get("priority", 0)
     url = project.get("url", "")
 
-    # Extract issue information
-    issues = project.get("issues", {}).get("nodes", [])
-    total_issues = len(issues)
-    completed_issues = sum(
-        1 for i in issues if i.get("state", {}).get("type") == "completed"
-    )
-    in_progress_issues = sum(
-        1 for i in issues if i.get("state", {}).get("type") == "started"
-    )
-
-    # Extract unique labels from all issues
-    all_labels = set()
-    for issue in issues:
-        labels = issue.get("labels", {}).get("nodes", [])
-        for label in labels:
-            all_labels.add(label.get("name", ""))
-
-    # Extract member information
-    lead = project.get("lead", {})
+    # Extract lead information
+    lead = project.get("lead") or {}
     lead_name = lead.get("name", "Unassigned") if lead else "Unassigned"
-
-    members = project.get("members", {}).get("nodes", [])
-    member_names = [m.get("name", "") for m in members if m.get("name")]
 
     # Build searchable content
     content_parts = [
@@ -176,29 +120,15 @@ def project_to_document(project: Dict[str, Any]) -> Dict[str, Any]:
     if description:
         content_parts.append(f"\n## Description\n{description}")
 
-    if total_issues > 0:
-        completion_pct = int((completed_issues / total_issues) * 100)
-        content_parts.append(
-            f"\n## Progress\n"
-            f"- Total Issues: {total_issues}\n"
-            f"- Completed: {completed_issues} ({completion_pct}%)\n"
-            f"- In Progress: {in_progress_issues}"
-        )
-
-    if all_labels:
-        content_parts.append(f"\n## Tags\n{', '.join(sorted(all_labels))}")
-
-    if member_names:
-        content_parts.append(f"\n## Team\n{', '.join(member_names)}")
-
-    # Add sample issues (top 5 most important)
-    if issues:
-        sorted_issues = sorted(
-            issues, key=lambda x: x.get("priority", 0), reverse=True
-        )[:5]
-        issue_titles = [f"- {i.get('title', 'Untitled')}" for i in sorted_issues]
-        if issue_titles:
-            content_parts.append(f"\n## Key Issues\n" + "\n".join(issue_titles))
+    # Add dates if available
+    start_date = project.get("startDate")
+    target_date = project.get("targetDate")
+    if start_date or target_date:
+        content_parts.append(f"\n## Timeline")
+        if start_date:
+            content_parts.append(f"- Start: {start_date}")
+        if target_date:
+            content_parts.append(f"- Target: {target_date}")
 
     content_parts.append(f"\n**Linear URL**: {url}")
 
@@ -208,14 +138,7 @@ def project_to_document(project: Dict[str, Any]) -> Dict[str, Any]:
         "project_name": name,
         "state": state,
         "priority": priority,
-        "total_issues": total_issues,
-        "completed_issues": completed_issues,
-        "completion_percentage": (
-            int((completed_issues / total_issues) * 100) if total_issues > 0 else 0
-        ),
-        "labels": list(all_labels),
         "lead": lead_name,
-        "team_members": member_names,
         "url": url,
         "created_at": project.get("createdAt", ""),
         "updated_at": project.get("updatedAt", ""),

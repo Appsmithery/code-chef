@@ -195,8 +195,11 @@ def issue_to_document(issue: Dict[str, Any]) -> Dict[str, Any]:
     if recent_comments:
         content_parts.append("\n## Recent Discussion")
         for comment in recent_comments:
-            user = comment.get("user", {}).get("name", "Unknown")
-            body = comment.get("body", "")[:200]  # First 200 chars
+            if comment is None:
+                continue
+            user_obj = comment.get("user") or {}
+            user = user_obj.get("name", "Unknown") if user_obj else "Unknown"
+            body = (comment.get("body") or "")[:200]  # First 200 chars
             content_parts.append(f"- **{user}**: {body}...")
 
     content_parts.append(f"\n**Linear URL**: {url}")
