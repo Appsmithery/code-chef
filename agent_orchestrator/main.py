@@ -3069,15 +3069,15 @@ async def get_workflow_status(workflow_id: str):
         }
     """
     from workflows.workflow_engine import WorkflowEngine
-    
+
     # Initialize gradient client for workflow engine
     workflow_gradient_client = GradientClient(agent_name="supervisor")
-    
+
     engine = WorkflowEngine(
         gradient_client=workflow_gradient_client,
         state_client=registry_client,
     )
-    
+
     try:
         workflow_state = await engine.get_workflow_status(workflow_id)
         return WorkflowStatusResponse(
@@ -3162,6 +3162,7 @@ async def resume_workflow(workflow_id: str, request: WorkflowResumeRequest):
 # ============================================================================
 # EVENT SOURCING ENDPOINTS (Week 4 - DEV-174)
 # ============================================================================
+
 
 @app.get("/workflow/{workflow_id}/events")
 async def get_workflow_events(
@@ -3391,7 +3392,9 @@ async def get_workflow_state_at_timestamp(workflow_id: str, timestamp: str):
         }
 
     except Exception as e:
-        logger.error(f"Failed to get state at timestamp for workflow {workflow_id}: {e}")
+        logger.error(
+            f"Failed to get state at timestamp for workflow {workflow_id}: {e}"
+        )
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3519,21 +3522,21 @@ async def cancel_workflow(
 ):
     """
     Cancel a running or paused workflow with cleanup.
-    
+
     Cleanup includes:
     - Release all resource locks
     - Mark Linear approval issues as complete
     - Notify participating agents
     - Cascade cancellation to child workflows
-    
+
     Args:
         workflow_id: Workflow to cancel
         reason: Cancellation reason
         cancelled_by: User who requested cancellation
-    
+
     Returns:
         Cancellation summary with cleanup details
-    
+
     Example:
         DELETE /workflow/abc-123?reason=Emergency+fix+deployed&cancelled_by=alice@example.com
         {
@@ -3550,25 +3553,25 @@ async def cancel_workflow(
         }
     """
     from workflows.workflow_engine import WorkflowEngine
-    
+
     engine = WorkflowEngine(
         gradient_client=gradient_client,
         state_client=state_client,
     )
-    
+
     try:
         result = await engine.cancel_workflow(
             workflow_id=workflow_id,
             reason=reason,
             cancelled_by=cancelled_by or "unknown",
         )
-        
+
         return result
-    
+
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        logger.error(f"Failed to cancel workflow {workflow_id}: {e}\")")
+        logger.error(f'Failed to cancel workflow {workflow_id}: {e}")')
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -3580,18 +3583,18 @@ async def retry_workflow_from_step(
 ):
     """
     Retry a failed workflow from a specific step.
-    
+
     Uses exponential backoff and error classification to determine
     if retries are appropriate.
-    
+
     Args:
         workflow_id: Workflow to retry
         step_id: Step to retry from
         max_retries: Maximum retry attempts (default: 3)
-    
+
     Returns:
         Retry result with status
-    
+
     Example:
         POST /workflow/abc-123/retry-from/deploy_staging?max_retries=5
         {
@@ -3604,38 +3607,38 @@ async def retry_workflow_from_step(
     """
     from workflows.workflow_engine import WorkflowEngine
     from shared.lib.retry_logic import RetryConfig
-    
+
     engine = WorkflowEngine(
         gradient_client=gradient_client,
         state_client=state_client,
     )
-    
+
     try:
         # Reconstruct state from events
         state_dict = await engine._reconstruct_state_from_events(workflow_id)
-        
+
         if state_dict.get("status") != "failed":
             raise HTTPException(
                 status_code=400,
-                detail=f"Cannot retry workflow with status {state_dict.get('status')}. Only failed workflows can be retried."
+                detail=f"Cannot retry workflow with status {state_dict.get('status')}. Only failed workflows can be retried.",
             )
-        
+
         # Check retry count
         retry_count = state_dict.get("retries", {}).get(step_id, 0)
-        
+
         if retry_count >= max_retries:
             raise HTTPException(
                 status_code=400,
-                detail=f"Maximum retries ({max_retries}) exceeded for step {step_id}"
+                detail=f"Maximum retries ({max_retries}) exceeded for step {step_id}",
             )
-        
+
         # Emit RETRY_STEP event
         from shared.lib.workflow_reducer import WorkflowAction
         from shared.lib.retry_logic import calculate_backoff, RetryConfig
-        
+
         config = RetryConfig(max_retries=max_retries)
         backoff_delay = calculate_backoff(retry_count, config)
-        
+
         await engine._emit_event(
             workflow_id=workflow_id,
             action=WorkflowAction.RETRY_STEP,
@@ -3646,7 +3649,7 @@ async def retry_workflow_from_step(
                 "backoff_delay": backoff_delay,
             },
         )
-        
+
         # Resume workflow execution from failed step
         # (In production, this would be done asynchronously via task queue)
         return {
@@ -3658,7 +3661,7 @@ async def retry_workflow_from_step(
             "backoff_delay": backoff_delay,
             "message": "Retry scheduled. Workflow will resume after backoff delay.",
         }
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -3669,6 +3672,7 @@ async def retry_workflow_from_step(
 # ============================================================================
 # WORKFLOW TEMPLATES
 # ============================================================================
+
 
 @app.get("/workflow/templates")
 async def list_workflow_templates():
