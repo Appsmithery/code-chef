@@ -24,22 +24,22 @@ def run_indexing_script(name: str, script_path: str) -> bool:
     print(f"\n{'=' * 70}")
     print(f"🚀 Running {name} indexing...")
     print(f"{'=' * 70}\n")
-    
+
     try:
         result = subprocess.run(
             ["docker", "exec", CONTAINER, "python3", script_path],
             capture_output=False,
             text=True,
-            timeout=300  # 5 minute timeout
+            timeout=300,  # 5 minute timeout
         )
-        
+
         if result.returncode == 0:
             print(f"\n✅ {name} indexing completed successfully")
             return True
         else:
             print(f"\n❌ {name} indexing failed with exit code {result.returncode}")
             return False
-    
+
     except subprocess.TimeoutExpired:
         print(f"\n⏱️ {name} indexing timed out after 5 minutes")
         return False
@@ -54,29 +54,29 @@ def main():
     print("📊 RAG Collection Population - Master Script")
     print(f"⏰ Started: {datetime.now().isoformat()}")
     print("=" * 70)
-    
+
     results = {}
-    
+
     for name, script_path in SCRIPTS:
         success = run_indexing_script(name, script_path)
         results[name] = success
-    
+
     # Print summary
     print("\n" + "=" * 70)
     print("📋 Summary")
     print("=" * 70)
-    
+
     for name, success in results.items():
         status = "✅ Success" if success else "❌ Failed"
         print(f"  {name}: {status}")
-    
+
     total = len(results)
     successful = sum(1 for s in results.values() if s)
-    
+
     print(f"\n🎯 Total: {successful}/{total} collections populated successfully")
     print(f"⏰ Finished: {datetime.now().isoformat()}")
     print("=" * 70)
-    
+
     # Exit with error if any failed
     sys.exit(0 if successful == total else 1)
 

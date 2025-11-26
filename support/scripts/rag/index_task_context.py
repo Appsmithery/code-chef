@@ -54,12 +54,12 @@ async def fetch_workflow_executions() -> List[Dict[str, Any]]:
     conn = get_db_connection()
     if not conn:
         return []
-    
+
     print(f"📡 Fetching workflow executions from database...")
-    
+
     try:
         cursor = conn.cursor()
-        
+
         # Query to get workflow summaries with aggregated events
         query = """
         WITH workflow_summary AS (
@@ -107,17 +107,17 @@ async def fetch_workflow_executions() -> List[Dict[str, Any]]:
         ORDER BY ws.start_time DESC
         LIMIT 100;
         """
-        
+
         cursor.execute(query)
         workflows = cursor.fetchall()
-        
+
         print(f"✅ Fetched {len(workflows)} workflow executions")
-        
+
         cursor.close()
         conn.close()
-        
+
         return workflows
-    
+
     except Exception as e:
         print(f"❌ Error fetching workflows: {e}")
         if conn:
@@ -136,16 +136,16 @@ def workflow_to_document(workflow: Dict[str, Any]) -> Dict[str, Any]:
     event_count = workflow.get("event_count", 0)
     steps_completed = workflow.get("steps_completed", 0)
     steps_failed = workflow.get("steps_failed", 0)
-    
+
     # Parse events
     events = workflow.get("events", [])
-    
+
     # Extract key actions
     actions = [e.get("action") for e in events if e.get("action")]
     action_counts = {}
     for action in actions:
         action_counts[action] = action_counts.get(action, 0) + 1
-    
+
     # Extract participating agents from step_ids or data
     agents = set()
     steps = set()
@@ -153,7 +153,7 @@ def workflow_to_document(workflow: Dict[str, Any]) -> Dict[str, Any]:
         step_id = event.get("step_id", "")
         if step_id:
             steps.add(step_id)
-        
+
         data = event.get("data", {})
         if isinstance(data, dict):
             # Extract agents from various data fields
@@ -163,12 +163,12 @@ def workflow_to_document(workflow: Dict[str, Any]) -> Dict[str, Any]:
                         agents.add(agent)
             if "agent" in data:
                 agents.add(data["agent"])
-    
+
     # Determine outcome
     is_successful = status in ["completed", "done"]
     is_failed = status in ["failed", "error"]
     is_paused = status in ["paused", "waiting", "approval_pending"]
-    
+
     # Build searchable content
     content_parts = [
         f"# Workflow Execution: {template_name}",
@@ -177,38 +177,46 @@ def workflow_to_document(workflow: Dict[str, Any]) -> Dict[str, Any]:
         f"**Duration**: {int(duration_seconds)} seconds",
         f"**Events**: {event_count}",
     ]
-    
+
     if steps_completed > 0 or steps_failed > 0:
         content_parts.append(f"**Steps Completed**: {steps_completed}")
         content_parts.append(f"**Steps Failed**: {steps_failed}")
-    
+
     if agents:
         content_parts.append(f"\n## Participating Agents\n{', '.join(sorted(agents))}")
-    
+
     if steps:
         content_parts.append(f"\n## Workflow Steps\n{', '.join(sorted(steps))}")
-    
+
     if action_counts:
         content_parts.append("\n## Action Summary")
-        for action, count in sorted(action_counts.items(), key=lambda x: x[1], reverse=True):
+        for action, count in sorted(
+            action_counts.items(), key=lambda x: x[1], reverse=True
+        ):
             content_parts.append(f"- {action}: {count}")
-    
+
     # Add outcome classification
     if is_successful:
         content_parts.append("\n✅ **Outcome**: Successfully completed")
     elif is_failed:
         content_parts.append("\n❌ **Outcome**: Failed")
         # Try to extract error information
-        error_events = [e for e in events if e.get("action") in ["fail_step", "rollback_step", "cancel_workflow"]]
+        error_events = [
+            e
+            for e in events
+            if e.get("action") in ["fail_step", "rollback_step", "cancel_workflow"]
+        ]
         if error_events:
             content_parts.append("\n### Failure Details")
             for e in error_events[:3]:  # Show first 3 errors
                 error_data = e.get("data", {})
                 if isinstance(error_data, dict) and "error" in error_data:
-                    content_parts.append(f"- {error_data.get('error', 'Unknown error')}")
+                    content_parts.append(
+                        f"- {error_data.get('error', 'Unknown error')}"
+                    )
     elif is_paused:
         content_parts.append("\n⏸️ **Outcome**: Paused (awaiting approval/input)")
-    
+
     # Add timeline summary (first and last few events)
     if events:
         content_parts.append("\n## Timeline")
@@ -219,9 +227,9 @@ def workflow_to_document(workflow: Dict[str, Any]) -> Dict[str, Any]:
             if event_str not in seen:
                 content_parts.append(f"- {event_str}")
                 seen.add(event_str)
-    
+
     content_parts.append(f"\n**Execution Period**: {start_time} to {end_time}")
-    
+
     return {
         "content": "\n".join(content_parts),
         "workflow_id": workflow_id,
@@ -246,9 +254,9 @@ async def index_to_rag_service(documents: List[Dict[str, Any]]):
     if not documents:
         print("No documents to index")
         return
-    
+
     print(f"\n📤 Indexing {len(documents)} workflow executions to RAG service...")
-    
+
     # Prepare documents and metadata
     doc_contents = [d["content"] for d in documents]
     metadatas = [
@@ -270,7 +278,7 @@ async def index_to_rag_service(documents: List[Dict[str, Any]]):
         }
         for d in documents
     ]
-    
+
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -279,18 +287,20 @@ async def index_to_rag_service(documents: List[Dict[str, Any]]):
                     "documents": doc_contents,
                     "metadatas": metadatas,
                     "collection": COLLECTION_NAME,
-                }
+                },
             )
             response.raise_for_status()
             result = response.json()
-            
-            print(f"✅ Successfully indexed {result['indexed_count']} workflow executions")
+
+            print(
+                f"✅ Successfully indexed {result['indexed_count']} workflow executions"
+            )
             print(f"   Collection: {result['collection']}")
             return result
-    
+
     except httpx.HTTPError as e:
         print(f"❌ HTTP error during indexing: {e}")
-        if hasattr(e, 'response') and e.response is not None:
+        if hasattr(e, "response") and e.response is not None:
             print(f"   Response: {e.response.text}")
         raise
     except Exception as e:
@@ -303,27 +313,33 @@ async def main():
     print("=" * 70)
     print("📊 Task Context Indexing - Workflow History Sync")
     print("=" * 70)
-    
+
     # Fetch workflow executions from database
     workflows = await fetch_workflow_executions()
-    
+
     if not workflows:
         print("⚠️ No workflows found or error occurred")
-        print("   This is expected if event sourcing was just deployed (0 workflow events)")
+        print(
+            "   This is expected if event sourcing was just deployed (0 workflow events)"
+        )
         return
-    
+
     # Convert to searchable documents
     print("\n🔄 Converting workflows to searchable documents...")
     documents = []
-    
+
     for workflow in workflows:
         doc = workflow_to_document(workflow)
         documents.append(doc)
-        status_icon = "✅" if doc["is_successful"] else "❌" if doc["is_failed"] else "⏸️"
-        print(f"  {status_icon} {doc['template_name']}: {doc['duration_seconds']}s, {doc['event_count']} events")
-    
+        status_icon = (
+            "✅" if doc["is_successful"] else "❌" if doc["is_failed"] else "⏸️"
+        )
+        print(
+            f"  {status_icon} {doc['template_name']}: {doc['duration_seconds']}s, {doc['event_count']} events"
+        )
+
     print(f"\n✅ Prepared {len(documents)} workflow documents")
-    
+
     # Show statistics
     status_counts = {}
     template_counts = {}
@@ -332,27 +348,29 @@ async def main():
         template = doc["template_name"]
         status_counts[status] = status_counts.get(status, 0) + 1
         template_counts[template] = template_counts.get(template, 0) + 1
-    
+
     print("\n📊 Workflow Statistics:")
     print("  Status Distribution:")
     for status, count in sorted(status_counts.items()):
         print(f"    {status}: {count}")
-    
+
     print("  Template Distribution:")
     for template, count in sorted(template_counts.items()):
         print(f"    {template}: {count}")
-    
+
     # Index to RAG service
     if documents:
         await index_to_rag_service(documents)
-    
+
     print("\n" + "=" * 70)
     print("✅ Task Context Indexing Complete!")
     print("=" * 70)
     print(f"\n💡 Query examples:")
     print(f"   curl -X POST {RAG_SERVICE_URL}/query \\")
     print(f"     -H 'Content-Type: application/json' \\")
-    print(f"     -d '{{\"query\": \"successful deployment workflows with feature_dev agent\", \"collection\": \"{COLLECTION_NAME}\"}}'")
+    print(
+        f'     -d \'{{"query": "successful deployment workflows with feature_dev agent", "collection": "{COLLECTION_NAME}"}}\''
+    )
 
 
 if __name__ == "__main__":
