@@ -790,6 +790,160 @@ class LinearWorkspaceClient:
             logger.error(f"Failed to update issue status: {e}")
             raise
 
+    async def update_issue(
+        self,
+        issue_id: str = None,
+        issue_identifier: str = None,
+        title: str = None,
+        description: str = None,
+        state_name: str = None,
+        state_id: str = None,
+        priority: int = None,
+        assignee_id: str = None,
+        label_ids: list = None,
+        comment: str = None,
+    ) -> bool:
+        """
+        Update an existing Linear issue with support for GitHub permalink enrichment.
+
+        Args:
+            issue_id: Issue UUID (use this OR issue_identifier)
+            issue_identifier: Issue identifier like "PR-123" (use this OR issue_id)
+            title: New title
+            description: New description (will be enriched with GitHub permalinks)
+            state_name: State name like "done", "in_progress" (use this OR state_id)
+            state_id: State UUID (use this OR state_name)
+            priority: Priority (0=None, 1=Urgent, 2=High, 3=Normal, 4=Low)
+            assignee_id: Assignee UUID
+            label_ids: List of label UUIDs
+            comment: Optional comment to add after update (will be enriched with GitHub permalinks)
+
+        Returns:
+            True if successful, False otherwise
+
+        Usage:
+            >>> await client.update_issue(
+            ...     issue_identifier="PR-123",
+            ...     description="Updated implementation in `main.py lines 100-150`",
+            ...     state_name="done",
+            ...     comment="All tests passing. See `test_feature.py lines 20-45` for details."
+            ... )
+        """
+        try:
+            # Resolve issue_identifier to issue_id if needed
+            if issue_identifier and not issue_id:
+                query = gql(
+                    """
+                    query GetIssueByIdentifier($identifier: String!) {
+                        issue(id: $identifier) {
+                            id
+                        }
+                    }
+                """
+                )
+                result = self.client.execute(
+                    query, variable_values={"identifier": issue_identifier}
+                )
+                issue_id = result["issue"]["id"]
+
+            if not issue_id:
+                logger.error("Either issue_id or issue_identifier must be provided")
+                return False
+
+            # Resolve state_name to state_id if needed
+            if state_name and not state_id:
+                team_id = self.config.workspace.team_id
+                if not team_id:
+                    raise ValueError("workspace.team_id not configured")
+
+                query = gql(
+                    """
+                    query GetWorkflowStates($teamId: String!) {
+                        team(id: $teamId) {
+                            states {
+                                nodes {
+                                    id
+                                    name
+                                }
+                            }
+                        }
+                    }
+                """
+                )
+                result = self.client.execute(query, variable_values={"teamId": team_id})
+                states = result["team"]["states"]["nodes"]
+
+                state_name_lower = state_name.lower().replace("_", " ")
+                for state in states:
+                    if state["name"].lower() == state_name_lower:
+                        state_id = state["id"]
+                        break
+
+            # Enrich description with GitHub permalinks if enabled
+            if description and self.permalink_generator:
+                try:
+                    description = (
+                        self.permalink_generator.enrich_markdown_with_permalinks(
+                            description
+                        )
+                    )
+                    logger.info("Enriched issue description update with GitHub permalinks")
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to enrich description with permalinks: {e}. Using original."
+                    )
+
+            # Build update input
+            update_input = {}
+            if title:
+                update_input["title"] = title
+            if description:
+                update_input["description"] = description
+            if state_id:
+                update_input["stateId"] = state_id
+            if priority is not None:
+                update_input["priority"] = priority
+            if assignee_id:
+                update_input["assigneeId"] = assignee_id
+            if label_ids:
+                update_input["labelIds"] = label_ids
+
+            # Update issue
+            mutation = gql(
+                """
+                mutation UpdateIssue($issueId: String!, $input: IssueUpdateInput!) {
+                    issueUpdate(id: $issueId, input: $input) {
+                        success
+                        issue {
+                            id
+                            identifier
+                        }
+                    }
+                }
+            """
+            )
+
+            result = self.client.execute(
+                mutation, variable_values={"issueId": issue_id, "input": update_input}
+            )
+
+            if result["issueUpdate"]["success"]:
+                issue_identifier_result = result["issueUpdate"]["issue"]["identifier"]
+                logger.info(f"Updated issue {issue_identifier_result}")
+
+                # Add comment if provided
+                if comment:
+                    await self.add_comment(issue_id, comment)
+
+                return True
+            else:
+                logger.error("Issue update returned success=false")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to update issue: {e}")
+            return False
+
     async def add_comment(self, issue_id: str, body: str) -> Dict[str, Any]:
         """
         Add comment to Linear issue.
@@ -807,6 +961,19 @@ class LinearWorkspaceClient:
             ...     body="Code generation complete. 3 files created, all tests passing."
             ... )
         """
+        # Enrich body with GitHub permalinks if enabled
+        enriched_body = body
+        if self.permalink_generator and body:
+            try:
+                enriched_body = (
+                    self.permalink_generator.enrich_markdown_with_permalinks(body)
+                )
+                logger.info("Enriched comment with GitHub permalinks")
+            except Exception as e:
+                logger.warning(
+                    f"Failed to enrich comment with permalinks: {e}. Using original body."
+                )
+        
         mutation = gql(
             """
             mutation CreateComment($issueId: String!, $body: String!) {
@@ -827,7 +994,7 @@ class LinearWorkspaceClient:
 
         try:
             result = self.client.execute(
-                mutation, variable_values={"issueId": issue_id, "body": body}
+                mutation, variable_values={"issueId": issue_id, "body": enriched_body}
             )
 
             comment = result["commentCreate"]["comment"]
