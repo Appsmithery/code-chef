@@ -93,37 +93,32 @@ async def fetch_linear_issues() -> List[Dict[str, Any]]:
     if not LINEAR_API_KEY:
         print("❌ LINEAR_API_KEY not found in environment")
         sys.exit(1)
-    
+
     print(f"📡 Fetching issues from Linear (Team: {LINEAR_TEAM_ID})...")
-    
+
     headers = {
         "Authorization": LINEAR_API_KEY,
         "Content-Type": "application/json",
     }
-    
-    payload = {
-        "query": ISSUES_QUERY,
-        "variables": {"teamId": LINEAR_TEAM_ID}
-    }
-    
+
+    payload = {"query": ISSUES_QUERY, "variables": {"teamId": LINEAR_TEAM_ID}}
+
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                LINEAR_API_URL,
-                headers=headers,
-                json=payload
-            )
+            response = await client.post(LINEAR_API_URL, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            
+
             if "errors" in data:
                 print(f"❌ GraphQL errors: {data['errors']}")
                 return []
-            
-            issues = data.get("data", {}).get("team", {}).get("issues", {}).get("nodes", [])
+
+            issues = (
+                data.get("data", {}).get("team", {}).get("issues", {}).get("nodes", [])
+            )
             print(f"✅ Fetched {len(issues)} issues")
             return issues
-    
+
     except httpx.HTTPError as e:
         print(f"❌ HTTP error fetching issues: {e}")
         return []
@@ -141,41 +136,41 @@ def issue_to_document(issue: Dict[str, Any]) -> Dict[str, Any]:
     priority = issue.get("priority", 0)
     estimate = issue.get("estimate", None)
     url = issue.get("url", "")
-    
+
     # State information
     state = issue.get("state", {})
     state_name = state.get("name", "unknown")
     state_type = state.get("type", "unknown")
-    
+
     # People
     assignee = issue.get("assignee", {})
     assignee_name = assignee.get("name", "Unassigned") if assignee else "Unassigned"
-    
+
     creator = issue.get("creator", {})
     creator_name = creator.get("name", "Unknown") if creator else "Unknown"
-    
+
     # Project
     project = issue.get("project", {})
     project_name = project.get("name", "No Project") if project else "No Project"
-    
+
     # Parent issue (if sub-issue)
     parent = issue.get("parent", {})
     parent_identifier = parent.get("identifier", "") if parent else ""
     parent_title = parent.get("title", "") if parent else ""
-    
+
     # Labels
     labels = issue.get("labels", {}).get("nodes", [])
     label_names = [l.get("name", "") for l in labels if l.get("name")]
-    
+
     # Comments (extract key discussion points)
     comments = issue.get("comments", {}).get("nodes", [])
     comment_count = len(comments)
     recent_comments = comments[-3:] if comments else []  # Last 3 comments
-    
+
     # Priority mapping
     priority_map = {0: "No Priority", 1: "Urgent", 2: "High", 3: "Normal", 4: "Low"}
     priority_label = priority_map.get(priority, "Unknown")
-    
+
     # Build searchable content
     content_parts = [
         f"# {identifier}: {title}",
@@ -184,32 +179,32 @@ def issue_to_document(issue: Dict[str, Any]) -> Dict[str, Any]:
         f"**Assignee**: {assignee_name}",
         f"**Project**: {project_name}",
     ]
-    
+
     if estimate:
         content_parts.append(f"**Estimate**: {estimate} points")
-    
+
     if parent_identifier:
         content_parts.append(f"**Parent Issue**: {parent_identifier} - {parent_title}")
-    
+
     if description:
         content_parts.append(f"\n## Description\n{description}")
-    
+
     if label_names:
         content_parts.append(f"\n## Labels\n{', '.join(label_names)}")
-    
+
     if recent_comments:
         content_parts.append("\n## Recent Discussion")
         for comment in recent_comments:
             user = comment.get("user", {}).get("name", "Unknown")
             body = comment.get("body", "")[:200]  # First 200 chars
             content_parts.append(f"- **{user}**: {body}...")
-    
+
     content_parts.append(f"\n**Linear URL**: {url}")
-    
+
     # Determine if completed or active
     is_completed = bool(issue.get("completedAt"))
     is_canceled = bool(issue.get("canceledAt"))
-    
+
     return {
         "content": "\n".join(content_parts),
         "issue_id": issue_id,
@@ -241,9 +236,9 @@ async def index_to_rag_service(documents: List[Dict[str, Any]]):
     if not documents:
         print("No documents to index")
         return
-    
+
     print(f"\n📤 Indexing {len(documents)} issues to RAG service...")
-    
+
     # Prepare documents and metadata
     doc_contents = [d["content"] for d in documents]
     metadatas = [
@@ -268,7 +263,7 @@ async def index_to_rag_service(documents: List[Dict[str, Any]]):
         }
         for d in documents
     ]
-    
+
     try:
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
@@ -277,18 +272,18 @@ async def index_to_rag_service(documents: List[Dict[str, Any]]):
                     "documents": doc_contents,
                     "metadatas": metadatas,
                     "collection": COLLECTION_NAME,
-                }
+                },
             )
             response.raise_for_status()
             result = response.json()
-            
+
             print(f"✅ Successfully indexed {result['indexed_count']} issues")
             print(f"   Collection: {result['collection']}")
             return result
-    
+
     except httpx.HTTPError as e:
         print(f"❌ HTTP error during indexing: {e}")
-        if hasattr(e, 'response') and e.response is not None:
+        if hasattr(e, "response") and e.response is not None:
             print(f"   Response: {e.response.text}")
         raise
     except Exception as e:
@@ -301,26 +296,28 @@ async def main():
     print("=" * 70)
     print("🎫 Issue Tracker Indexing - Linear Issue Sync")
     print("=" * 70)
-    
+
     # Fetch issues from Linear
     issues = await fetch_linear_issues()
-    
+
     if not issues:
         print("⚠️ No issues found or error occurred")
         return
-    
+
     # Convert to searchable documents
     print("\n🔄 Converting issues to searchable documents...")
     documents = []
-    
+
     for issue in issues:
         doc = issue_to_document(issue)
         documents.append(doc)
-        status_icon = "✅" if doc["is_completed"] else "🔄" if doc["is_active"] else "❌"
+        status_icon = (
+            "✅" if doc["is_completed"] else "🔄" if doc["is_active"] else "❌"
+        )
         print(f"  {status_icon} {doc['identifier']}: {doc['title'][:60]}...")
-    
+
     print(f"\n✅ Prepared {len(documents)} issue documents")
-    
+
     # Show statistics
     state_type_counts = {}
     priority_counts = {}
@@ -329,27 +326,29 @@ async def main():
         priority = doc["priority_label"]
         state_type_counts[state_type] = state_type_counts.get(state_type, 0) + 1
         priority_counts[priority] = priority_counts.get(priority, 0) + 1
-    
+
     print("\n📊 Issue Statistics:")
     print("  State Types:")
     for state, count in sorted(state_type_counts.items()):
         print(f"    {state}: {count}")
-    
+
     print("  Priority Distribution:")
     for priority, count in sorted(priority_counts.items()):
         print(f"    {priority}: {count}")
-    
+
     # Index to RAG service
     if documents:
         await index_to_rag_service(documents)
-    
+
     print("\n" + "=" * 70)
     print("✅ Issue Tracker Indexing Complete!")
     print("=" * 70)
     print(f"\n💡 Query examples:")
     print(f"   curl -X POST {RAG_SERVICE_URL}/query \\")
     print(f"     -H 'Content-Type: application/json' \\")
-    print(f"     -d '{{\"query\": \"high priority authentication bugs\", \"collection\": \"{COLLECTION_NAME}\"}}'")
+    print(
+        f'     -d \'{{"query": "high priority authentication bugs", "collection": "{COLLECTION_NAME}"}}\''
+    )
 
 
 if __name__ == "__main__":
