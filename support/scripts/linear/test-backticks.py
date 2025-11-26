@@ -13,8 +13,7 @@ from lib.github_permalink_generator import GitHubPermalinkGenerator
 
 # Initialize generator
 generator = GitHubPermalinkGenerator(
-    "https://github.com/Appsmithery/Dev-Tools",
-    str(repo_root)
+    "https://github.com/Appsmithery/Dev-Tools", str(repo_root)
 )
 
 # Test cases with backticks (like Linear comments)
@@ -34,7 +33,7 @@ print("=" * 70)
 for i, test in enumerate(test_cases, 1):
     print(f"\nTest {i}:")
     print(f"  Input:  {test}")
-    
+
     # Extract references
     refs = generator.extract_file_references(test)
     print(f"  Found:  {len(refs)} reference(s)")
@@ -47,11 +46,11 @@ for i, test in enumerate(test_cases, 1):
                 print(f" line {ref.line_start}")
         else:
             print()
-    
+
     # Enrich
     enriched = generator.enrich_markdown_with_permalinks(test)
     print(f"  Output: {enriched[:120]}...")
-    
+
     # Check if enrichment happened
     if "[" in enriched and "](" in enriched:
         print("  Status: ✅ PASS - Permalink generated")
