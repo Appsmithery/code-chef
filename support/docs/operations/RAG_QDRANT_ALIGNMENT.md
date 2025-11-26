@@ -313,6 +313,50 @@ curl http://45.55.173.72:8007/collections
 - **Collection Management**: Auto-prune old/stale vectors
 - **Query Caching**: Cache frequent queries in Redis
 
+## Collection Roadmap
+
+### Active Collections (Production)
+
+| Collection | Points | Status | Purpose |
+|------------|--------|--------|----------|
+| `the-shop` | 460 | ✅ Active | Primary knowledge base (DigitalOcean KB sync) |
+| `vendor-docs` | 94 | ✅ Active | Vendor API documentation (Gradient, Linear, LangSmith) |
+
+### Planned Collections (Future Implementation)
+
+| Collection | Status | Implementation Timeline | Purpose |
+|------------|--------|------------------------|----------|
+| `agent_memory` | ⏳ Planned | Q2 2026 (Zen Priority 3) | Agent episodic memory and conversation history |
+| `task_context` | ⏳ Planned | Q1 2026 (RAG Phase 2) | Workflow context persistence and task execution history |
+| `code_patterns` | ⏳ Planned | Q1 2026 (RAG Phase 1) | Code generation knowledge base with architectural patterns |
+| `feature_specs` | ⏳ Planned | Q1 2026 (RAG Phase 1) | Feature specifications and requirements documentation |
+| `issue_tracker` | ⏳ Planned | Q2 2026 (Linear integration) | Linear issue semantic search and project management context |
+
+**Implementation Dependencies:**
+
+- **`agent_memory`**: Requires DEV-167 (Agent Memory Implementation), Zen conversation memory port
+- **`task_context`**: Requires workflow state persistence enhancements
+- **`code_patterns`**: Requires code indexing script, pattern extraction from `agent_orchestrator/`
+- **`feature_specs`**: Requires Linear project/issue description indexing
+- **`issue_tracker`**: Requires Linear GraphQL integration for issue sync
+
+**Current Configuration Status:**
+
+- ✅ All 7 collections defined in `config/rag/vectordb.config.yaml`
+- ✅ Collections auto-created on first use via `ensure_collection()` in RAG service
+- ✅ Infrastructure ready (scripts, test suites, placeholder implementations exist)
+- ⏳ Awaiting feature development to populate planned collections
+
+**Reference Issues:**
+
+- **DEV-167**: Agent Memory Implementation (Backlog)
+- **DEV-172**: Workflow composition with parent chains (In Progress)
+- **DEV-175**: Zen pattern integration (Done)
+- **RAG Phase 1**: Code patterns + feature specs indexing (Q1 2026)
+- **RAG Phase 2**: Task context persistence (Q1 2026)
+
+---
+
 ## References
 
 - **Qdrant Cloud Dashboard**: https://cloud.qdrant.io/
@@ -321,3 +365,6 @@ curl http://45.55.173.72:8007/collections
 - **Vector DB Config**: `config/rag/vectordb.config.yaml`
 - **Indexing Script**: `support/scripts/rag/index_vendor_docs.py`
 - **Gradient AI Docs**: https://docs.digitalocean.com/products/gradient-ai-platform/
+- **Linear Roadmap**: AI DevOps Agent Platform project (b21cbaa1-9f09-40f4-b62a-73e0f86dd501)
+- **Zen Integration**: `support/docs/_temp/Reusable Components.md`
+- **RAG Architecture**: `support/docs/architecture/RAG_DOCUMENTATION_AGGREGATION.md`
