@@ -13,7 +13,9 @@
 - Observability: LangSmith tracing, Grafana/Prometheus metrics
 - HITL: Risk-based approvals via Linear (DEV-68 hub), LangGraph checkpointing
 - Service ports: gateway:8000, orchestrator:8001, rag:8007, state:8008, langgraph:8010
+- **RAG Semantic Search (DEV-184, completed Nov 2025)**: Qdrant Cloud with 1,218 vectors across 7 collections (code_patterns, issue_tracker, feature_specs, vendor-docs, the-shop)
 - **Zen Pattern Integration (DEV-175, completed Nov 2025)**: Parent workflow chains, resource deduplication (80-90% token savings), workflow TTL management
+- **Memory Optimization (Nov 2025)**: 2GB droplet with optimized container limits (256MB-512MB per service), 2GB swap enabled
 
 ## Repository Navigation
 
@@ -61,6 +63,7 @@ Dev-Tools/
 - **LLM**: `config/agents/models.yaml` - All agent models, costs, parameters; hot-reload on restart
 - **HITL**: `config/hitl/risk-assessment-rules.yaml`, `config/hitl/approval-policies.yaml`
 - **State**: `config/state/schema.sql` - PostgreSQL schema for checkpointing
+- **RAG/Vector DB**: Qdrant Cloud (`QDRANT_URL`, `QDRANT_API_KEY` in `.env`), OpenAI embeddings (`text-embedding-3-small`)
 - **Observability**: LangSmith (`.env` keys), Prometheus (`config/prometheus/prometheus.yml`)
 
 ## Linear Integration
@@ -500,6 +503,62 @@ This pattern provides:
 - Provider registry for multi-LLM workflows
 - Workflow conversation memory (planned Q2 2026)
 - Continuation API for resumed workflows
+
+### RAG Semantic Search (DEV-184, Completed November 2025)
+
+**Overview:** Production-ready semantic search across codebase, Linear issues, and documentation using Qdrant Cloud.
+
+**Qdrant Cloud Configuration:**
+- **Cluster**: `83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io`
+- **Embeddings**: OpenAI `text-embedding-3-small` (1536 dimensions)
+- **API Key**: Non-expiring (created Nov 26, 2025)
+
+**Indexed Collections:**
+
+| Collection | Vectors | Source | Update Frequency |
+|------------|---------|--------|------------------|
+| `code_patterns` | 505 | Python AST extraction | On deployment |
+| `issue_tracker` | 155 | Linear GraphQL API | On demand |
+| `feature_specs` | 4 | Linear Projects | On demand |
+| `the-shop` | 460 | DO Knowledge Base | Sync scheduled |
+| `vendor-docs` | 94 | API documentation | Manual |
+| `task_context` | 0 | Workflow events | When populated |
+| `agent_memory` | 0 | Agent conversations | Future |
+
+**Indexing Scripts:**
+```bash
+# Index codebase patterns (AST extraction)
+python support/scripts/rag/index_code_patterns.py
+
+# Index Linear issues
+python support/scripts/rag/index_issue_tracker.py
+
+# Index Linear projects  
+python support/scripts/rag/index_feature_specs.py
+
+# Index vendor documentation
+python support/scripts/rag/index_vendor_docs.py
+```
+
+**Query API:**
+```bash
+# Semantic search
+curl -X POST http://45.55.173.72:8007/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "workflow execution patterns", "collection": "code_patterns", "limit": 5}'
+
+# List collections
+curl http://45.55.173.72:8007/collections
+
+# Health check
+curl http://45.55.173.72:8007/health
+```
+
+**Key Files:**
+- `shared/services/rag/main.py`: RAG FastAPI service
+- `config/rag/indexing.yaml`: Indexing configuration
+- `config/rag/vectordb.config.yaml`: Collection schemas
+- `support/scripts/rag/`: Indexing scripts
 
 ## Quality bar
 
