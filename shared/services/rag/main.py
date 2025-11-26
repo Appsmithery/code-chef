@@ -62,18 +62,17 @@ def init_embedding_model():
         if OPENAI_API_KEY:
             logger.info(f"Using OpenAI embeddings: {OPENAI_EMBEDDING_MODEL}")
             return OpenAIEmbeddings(
-                model=OPENAI_EMBEDDING_MODEL,
-                openai_api_key=OPENAI_API_KEY
+                model=OPENAI_EMBEDDING_MODEL, openai_api_key=OPENAI_API_KEY
             )
         else:
-            logger.info(f"Using Ollama embeddings at {OLLAMA_URL}: {OLLAMA_EMBEDDING_MODEL}")
-            return OllamaEmbeddings(
-                model=OLLAMA_EMBEDDING_MODEL,
-                base_url=OLLAMA_URL
+            logger.info(
+                f"Using Ollama embeddings at {OLLAMA_URL}: {OLLAMA_EMBEDDING_MODEL}"
             )
+            return OllamaEmbeddings(model=OLLAMA_EMBEDDING_MODEL, base_url=OLLAMA_URL)
     except Exception as exc:
         logger.error(f"Failed to initialize embedding model: {exc}")
         raise
+
 
 def init_qdrant_client() -> Optional[QdrantClient]:
     try:
@@ -95,7 +94,9 @@ qdrant_client = init_qdrant_client()
 embedding_model = init_embedding_model()
 COLLECTION_CACHE: set[str] = set()
 
-logger.info(f"RAG Service initialized with embedding model: {type(embedding_model).__name__}")
+logger.info(
+    f"RAG Service initialized with embedding model: {type(embedding_model).__name__}"
+)
 
 DISTANCE_MAP = {
     "COSINE": Distance.COSINE,
@@ -263,17 +264,18 @@ async def embed_texts(texts: List[str]) -> List[List[float]]:
     """Generate embeddings using LangChain (OpenAI or Ollama)."""
     if not texts:
         return []
-    
+
     try:
         # Use LangChain's async embedding method
         embeddings = await embedding_model.aembed_documents(texts)
-        logger.info(f"Generated {len(embeddings)} embeddings using {type(embedding_model).__name__}")
+        logger.info(
+            f"Generated {len(embeddings)} embeddings using {type(embedding_model).__name__}"
+        )
         return embeddings
     except Exception as exc:
         logger.error(f"Embedding generation failed: {exc}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate embeddings: {str(exc)}"
+            status_code=500, detail=f"Failed to generate embeddings: {str(exc)}"
         ) from exc
 
 
@@ -529,7 +531,9 @@ async def index_documents(request: IndexRequest):
         except Exception as e:
             print(f"Failed to log indexing to memory server: {e}")
 
-        embedding_model_name = OPENAI_EMBEDDING_MODEL if OPENAI_API_KEY else OLLAMA_EMBEDDING_MODEL
+        embedding_model_name = (
+            OPENAI_EMBEDDING_MODEL if OPENAI_API_KEY else OLLAMA_EMBEDDING_MODEL
+        )
         return IndexResponse(
             success=True,
             indexed_count=len(points),
