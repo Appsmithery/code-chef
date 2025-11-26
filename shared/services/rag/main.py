@@ -32,8 +32,8 @@ QDRANT_DISTANCE = os.getenv("QDRANT_DISTANCE", "cosine")
 MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
 
-# Gradient / embeddings configuration
-GRADIENT_API_KEY = os.getenv("GRADIENT_API_KEY") or os.getenv("DIGITALOCEAN_TOKEN") or os.getenv("DIGITAL_OCEAN_PAT")
+# Gradient / embeddings configuration  
+GRADIENT_API_KEY = os.getenv("GRADIENT_API_KEY") or os.getenv("GRADIENT_MODEL_ACCESS_KEY") or os.getenv("DIGITALOCEAN_TOKEN") or os.getenv("DIGITAL_OCEAN_PAT")
 GRADIENT_BASE_URL = os.getenv("GRADIENT_BASE_URL", "https://api.digitalocean.com/v2/ai")
 GRADIENT_EMBEDDING_MODEL = os.getenv("GRADIENT_EMBEDDING_MODEL", "text-embedding-3-large")
 EMBEDDING_TIMEOUT = int(os.getenv("EMBEDDING_TIMEOUT", "60"))
