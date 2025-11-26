@@ -8,19 +8,20 @@
 
 ### Qdrant Cloud Collections
 
-| Collection     | Points | Status | Purpose                          |
-| -------------- | ------ | ------ | -------------------------------- |
-| `the-shop`     | 460    | ✅ Active | Main knowledge base (DO KB sync) |
-| `vendor-docs`  | 94     | ✅ Active | Vendor API documentation         |
-| `agent_memory` | 0      | ⚠️ Empty  | Agent conversation memory        |
-| `task_context` | 0      | ⚠️ Empty  | Task-specific context            |
-| `code_patterns`| 0      | ⚠️ Empty  | Code examples and patterns       |
-| `feature_specs`| 0      | ⚠️ Empty  | Feature specifications           |
-| `issue_tracker`| 0      | ⚠️ Empty  | Issue tracking context           |
+| Collection      | Points | Status    | Purpose                          |
+| --------------- | ------ | --------- | -------------------------------- |
+| `the-shop`      | 460    | ✅ Active | Main knowledge base (DO KB sync) |
+| `vendor-docs`   | 94     | ✅ Active | Vendor API documentation         |
+| `agent_memory`  | 0      | ⚠️ Empty  | Agent conversation memory        |
+| `task_context`  | 0      | ⚠️ Empty  | Task-specific context            |
+| `code_patterns` | 0      | ⚠️ Empty  | Code examples and patterns       |
+| `feature_specs` | 0      | ⚠️ Empty  | Feature specifications           |
+| `issue_tracker` | 0      | ⚠️ Empty  | Issue tracking context           |
 
 ### Configuration Stack
 
 **Qdrant Cloud:**
+
 - **Cluster ID**: `83b61795-7dbd-4477-890e-edce352a00e2`
 - **Region**: `us-east4-0.gcp` (Google Cloud Platform)
 - **URL**: `https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io`
@@ -28,6 +29,7 @@
 - **Distance Metric**: Cosine similarity
 
 **Embedding Provider:**
+
 - **Provider**: DigitalOcean Gradient AI
 - **Model**: `text-embedding-ada-002` (OpenAI-compatible)
 - **Endpoint**: `https://inference.do-ai.run/v1`
@@ -35,6 +37,7 @@
 - **Timeout**: 60 seconds
 
 **RAG Service (port 8007):**
+
 - **Status**: ✅ Connected to Qdrant Cloud
 - **MCP Gateway**: ✅ Connected (http://gateway-mcp:8000)
 - **Default Collection**: `the-shop`
@@ -45,6 +48,7 @@
 ### 1. Security Fix: Remove Hardcoded Credentials
 
 **Before** (`deploy/docker-compose.yml`):
+
 ```yaml
 - QDRANT_URL=https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io
 - QDRANT_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -54,6 +58,7 @@
 ```
 
 **After** (`deploy/docker-compose.yml`):
+
 ```yaml
 - QDRANT_URL=${QDRANT_URL}
 - QDRANT_API_KEY=${QDRANT_API_KEY}
@@ -64,7 +69,8 @@ env_file:
   - ../config/env/.env
 ```
 
-**Impact**: 
+**Impact**:
+
 - ✅ Credentials now loaded from `.env` (gitignored)
 - ✅ Consistent with orchestrator and other services
 - ✅ Easier to rotate keys and manage environments
@@ -72,13 +78,15 @@ env_file:
 ### 2. Standardize Embedding Provider
 
 **Changed**: OpenAI → DigitalOcean Gradient AI  
-**Reason**: 
+**Reason**:
+
 - Cost savings (150x cheaper: $0.20/1M tokens vs $30/1M)
 - <50ms latency (same datacenter)
 - OpenAI-compatible API
 - Consistent with orchestrator LLM provider
 
 **Model Mapping**:
+
 - Old: `text-embedding-3-small` (OpenAI direct)
 - New: `text-embedding-ada-002` (DO Gradient proxy)
 - Both produce 1536-dimensional vectors ✅
@@ -88,12 +96,14 @@ env_file:
 **File**: `config/env/.env.template`
 
 **Added**:
+
 - Clearer Qdrant URL format documentation
 - `QDRANT_HOST` and `QDRANT_PORT` for local dev
 - `EMBEDDING_TIMEOUT` variable
 - Deprecated old variables (with migration notes)
 
 **Removed Ambiguity**:
+
 - Consolidated `QDRANT_CLUSTER_*` → use `QDRANT_URL` + `QDRANT_API_KEY`
 - Added comments explaining where to get credentials
 
@@ -158,6 +168,7 @@ curl -X POST http://45.55.173.72:8007/query \
 **`vendor-docs` Collection**: 94 points indexed
 
 Likely sources (based on `config/rag/indexing.yaml`):
+
 - Linear GraphQL API documentation
 - Gradient AI platform docs
 - Other vendor APIs
@@ -177,6 +188,7 @@ python support/scripts/rag/index_vendor_docs.py --source langsmith-api
 ```
 
 **Sources Available** (see `config/rag/indexing.yaml`):
+
 1. **gradient-ai**: DigitalOcean Gradient platform docs
 2. **linear-api**: Linear GraphQL + SDK
 3. **langsmith-api**: LangSmith observability
@@ -217,6 +229,7 @@ docker compose logs rag-context --tail=100 | grep -i error
 
 **Grafana Dashboard**: https://appsmithery.grafana.net  
 **Metrics to Monitor**:
+
 - RAG query latency (`/query` endpoint)
 - Embedding generation time
 - Qdrant connection status
@@ -228,6 +241,7 @@ docker compose logs rag-context --tail=100 | grep -i error
 **Recovery**: Collections can be re-indexed from source URLs
 
 **Manual Backup** (via Qdrant API):
+
 ```bash
 # Export collection snapshot
 curl -X POST "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io/collections/the-shop/snapshots" \
@@ -239,11 +253,13 @@ curl -X POST "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.
 ### Issue: "Qdrant not available"
 
 **Check**:
+
 1. `QDRANT_URL` and `QDRANT_API_KEY` set in `.env`
 2. Network connectivity to Qdrant Cloud
 3. RAG service logs: `docker compose logs rag-context`
 
 **Solution**:
+
 ```bash
 # Test Qdrant connection directly
 curl "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io/collections" \
@@ -253,11 +269,13 @@ curl "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.i
 ### Issue: "Embedding API error"
 
 **Check**:
+
 1. `GRADIENT_MODEL_ACCESS_KEY` set in `.env`
 2. `GRADIENT_BASE_URL` points to DO Gradient endpoint
 3. Embedding timeout not too aggressive
 
 **Solution**:
+
 ```bash
 # Test embeddings directly
 python support/scripts/rag/test_embeddings.py
@@ -266,11 +284,13 @@ python support/scripts/rag/test_embeddings.py
 ### Issue: Empty Collections
 
 **Check**:
+
 ```bash
 curl http://45.55.173.72:8007/collections
 ```
 
 **Solution**:
+
 - For `the-shop`: Should sync from DigitalOcean Knowledge Base (460 points)
 - For `vendor-docs`: Run `index_vendor_docs.py` script
 - For other collections: Will populate as agents use them
