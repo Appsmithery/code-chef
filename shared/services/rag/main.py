@@ -245,7 +245,7 @@ async def embed_texts(texts: List[str]) -> List[List[float]]:
             detail="Embedding provider not configured (missing Gradient API key)",
         )
 
-    endpoint = f"{GRADIENT_BASE_URL.rstrip('/')}/v1/embeddings"
+    endpoint = f"{GRADIENT_BASE_URL.rstrip('/')}/embeddings"
     headers = {
         "Authorization": f"Bearer {GRADIENT_API_KEY}",
         "Content-Type": "application/json",
