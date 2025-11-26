@@ -3079,7 +3079,8 @@ async def get_workflow_status(workflow_id: str):
     )
     
     try:
-        workflow_state = await engine.get_workflow_status(workflow_id)        return WorkflowStatusResponse(
+        workflow_state = await engine.get_workflow_status(workflow_id)
+        return WorkflowStatusResponse(
             workflow_id=workflow_state.workflow_id,
             status=workflow_state.status.value,
             current_step=workflow_state.current_step,
