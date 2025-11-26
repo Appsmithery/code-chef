@@ -89,10 +89,10 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
+          memory: 256M
         reservations:
           cpus: "0.25"
-          memory: 256M
+          memory: 128M
 
   # RAG Context Manager
   rag-context:
@@ -123,7 +123,7 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
+          memory: 512M
         reservations:
           cpus: "0.25"
           memory: 256M
@@ -222,10 +222,10 @@ services:
       resources:
         limits:
           cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.5"
           memory: 256M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devtools -d devtools"]
       interval: 10s
@@ -247,10 +247,10 @@ services:
       resources:
         limits:
           cpus: "0.5"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
           memory: 128M
+        reservations:
+          cpus: "0.1"
+          memory: 32M
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -309,11 +309,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.25"
+          cpus: "0.5"
           memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
 
   prometheus:
     image: prom/prometheus:latest
@@ -336,11 +336,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.25"
+          cpus: "0.5"
           memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
 
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
@@ -439,11 +439,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.25"
+          cpus: "0.5"
           memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
       interval: 30s
@@ -464,11 +464,11 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
-          memory: 1G
-        reservations:
-          cpus: "0.25"
+          cpus: "0.5"
           memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
 
   promtail:
     image: grafana/promtail:2.9.3
