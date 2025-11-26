@@ -142,12 +142,14 @@ class GitHubPermalinkGenerator:
             45
         """
         patterns = [
-            # "path/to/file.py lines 45-67"
-            r"([a-zA-Z0-9_\-./]+\.(?:py|ts|js|tsx|jsx|yaml|yml|json|md|sh|txt|sql|env))\s+lines?\s+(\d+)-(\d+)",
-            # "path/to/file.py line 45"
-            r"([a-zA-Z0-9_\-./]+\.(?:py|ts|js|tsx|jsx|yaml|yml|json|md|sh|txt|sql|env))\s+line\s+(\d+)",
-            # Just "path/to/file.py"
-            r"([a-zA-Z0-9_\-./]+\.(?:py|ts|js|tsx|jsx|yaml|yml|json|md|sh|txt|sql|env))(?:\s|$|,|\.|;)",
+            # "`path/to/file.py` lines 45-67" or "path/to/file.py lines 45-67"
+            r"`?([a-zA-Z0-9_\-./]+\.(?:py|ts|js|tsx|jsx|yaml|yml|json|md|sh|txt|sql|env|ps1))`?\s+lines?\s+(\d+)-(\d+)",
+            # "`path/to/file.py` line 45" or "path/to/file.py line 45"
+            r"`?([a-zA-Z0-9_\-./]+\.(?:py|ts|js|tsx|jsx|yaml|yml|json|md|sh|txt|sql|env|ps1))`?\s+line\s+(\d+)",
+            # Just "`path/to/file.py`" or "path/to/file.py"
+            r"`([a-zA-Z0-9_\-./]+\.(?:py|ts|js|tsx|jsx|yaml|yml|json|md|sh|txt|sql|env|ps1))`",
+            # Fallback: path/to/file.py followed by whitespace/end/punctuation
+            r"([a-zA-Z0-9_\-./]+\.(?:py|ts|js|tsx|jsx|yaml|yml|json|md|sh|txt|sql|env|ps1))(?:\s|$|,|\.|;)",
         ]
 
         references = []
@@ -219,17 +221,23 @@ class GitHubPermalinkGenerator:
                 ref.path, ref.line_start, ref.line_end, commit_sha
             )
 
-            # Build the exact text to find and replace
+            # Build the exact text to find and replace (with and without backticks)
             if ref.line_start:
                 if ref.line_end and ref.line_end != ref.line_start:
-                    # Find "file.py lines 45-67" or "file.py line 45-67"
-                    search_text = f"{ref.path} lines {ref.line_start}-{ref.line_end}"
-                    alt_search = f"{ref.path} line {ref.line_start}-{ref.line_end}"
+                    # Find "`file.py` lines 45-67" or "file.py lines 45-67"
+                    search_variants = [
+                        f"`{ref.path}` lines {ref.line_start}-{ref.line_end}",
+                        f"{ref.path} lines {ref.line_start}-{ref.line_end}",
+                        f"`{ref.path}` line {ref.line_start}-{ref.line_end}",
+                        f"{ref.path} line {ref.line_start}-{ref.line_end}",
+                    ]
                     link_text = f"{ref.path} (L{ref.line_start}-L{ref.line_end})"
                 else:
-                    # Find "file.py line 45"
-                    search_text = f"{ref.path} line {ref.line_start}"
-                    alt_search = None
+                    # Find "`file.py` line 45" or "file.py line 45"
+                    search_variants = [
+                        f"`{ref.path}` line {ref.line_start}",
+                        f"{ref.path} line {ref.line_start}",
+                    ]
                     link_text = f"{ref.path} (L{ref.line_start})"
 
                 # Mark this path as linked (so we don't link standalone filename later)
@@ -238,27 +246,30 @@ class GitHubPermalinkGenerator:
                 # Only link standalone filename if we haven't linked it with line numbers
                 if ref.path in paths_replaced:
                     continue  # Skip this reference
-                search_text = ref.path
-                alt_search = None
+                # Find "`file.py`" or "file.py"
+                search_variants = [
+                    f"`{ref.path}`",
+                    ref.path,
+                ]
                 link_text = ref.path
                 paths_replaced.add(ref.path)
 
             markdown_link = f"[{link_text}]({permalink})"
-            replacements.append((search_text, alt_search, markdown_link))
+            replacements.append((search_variants, markdown_link))
 
         # Apply replacements (most specific first)
-        for search_text, alt_search, markdown_link in replacements:
-            # Check if this text is already inside a markdown link
-            # by checking if it appears between ]( and )
-            if f"]({search_text}" in enriched or f"[{search_text}]" in enriched:
-                continue
+        for search_variants, markdown_link in replacements:
+            # Try each variant
+            for search_text in search_variants:
+                # Check if this text is already inside a markdown link
+                # by checking if it appears between ]( and )
+                if f"]({search_text}" in enriched or f"[{search_text}]" in enriched:
+                    continue
 
-            # Try primary search text
-            if search_text in enriched:
-                enriched = enriched.replace(search_text, markdown_link, 1)
-            # Try alternative if provided
-            elif alt_search and alt_search in enriched:
-                enriched = enriched.replace(alt_search, markdown_link, 1)
+                # Try this variant
+                if search_text in enriched:
+                    enriched = enriched.replace(search_text, markdown_link, 1)
+                    break  # Stop trying variants once we find a match
 
         logger.info(f"Enriched markdown with {len(references)} permalinks")
         return enriched
