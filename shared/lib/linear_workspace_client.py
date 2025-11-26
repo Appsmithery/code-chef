@@ -887,7 +887,9 @@ class LinearWorkspaceClient:
                             description
                         )
                     )
-                    logger.info("Enriched issue description update with GitHub permalinks")
+                    logger.info(
+                        "Enriched issue description update with GitHub permalinks"
+                    )
                 except Exception as e:
                     logger.warning(
                         f"Failed to enrich description with permalinks: {e}. Using original."
@@ -973,7 +975,7 @@ class LinearWorkspaceClient:
                 logger.warning(
                     f"Failed to enrich comment with permalinks: {e}. Using original body."
                 )
-        
+
         mutation = gql(
             """
             mutation CreateComment($issueId: String!, $body: String!) {
