@@ -10,17 +10,20 @@
 ## Quick Reference
 
 ### Health Check
+
 ```bash
 curl http://45.55.173.72:8007/health
 # Expected: {"status":"ok","qdrant_status":"connected","mcp_gateway_status":"connected"}
 ```
 
 ### List Collections
+
 ```bash
 curl http://45.55.173.72:8007/collections
 ```
 
 ### Query Semantic Search
+
 ```bash
 curl -X POST http://45.55.173.72:8007/query \
   -H "Content-Type: application/json" \
@@ -31,32 +34,35 @@ curl -X POST http://45.55.173.72:8007/query \
 
 ## Production Collections (1,218 Total Vectors)
 
-| Collection | Vectors | Source | Purpose | Update Frequency |
-|------------|---------|--------|---------|------------------|
-| **code_patterns** | 505 | Python AST extraction | Codebase patterns, functions, classes | On deployment |
-| **issue_tracker** | 155 | Linear GraphQL API | Issue search, project context | On demand |
-| **feature_specs** | 4 | Linear Projects | Project specifications | On demand |
-| **the-shop** | 460 | DigitalOcean KB | DigitalOcean documentation | Scheduled sync |
-| **vendor-docs** | 94 | API documentation | Vendor API references | Manual |
-| **task_context** | 0 | Workflow events | Task execution history | Future (needs workflow_events table) |
-| **agent_memory** | 0 | Agent conversations | Episodic agent memory | Future |
+| Collection        | Vectors | Source                | Purpose                               | Update Frequency                     |
+| ----------------- | ------- | --------------------- | ------------------------------------- | ------------------------------------ |
+| **code_patterns** | 505     | Python AST extraction | Codebase patterns, functions, classes | On deployment                        |
+| **issue_tracker** | 155     | Linear GraphQL API    | Issue search, project context         | On demand                            |
+| **feature_specs** | 4       | Linear Projects       | Project specifications                | On demand                            |
+| **the-shop**      | 460     | DigitalOcean KB       | DigitalOcean documentation            | Scheduled sync                       |
+| **vendor-docs**   | 94      | API documentation     | Vendor API references                 | Manual                               |
+| **task_context**  | 0       | Workflow events       | Task execution history                | Future (needs workflow_events table) |
+| **agent_memory**  | 0       | Agent conversations   | Episodic agent memory                 | Future                               |
 
 ---
 
 ## Qdrant Cloud Configuration
 
 **Cluster Details:**
+
 - **Cluster ID**: `83b61795-7dbd-4477-890e-edce352a00e2`
 - **Region**: `us-east4-0.gcp` (Google Cloud Platform)
 - **URL**: `https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io`
 - **Dashboard**: https://cloud.qdrant.io
 
 **API Key:**
+
 - Created: November 26, 2025
 - Expiration: **None** (permanent)
 - Access: MANAGE CLUSTER (full access)
 
 **Embeddings:**
+
 - Provider: OpenAI
 - Model: `text-embedding-3-small`
 - Dimensions: 1536
@@ -69,6 +75,7 @@ curl -X POST http://45.55.173.72:8007/query \
 All scripts located in `support/scripts/rag/`:
 
 ### Index Code Patterns (505 vectors)
+
 Extracts patterns from Python codebase using AST analysis.
 
 ```bash
@@ -77,6 +84,7 @@ python support/scripts/rag/index_code_patterns.py
 ```
 
 **Pattern Types Extracted:**
+
 - Functions and methods with docstrings
 - Class definitions with inheritance
 - Data retrieval patterns
@@ -85,6 +93,7 @@ python support/scripts/rag/index_code_patterns.py
 - Error handling patterns
 
 ### Index Linear Issues (155 vectors)
+
 Syncs issues from Linear workspace via GraphQL API.
 
 ```bash
@@ -94,12 +103,14 @@ python support/scripts/rag/index_issue_tracker.py
 ```
 
 **Indexed Fields:**
+
 - Issue title and description
 - Comments and discussion
 - Labels and priority
 - State and assignee
 
 ### Index Linear Projects (4 vectors)
+
 Syncs project specifications from Linear.
 
 ```bash
@@ -109,6 +120,7 @@ python support/scripts/rag/index_feature_specs.py
 ```
 
 ### Index Vendor Documentation (94 vectors)
+
 Indexes external API documentation.
 
 ```bash
@@ -140,12 +152,12 @@ OPENAI_API_KEY=sk-proj-...
 
 ### Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Service health with Qdrant connection status |
-| `/collections` | GET | List all collections with vector counts |
-| `/query` | POST | Semantic search across collections |
-| `/index` | POST | Index new documents (internal) |
+| Endpoint       | Method | Description                                  |
+| -------------- | ------ | -------------------------------------------- |
+| `/health`      | GET    | Service health with Qdrant connection status |
+| `/collections` | GET    | List all collections with vector counts      |
+| `/query`       | POST   | Semantic search across collections           |
+| `/index`       | POST   | Index new documents (internal)               |
 
 ### Query Request Format
 
@@ -188,6 +200,7 @@ OPENAI_API_KEY=sk-proj-...
 **Cause**: API key expired or invalid
 
 **Solution**:
+
 1. Check key in Qdrant Cloud dashboard
 2. Generate new key if expired
 3. Update `.env` on droplet:
@@ -206,6 +219,7 @@ OPENAI_API_KEY=sk-proj-...
 **Cause**: DNS resolution failure inside container
 
 **Solution**:
+
 1. Check internet connectivity on droplet
 2. Verify QDRANT_URL is correct (not localhost)
 3. Restart Docker DNS:
@@ -218,6 +232,7 @@ OPENAI_API_KEY=sk-proj-...
 **Cause**: Collection not indexed or wrong collection name
 
 **Solution**:
+
 1. List collections: `curl http://45.55.173.72:8007/collections`
 2. Check vector count > 0
 3. Re-index if needed:
@@ -230,6 +245,7 @@ OPENAI_API_KEY=sk-proj-...
 **Cause**: Large result set or unoptimized embeddings
 
 **Solution**:
+
 1. Add `score_threshold` to filter low-relevance results
 2. Reduce `limit` parameter
 3. Check Qdrant Cloud metrics for bottlenecks
@@ -239,10 +255,12 @@ OPENAI_API_KEY=sk-proj-...
 ## Monitoring
 
 ### Grafana Dashboard
+
 - URL: https://appsmithery.grafana.net
 - Metrics: RAG query latency, Qdrant connection status
 
 ### Logs
+
 ```bash
 # View RAG service logs
 ssh root@45.55.173.72 "docker logs deploy-rag-context-1 --tail=100 -f"
@@ -252,6 +270,7 @@ ssh root@45.55.173.72 "docker logs deploy-rag-context-1 2>&1 | grep -i error"
 ```
 
 ### Health Monitoring
+
 ```bash
 # Automated health check
 curl -s http://45.55.173.72:8007/health | jq .
@@ -272,11 +291,13 @@ curl -s http://45.55.173.72:8007/health | jq .
 ### Re-indexing Collections
 
 **When to re-index:**
+
 - After major code changes
 - After Linear issue bulk updates
 - When vectors seem outdated
 
 **Full re-index:**
+
 ```bash
 ssh root@45.55.173.72
 cd /opt/Dev-Tools
@@ -294,6 +315,7 @@ python support/scripts/rag/index_feature_specs.py
 **Qdrant Cloud**: Automatic backups enabled
 
 **Manual snapshot:**
+
 ```bash
 curl -X POST "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io/collections/code_patterns/snapshots" \
   -H "api-key: $QDRANT_API_KEY"
@@ -314,6 +336,7 @@ curl -X POST "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.
 ## Changelog
 
 ### November 26, 2025 (DEV-184)
+
 - ✅ Indexed code_patterns (505 vectors)
 - ✅ Indexed issue_tracker (155 vectors)
 - ✅ Indexed feature_specs (4 vectors)

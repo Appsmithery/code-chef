@@ -9,6 +9,7 @@
 ## Pre-Test Setup
 
 ### 1. Environment Verification
+
 ```powershell
 # Check all services are healthy
 ssh root@45.55.173.72 "curl -s http://localhost:8001/health"  # Orchestrator
@@ -18,6 +19,7 @@ ssh root@45.55.173.72 "curl -s http://localhost:8008/health"  # State
 ```
 
 ### 2. Container Status
+
 ```powershell
 ssh root@45.55.173.72 "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
 ```
@@ -31,6 +33,7 @@ Expected: 13 containers running
 ## 1. RAG Semantic Search (DEV-184) ✅
 
 ### 1.1 Qdrant Cloud Connection
+
 - [ ] **Health check shows qdrant_status: connected**
   ```bash
   curl http://45.55.173.72:8007/health | jq '.qdrant_status'
@@ -38,6 +41,7 @@ Expected: 13 containers running
   ```
 
 ### 1.2 Collection Verification
+
 - [ ] **All 7 collections exist with correct counts**
   ```bash
   curl http://45.55.173.72:8007/collections | jq .
@@ -52,7 +56,9 @@ Expected: 13 containers running
   ```
 
 ### 1.3 Semantic Search Queries
+
 - [ ] **Query code_patterns**
+
   ```bash
   curl -X POST http://45.55.173.72:8007/query \
     -H "Content-Type: application/json" \
@@ -61,6 +67,7 @@ Expected: 13 containers running
   ```
 
 - [ ] **Query issue_tracker**
+
   ```bash
   curl -X POST http://45.55.173.72:8007/query \
     -H "Content-Type: application/json" \
@@ -81,6 +88,7 @@ Expected: 13 containers running
 ## 2. Memory Optimization
 
 ### 2.1 Swap Enabled
+
 - [ ] **2GB swap active**
   ```bash
   ssh root@45.55.173.72 "free -h | grep Swap"
@@ -88,6 +96,7 @@ Expected: 13 containers running
   ```
 
 ### 2.2 Container Memory Limits
+
 - [ ] **All containers within limits**
   ```bash
   ssh root@45.55.173.72 "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}'"
@@ -99,6 +108,7 @@ Expected: 13 containers running
   ```
 
 ### 2.3 System Memory
+
 - [ ] **Available memory > 500MB**
   ```bash
   ssh root@45.55.173.72 "free -h"
@@ -110,6 +120,7 @@ Expected: 13 containers running
 ## 3. Orchestrator & LangGraph
 
 ### 3.1 Health Endpoints
+
 - [ ] **Orchestrator healthy**
   ```bash
   curl http://45.55.173.72:8001/health
@@ -117,6 +128,7 @@ Expected: 13 containers running
   ```
 
 ### 3.2 Token Metrics
+
 - [ ] **Token tracking endpoint accessible**
   ```bash
   curl http://45.55.173.72:8001/metrics/tokens | jq '.totals'
@@ -124,6 +136,7 @@ Expected: 13 containers running
   ```
 
 ### 3.3 Prometheus Metrics
+
 - [ ] **Prometheus metrics exposed**
   ```bash
   curl -s http://45.55.173.72:8001/metrics | grep llm_
@@ -135,6 +148,7 @@ Expected: 13 containers running
 ## 4. MCP Gateway
 
 ### 4.1 Gateway Health
+
 - [ ] **Gateway operational**
   ```bash
   curl http://45.55.173.72:8000/health
@@ -142,6 +156,7 @@ Expected: 13 containers running
   ```
 
 ### 4.2 Tool Discovery
+
 - [ ] **Tools available**
   ```bash
   curl http://45.55.173.72:8000/tools | jq '. | length'
@@ -153,6 +168,7 @@ Expected: 13 containers running
 ## 5. Linear Integration
 
 ### 5.1 Linear API Connection
+
 - [ ] **Verify Linear API key works**
   ```bash
   curl -X POST https://api.linear.app/graphql \
@@ -163,6 +179,7 @@ Expected: 13 containers running
   ```
 
 ### 5.2 HITL Hub Active
+
 - [ ] **DEV-68 exists and is In Progress**
   ```bash
   # Check via Linear UI or API
@@ -174,17 +191,20 @@ Expected: 13 containers running
 ## 6. Observability
 
 ### 6.1 LangSmith Tracing
+
 - [ ] **LangSmith receiving traces**
   - Open: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
   - Expected: Recent traces visible (within last hour if agents active)
 
 ### 6.2 Grafana Cloud
+
 - [ ] **Metrics visible in Grafana**
   - Open: https://appsmithery.grafana.net/explore
   - Query: `up{cluster="dev-tools"}`
   - Expected: 4+ services reporting
 
 ### 6.3 Prometheus Scraping
+
 - [ ] **All services being scraped**
   ```bash
   ssh root@45.55.173.72 "curl -s http://localhost:9090/api/v1/targets" | jq '.data.activeTargets | length'
@@ -196,6 +216,7 @@ Expected: 13 containers running
 ## 7. State Persistence
 
 ### 7.1 PostgreSQL
+
 - [ ] **Database accessible**
   ```bash
   ssh root@45.55.173.72 "docker exec deploy-postgres-1 pg_isready"
@@ -203,6 +224,7 @@ Expected: 13 containers running
   ```
 
 ### 7.2 Redis
+
 - [ ] **Redis operational**
   ```bash
   ssh root@45.55.173.72 "docker exec deploy-redis-1 redis-cli ping"
@@ -214,6 +236,7 @@ Expected: 13 containers running
 ## 8. Workflow Engine (Zen Patterns)
 
 ### 8.1 TTL Configuration
+
 - [ ] **WORKFLOW_TTL_HOURS set**
   ```bash
   ssh root@45.55.173.72 "grep WORKFLOW_TTL_HOURS /opt/Dev-Tools/config/env/.env"
@@ -221,6 +244,7 @@ Expected: 13 containers running
   ```
 
 ### 8.2 Event Schema
+
 - [ ] **workflow_events table exists (if deployed)**
   ```bash
   ssh root@45.55.173.72 "docker exec deploy-postgres-1 psql -U devtools -c '\dt workflow_*'"
@@ -233,23 +257,23 @@ Expected: 13 containers running
 
 ### Test Run: [DATE]
 
-| Category | Test | Result | Notes |
-|----------|------|--------|-------|
-| RAG | Health check | ⬜ | |
-| RAG | Collections exist | ⬜ | |
-| RAG | Query code_patterns | ⬜ | |
-| RAG | Query issue_tracker | ⬜ | |
-| Memory | Swap enabled | ⬜ | |
-| Memory | Container limits | ⬜ | |
-| Orchestrator | Health | ⬜ | |
-| Orchestrator | Token metrics | ⬜ | |
-| Gateway | Health | ⬜ | |
-| Gateway | Tools available | ⬜ | |
-| Linear | API connection | ⬜ | |
-| Observability | LangSmith | ⬜ | |
-| Observability | Grafana | ⬜ | |
-| State | PostgreSQL | ⬜ | |
-| State | Redis | ⬜ | |
+| Category      | Test                | Result | Notes |
+| ------------- | ------------------- | ------ | ----- |
+| RAG           | Health check        | ⬜     |       |
+| RAG           | Collections exist   | ⬜     |       |
+| RAG           | Query code_patterns | ⬜     |       |
+| RAG           | Query issue_tracker | ⬜     |       |
+| Memory        | Swap enabled        | ⬜     |       |
+| Memory        | Container limits    | ⬜     |       |
+| Orchestrator  | Health              | ⬜     |       |
+| Orchestrator  | Token metrics       | ⬜     |       |
+| Gateway       | Health              | ⬜     |       |
+| Gateway       | Tools available     | ⬜     |       |
+| Linear        | API connection      | ⬜     |       |
+| Observability | LangSmith           | ⬜     |       |
+| Observability | Grafana             | ⬜     |       |
+| State         | PostgreSQL          | ⬜     |       |
+| State         | Redis               | ⬜     |       |
 
 **Legend:** ✅ Pass | ❌ Fail | ⬜ Not tested
 
@@ -260,14 +284,17 @@ Expected: 13 containers running
 ### Common Issues
 
 1. **RAG returns 403**
+
    - Cause: Qdrant API key expired
    - Fix: Generate new key in Qdrant Cloud, update .env, recreate rag-context
 
 2. **Container OOM killed**
+
    - Cause: Memory limit exceeded
    - Fix: Check limits in docker-compose.yml, increase if needed
 
 3. **No LangSmith traces**
+
    - Cause: LANGSMITH_TRACING not set or API key invalid
    - Fix: Check .env, verify key at smith.langchain.com
 

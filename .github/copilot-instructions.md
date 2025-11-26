@@ -509,23 +509,25 @@ This pattern provides:
 **Overview:** Production-ready semantic search across codebase, Linear issues, and documentation using Qdrant Cloud.
 
 **Qdrant Cloud Configuration:**
+
 - **Cluster**: `83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io`
 - **Embeddings**: OpenAI `text-embedding-3-small` (1536 dimensions)
 - **API Key**: Non-expiring (created Nov 26, 2025)
 
 **Indexed Collections:**
 
-| Collection | Vectors | Source | Update Frequency |
-|------------|---------|--------|------------------|
-| `code_patterns` | 505 | Python AST extraction | On deployment |
-| `issue_tracker` | 155 | Linear GraphQL API | On demand |
-| `feature_specs` | 4 | Linear Projects | On demand |
-| `the-shop` | 460 | DO Knowledge Base | Sync scheduled |
-| `vendor-docs` | 94 | API documentation | Manual |
-| `task_context` | 0 | Workflow events | When populated |
-| `agent_memory` | 0 | Agent conversations | Future |
+| Collection      | Vectors | Source                | Update Frequency |
+| --------------- | ------- | --------------------- | ---------------- |
+| `code_patterns` | 505     | Python AST extraction | On deployment    |
+| `issue_tracker` | 155     | Linear GraphQL API    | On demand        |
+| `feature_specs` | 4       | Linear Projects       | On demand        |
+| `the-shop`      | 460     | DO Knowledge Base     | Sync scheduled   |
+| `vendor-docs`   | 94      | API documentation     | Manual           |
+| `task_context`  | 0       | Workflow events       | When populated   |
+| `agent_memory`  | 0       | Agent conversations   | Future           |
 
 **Indexing Scripts:**
+
 ```bash
 # Index codebase patterns (AST extraction)
 python support/scripts/rag/index_code_patterns.py
@@ -533,7 +535,7 @@ python support/scripts/rag/index_code_patterns.py
 # Index Linear issues
 python support/scripts/rag/index_issue_tracker.py
 
-# Index Linear projects  
+# Index Linear projects
 python support/scripts/rag/index_feature_specs.py
 
 # Index vendor documentation
@@ -541,6 +543,7 @@ python support/scripts/rag/index_vendor_docs.py
 ```
 
 **Query API:**
+
 ```bash
 # Semantic search
 curl -X POST http://45.55.173.72:8007/query \
@@ -555,6 +558,7 @@ curl http://45.55.173.72:8007/health
 ```
 
 **Key Files:**
+
 - `shared/services/rag/main.py`: RAG FastAPI service
 - `config/rag/indexing.yaml`: Indexing configuration
 - `config/rag/vectordb.config.yaml`: Collection schemas
