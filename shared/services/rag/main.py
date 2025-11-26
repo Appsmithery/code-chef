@@ -39,21 +39,41 @@ QDRANT_DISTANCE = os.getenv("QDRANT_DISTANCE", "cosine")
 MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
 
-# Gradient / embeddings configuration
-# For embeddings, prioritize GRADIENT_MODEL_ACCESS_KEY (serverless inference)
-# over GRADIENT_API_KEY (agentic cloud/workspaces)
-GRADIENT_API_KEY = (
-    os.getenv("GRADIENT_MODEL_ACCESS_KEY")
-    or os.getenv("GRADIENT_API_KEY")
-    or os.getenv("DIGITALOCEAN_TOKEN")
-    or os.getenv("DIGITAL_OCEAN_PAT")
-)
-GRADIENT_BASE_URL = os.getenv("GRADIENT_BASE_URL", "https://api.digitalocean.com/v2/ai")
-GRADIENT_EMBEDDING_MODEL = os.getenv(
-    "GRADIENT_EMBEDDING_MODEL", "text-embedding-3-large"
-)
-EMBEDDING_TIMEOUT = int(os.getenv("EMBEDDING_TIMEOUT", "60"))
+# Embedding configuration - Hybrid approach (OpenAI primary, Ollama fallback)
+from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import OllamaEmbeddings
+from typing import Optional
+import logging
 
+logger = logging.getLogger(__name__)
+
+# OpenAI Configuration (primary)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+
+# Ollama Configuration (fallback)
+OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434")
+OLLAMA_EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "nomic-embed-text")
+
+
+def init_embedding_model():
+    """Initialize embedding model with fallback chain: OpenAI → Ollama."""
+    try:
+        if OPENAI_API_KEY:
+            logger.info(f"Using OpenAI embeddings: {OPENAI_EMBEDDING_MODEL}")
+            return OpenAIEmbeddings(
+                model=OPENAI_EMBEDDING_MODEL,
+                openai_api_key=OPENAI_API_KEY
+            )
+        else:
+            logger.info(f"Using Ollama embeddings at {OLLAMA_URL}: {OLLAMA_EMBEDDING_MODEL}")
+            return OllamaEmbeddings(
+                model=OLLAMA_EMBEDDING_MODEL,
+                base_url=OLLAMA_URL
+            )
+    except Exception as exc:
+        logger.error(f"Failed to initialize embedding model: {exc}")
+        raise
 
 def init_qdrant_client() -> Optional[QdrantClient]:
     try:
@@ -72,7 +92,10 @@ def init_qdrant_client() -> Optional[QdrantClient]:
 
 
 qdrant_client = init_qdrant_client()
+embedding_model = init_embedding_model()
 COLLECTION_CACHE: set[str] = set()
+
+logger.info(f"RAG Service initialized with embedding model: {type(embedding_model).__name__}")
 
 DISTANCE_MAP = {
     "COSINE": Distance.COSINE,
@@ -237,37 +260,20 @@ def build_metadata_filter(metadata: Optional[Dict[str, Any]]) -> Optional[Filter
 
 
 async def embed_texts(texts: List[str]) -> List[List[float]]:
+    """Generate embeddings using LangChain (OpenAI or Ollama)."""
     if not texts:
         return []
-    if not GRADIENT_API_KEY:
+    
+    try:
+        # Use LangChain's async embedding method
+        embeddings = await embedding_model.aembed_documents(texts)
+        logger.info(f"Generated {len(embeddings)} embeddings using {type(embedding_model).__name__}")
+        return embeddings
+    except Exception as exc:
+        logger.error(f"Embedding generation failed: {exc}")
         raise HTTPException(
             status_code=500,
-            detail="Embedding provider not configured (missing Gradient API key)",
-        )
-
-    endpoint = f"{GRADIENT_BASE_URL.rstrip('/')}/embeddings"
-    headers = {
-        "Authorization": f"Bearer {GRADIENT_API_KEY}",
-        "Content-Type": "application/json",
-    }
-    payload = {"model": GRADIENT_EMBEDDING_MODEL, "input": texts}
-
-    try:
-        async with httpx.AsyncClient(timeout=EMBEDDING_TIMEOUT) as client:
-            response = await client.post(endpoint, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            embeddings = [item.get("embedding") for item in data.get("data", [])]
-            if len(embeddings) != len(texts):
-                raise ValueError("Embedding response size mismatch")
-            return embeddings
-    except httpx.HTTPStatusError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Embedding API error: {exc.response.text}"
-        ) from exc
-    except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to generate embeddings: {exc}"
+            detail=f"Failed to generate embeddings: {str(exc)}"
         ) from exc
 
 
@@ -523,11 +529,12 @@ async def index_documents(request: IndexRequest):
         except Exception as e:
             print(f"Failed to log indexing to memory server: {e}")
 
+        embedding_model_name = OPENAI_EMBEDDING_MODEL if OPENAI_API_KEY else OLLAMA_EMBEDDING_MODEL
         return IndexResponse(
             success=True,
             indexed_count=len(points),
             collection=request.collection,
-            message=f"Indexed {len(points)} documents with embedding model {GRADIENT_EMBEDDING_MODEL}.",
+            message=f"Indexed {len(points)} documents with {type(embedding_model).__name__} ({embedding_model_name}).",
         )
 
     except HTTPException:
