@@ -67,7 +67,7 @@ Dev-Tools/
 
 ### Roadmap Management (CRITICAL WORKFLOW)
 
-When user says *"update linear roadmap"* → Update Linear project issues via API, NOT markdown files
+When user says _"update linear roadmap"_ → Update Linear project issues via API, NOT markdown files
 
 **Commands:**
 
@@ -96,7 +96,7 @@ python support/scripts/linear/agent-linear-update.py create-phase --project-id "
 - **Retrospective Updates**: Always mark completed work as "done"
 - **Decompose Tasks**: Create sub-issues for complex features (3-5 tasks each)
 - **Dependency Awareness**: Use explicit dependency identifiers between issues/subissues
-- **Temporal Ambiguity**: Don't reference time periods or relative timelines  
+- **Temporal Ambiguity**: Don't reference time periods or relative timelines
 - **Taxonomy**: Linear platform content structure includes {`Workspace` > `Team` > `Project` > `Issue` > `Sub-issue` > `Milestone`}
 
 ### HITL Approvals
@@ -448,6 +448,7 @@ This pattern provides:
 **Completed Implementations:**
 
 1. **Parent Workflow Chains** (`shared/lib/workflow_reducer.py` + `config/state/workflow_events.sql`):
+
    - Added `parent_workflow_id` field to `WorkflowEvent` dataclass
    - Implemented `get_workflow_chain(workflow_id, event_loader)` with circular detection
    - Recursive CTE view: `workflow_chains` for SQL-based traversal
@@ -455,6 +456,7 @@ This pattern provides:
    - Migration: `SELECT migrate_parent_workflow_id();` (idempotent)
 
 2. **Resource Deduplication** (`agent_orchestrator/workflows/workflow_engine.py`):
+
    - Newest-first priority: `_deduplicate_workflow_resources()` walks events backwards
    - **80-90% token savings** when files modified multiple times (Zen production proven)
    - Example: `docker-compose.yml` modified 5x → 1 file in context (5000 → 1000 tokens)
@@ -468,11 +470,13 @@ This pattern provides:
    - View: `active_workflows_with_ttl` shows TTL status for monitoring
 
 **Implementation Stats:**
+
 - Code: 300+ lines production code, 160+ lines SQL (migrations, views, functions)
 - Tests: 55 unit tests across 3 test files (24 + 18 + 13)
 - Linear Issues: DEV-175 (parent), DEV-176 (parent chains), DEV-177 (resource dedup), DEV-178 (TTL management)
 
 **Key Files:**
+
 - `shared/lib/workflow_reducer.py`: Parent chain traversal logic
 - `agent_orchestrator/workflows/workflow_engine.py`: Deduplication + TTL management
 - `config/state/workflow_events.sql`: Schema migrations and database functions
@@ -482,6 +486,7 @@ This pattern provides:
 - `support/tests/unit/test_workflow_ttl.py`: 13 test cases
 
 **Deployment:**
+
 1. Update `.env`: Set `WORKFLOW_TTL_HOURS` (24 for production)
 2. Run SQL migrations: `psql $DATABASE_URL -f config/state/workflow_events.sql`
 3. Deploy: `./support/scripts/deploy/deploy-to-droplet.ps1 -DeployType full`
@@ -489,6 +494,7 @@ This pattern provides:
 5. Monitor: LangSmith traces show token savings, Grafana metrics track workflow lifecycle
 
 **Future Enhancements (See Linear Backlog):**
+
 - Dual prioritization strategy (DEV-167 dependency)
 - Model context management improvements
 - Provider registry for multi-LLM workflows
