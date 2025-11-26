@@ -23,40 +23,40 @@ from lib.linear_workspace_client import LinearWorkspaceClient
 
 async def test_update_and_comment():
     """Test update_issue() and add_comment() with permalink enrichment."""
-    
+
     print("\n" + "=" * 60)
     print("GitHub Permalink Generation - Update & Comment Test")
     print("=" * 60)
-    
+
     # Load config
     print("\nLoading Linear configuration...")
     config = LinearConfig.load()
-    
+
     if not config.github or not config.github.permalink_generation.enabled:
         print("❌ GitHub permalink generation not enabled in config")
         return False
-    
+
     print(f"✅ GitHub config loaded: {config.github.repository.url}")
     print(f"✅ Permalink generation: enabled")
-    
+
     # Initialize client
     print("\nInitializing Linear workspace client...")
     client = LinearWorkspaceClient()
-    
+
     if not client.permalink_generator:
         print("❌ Permalink generator not initialized")
         return False
-    
+
     print("✅ Permalink generator initialized")
-    
+
     # Test case: Find the most recent test issue
     print("\n" + "-" * 60)
     print("Test 1: Update Issue Description with File References")
     print("-" * 60)
-    
+
     # Use DEV-182 from previous test
     issue_identifier = "DEV-182"
-    
+
     update_description = """## Implementation Update
 
 **Completed:**
@@ -70,28 +70,27 @@ All unit tests passing. See `support/scripts/linear/test-permalink-generation.py
 **Next Steps:**
 Review deployment process in `support/scripts/deploy/deploy-to-droplet.ps1 lines 100-150`.
 """
-    
+
     print(f"\nUpdating issue: {issue_identifier}")
     print("\nNew description with file references:")
     print(update_description)
-    
+
     success = await client.update_issue(
-        issue_identifier=issue_identifier,
-        description=update_description
+        issue_identifier=issue_identifier, description=update_description
     )
-    
+
     if success:
         print(f"\n✅ Issue {issue_identifier} updated successfully")
         print(f"   URL: https://linear.app/dev-ops/issue/{issue_identifier}")
     else:
         print(f"\n❌ Failed to update issue {issue_identifier}")
         return False
-    
+
     # Test case 2: Add comment with file references
     print("\n" + "-" * 60)
     print("Test 2: Add Comment with File References")
     print("-" * 60)
-    
+
     comment_body = """**Production Deployment Complete** 🚀
 
 Deployed to droplet 45.55.173.72 with permalink generation enabled.
@@ -106,26 +105,31 @@ Check orchestrator startup in `deploy/docker-compose.yml` service definition.
 
 All systems operational! 🎉
 """
-    
+
     print(f"\nAdding comment to issue: {issue_identifier}")
     print("\nComment with file references:")
     print(comment_body)
-    
+
     # Get issue UUID first
     from gql import gql
-    query = gql("""
+
+    query = gql(
+        """
         query GetIssueId($identifier: String!) {
             issue(id: $identifier) {
                 id
             }
         }
-    """)
-    
-    result = client.client.execute(query, variable_values={"identifier": issue_identifier})
+    """
+    )
+
+    result = client.client.execute(
+        query, variable_values={"identifier": issue_identifier}
+    )
     issue_id = result["issue"]["id"]
-    
+
     comment = await client.add_comment(issue_id, comment_body)
-    
+
     if comment:
         print(f"\n✅ Comment added successfully")
         print(f"   Comment ID: {comment['id']}")
@@ -133,12 +137,12 @@ All systems operational! 🎉
     else:
         print(f"\n❌ Failed to add comment")
         return False
-    
+
     # Test case 3: Combined update
     print("\n" + "-" * 60)
     print("Test 3: Update with Both Description and Comment")
     print("-" * 60)
-    
+
     combined_description = """## Final Status Update
 
 **Feature Complete:** GitHub permalink generation is now live in production.
@@ -153,7 +157,7 @@ All agent workflows (feature-dev, code-review, infrastructure, cicd, documentati
 **Documentation:**
 See `support/docs/LINEAR_INTEGRATION_GUIDE.md` for usage guide.
 """
-    
+
     combined_comment = """**Retrospective: DEV-180 Implementation**
 
 **Timeline:**
@@ -173,16 +177,16 @@ See `support/docs/LINEAR_INTEGRATION_GUIDE.md` for usage guide.
 
 🎯 Ready for production use!
 """
-    
+
     print(f"\nUpdating issue {issue_identifier} with description + comment...")
-    
+
     success = await client.update_issue(
         issue_identifier=issue_identifier,
         description=combined_description,
         state_name="done",
-        comment=combined_comment
+        comment=combined_comment,
     )
-    
+
     if success:
         print(f"\n✅ Issue {issue_identifier} updated with description and comment")
         print(f"   Status: Done")
@@ -190,7 +194,7 @@ See `support/docs/LINEAR_INTEGRATION_GUIDE.md` for usage guide.
     else:
         print(f"\n❌ Failed to update issue")
         return False
-    
+
     # Summary
     print("\n" + "=" * 60)
     print("Test Summary")
@@ -198,7 +202,7 @@ See `support/docs/LINEAR_INTEGRATION_GUIDE.md` for usage guide.
     print("Update Issue Description:  ✅ PASS")
     print("Add Comment:               ✅ PASS")
     print("Combined Update + Comment: ✅ PASS")
-    
+
     print("\n✅ All tests passed!")
     print("\n📌 Manual Verification:")
     print(f"   Open issue: https://linear.app/dev-ops/issue/{issue_identifier}")
@@ -206,7 +210,7 @@ See `support/docs/LINEAR_INTEGRATION_GUIDE.md` for usage guide.
     print("   2. Check comments have clickable GitHub permalinks")
     print("   3. Verify links navigate to correct files/lines on GitHub")
     print("   4. Confirm all links include commit SHA for stability")
-    
+
     return True
 
 
