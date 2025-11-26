@@ -79,12 +79,7 @@ async def fetch_linear_projects() -> List[Dict[str, Any]]:
                 print(f"❌ GraphQL errors: {data['errors']}")
                 return []
 
-            projects = (
-                data.get("data", {})
-                .get("projects", {})
-                .get("projects", {})
-                .get("nodes", [])
-            )
+            projects = data.get("data", {}).get("projects", {}).get("nodes", [])
             print(f"✅ Fetched {len(projects)} projects")
             return projects
 
@@ -164,12 +159,10 @@ async def index_to_rag_service(documents: List[Dict[str, Any]]):
             "project_name": d["project_name"],
             "state": d["state"],
             "priority": d["priority"],
-            "total_issues": d["total_issues"],
-            "completed_issues": d["completed_issues"],
-            "completion_percentage": d["completion_percentage"],
-            "labels": d["labels"][:10],  # Limit to 10 labels for metadata
             "lead": d["lead"],
             "url": d["url"],
+            "start_date": d.get("start_date", ""),
+            "target_date": d.get("target_date", ""),
             "updated_at": d["updated_at"],
             "indexed_at": datetime.utcnow().isoformat(),
         }
@@ -223,9 +216,7 @@ async def main():
     for project in projects:
         doc = project_to_document(project)
         documents.append(doc)
-        print(
-            f"  ✓ {doc['project_name']}: {doc['total_issues']} issues, {doc['completion_percentage']}% complete"
-        )
+        print(f"  ✓ {doc['project_name']} ({doc['state']})")
 
     print(f"\n✅ Prepared {len(documents)} feature spec documents")
 
