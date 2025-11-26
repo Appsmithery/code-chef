@@ -40,9 +40,11 @@ MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
 
 # Gradient / embeddings configuration
+# For embeddings, prioritize GRADIENT_MODEL_ACCESS_KEY (serverless inference)
+# over GRADIENT_API_KEY (agentic cloud/workspaces)
 GRADIENT_API_KEY = (
-    os.getenv("GRADIENT_API_KEY")
-    or os.getenv("GRADIENT_MODEL_ACCESS_KEY")
+    os.getenv("GRADIENT_MODEL_ACCESS_KEY")
+    or os.getenv("GRADIENT_API_KEY")
     or os.getenv("DIGITALOCEAN_TOKEN")
     or os.getenv("DIGITAL_OCEAN_PAT")
 )
