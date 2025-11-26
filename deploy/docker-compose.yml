@@ -107,7 +107,6 @@ services:
       - QDRANT_COLLECTION=${QDRANT_COLLECTION:-the-shop}
       - QDRANT_VECTOR_SIZE=${QDRANT_VECTOR_SIZE:-1536}
       - QDRANT_DISTANCE=${QDRANT_DISTANCE:-cosine}
-      - GRADIENT_API_KEY=${GRADIENT_MODEL_ACCESS_KEY}
       - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://inference.do-ai.run/v1}
       - GRADIENT_EMBEDDING_MODEL=${GRADIENT_EMBEDDING_MODEL:-text-embedding-ada-002}
       - EMBEDDING_TIMEOUT=${EMBEDDING_TIMEOUT:-60}
@@ -275,7 +274,6 @@ services:
       - DB_USER=devtools
       - DB_PASSWORD_FILE=/run/secrets/db_password
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
-      - GRADIENT_MODEL_ACCESS_KEY=${GRADIENT_MODEL_ACCESS_KEY:-}
       - GRADIENT_MODEL=${GRADIENT_MODEL:-meta-llama-3.1-8b-instruct}
     env_file:
       - ../config/env/.env
