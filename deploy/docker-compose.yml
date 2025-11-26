@@ -43,6 +43,7 @@ services:
       - ../config/prometheus:/app/config/prometheus:ro
       - ../agent_orchestrator/tools:/app/tools:ro
       - ../shared:/app/shared:ro
+      - ../support/scripts:/app/support/scripts:ro
     secrets:
       - db_password
       - linear_oauth_token
