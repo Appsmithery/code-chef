@@ -13,7 +13,7 @@
 - Observability: LangSmith tracing, Grafana/Prometheus metrics
 - HITL: Risk-based approvals via Linear (DEV-68 hub), LangGraph checkpointing
 - Service ports: gateway:8000, orchestrator:8001, rag:8007, state:8008, langgraph:8010
-- **Week 5 (Nov 2025)**: Zen pattern integration - parent workflow chains, resource deduplication (80-90% token savings), workflow TTL management
+- **Zen Pattern Integration (DEV-175, completed Nov 2025)**: Parent workflow chains, resource deduplication (80-90% token savings), workflow TTL management
 
 ## Repository Navigation
 
@@ -253,7 +253,7 @@ ufw status                    # Verify rules
 
 ### Container Hygiene & Cleanup (Automated)
 
-**Automated Cleanup System** (DEV-169 - November 2025):
+**Automated Cleanup System** (DEV-169, completed):
 
 - **Post-deployment**: Automatic cleanup after every deploy via `deploy-to-droplet.ps1` (dangling images, build cache, 1h old containers)
 - **Weekly maintenance**: Cron job runs Sundays at 3 AM UTC via `weekly-cleanup.sh` (7-day retention policy)
@@ -290,7 +290,7 @@ ufw status                    # Verify rules
   - **Workspace ID** is REQUIRED for org-scoped service keys (extract from URL: `/o/{workspace-id}/`)
   - Both `LANGCHAIN_API_KEY` and `LANGSMITH_API_KEY` must be set (SDK compatibility)
 - **Deployment**: After changing tracing config, must run `docker compose down && docker compose up -d` (restart alone won't reload `.env`)
-- **Deprecation Note**: Langfuse has been completely removed (November 2025). All tracing now uses LangSmith only. No `LANGFUSE_*` environment variables should be present. Gateway instrumentation.js contains only OpenTelemetry, no Langfuse imports.
+- **Deprecation Note**: Langfuse has been completely removed. All tracing now uses LangSmith only. No `LANGFUSE_*` environment variables should be present. Gateway instrumentation.js contains only OpenTelemetry, no Langfuse imports.
 
 ### Grafana Cloud (Prometheus Metrics)
 
@@ -441,11 +441,11 @@ This pattern provides:
   - Seamless MCP gateway integration
   - Production-ready LangChain patterns
 
-### Week 5: Zen Pattern Integration (November 2025)
+### Zen Pattern Integration (DEV-175, Completed November 2025)
 
 **Overview:** Ported battle-tested patterns from Zen MCP Server (1000+ production conversations) to enhance event sourcing and workflow management.
 
-**Priority 1 Implementations (DEV-175):**
+**Completed Implementations:**
 
 1. **Parent Workflow Chains** (`shared/lib/workflow_reducer.py` + `config/state/workflow_events.sql`):
    - Added `parent_workflow_id` field to `WorkflowEvent` dataclass
@@ -470,8 +470,7 @@ This pattern provides:
 **Implementation Stats:**
 - Code: 300+ lines production code, 160+ lines SQL (migrations, views, functions)
 - Tests: 55 unit tests across 3 test files (24 + 18 + 13)
-- Time: ~1.5 hours total (Task 5.1: 45min, Task 5.2: 30min, Task 5.3: 20min)
-- Linear: DEV-175 (parent), DEV-176/177/178 (sub-issues)
+- Linear Issues: DEV-175 (parent), DEV-176 (parent chains), DEV-177 (resource dedup), DEV-178 (TTL management)
 
 **Key Files:**
 - `shared/lib/workflow_reducer.py`: Parent chain traversal logic
@@ -489,9 +488,12 @@ This pattern provides:
 4. Setup cron: `0 * * * * psql $DATABASE_URL -c "SELECT * FROM cleanup_expired_workflows();"`
 5. Monitor: LangSmith traces show token savings, Grafana metrics track workflow lifecycle
 
-**Future Work (Priority 2 & 3):**
-- P2: Dual prioritization strategy (2h), model context management (1h), provider registry (2h)
-- P3: Workflow conversation memory (3h), continuation API (1h)
+**Future Enhancements (See Linear Backlog):**
+- Dual prioritization strategy (DEV-167 dependency)
+- Model context management improvements
+- Provider registry for multi-LLM workflows
+- Workflow conversation memory (planned Q2 2026)
+- Continuation API for resumed workflows
 
 ## Quality bar
 
