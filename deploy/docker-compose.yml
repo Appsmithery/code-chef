@@ -248,6 +248,14 @@ services:
         limits:
           cpus: "0.5"
           memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Ollama - Self-hosted embedding service (fallback for OpenAI)
   ollama:
@@ -268,14 +276,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-        reservations:
-          cpus: "0.25"
-          memory: 128M
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   # LangGraph Workflow Service
   langgraph:
