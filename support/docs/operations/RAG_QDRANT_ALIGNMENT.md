@@ -317,19 +317,19 @@ curl http://45.55.173.72:8007/collections
 
 ### Active Collections (Production)
 
-| Collection | Points | Status | Purpose |
-|------------|--------|--------|----------|
-| `the-shop` | 460 | ✅ Active | Primary knowledge base (DigitalOcean KB sync) |
-| `vendor-docs` | 94 | ✅ Active | Vendor API documentation (Gradient, Linear, LangSmith) |
+| Collection    | Points | Status    | Purpose                                                |
+| ------------- | ------ | --------- | ------------------------------------------------------ |
+| `the-shop`    | 460    | ✅ Active | Primary knowledge base (DigitalOcean KB sync)          |
+| `vendor-docs` | 94     | ✅ Active | Vendor API documentation (Gradient, Linear, LangSmith) |
 
 ### Planned Collections (Future Implementation)
 
-| Collection | Status | Implementation Timeline | Purpose |
-|------------|--------|------------------------|----------|
-| `agent_memory` | ⏳ Planned | Q2 2026 (Zen Priority 3) | Agent episodic memory and conversation history |
-| `task_context` | ⏳ Planned | Q1 2026 (RAG Phase 2) | Workflow context persistence and task execution history |
-| `code_patterns` | ⏳ Planned | Q1 2026 (RAG Phase 1) | Code generation knowledge base with architectural patterns |
-| `feature_specs` | ⏳ Planned | Q1 2026 (RAG Phase 1) | Feature specifications and requirements documentation |
+| Collection      | Status     | Implementation Timeline      | Purpose                                                     |
+| --------------- | ---------- | ---------------------------- | ----------------------------------------------------------- |
+| `agent_memory`  | ⏳ Planned | Q2 2026 (Zen Priority 3)     | Agent episodic memory and conversation history              |
+| `task_context`  | ⏳ Planned | Q1 2026 (RAG Phase 2)        | Workflow context persistence and task execution history     |
+| `code_patterns` | ⏳ Planned | Q1 2026 (RAG Phase 1)        | Code generation knowledge base with architectural patterns  |
+| `feature_specs` | ⏳ Planned | Q1 2026 (RAG Phase 1)        | Feature specifications and requirements documentation       |
 | `issue_tracker` | ⏳ Planned | Q2 2026 (Linear integration) | Linear issue semantic search and project management context |
 
 **Implementation Dependencies:**
