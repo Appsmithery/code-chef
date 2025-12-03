@@ -293,6 +293,7 @@ services:
       - DB_PORT=5432
       - DB_NAME=devtools
       - DB_USER=devtools
+      - DB_PASSWORD=${DB_PASSWORD}
       - DB_PASSWORD_FILE=/run/secrets/db_password
       - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - GRADIENT_MODEL=${GRADIENT_MODEL:-meta-llama-3.1-8b-instruct}
