@@ -189,7 +189,7 @@ class EmailNotifier:
         <div class="action-buttons">
             <p><strong>To approve or reject this request:</strong></p>
             <ol>
-                <li>SSH to droplet: <code>ssh do-mcp-gateway</code></li>
+                <li>SSH to droplet: <code>ssh do-codechef-droplet</code></li>
                 <li>Run approval command:
                     <ul>
                         <li>✅ Approve: <code>task workflow:approve REQUEST_ID={approval_id}</code></li>

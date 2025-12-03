@@ -1,7 +1,7 @@
 #!/bin/bash
 # Deploy minimal working Alloy config
 
-ssh do-mcp-gateway << 'ENDSSH'
+ssh do-codechef-droplet << 'ENDSSH'
 # Stop service
 systemctl stop alloy
 systemctl reset-failed alloy

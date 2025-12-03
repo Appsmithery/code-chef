@@ -114,7 +114,7 @@ env_file:
 SSH to droplet and update `/opt/Dev-Tools/config/env/.env`:
 
 ```bash
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 
 # Edit .env file
 cd /opt/Dev-Tools
@@ -217,7 +217,7 @@ curl -X POST https://codechef.appsmithery.co/rag/query \
 
 ```bash
 # View RAG service logs
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 cd /opt/Dev-Tools/deploy
 docker compose logs rag-context --tail=100 -f
 

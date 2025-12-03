@@ -145,8 +145,8 @@ curl https://codechef.appsmithery.co/state/health    # State
 curl https://codechef.appsmithery.co/langgraph/health # LangGraph
 
 # Direct (from droplet via SSH alias)
-ssh do-mcp-gateway "curl http://localhost:8001/health"  # Orchestrator
-ssh do-mcp-gateway "curl http://localhost:8007/health"  # RAG
+ssh do-codechef-droplet "curl http://localhost:8001/health"  # Orchestrator
+ssh do-codechef-droplet "curl http://localhost:8007/health"  # RAG
 ```
 
 ### ⚠️ Configuration Changes (CRITICAL)
@@ -251,7 +251,7 @@ ssh do-mcp-gateway "curl http://localhost:8007/health"  # RAG
 
 1. Install "Remote - SSH" extension (`ms-vscode-remote.remote-ssh`)
 2. Press `F1` → "Remote-SSH: Connect to Host"
-3. Enter: `root@45.55.173.72` or use alias `do-mcp-gateway`
+3. Enter: `root@45.55.173.72` or use alias `do-codechef-droplet`
 4. Opens new VS Code window connected to droplet
 5. Access terminal, files, and run commands directly on remote
 6. Edit files in place, debug services, and monitor logs in real-time
@@ -259,7 +259,7 @@ ssh do-mcp-gateway "curl http://localhost:8007/health"  # RAG
 **SSH Config Setup** (`C:\Users\<USER>\.ssh\config` on Windows, `~/.ssh/config` on Linux/Mac):
 
 ```
-Host do-mcp-gateway
+Host do-codechef-droplet
     HostName 45.55.173.72
     User root
     IdentityFile ~/.ssh/github-actions-deploy
@@ -271,28 +271,28 @@ Host do-mcp-gateway
 
 ```powershell
 # SSH directly from terminal (using alias)
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 
 # Execute single command
-ssh do-mcp-gateway "cd /opt/Dev-Tools && git pull && docker compose ps"
+ssh do-codechef-droplet "cd /opt/Dev-Tools && git pull && docker compose ps"
 
 # SCP files to droplet
-scp local-file.txt do-mcp-gateway:/opt/Dev-Tools/
+scp local-file.txt do-codechef-droplet:/opt/Dev-Tools/
 
 # Tail logs remotely
-ssh do-mcp-gateway "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
+ssh do-codechef-droplet "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
 
 # Check service health
-ssh do-mcp-gateway "curl -s http://localhost:8001/health | jq ."
+ssh do-codechef-droplet "curl -s http://localhost:8001/health | jq ."
 
 # Restart specific service
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose restart orchestrator"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose restart orchestrator"
 ```
 
 **Firewall Configuration (UFW):**
 
 ```bash
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 ufw allow 22/tcp              # SSH (CRITICAL)
 ufw allow 8000:8008/tcp       # Agent services
 ufw allow 80/tcp              # HTTP (Caddy)
@@ -313,7 +313,7 @@ ufw status                    # Verify rules
 **Manual Cleanup** (when needed):
 
 - **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
-- **Quick cleanup**: `ssh do-mcp-gateway "docker image prune -f && docker builder prune -f"`
+- **Quick cleanup**: `ssh do-codechef-droplet "docker image prune -f && docker builder prune -f"`
 - **Emergency cleanup**: Use GitHub Actions workflow with "full" mode (stops services, cleans all, restarts)
 - **Verify health after cleanup.** Re-run `support/scripts/validation/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
 - **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
@@ -355,13 +355,13 @@ ufw status                    # Verify rules
 
   ```bash
   # Check status
-  ssh do-mcp-gateway "sudo systemctl status alloy"
+  ssh do-codechef-droplet "sudo systemctl status alloy"
 
   # Restart after config changes
-  ssh do-mcp-gateway "sudo systemctl restart alloy"
+  ssh do-codechef-droplet "sudo systemctl restart alloy"
 
   # View logs
-  ssh do-mcp-gateway "sudo journalctl -u alloy -f"
+  ssh do-codechef-droplet "sudo journalctl -u alloy -f"
   ```
 
 - **Dashboard Access**: Navigate to https://appsmithery.grafana.net/explore, select datasource "grafanacloud-appsmithery-prom", query `up{cluster="dev-tools"}` to verify all services reporting

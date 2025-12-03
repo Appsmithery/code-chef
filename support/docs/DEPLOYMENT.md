@@ -210,7 +210,7 @@ echo "ghp_***" > config/env/secrets/github_pat.txt
 - [ ] All changes committed and pushed to `origin/main`
 - [ ] `config/env/.env` populated with production secrets
 - [ ] Docker secrets created (`setup_secrets.sh`)
-- [ ] SSH access to droplet verified (`ssh do-mcp-gateway`)
+- [ ] SSH access to droplet verified (`ssh do-codechef-droplet`)
 - [ ] Backup tag created (`git tag pre-deploy-$(date +%Y%m%d)`)
 
 ### Deploy Process
@@ -237,10 +237,10 @@ curl https://codechef.appsmithery.co/rag/health
 
 ```bash
 # Check service status
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose ps"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose ps"
 
 # View logs
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs orchestrator --tail=50"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose logs orchestrator --tail=50"
 
 # Test workflow (via HTTPS)
 curl -X POST https://codechef.appsmithery.co/api/orchestrate \
@@ -262,7 +262,7 @@ curl -X POST https://codechef.appsmithery.co/api/orchestrate \
 
 ```bash
 # Check logs
-ssh do-mcp-gateway "docker compose logs orchestrator --tail=100"
+ssh do-codechef-droplet "docker compose logs orchestrator --tail=100"
 
 # Common issues:
 # 1. Missing env vars - Check .env uploaded correctly
@@ -276,30 +276,30 @@ ssh do-mcp-gateway "docker compose logs orchestrator --tail=100"
 # Docker Compose only reads .env at startup
 # Must use down+up, not restart
 
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
 ```
 
 ### Health Check Failing
 
 ```bash
 # Check service is running
-ssh do-mcp-gateway "docker compose ps"
+ssh do-codechef-droplet "docker compose ps"
 
 # Check internal connectivity
-ssh do-mcp-gateway "docker exec deploy-orchestrator-1 curl http://gateway-mcp:8000/health"
+ssh do-codechef-droplet "docker exec deploy-orchestrator-1 curl http://gateway-mcp:8000/health"
 
 # Check logs for errors
-ssh do-mcp-gateway "docker compose logs orchestrator | grep ERROR"
+ssh do-codechef-droplet "docker compose logs orchestrator | grep ERROR"
 ```
 
 ### Out of Memory
 
 ```bash
 # Check memory usage
-ssh do-mcp-gateway "free -h"
+ssh do-codechef-droplet "free -h"
 
 # Clean up Docker resources
-ssh do-mcp-gateway "docker system prune -af && docker builder prune -af"
+ssh do-codechef-droplet "docker system prune -af && docker builder prune -af"
 
 # Or use automated cleanup
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType cleanup
@@ -327,8 +327,8 @@ If deployment fails validation, script automatically rolls back:
 .\support\scripts\deploy\deploy-to-droplet.ps1 -Rollback
 
 # Or rollback to specific tag
-ssh do-mcp-gateway "cd /opt/Dev-Tools && git checkout pre-deploy-20251125"
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d --build"
+ssh do-codechef-droplet "cd /opt/Dev-Tools && git checkout pre-deploy-20251125"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d --build"
 ```
 
 ---
@@ -351,13 +351,13 @@ ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker co
 
 ```bash
 # View all services
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs -f"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose logs -f"
 
 # View specific service
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
 
 # Filter errors
-ssh do-mcp-gateway "docker compose logs orchestrator | grep ERROR"
+ssh do-codechef-droplet "docker compose logs orchestrator | grep ERROR"
 ```
 
 ---
@@ -409,9 +409,9 @@ docker compose restart
 
 ```bash
 # Complete rebuild from scratch
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down --volumes"
-ssh do-mcp-gateway "cd /opt/Dev-Tools && git pull origin main"
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose up -d --build"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose down --volumes"
+ssh do-codechef-droplet "cd /opt/Dev-Tools && git pull origin main"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose up -d --build"
 ```
 
 ---

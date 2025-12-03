@@ -40,13 +40,13 @@ Runs after every successful deployment:
 
 ```bash
 # Check cron job status
-ssh do-mcp-gateway "crontab -l"
+ssh do-codechef-droplet "crontab -l"
 
 # View cleanup logs
-ssh do-mcp-gateway "tail -f /var/log/docker-cleanup.log"
+ssh do-codechef-droplet "tail -f /var/log/docker-cleanup.log"
 
 # Manually trigger cleanup
-ssh do-mcp-gateway "/opt/Dev-Tools/support/scripts/maintenance/weekly-cleanup.sh"
+ssh do-codechef-droplet "/opt/Dev-Tools/support/scripts/maintenance/weekly-cleanup.sh"
 ```
 
 ---
@@ -56,7 +56,7 @@ ssh do-mcp-gateway "/opt/Dev-Tools/support/scripts/maintenance/weekly-cleanup.sh
 ### Quick Cleanup (Safe)
 
 ```bash
-ssh do-mcp-gateway << 'EOF'
+ssh do-codechef-droplet << 'EOF'
 docker image prune -f
 docker builder prune -f
 docker container prune -f --filter "until=1h"
@@ -67,7 +67,7 @@ EOF
 ### Aggressive Cleanup (Reclaim More Space)
 
 ```bash
-ssh do-mcp-gateway << 'EOF'
+ssh do-codechef-droplet << 'EOF'
 cd /opt/Dev-Tools/deploy
 docker image prune -af --filter "until=168h"
 docker builder prune -af --filter "until=168h"
@@ -80,7 +80,7 @@ EOF
 ### Emergency Full Cleanup (Last Resort)
 
 ```bash
-ssh do-mcp-gateway << 'EOF'
+ssh do-codechef-droplet << 'EOF'
 cd /opt/Dev-Tools/deploy
 docker compose down
 docker system prune -af
@@ -99,16 +99,16 @@ EOF
 
 ```bash
 # Docker disk usage
-ssh do-mcp-gateway "docker system df"
+ssh do-codechef-droplet "docker system df"
 
 # Container memory usage
-ssh do-mcp-gateway "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}'"
+ssh do-codechef-droplet "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}'"
 
 # Droplet memory/disk
-ssh do-mcp-gateway "free -h && df -h /"
+ssh do-codechef-droplet "free -h && df -h /"
 
 # Find reclaimable space
-ssh do-mcp-gateway "docker system df -v | grep -E '(SIZE|RECLAIMABLE)'"
+ssh do-codechef-droplet "docker system df -v | grep -E '(SIZE|RECLAIMABLE)'"
 ```
 
 ### Health Checks After Cleanup
@@ -121,7 +121,7 @@ for endpoint in api rag state langgraph; do
 done
 
 # Check container status
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose ps"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose ps"
 ```
 
 ---
@@ -132,13 +132,13 @@ ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose ps"
 
 ```bash
 # Check cron service
-ssh do-mcp-gateway "systemctl status cron"
+ssh do-codechef-droplet "systemctl status cron"
 
 # Verify cron job exists
-ssh do-mcp-gateway "crontab -l | grep weekly-cleanup"
+ssh do-codechef-droplet "crontab -l | grep weekly-cleanup"
 
 # Check for execution (next Sunday)
-ssh do-mcp-gateway "grep 'Weekly Docker Cleanup' /var/log/docker-cleanup.log | tail -5"
+ssh do-codechef-droplet "grep 'Weekly Docker Cleanup' /var/log/docker-cleanup.log | tail -5"
 
 # Reinstall cron job
 bash support/scripts/maintenance/setup-cron-job.sh
@@ -148,10 +148,10 @@ bash support/scripts/maintenance/setup-cron-job.sh
 
 ```bash
 # 1. Check what's using memory
-ssh do-mcp-gateway "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}' | sort -k2 -h -r"
+ssh do-codechef-droplet "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}' | sort -k2 -h -r"
 
 # 2. Check for stopped containers
-ssh do-mcp-gateway "docker ps -a --filter 'status=exited'"
+ssh do-codechef-droplet "docker ps -a --filter 'status=exited'"
 
 # 3. Run emergency cleanup
 # (Use GitHub Actions workflow with 'full' mode)
@@ -161,13 +161,13 @@ ssh do-mcp-gateway "docker ps -a --filter 'status=exited'"
 
 ```bash
 # Check logs for errors
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs --tail=50 | grep ERROR"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose logs --tail=50 | grep ERROR"
 
 # Restart affected service
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose restart <service_name>"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose restart <service_name>"
 
 # Full stack restart if needed
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
 ```
 
 ---

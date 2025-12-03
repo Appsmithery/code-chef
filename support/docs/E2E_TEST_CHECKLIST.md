@@ -17,16 +17,16 @@ curl https://codechef.appsmithery.co/rag/health    # RAG
 curl https://codechef.appsmithery.co/state/health  # State
 
 # Or via SSH for internal ports
-ssh do-mcp-gateway "curl -s http://localhost:8001/health"  # Orchestrator
-ssh do-mcp-gateway "curl -s http://localhost:8000/health"  # Gateway
-ssh do-mcp-gateway "curl -s http://localhost:8007/health"  # RAG
-ssh do-mcp-gateway "curl -s http://localhost:8008/health"  # State
+ssh do-codechef-droplet "curl -s http://localhost:8001/health"  # Orchestrator
+ssh do-codechef-droplet "curl -s http://localhost:8000/health"  # Gateway
+ssh do-codechef-droplet "curl -s http://localhost:8007/health"  # RAG
+ssh do-codechef-droplet "curl -s http://localhost:8008/health"  # State
 ```
 
 ### 2. Container Status
 
 ```powershell
-ssh do-mcp-gateway "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+ssh do-codechef-droplet "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
 ```
 
 Expected: 13 containers running
@@ -96,7 +96,7 @@ Expected: 13 containers running
 
 - [ ] **2GB swap active**
   ```bash
-  ssh do-mcp-gateway "free -h | grep Swap"
+  ssh do-codechef-droplet "free -h | grep Swap"
   # Expected: Swap: 2.0Gi (some amount used)
   ```
 
@@ -104,7 +104,7 @@ Expected: 13 containers running
 
 - [ ] **All containers within limits**
   ```bash
-  ssh do-mcp-gateway "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}'"
+  ssh do-codechef-droplet "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}'"
   # Expected: No container exceeding its limit
   # - gateway-mcp: < 256MB
   # - rag-context: < 512MB
@@ -116,7 +116,7 @@ Expected: 13 containers running
 
 - [ ] **Available memory > 500MB**
   ```bash
-  ssh do-mcp-gateway "free -h"
+  ssh do-codechef-droplet "free -h"
   # Expected: available > 500Mi
   ```
 
@@ -144,7 +144,7 @@ Expected: 13 containers running
 
 - [ ] **Prometheus metrics exposed**
   ```bash
-  ssh do-mcp-gateway "curl -s http://localhost:8001/metrics | grep llm_"
+  ssh do-codechef-droplet "curl -s http://localhost:8001/metrics | grep llm_"
   # Expected: llm_tokens_total, llm_cost_usd_total metrics
   ```
 
@@ -156,7 +156,7 @@ Expected: 13 containers running
 
 - [ ] **Gateway operational**
   ```bash
-  ssh do-mcp-gateway "curl http://localhost:8000/health"
+  ssh do-codechef-droplet "curl http://localhost:8000/health"
   # Expected: {"status":"ok","service":"mcp-gateway"}
   ```
 
@@ -164,7 +164,7 @@ Expected: 13 containers running
 
 - [ ] **Tools available**
   ```bash
-  ssh do-mcp-gateway "curl http://localhost:8000/tools | jq '. | length'"
+  ssh do-codechef-droplet "curl http://localhost:8000/tools | jq '. | length'"
   # Expected: 150+ tools
   ```
 
@@ -212,7 +212,7 @@ Expected: 13 containers running
 
 - [ ] **All services being scraped**
   ```bash
-  ssh do-mcp-gateway "curl -s http://localhost:9090/api/v1/targets" | jq '.data.activeTargets | length'
+  ssh do-codechef-droplet "curl -s http://localhost:9090/api/v1/targets" | jq '.data.activeTargets | length'
   # Expected: 4+ active targets
   ```
 
@@ -224,7 +224,7 @@ Expected: 13 containers running
 
 - [ ] **Database accessible**
   ```bash
-  ssh do-mcp-gateway "docker exec deploy-postgres-1 pg_isready"
+  ssh do-codechef-droplet "docker exec deploy-postgres-1 pg_isready"
   # Expected: accepting connections
   ```
 
@@ -232,7 +232,7 @@ Expected: 13 containers running
 
 - [ ] **Redis operational**
   ```bash
-  ssh do-mcp-gateway "docker exec deploy-redis-1 redis-cli ping"
+  ssh do-codechef-droplet "docker exec deploy-redis-1 redis-cli ping"
   # Expected: PONG
   ```
 
@@ -244,7 +244,7 @@ Expected: 13 containers running
 
 - [ ] **WORKFLOW_TTL_HOURS set**
   ```bash
-  ssh do-mcp-gateway "grep WORKFLOW_TTL_HOURS /opt/Dev-Tools/config/env/.env"
+  ssh do-codechef-droplet "grep WORKFLOW_TTL_HOURS /opt/Dev-Tools/config/env/.env"
   # Expected: WORKFLOW_TTL_HOURS=24
   ```
 
@@ -252,7 +252,7 @@ Expected: 13 containers running
 
 - [ ] **workflow_events table exists (if deployed)**
   ```bash
-  ssh do-mcp-gateway "docker exec deploy-postgres-1 psql -U devtools -c '\dt workflow_*'"
+  ssh do-codechef-droplet "docker exec deploy-postgres-1 psql -U devtools -c '\dt workflow_*'"
   # Expected: Tables listed (or error if not yet migrated)
   ```
 
@@ -305,7 +305,7 @@ Expected: 13 containers running
 
 4. **Metrics not appearing in Grafana**
    - Cause: Alloy not scraping
-   - Fix: `ssh do-mcp-gateway "systemctl restart alloy"`
+   - Fix: `ssh do-codechef-droplet "systemctl restart alloy"`
 
 ---
 

@@ -674,7 +674,7 @@ Before deploying to production droplet:
 1. **Database Migration**
 
    ```bash
-   ssh do-mcp-gateway
+   ssh do-codechef-droplet
    cd /opt/Dev-Tools
    task workflow:init-db
    ```

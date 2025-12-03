@@ -57,10 +57,10 @@
 
 ```bash
 # Check HTTP metrics (should have data)
-ssh do-mcp-gateway "curl -s http://localhost:8001/metrics | grep http_requests_total"
+ssh do-codechef-droplet "curl -s http://localhost:8001/metrics | grep http_requests_total"
 
 # Check LLM metrics (defined but may be zero)
-ssh do-mcp-gateway "curl -s http://localhost:8001/metrics | grep llm_"
+ssh do-codechef-droplet "curl -s http://localhost:8001/metrics | grep llm_"
 ```
 
 ### 2. Test LLM Metrics Collection
@@ -77,7 +77,7 @@ curl -X POST https://codechef.appsmithery.co/api/v1/decompose \
 **Watch metrics update:**
 
 ```bash
-ssh do-mcp-gateway "watch -n 5 'curl -s http://localhost:8001/metrics | grep llm_'"
+ssh do-codechef-droplet "watch -n 5 'curl -s http://localhost:8001/metrics | grep llm_'"
 ```
 
 ### 3. Validate in Grafana
@@ -155,7 +155,7 @@ ssh do-mcp-gateway "watch -n 5 'curl -s http://localhost:8001/metrics | grep llm
 
 **Check:**
 
-1. Prometheus scraping: Access via SSH tunnel (`ssh -L 9090:localhost:9090 do-mcp-gateway`, then http://localhost:9090/targets)
+1. Prometheus scraping: Access via SSH tunnel (`ssh -L 9090:localhost:9090 do-codechef-droplet`, then http://localhost:9090/targets)
 2. Grafana data source: Settings > Data Sources > Prometheus (should be healthy)
 3. Time range: Try "Last 6 hours" or "Last 24 hours"
 
