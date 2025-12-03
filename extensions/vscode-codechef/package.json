@@ -1,8 +1,8 @@
 {
   "name": "vscode-codechef",
-  "displayName": "code/chef - AI Agent Orchestrator",
-  "description": "AI-powered task orchestration with LangGraph single-orchestrator architecture, 150+ MCP tools, and LangChain function calling. Submit development tasks via Copilot Chat.",
-  "version": "0.5.0",
+  "displayName": "code/chef - AI DevOps Team",
+  "description": "AI DevOps Team, orchestrated by your Head Chef. LangGraph single-orchestrator architecture with 150+ MCP tools and LangChain function calling.",
+  "version": "0.5.1",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "icon.png",
