@@ -1,7 +1,8 @@
 #!/usr/bin/env pwsh
 # Backup droplet volumes to local machine
 param(
-    [string]$DropletIP = "45.55.173.72",
+    [string]$DropletHost = "codechef.appsmithery.co",
+    [string]$DropletIP = "45.55.173.72",  # For SSH
     [string]$DropletPath = "/opt/Dev-Tools"
 )
 
@@ -10,7 +11,7 @@ $backup_dir = "./backups/$timestamp"
 
 New-Item -ItemType Directory -Force -Path $backup_dir | Out-Null
 
-Write-Host "[BACKUP] Backing up droplet volumes to $backup_dir..."
+Write-Host "[BACKUP] Backing up $DropletHost volumes to $backup_dir..."
 
 # Run backup script on droplet
 ssh root@$DropletIP "cd $DropletPath && ./support/scripts/data/backup_volumes.sh"

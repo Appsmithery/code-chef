@@ -69,7 +69,7 @@ async def test_high_priority_approval():
                     "Production orchestrator restart",
                 ],
                 "estimated_cost": 500,
-                "deployment_target": "45.55.173.72 (production droplet)",
+                "deployment_target": "codechef.appsmithery.co (production)",
             },
         )
 
@@ -94,7 +94,7 @@ async def test_high_priority_approval():
         print()
         print("3. Watch the orchestrator logs for webhook events:")
         print(
-            '   ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 -f | grep -i webhook"'
+            '   ssh do-mcp-gateway "docker logs deploy-orchestrator-1 -f | grep -i webhook"'
         )
         print()
         print("4. The webhook will:")

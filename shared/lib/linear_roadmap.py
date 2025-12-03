@@ -16,44 +16,40 @@ logger = logging.getLogger(__name__)
 
 class LinearRoadmapUpdater:
     """Helper for updating Linear project roadmap via GraphQL API."""
-    
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize with Linear API key.
-        
+
         Args:
             api_key: Linear OAuth token or Personal API key
         """
         self.api_key = api_key or os.getenv("LINEAR_API_KEY")
         self.graphql_endpoint = "https://api.linear.app/graphql"
         self.enabled = bool(self.api_key)
-        
+
         if not self.enabled:
             logger.warning("Linear API key not configured - updates disabled")
-    
+
     def is_enabled(self) -> bool:
         """Check if Linear integration is available."""
         return self.enabled
-    
-    async def update_issue_description(
-        self, 
-        issue_id: str, 
-        description: str
-    ) -> bool:
+
+    async def update_issue_description(self, issue_id: str, description: str) -> bool:
         """
         Update an issue's description.
-        
+
         Args:
             issue_id: Linear issue ID
             description: New description (Markdown supported)
-            
+
         Returns:
             True if successful, False otherwise
         """
         if not self.is_enabled():
             logger.error("Cannot update issue - Linear not configured")
             return False
-        
+
         mutation = """
         mutation IssueUpdate($id: String!, $description: String!) {
           issueUpdate(id: $id, input: { description: $description }) {
@@ -65,14 +61,11 @@ class LinearRoadmapUpdater:
           }
         }
         """
-        
-        variables = {
-            "id": issue_id,
-            "description": description
-        }
-        
+
+        variables = {"id": issue_id, "description": description}
+
         return await self._execute_mutation(mutation, variables)
-    
+
     async def update_phase_completion(
         self,
         issue_id: str,
@@ -84,11 +77,11 @@ class LinearRoadmapUpdater:
         artifacts: Optional[Dict[str, str]] = None,
         tests: Optional[List[str]] = None,
         summary: Optional[str] = None,
-        deployment_url: Optional[str] = None
+        deployment_url: Optional[str] = None,
     ) -> bool:
         """
         Update a phase issue with comprehensive completion information.
-        
+
         Args:
             issue_id: Linear issue ID for the phase
             phase_name: Name of the phase (e.g., "Phase 2: HITL Integration")
@@ -100,99 +93,113 @@ class LinearRoadmapUpdater:
             tests: List of test descriptions
             summary: Optional summary paragraph
             deployment_url: Optional deployment URL
-            
+
         Returns:
             True if successful, False otherwise
         """
         if not self.is_enabled():
             logger.error("Cannot update phase - Linear not configured")
             return False
-        
+
         # Build comprehensive description
         description_parts = [
             f"## {phase_name} - {status}",
             "",
         ]
-        
+
         if summary:
-            description_parts.extend([
-                "### Implementation Summary",
-                summary,
-                "",
-            ])
-        
+            description_parts.extend(
+                [
+                    "### Implementation Summary",
+                    summary,
+                    "",
+                ]
+            )
+
         if components:
-            description_parts.extend([
-                "### Components Delivered",
-                *[f"{i+1}. **{comp}**" for i, comp in enumerate(components)],
-                "",
-            ])
-        
+            description_parts.extend(
+                [
+                    "### Components Delivered",
+                    *[f"{i+1}. **{comp}**" for i, comp in enumerate(components)],
+                    "",
+                ]
+            )
+
         if subtasks:
-            description_parts.extend([
-                "### Subtasks Completed",
-                *[f"- {'✅' if task.get('status') == 'complete' else '⏳'} {task['title']}" 
-                  for task in subtasks],
-                "",
-            ])
-        
+            description_parts.extend(
+                [
+                    "### Subtasks Completed",
+                    *[
+                        f"- {'✅' if task.get('status') == 'complete' else '⏳'} {task['title']}"
+                        for task in subtasks
+                    ],
+                    "",
+                ]
+            )
+
         if metrics:
-            description_parts.extend([
-                f"### Production Metrics (as of {datetime.now().strftime('%Y-%m-%d')})",
-                *[f"- {key.replace('_', ' ').title()}: {value}" 
-                  for key, value in metrics.items()],
-                "",
-            ])
-        
+            description_parts.extend(
+                [
+                    f"### Production Metrics (as of {datetime.now().strftime('%Y-%m-%d')})",
+                    *[
+                        f"- {key.replace('_', ' ').title()}: {value}"
+                        for key, value in metrics.items()
+                    ],
+                    "",
+                ]
+            )
+
         if artifacts:
-            description_parts.extend([
-                "### Artifacts",
-                *[f"- `{path}`: {desc}" for path, desc in artifacts.items()],
-                "",
-            ])
-        
+            description_parts.extend(
+                [
+                    "### Artifacts",
+                    *[f"- `{path}`: {desc}" for path, desc in artifacts.items()],
+                    "",
+                ]
+            )
+
         if tests:
-            description_parts.extend([
-                "### Testing",
-                *[f"✅ {test}" for test in tests],
-                "",
-            ])
-        
-        description_parts.extend([
-            f"**Status**: {status}",
-        ])
-        
+            description_parts.extend(
+                [
+                    "### Testing",
+                    *[f"✅ {test}" for test in tests],
+                    "",
+                ]
+            )
+
+        description_parts.extend(
+            [
+                f"**Status**: {status}",
+            ]
+        )
+
         if deployment_url:
             description_parts.append(f"**Deployment**: {deployment_url}")
-        
+
         description = "\n".join(description_parts)
-        
+
         success = await self.update_issue_description(issue_id, description)
-        
+
         if success:
             logger.info(f"Updated Linear phase: {phase_name} - {status}")
-        
+
         return success
-    
-    async def mark_issue_complete(
-        self,
-        issue_id: str,
-        state_id: str
-    ) -> bool:
+
+    async def mark_issue_complete(self, issue_id: str, state_id: str) -> bool:
         """
         Mark an issue as complete by updating its workflow state.
-        
+
         Args:
             issue_id: Linear issue ID
             state_id: Workflow state ID for "completed" state
-            
+
         Returns:
             True if successful, False otherwise
         """
         if not self.is_enabled():
             logger.error("Cannot mark complete - Linear not configured")
             return False
-        
+
         mutation = """
         mutation IssueUpdate($id: String!, $stateId: String!) {
           issueUpdate(id: $id, input: { stateId: $stateId }) {
@@ -207,39 +214,36 @@ class LinearRoadmapUpdater:
           }
         }
         """
-        
-        variables = {
-            "id": issue_id,
-            "stateId": state_id
-        }
-        
+
+        variables = {"id": issue_id, "stateId": state_id}
+
         return await self._execute_mutation(mutation, variables)
-    
+
     async def create_subtask(
         self,
         title: str,
         description: str,
         parent_id: str,
         project_id: str,
-        team_id: str
+        team_id: str,
     ) -> Optional[str]:
         """
         Create a new subtask under a parent issue.
-        
+
         Args:
             title: Issue title
             description: Issue description (Markdown)
             parent_id: Parent issue ID
             project_id: Project ID
             team_id: Team ID
-            
+
         Returns:
             Created issue ID if successful, None otherwise
         """
         if not self.is_enabled():
             logger.error("Cannot create subtask - Linear not configured")
             return None
-        
+
         mutation = """
         mutation IssueCreate(
           $title: String!
@@ -266,77 +270,72 @@ class LinearRoadmapUpdater:
           }
         }
         """
-        
+
         variables = {
             "title": title,
             "description": description,
             "projectId": project_id,
             "parentId": parent_id,
-            "teamId": team_id
+            "teamId": team_id,
         }
-        
+
         success = await self._execute_mutation(mutation, variables)
-        
+
         if success:
             logger.info(f"Created Linear subtask: {title}")
             # Note: In production, parse response to get issue ID
             return "created"  # Placeholder
-        
+
         return None
-    
-    async def _execute_mutation(
-        self,
-        mutation: str,
-        variables: Dict[str, Any]
-    ) -> bool:
+
+    async def _execute_mutation(self, mutation: str, variables: Dict[str, Any]) -> bool:
         """
         Execute a GraphQL mutation.
-        
+
         Args:
             mutation: GraphQL mutation string
             variables: Mutation variables
-            
+
         Returns:
             True if successful, False otherwise
         """
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}" if not self.api_key.startswith("Bearer ") else self.api_key
+            "Authorization": (
+                f"Bearer {self.api_key}"
+                if not self.api_key.startswith("Bearer ")
+                else self.api_key
+            ),
         }
-        
-        payload = {
-            "query": mutation,
-            "variables": variables
-        }
-        
+
+        payload = {"query": mutation, "variables": variables}
+
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.post(
-                    self.graphql_endpoint,
-                    json=payload,
-                    headers=headers
+                    self.graphql_endpoint, json=payload, headers=headers
                 )
-                
+
                 if response.status_code != 200:
                     logger.error(f"Linear API error: {response.status_code}")
                     return False
-                
+
                 result = response.json()
-                
+
                 if "errors" in result:
                     logger.error(f"Linear GraphQL errors: {result['errors']}")
                     return False
-                
+
                 # Check mutation success
                 data = result.get("data", {})
                 mutation_name = list(data.keys())[0] if data else None
-                
+
                 if mutation_name and data[mutation_name].get("success"):
                     return True
-                
+
                 logger.error(f"Linear mutation failed: {result}")
                 return False
-                
+
         except Exception as e:
             logger.error(f"Linear API exception: {e}", exc_info=True)
             return False
@@ -372,14 +371,14 @@ PROJECT_REGISTRY = {
         "id": "b21cbaa1-9f09-40f4-b62a-73e0f86dd501",
         "short_id": "78b3b839d36b",
         "name": "AI DevOps Agent Platform",
-        "orchestrator_url": "http://45.55.173.72:8001"
+        "orchestrator_url": "https://codechef.appsmithery.co/api",
     },
     "twkr": {
         "id": None,  # To be created by orchestrator
         "short_id": None,
         "name": "TWKR",
-        "orchestrator_url": "http://45.55.173.72:8001"
-    }
+        "orchestrator_url": "https://codechef.appsmithery.co/api",
+    },
 }
 
 # Phase issue IDs

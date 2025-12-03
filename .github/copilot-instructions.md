@@ -144,9 +144,9 @@ curl https://codechef.appsmithery.co/rag/health      # RAG
 curl https://codechef.appsmithery.co/state/health    # State
 curl https://codechef.appsmithery.co/langgraph/health # LangGraph
 
-# Direct (from droplet)
-ssh root@45.55.173.72 "curl http://localhost:8001/health"  # Orchestrator
-ssh root@45.55.173.72 "curl http://localhost:8007/health"  # RAG
+# Direct (from droplet via SSH alias)
+ssh do-mcp-gateway "curl http://localhost:8001/health"  # Orchestrator
+ssh do-mcp-gateway "curl http://localhost:8007/health"  # RAG
 ```
 
 ### ⚠️ Configuration Changes (CRITICAL)
@@ -270,29 +270,29 @@ Host do-mcp-gateway
 **Quick Remote Commands:**
 
 ```powershell
-# SSH directly from terminal
-ssh root@45.55.173.72
+# SSH directly from terminal (using alias)
+ssh do-mcp-gateway
 
 # Execute single command
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull && docker compose ps"
+ssh do-mcp-gateway "cd /opt/Dev-Tools && git pull && docker compose ps"
 
 # SCP files to droplet
-scp local-file.txt root@45.55.173.72:/opt/Dev-Tools/
+scp local-file.txt do-mcp-gateway:/opt/Dev-Tools/
 
 # Tail logs remotely
-ssh root@45.55.173.72 "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
+ssh do-mcp-gateway "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
 
 # Check service health
-ssh root@45.55.173.72 "curl -s http://localhost:8001/health | jq ."
+ssh do-mcp-gateway "curl -s http://localhost:8001/health | jq ."
 
 # Restart specific service
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose restart orchestrator"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose restart orchestrator"
 ```
 
 **Firewall Configuration (UFW):**
 
 ```bash
-ssh root@45.55.173.72
+ssh do-mcp-gateway
 ufw allow 22/tcp              # SSH (CRITICAL)
 ufw allow 8000:8008/tcp       # Agent services
 ufw allow 80/tcp              # HTTP (Caddy)
@@ -313,7 +313,7 @@ ufw status                    # Verify rules
 **Manual Cleanup** (when needed):
 
 - **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
-- **Quick cleanup**: `ssh root@45.55.173.72 "docker image prune -f && docker builder prune -f"`
+- **Quick cleanup**: `ssh do-mcp-gateway "docker image prune -f && docker builder prune -f"`
 - **Emergency cleanup**: Use GitHub Actions workflow with "full" mode (stops services, cleans all, restarts)
 - **Verify health after cleanup.** Re-run `support/scripts/validation/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
 - **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
@@ -355,13 +355,13 @@ ufw status                    # Verify rules
 
   ```bash
   # Check status
-  ssh root@45.55.173.72 "sudo systemctl status alloy"
+  ssh do-mcp-gateway "sudo systemctl status alloy"
 
   # Restart after config changes
-  ssh root@45.55.173.72 "sudo systemctl restart alloy"
+  ssh do-mcp-gateway "sudo systemctl restart alloy"
 
   # View logs
-  ssh root@45.55.173.72 "sudo journalctl -u alloy -f"
+  ssh do-mcp-gateway "sudo journalctl -u alloy -f"
   ```
 
 - **Dashboard Access**: Navigate to https://appsmithery.grafana.net/explore, select datasource "grafanacloud-appsmithery-prom", query `up{cluster="dev-tools"}` to verify all services reporting

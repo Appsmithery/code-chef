@@ -1,9 +1,10 @@
 # Generate servers.html from actual MCP server definitions on droplet
 
 $ErrorActionPreference = "Continue"
+$DROPLET = "do-mcp-gateway"  # SSH config alias for root@45.55.173.72
 
-Write-Host "Fetching server list from droplet..."
-$serverDirs = ssh root@45.55.173.72 "ls -1 /opt/central-mcp-gateway/servers/ | grep -v -E '(README|client|index)'" | Where-Object { $_ -and $_.Trim() }
+Write-Host "Fetching server list from droplet ($DROPLET)..."
+$serverDirs = ssh $DROPLET "ls -1 /opt/central-mcp-gateway/servers/ | grep -v -E '(README|client|index)'" | Where-Object { $_ -and $_.Trim() }
 
 Write-Host "Found $($serverDirs.Count) server directories"
 
@@ -15,7 +16,7 @@ foreach ($dir in $serverDirs) {
     
     # Read index.ts to get SERVER_INFO
     $indexPath = "/opt/central-mcp-gateway/servers/$dir/index.ts"
-    $indexContent = ssh root@45.55.173.72 "cat $indexPath 2>/dev/null" | Out-String
+    $indexContent = ssh $DROPLET "cat $indexPath 2>/dev/null" | Out-String
     
     # Extract SERVER_INFO block
     if ($indexContent -match "SERVER_INFO\s*=\s*\{([^\}]+)\}") {

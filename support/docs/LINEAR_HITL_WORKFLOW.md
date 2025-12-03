@@ -380,7 +380,7 @@ CREATE INDEX idx_approval_requests_workflow ON approval_requests(workflow_id);
 
 ```bash
 # SSH to droplet
-ssh root@45.55.173.72
+ssh do-mcp-gateway
 
 # Apply schema
 cd /opt/Dev-Tools
@@ -450,7 +450,7 @@ task workflow:list-pending
 ### Test Low-Risk Task (Auto-Approve)
 
 ```bash
-curl -X POST http://45.55.173.72:8001/orchestrate \
+curl -X POST https://codechef.appsmithery.co/api/orchestrate \
   -H "Content-Type: application/json" \
   -d '{
     "description": "Read configuration from dev environment",
@@ -463,7 +463,7 @@ curl -X POST http://45.55.173.72:8001/orchestrate \
 ### Test High-Risk Task (HITL Approval)
 
 ```bash
-curl -X POST http://45.55.173.72:8001/orchestrate \
+curl -X POST https://codechef.appsmithery.co/api/orchestrate \
   -H "Content-Type: application/json" \
   -d '{
     "description": "Deploy authentication service to production",
@@ -543,7 +543,7 @@ task workflow:status WORKFLOW_ID=32467165-c04f-49fa-9e41-8b4bbb775253
 ### View Orchestrator Logs
 
 ```bash
-ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'HITL\|approval'"
+ssh do-mcp-gateway "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'HITL\|approval'"
 
 # Look for:
 # - "HITL approval required for high-risk task"
@@ -564,7 +564,7 @@ ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'H
 
 1. Check webhook processed successfully:
    ```bash
-   ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 | grep 'webhook\|approval'"
+   ssh do-mcp-gateway "docker logs deploy-orchestrator-1 | grep 'webhook\|approval'"
    ```
 2. Verify approval status in PostgreSQL:
    ```sql
@@ -609,7 +609,7 @@ ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'H
 task workflow:clean-expired
 
 # Manual cleanup
-ssh root@45.55.173.72 'docker exec deploy-postgres-1 psql -U devtools -d devtools -c "DELETE FROM approval_requests WHERE status = '\''pending'\'' AND expires_at < NOW();"'
+ssh do-mcp-gateway 'docker exec deploy-postgres-1 psql -U devtools -d devtools -c "DELETE FROM approval_requests WHERE status = '\''pending'\'' AND expires_at < NOW();"'
 ```
 
 ---

@@ -266,7 +266,7 @@ url = generate_permalink("agent_orchestrator/main.py", line_start=45, line_end=6
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
 
 # Verify deployment
-ssh root@45.55.173.72 "curl -s http://localhost:8001/health | jq"
+ssh do-mcp-gateway "curl -s http://localhost:8001/health | jq"
 ```
 
 ---
@@ -465,10 +465,10 @@ async def accept_task(task: TaskAssignment):
 
 ```bash
 # Check webhook endpoint
-curl https://theshop.appsmithery.co/webhooks/linear/health
+curl https://codechef.appsmithery.co/webhooks/linear/health
 
 # Check orchestrator
-curl http://45.55.173.72:8001/health
+curl https://codechef.appsmithery.co/api/health
 ```
 
 ### Dashboard Queries

@@ -59,7 +59,7 @@ git push origin main  # Pushes to GitHub
 
 ```powershell
 # Run before any major deployment
-ssh root@45.55.173.72
+ssh do-mcp-gateway
 cd /opt/Dev-Tools
 
 # Full system snapshot

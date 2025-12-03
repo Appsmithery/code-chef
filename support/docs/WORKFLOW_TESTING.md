@@ -15,8 +15,8 @@ python support/scripts/workflow/test-workflows.py pr-deployment
 python support/scripts/workflow/test-workflows.py feature
 python support/scripts/workflow/test-workflows.py infrastructure
 
-# Set custom orchestrator URL
-ORCHESTRATOR_URL=http://45.55.173.72:8001 python support/scripts/workflow/test-workflows.py
+# Set custom orchestrator URL (via HTTPS domain)
+ORCHESTRATOR_URL=https://codechef.appsmithery.co/api python support/scripts/workflow/test-workflows.py
 ```
 
 ## Test Coverage
@@ -288,8 +288,8 @@ ORCHESTRATOR_URL=http://45.55.173.72:8001 python support/scripts/workflow/test-w
 docker compose up -d
 python support/scripts/workflow/test-workflows.py
 
-# Remote testing (orchestrator on droplet)
-ORCHESTRATOR_URL=http://45.55.173.72:8001 python support/scripts/workflow/test-workflows.py
+# Remote testing (orchestrator on droplet via HTTPS)
+ORCHESTRATOR_URL=https://codechef.appsmithery.co/api python support/scripts/workflow/test-workflows.py
 
 # Test specific workflow with verbose output
 python support/scripts/workflow/test-workflows.py infrastructure

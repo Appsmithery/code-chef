@@ -211,8 +211,8 @@ if ($TestsFailed -eq 0) {
     Write-Host ""
     Write-Host "Next Steps:" -ForegroundColor Cyan
     Write-Host "  1. Deploy to droplet: .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config"
-    Write-Host "  2. Verify health: curl http://45.55.173.72:8001/health"
-    Write-Host "  3. Check metrics: curl http://45.55.173.72:8001/metrics/tokens"
+    Write-Host "  2. Verify health: curl https://codechef.appsmithery.co/api/health"
+    Write-Host "  3. Check metrics: curl https://codechef.appsmithery.co/api/metrics/tokens"
     Write-Host "  4. Import Grafana dashboard: config/grafana/dashboards/llm-token-metrics.json"
     exit 0
 } else {

@@ -57,7 +57,7 @@ async def create_test_approval():
     print()
     print("3. Watch orchestrator logs (run in separate terminal):")
     print(
-        '   ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 -f | grep -i webhook"'
+        '   ssh do-mcp-gateway "docker logs deploy-orchestrator-1 -f | grep -i webhook"'
     )
     print()
     print("4. Expected webhook flow:")

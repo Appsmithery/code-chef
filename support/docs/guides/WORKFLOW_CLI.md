@@ -364,7 +364,7 @@ Actions
 - Approve: Resume workflow with approved decision
 - Reject: Terminate workflow
 
-Resume Endpoint: POST http://45.55.173.72:8001/workflow/resume/pr-deployment-abc123
+Resume Endpoint: POST https://codechef.appsmithery.co/api/workflow/resume/pr-deployment-abc123
 ```
 
 **Parent Issue**: All approval requests created as sub-issues of DEV-68 (HITL Hub)

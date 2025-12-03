@@ -10,13 +10,14 @@
 
 set -e
 
-DROPLET_IP="45.55.173.72"
+DROPLET_HOST="codechef.appsmithery.co"
+DROPLET_IP="45.55.173.72"  # For SSH
 DROPLET_USER="root"
 DEPLOY_PATH="/opt/Dev-Tools"
 SCRIPT_NAME="weekly-cleanup.sh"
 CRON_SCHEDULE="0 3 * * 0"
 
-echo "🔧 Setting up weekly Docker cleanup cron job on droplet..."
+echo "🔧 Setting up weekly Docker cleanup cron job on $DROPLET_HOST..."
 echo ""
 
 # Check if cleanup script exists locally

@@ -118,7 +118,7 @@ try {
             Write-Host "✅ Data is fresh (${ageSeconds}s old)" -ForegroundColor Green
         } else {
             Write-Host "⚠️  Data is stale (${ageSeconds}s old)" -ForegroundColor Yellow
-            Write-Host "   Check Grafana Agent status: ssh root@45.55.173.72 'systemctl status grafana-agent'" -ForegroundColor Gray
+            Write-Host "   Check Grafana Alloy status: ssh do-mcp-gateway 'systemctl status alloy'" -ForegroundColor Gray
         }
     }
 } catch {
@@ -138,11 +138,11 @@ Write-Host "Commands:" -ForegroundColor Cyan
 Write-Host "  1. Open dashboard in browser:"
 Write-Host "     start $dashboardUrl"
 Write-Host ""
-Write-Host "  2. Check agent logs:"
-Write-Host "     ssh root@45.55.173.72 'journalctl -u grafana-agent -f'" -ForegroundColor Gray
+Write-Host "  2. Check Alloy agent logs:"
+Write-Host "     ssh do-mcp-gateway 'journalctl -u alloy -f'" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  3. Restart agent if needed:"
-Write-Host "     ssh root@45.55.173.72 'systemctl restart grafana-agent'" -ForegroundColor Gray
+Write-Host "     ssh do-mcp-gateway 'systemctl restart alloy'" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  4. Query metrics directly (Explore):"
 Write-Host "     https://appsmithery.grafana.net/explore"

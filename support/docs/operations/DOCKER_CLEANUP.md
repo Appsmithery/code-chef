@@ -149,7 +149,7 @@ docker system prune -a --volumes -f
 
 ```bash
 # SSH to droplet
-ssh root@45.55.173.72
+ssh do-mcp-gateway
 
 # Check current usage
 docker system df

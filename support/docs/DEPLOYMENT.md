@@ -1,7 +1,7 @@
 # Dev-Tools Deployment Guide
 
 **Version:** v0.3  
-**Status:**  Production Ready  
+**Status:** Production Ready  
 **Last Updated:** November 25, 2025
 
 See [QUICKSTART.md](QUICKSTART.md) for local setup | [ARCHITECTURE.md](ARCHITECTURE.md) for system design
@@ -29,11 +29,11 @@ See [QUICKSTART.md](QUICKSTART.md) for local setup | [ARCHITECTURE.md](ARCHITECT
 ### Health Checks
 
 ```bash
-# Production (45.55.173.72)
-curl http://45.55.173.72:8001/health  # Orchestrator
-curl http://45.55.173.72:8000/health  # Gateway
-curl http://45.55.173.72:8007/health  # RAG
-curl http://45.55.173.72:8008/health  # State
+# Production via HTTPS (codechef.appsmithery.co)
+curl https://codechef.appsmithery.co/api/health      # Orchestrator
+curl https://codechef.appsmithery.co/rag/health      # RAG
+curl https://codechef.appsmithery.co/state/health    # State
+curl https://codechef.appsmithery.co/langgraph/health # LangGraph
 ```
 
 Expected: `{"status": "healthy", "mcp_gateway": "connected"}`
@@ -42,12 +42,12 @@ Expected: `{"status": "healthy", "mcp_gateway": "connected"}`
 
 ## Deployment Strategies
 
-| Change Type            | Strategy | Duration | Command                                        |
-| ---------------------- | -------- | -------- | ---------------------------------------------- |
-| .env or config YAML    | `config` | 30s      | `deploy-to-droplet.ps1 -DeployType config`     |
-| Python code/Dockerfile | `full`   | 10min    | `deploy-to-droplet.ps1 -DeployType full`       |
-| Documentation only     | `quick`  | 15s      | `deploy-to-droplet.ps1 -DeployType quick`      |
-| Not sure               | `auto`   | varies   | `deploy-to-droplet.ps1 -DeployType auto`       |
+| Change Type            | Strategy | Duration | Command                                    |
+| ---------------------- | -------- | -------- | ------------------------------------------ |
+| .env or config YAML    | `config` | 30s      | `deploy-to-droplet.ps1 -DeployType config` |
+| Python code/Dockerfile | `full`   | 10min    | `deploy-to-droplet.ps1 -DeployType full`   |
+| Documentation only     | `quick`  | 15s      | `deploy-to-droplet.ps1 -DeployType quick`  |
+| Not sure               | `auto`   | varies   | `deploy-to-droplet.ps1 -DeployType auto`   |
 
 ---
 
@@ -62,7 +62,7 @@ Expected: `{"status": "healthy", "mcp_gateway": "connected"}`
 3. Runs `docker compose down && docker compose up -d` (CRITICAL)
 4. Validates health endpoints
 
- **Why down+up?** Docker Compose only reads `.env` at startup. Simple `restart` does NOT reload environment variables.
+**Why down+up?** Docker Compose only reads `.env` at startup. Simple `restart` does NOT reload environment variables.
 
 **Example:**
 
@@ -139,13 +139,13 @@ git push origin main
 
 ### Services
 
-| Service      | Port | Container Name         |
-| ------------ | ---- | ---------------------- |
-| orchestrator | 8001 | deploy-orchestrator-1  |
-| gateway-mcp  | 8000 | deploy-gateway-mcp-1   |
-| rag-context  | 8007 | deploy-rag-context-1   |
-| state        | 8008 | deploy-state-1         |
-| postgres     | 5432 | deploy-postgres-1      |
+| Service      | Port | Container Name        |
+| ------------ | ---- | --------------------- |
+| orchestrator | 8001 | deploy-orchestrator-1 |
+| gateway-mcp  | 8000 | deploy-gateway-mcp-1  |
+| rag-context  | 8007 | deploy-rag-context-1  |
+| state        | 8008 | deploy-state-1        |
+| postgres     | 5432 | deploy-postgres-1     |
 
 ### Networking
 
@@ -210,7 +210,7 @@ echo "ghp_***" > config/env/secrets/github_pat.txt
 - [ ] All changes committed and pushed to `origin/main`
 - [ ] `config/env/.env` populated with production secrets
 - [ ] Docker secrets created (`setup_secrets.sh`)
-- [ ] SSH access to droplet verified (`ssh root@45.55.173.72`)
+- [ ] SSH access to droplet verified (`ssh do-mcp-gateway`)
 - [ ] Backup tag created (`git tag pre-deploy-$(date +%Y%m%d)`)
 
 ### Deploy Process
@@ -228,22 +228,22 @@ git push origin --tags
 # - Health checks validate services
 # - Automatic rollback on failure
 
-# 4. Verify in production
-curl http://45.55.173.72:8001/health
-curl http://45.55.173.72:8000/health
+# 4. Verify in production (via HTTPS)
+curl https://codechef.appsmithery.co/api/health
+curl https://codechef.appsmithery.co/rag/health
 ```
 
 ### Post-Deployment Verification
 
 ```bash
 # Check service status
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose ps"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose ps"
 
 # View logs
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose logs orchestrator --tail=50"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs orchestrator --tail=50"
 
-# Test workflow
-curl -X POST http://45.55.173.72:8001/orchestrate \
+# Test workflow (via HTTPS)
+curl -X POST https://codechef.appsmithery.co/api/orchestrate \
   -H "Content-Type: application/json" \
   -d '{"task": "Generate unit tests for authentication module"}'
 
@@ -262,7 +262,7 @@ curl -X POST http://45.55.173.72:8001/orchestrate \
 
 ```bash
 # Check logs
-ssh root@45.55.173.72 "docker compose logs orchestrator --tail=100"
+ssh do-mcp-gateway "docker compose logs orchestrator --tail=100"
 
 # Common issues:
 # 1. Missing env vars - Check .env uploaded correctly
@@ -276,30 +276,30 @@ ssh root@45.55.173.72 "docker compose logs orchestrator --tail=100"
 # Docker Compose only reads .env at startup
 # Must use down+up, not restart
 
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
 ```
 
 ### Health Check Failing
 
 ```bash
 # Check service is running
-ssh root@45.55.173.72 "docker compose ps"
+ssh do-mcp-gateway "docker compose ps"
 
 # Check internal connectivity
-ssh root@45.55.173.72 "docker exec deploy-orchestrator-1 curl http://gateway-mcp:8000/health"
+ssh do-mcp-gateway "docker exec deploy-orchestrator-1 curl http://gateway-mcp:8000/health"
 
 # Check logs for errors
-ssh root@45.55.173.72 "docker compose logs orchestrator | grep ERROR"
+ssh do-mcp-gateway "docker compose logs orchestrator | grep ERROR"
 ```
 
 ### Out of Memory
 
 ```bash
 # Check memory usage
-ssh root@45.55.173.72 "free -h"
+ssh do-mcp-gateway "free -h"
 
 # Clean up Docker resources
-ssh root@45.55.173.72 "docker system prune -af && docker builder prune -af"
+ssh do-mcp-gateway "docker system prune -af && docker builder prune -af"
 
 # Or use automated cleanup
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType cleanup
@@ -327,8 +327,8 @@ If deployment fails validation, script automatically rolls back:
 .\support\scripts\deploy\deploy-to-droplet.ps1 -Rollback
 
 # Or rollback to specific tag
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && git checkout pre-deploy-20251125"
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d --build"
+ssh do-mcp-gateway "cd /opt/Dev-Tools && git checkout pre-deploy-20251125"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d --build"
 ```
 
 ---
@@ -351,13 +351,13 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose down && docker
 
 ```bash
 # View all services
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose logs -f"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs -f"
 
 # View specific service
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
 
 # Filter errors
-ssh root@45.55.173.72 "docker compose logs orchestrator | grep ERROR"
+ssh do-mcp-gateway "docker compose logs orchestrator | grep ERROR"
 ```
 
 ---
@@ -409,9 +409,9 @@ docker compose restart
 
 ```bash
 # Complete rebuild from scratch
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose down --volumes"
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull origin main"
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose up -d --build"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down --volumes"
+ssh do-mcp-gateway "cd /opt/Dev-Tools && git pull origin main"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose up -d --build"
 ```
 
 ---
