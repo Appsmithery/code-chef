@@ -1,8 +1,8 @@
-# Testing @devtools Extension
+# Testing @codechef Extension
 
 ## Issue: Command Not Found
 
-The error "command 'devtools.configure' not found" suggests the extension hasn't fully activated.
+The error "command 'codechef.configure' not found" suggests the extension hasn't fully activated.
 
 ## Root Cause
 
@@ -14,7 +14,7 @@ VS Code extensions with `chatParticipants` and `activationEvents: ["onStartupFin
 
 ## Solution: Test in Copilot Chat First
 
-Instead of using `F1` → "Dev-Tools: Configure", test the extension by:
+Instead of using `F1` → "code/chef: Configure", test the extension by:
 
 ### Step 1: Open Copilot Chat
 
@@ -26,12 +26,12 @@ Type `@` in the chat and you should see:
 
 - `@workspace`
 - `@vscode`
-- `@devtools` ← **Our extension**
+- `@codechef` ← **Our extension**
 
 ### Step 3: Submit a test task
 
 ```
-@devtools test connection
+@codechef test connection
 ```
 
 This will:
@@ -45,28 +45,28 @@ This will:
 
 Once the chat participant runs once, all commands become available:
 
-- `F1` → "Dev-Tools: Configure"
-- `F1` → "Dev-Tools: Submit Task"
-- `F1` → "Dev-Tools: Check Status"
+- `F1` → "code/chef: Configure"
+- `F1` → "code/chef: Submit Task"
+- `F1` → "code/chef: Check Status"
 - etc.
 
 ## Alternative: Force Activation
 
-If `@devtools` doesn't appear in the participant list, the extension may not be properly installed.
+If `@codechef` doesn't appear in the participant list, the extension may not be properly installed.
 
 **Full reinstall:**
 
 ```powershell
-cd D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot
+cd D:\INFRA\code/chef\code/chef\extensions\vscode-codechef
 
 # Uninstall completely
-code --uninstall-extension appsmithery.vscode-devtools-copilot
+code --uninstall-extension appsmithery.vscode-codechef
 
 # Wait for uninstall to complete
 Start-Sleep -Seconds 3
 
 # Reinstall fresh
-code --install-extension .\vscode-devtools-copilot-0.1.0.vsix
+code --install-extension .\vscode-codechef-0.1.0.vsix
 
 # Reload VS Code
 # Ctrl+Shift+P → "Developer: Reload Window"
@@ -80,31 +80,31 @@ code --install-extension .\vscode-devtools-copilot-0.1.0.vsix
    code --list-extensions | Select-String "devtools"
    ```
 
-   Should show: `appsmithery.vscode-devtools-copilot`
+   Should show: `appsmithery.vscode-codechef`
 
 2. **Check extension activated**:
 
    - Look for status bar item (bottom-right)
-   - Should show: "✓ Dev-Tools" or "⚠ Dev-Tools"
+   - Should show: "✓ code/chef" or "⚠ code/chef"
 
 3. **Check logs**:
 
    - `F1` → "Developer: Show Logs" → "Extension Host"
-   - Look for: "Dev-Tools extension activating..."
+   - Look for: "code/chef extension activating..."
 
 4. **Test orchestrator directly**:
    ```powershell
-   Invoke-RestMethod -Uri "http://45.55.173.72:8001/health"
+   Invoke-RestMethod -Uri "https://codechef.appsmithery.co/api/health"
    ```
    Should return: `status: ok, service: orchestrator`
 
 ## Expected Behavior
 
-Once working, typing `@devtools Add auth to API` in Copilot Chat should:
+Once working, typing `@codechef Add auth to API` in Copilot Chat should:
 
 1. Show participant icon (if we had added one)
 2. Display "Analyzing workspace context..." progress
-3. Show "Submitting to Dev-Tools orchestrator..." progress
+3. Show "Submitting to code/chef orchestrator..." progress
 4. Return task breakdown with:
    - Task ID
    - Subtasks list

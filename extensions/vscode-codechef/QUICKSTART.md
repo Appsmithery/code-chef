@@ -9,7 +9,7 @@ Your VS Code extension is **ready to test**!
 1. **Extension Core** (6 TypeScript files → compiled to JavaScript)
 
    - `extension.ts` - Activation/deactivation lifecycle
-   - `chatParticipant.ts` - @devtools chat participant handler
+   - `chatParticipant.ts` - @codechef chat participant handler
    - `orchestratorClient.ts` - HTTP API client
    - `contextExtractor.ts` - Workspace context gathering
    - `sessionManager.ts` - Multi-turn conversation persistence
@@ -36,15 +36,15 @@ Your VS Code extension is **ready to test**!
    - Source maps generated for debugging
 
 5. **Connectivity**: ✅ Healthy
-   - Orchestrator: http://45.55.173.72:8001 (responding)
-   - MCP Gateway: http://45.55.173.72:8000 (available)
+   - Orchestrator: https://codechef.appsmithery.co/api (responding)
+   - MCP Gateway: https://codechef.appsmithery.co/api (available)
 
 ## 🚀 Testing Steps
 
 ### 1. Open Extension in VS Code
 
 ```powershell
-code D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot
+code D:\INFRA\code/chef\code/chef\extensions\vscode-devtools-copilot
 ```
 
 ### 2. Launch Extension Development Host
@@ -60,12 +60,12 @@ In the Extension Development Host window:
 - Press **Ctrl+I** (or click Copilot icon in sidebar)
 - Copilot Chat panel opens
 
-### 4. Test @devtools Participant
+### 4. Test @codechef Participant
 
 Type in Copilot Chat:
 
 ```
-@devtools Add JWT authentication to my Express API
+@codechef Add JWT authentication to my Express API
 ```
 
 **Expected Response:**
@@ -87,7 +87,7 @@ Estimated Duration: 30 minutes
 ### 5. Check Task Status
 
 ```
-@devtools /status abc123
+@codechef /status abc123
 ```
 
 **Expected Response:**
@@ -107,7 +107,7 @@ Progress: 2/4 subtasks
 ### 6. List Available Tools
 
 ```
-@devtools /tools
+@codechef /tools
 ```
 
 **Expected Response:**
@@ -130,7 +130,7 @@ Progress: 2/4 subtasks
 Submit high-risk task requiring approval:
 
 ```
-@devtools Drop all tables in production database
+@codechef Drop all tables in production database
 ```
 
 **Expected Response:**
@@ -170,10 +170,10 @@ Use /approve xyz789 to proceed after review.
 
 1. Check orchestrator health:
    ```powershell
-   Invoke-WebRequest http://45.55.173.72:8001/health
+   Invoke-WebRequest https://codechef.appsmithery.co/api/health
    ```
 2. Verify firewall allows outbound connections
-3. Update URL in settings: F1 → "Dev-Tools: Configure"
+3. Update URL in settings: F1 → "code/chef: Configure"
 
 ### Context Not Being Extracted
 
@@ -186,14 +186,14 @@ Use /approve xyz789 to proceed after review.
 1. Install Linear Connect extension: `linear.linear-vscode`
 2. Configure Linear API token in extension settings
 3. Subscribe to PR-68 in Linear workspace
-4. Check polling is enabled: `devtools.enableNotifications = true`
+4. Check polling is enabled: `codechef.enableNotifications = true`
 
 ## 📦 Packaging (Optional)
 
 ### Create VSIX Package
 
 ```powershell
-cd D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot
+cd D:\INFRA\code/chef\code/chef\extensions\vscode-devtools-copilot
 npm run package
 ```
 
@@ -214,7 +214,7 @@ npm run publish
 
 ## 🔄 Next Steps
 
-1. **Test Extension** (F5 → Copilot Chat → @devtools)
+1. **Test Extension** (F5 → Copilot Chat → @codechef)
 2. **Submit Real Task** (verify end-to-end workflow)
 3. **Check LangSmith Traces** (confirm observability)
 4. **Build MCP Bridge** (PR-114 - NPM/PyPI packages)
@@ -225,12 +225,12 @@ npm run publish
 
 ## 📚 Resources
 
-- **Extension Source**: `D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot`
+- **Extension Source**: `D:\INFRA\code/chef\code/chef\extensions\vscode-devtools-copilot`
 - **Implementation Plan**: `support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md`
 - **Linear Roadmap**: [PR-112](https://linear.app/project-roadmaps/issue/PR-112)
 - **LangSmith Project**: [agents](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
-- **Orchestrator API**: http://45.55.173.72:8001
-- **MCP Gateway**: http://45.55.173.72:8000
+- **Orchestrator API**: https://codechef.appsmithery.co/api
+- **MCP Gateway**: https://codechef.appsmithery.co/api
 
 ## 💡 Tips
 

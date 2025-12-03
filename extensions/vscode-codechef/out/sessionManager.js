@@ -41,7 +41,7 @@ class SessionManager {
         this.sessions = new Map();
         this.sessionTimeout = 3600000; // 1 hour
         // Load persisted sessions
-        const saved = context.globalState.get('devtools.sessions', {});
+        const saved = context.globalState.get('codechef.sessions', {});
         this.sessions = new Map(Object.entries(saved));
         // Cleanup old sessions periodically
         setInterval(() => this.cleanupSessions(), 300000); // Every 5 minutes
@@ -70,7 +70,7 @@ class SessionManager {
         return `session_${Date.now()}`;
     }
     generateSessionId() {
-        return `devtools_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `codechef_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
     hashString(str) {
         let hash = 0;
@@ -83,7 +83,7 @@ class SessionManager {
     }
     persistSessions() {
         const obj = Object.fromEntries(this.sessions);
-        this.context.globalState.update('devtools.sessions', obj);
+        this.context.globalState.update('codechef.sessions', obj);
     }
     cleanupSessions() {
         // In a real implementation, we'd track last access times
@@ -96,7 +96,7 @@ class SessionManager {
     }
     clearSessions() {
         this.sessions.clear();
-        this.context.globalState.update('devtools.sessions', {});
+        this.context.globalState.update('codechef.sessions', {});
     }
 }
 exports.SessionManager = SessionManager;

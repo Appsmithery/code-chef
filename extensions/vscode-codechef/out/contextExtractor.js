@@ -206,7 +206,7 @@ class ContextExtractor {
      * Get Linear project ID from workspace settings (if exists)
      */
     getLinearProjectId() {
-        const config = vscode.workspace.getConfiguration('devtools.linear');
+        const config = vscode.workspace.getConfiguration('codechef.linear');
         return config.get('projectId') || null;
     }
     /**
@@ -214,7 +214,7 @@ class ContextExtractor {
      * Called after orchestrator creates new project
      */
     async saveLinearProjectId(projectId) {
-        const config = vscode.workspace.getConfiguration('devtools.linear');
+        const config = vscode.workspace.getConfiguration('codechef.linear');
         await config.update('projectId', projectId, vscode.ConfigurationTarget.Workspace);
     }
 }

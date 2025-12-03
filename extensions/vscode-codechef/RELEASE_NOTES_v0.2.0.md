@@ -1,7 +1,7 @@
 # Release Notes: VS Code Extension v0.2.0
 
 **Release Date**: January 2025  
-**Package**: `vscode-devtools-copilot-0.2.0.vsix` (971.31 KB)  
+**Package**: `vscode-codechef-0.2.0.vsix` (971.31 KB)  
 **Commit**: b3641ec
 
 ## 🎉 Major Features
@@ -55,7 +55,7 @@ The orchestrator and all 6 specialized agents can now **INVOKE** MCP tools via L
 
 ### Extension Package
 
-- **File**: `vscode-devtools-copilot-0.2.0.vsix`
+- **File**: `vscode-codechef-0.2.0.vsix`
 - **Size**: 971.31 KB
 - **Files**: 405 total (178 JavaScript, 12 TypeScript compiled, 385 node_modules)
 - **Includes**: README, LICENSE, icon, compiled code, prompts, dependencies
@@ -65,23 +65,23 @@ The orchestrator and all 6 specialized agents can now **INVOKE** MCP tools via L
 ### From .vsix File (Local)
 
 ```bash
-cd extensions/vscode-devtools-copilot
-code --install-extension vscode-devtools-copilot-0.2.0.vsix
+cd extensions/vscode-codechef
+code --install-extension vscode-codechef-0.2.0.vsix
 ```
 
 ### From VS Code Marketplace (Future)
 
 ```bash
-code --install-extension appsmithery.vscode-devtools-copilot
+code --install-extension appsmithery.vscode-codechef
 ```
 
 ## 🔧 Configuration
 
-Required setting (press F1 → "Dev-Tools: Configure"):
+Required setting (press F1 → "code/chef: Configure"):
 
 ```json
 {
-  "devtools.orchestratorUrl": "http://45.55.173.72:8001"
+  "codechef.orchestratorUrl": "https://codechef.appsmithery.co/api"
 }
 ```
 
@@ -89,11 +89,11 @@ Optional settings:
 
 ```json
 {
-  "devtools.mcpGatewayUrl": "http://45.55.173.72:8000",
-  "devtools.linearHubIssue": "PR-68",
-  "devtools.autoApproveThreshold": "low",
-  "devtools.enableNotifications": true,
-  "devtools.langsmithUrl": "https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046"
+  "codechef.mcpGatewayUrl": "https://codechef.appsmithery.co/api",
+  "codechef.linearHubIssue": "PR-68",
+  "codechef.autoApproveThreshold": "low",
+  "codechef.enableNotifications": true,
+  "codechef.langsmithUrl": "https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046"
 }
 ```
 
@@ -129,14 +129,14 @@ All tasks are fully traced and monitored:
 
 ### LangSmith LLM Tracing
 
-- **Workspace**: Dev-Tools (5029c640-3f73-480c-82f3-58e402ed4207)
+- **Workspace**: code/chef (5029c640-3f73-480c-82f3-58e402ed4207)
 - **Project**: agents (f967bb5e-2e61-434f-8ee1-0df8c22bc046)
 - **URL**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
 - **Features**: Token counts, latency, tool calls, LLM responses, error traces
 
 ### Prometheus Metrics
 
-- **Endpoint**: http://45.55.173.72:9090
+- **Endpoint**: http://codechef.appsmithery.co:9090
 - **Metrics**: HTTP requests, response times, error rates, agent health
 - **Scrape Interval**: 15s
 - **Retention**: 15 days
@@ -153,14 +153,14 @@ All tasks are fully traced and monitored:
 ### Extension Validation
 
 ```bash
-cd extensions/vscode-devtools-copilot
+cd extensions/vscode-codechef
 .\validate-extension.ps1
 ```
 
 Validates:
 
 - ✅ Extension loads in VS Code
-- ✅ Chat participant `@devtools` available
+- ✅ Chat participant `@codechef` available
 - ✅ Commands registered in Command Palette
 - ✅ Configuration settings accessible
 - ✅ Network connectivity to orchestrator
@@ -168,7 +168,7 @@ Validates:
 ### Manual Testing
 
 1. Open Copilot Chat (Ctrl+I)
-2. Type: `@devtools Add JWT authentication to my Express API`
+2. Type: `@codechef Add JWT authentication to my Express API`
 3. Verify:
 
    - Task submitted successfully
@@ -180,21 +180,21 @@ Validates:
 4. Check task status:
 
    ```
-   @devtools /status <task-id>
+   @codechef /status <task-id>
    ```
 
 5. List available tools:
    ```
-   @devtools /tools
+   @codechef /tools
    ```
 
 ## 📝 Documentation Updates
 
 ### Updated Files
 
-- ✅ `extensions/vscode-devtools-copilot/README.md`: Added LangChain architecture, badges, enhanced examples
-- ✅ `extensions/vscode-devtools-copilot/CHANGELOG.md`: Version history following semantic versioning
-- ✅ `extensions/vscode-devtools-copilot/package.json`: v0.2.0, expanded keywords, badges, icon
+- ✅ `extensions/vscode-codechef/README.md`: Added LangChain architecture, badges, enhanced examples
+- ✅ `extensions/vscode-codechef/CHANGELOG.md`: Version history following semantic versioning
+- ✅ `extensions/vscode-codechef/package.json`: v0.2.0, expanded keywords, badges, icon
 - ✅ `agent_orchestrator/README.md`: Progressive tool disclosure architecture
 - ✅ `support/docs/README.md`: Added progressive tool disclosure link
 - ✅ `support/docs/SETUP_GUIDE.md`: LangChain tool binding verification steps
@@ -202,18 +202,18 @@ Validates:
 
 ### New Files
 
-- ✅ `extensions/vscode-devtools-copilot/CHANGELOG.md`: Version history
-- ✅ `extensions/vscode-devtools-copilot/RELEASE_NOTES_v0.2.0.md`: This file
-- ✅ `extensions/vscode-devtools-copilot/minions_purple.png`: Extension icon
-- ✅ `extensions/vscode-devtools-copilot/vscode-devtools-copilot-0.2.0.vsix`: Packaged extension
+- ✅ `extensions/vscode-codechef/CHANGELOG.md`: Version history
+- ✅ `extensions/vscode-codechef/RELEASE_NOTES_v0.2.0.md`: This file
+- ✅ `extensions/vscode-codechef/minions_purple.png`: Extension icon
+- ✅ `extensions/vscode-codechef/vscode-codechef-0.2.0.vsix`: Packaged extension
 
 ## 🔗 References
 
 ### Documentation
 
-- [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
-- [Setup Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/SETUP_GUIDE.md)
-- [Integration Implementation Plan](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md)
+- [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/code/chef/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
+- [Setup Guide](https://github.com/Appsmithery/code/chef/blob/main/support/docs/SETUP_GUIDE.md)
+- [Integration Implementation Plan](https://github.com/Appsmithery/code/chef/blob/main/support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md)
 
 ### Integrations
 
@@ -224,18 +224,18 @@ Validates:
 
 ### Repository
 
-- [Dev-Tools GitHub](https://github.com/Appsmithery/Dev-Tools)
+- [code/chef GitHub](https://github.com/Appsmithery/code/chef)
 - [Linear Project](https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b)
-- [Issues](https://github.com/Appsmithery/Dev-Tools/issues)
+- [Issues](https://github.com/Appsmithery/code/chef/issues)
 
 ## 🎯 Next Steps
 
 ### For Users
 
-1. **Install Extension**: `code --install-extension vscode-devtools-copilot-0.2.0.vsix`
-2. **Configure**: F1 → "Dev-Tools: Configure" → Enter orchestrator URL
-3. **Test**: Open Copilot Chat → `@devtools hello world` (verify connection)
-4. **Use**: Submit real tasks → `@devtools Add authentication to my API`
+1. **Install Extension**: `code --install-extension vscode-codechef-0.2.0.vsix`
+2. **Configure**: F1 → "code/chef: Configure" → Enter orchestrator URL
+3. **Test**: Open Copilot Chat → `@codechef hello world` (verify connection)
+4. **Use**: Submit real tasks → `@codechef Add authentication to my API`
 
 ### For Developers
 
@@ -281,6 +281,6 @@ Validates:
 
 **Version**: 0.2.0  
 **Status**: ✅ Ready for Distribution  
-**Package**: `vscode-devtools-copilot-0.2.0.vsix` (971.31 KB)  
+**Package**: `vscode-codechef-0.2.0.vsix` (971.31 KB)  
 **License**: MIT  
 **Publisher**: appsmithery

@@ -42,7 +42,7 @@
 - Update description to mention "LangGraph single-orchestrator"
 - Update keywords to add "langgraph", "workflow-engine", "state-management"
 - Update badges to reflect "1 orchestrator" instead of "6 agents"
-- Update default `orchestratorUrl` if needed (currently `http://45.55.173.72:8001` - correct)
+- Update default `orchestratorUrl` if needed (currently `https://codechef.appsmithery.co/api` - correct)
 
 **Script**:
 
@@ -151,10 +151,10 @@ task extension:refactor-client
 
 ```bash
 # Test health endpoint
-curl http://45.55.173.72:8001/health
+curl https://codechef.appsmithery.co/api/health
 
 # Test orchestrate endpoint
-curl -X POST http://45.55.173.72:8001/orchestrate \
+curl -X POST https://codechef.appsmithery.co/api/orchestrate \
   -H "Content-Type: application/json" \
   -d '{"description":"test","priority":"low"}'
 ```
@@ -223,8 +223,8 @@ task extension:refactor-chat
 
 ```bash
 # Test chat participant commands in VS Code
-@devtools /tools
-@devtools /status <task-id>
+@codechef /tools
+@codechef /status <task-id>
 ```
 
 ---
@@ -275,7 +275,7 @@ task extension:update-linear-watcher
 
 ```bash
 # Test approval notification by creating high-risk task
-curl -X POST http://45.55.173.72:8001/orchestrate \
+curl -X POST https://codechef.appsmithery.co/api/orchestrate \
   -H "Content-Type: application/json" \
   -d '{"description":"Deploy to production","priority":"high"}'
 
@@ -399,8 +399,8 @@ task extension:update-quickref
 1. **Extension Activation**:
 
    - [ ] Extension loads without errors
-   - [ ] Status bar shows "$(check) Dev-Tools"
-   - [ ] Chat participant registered as `@devtools`
+   - [ ] Status bar shows "$(check) code/chef"
+   - [ ] Chat participant registered as `@codechef`
 
 2. **Health Checks**:
 
@@ -410,33 +410,33 @@ task extension:update-quickref
 
 3. **Task Submission**:
 
-   - [ ] Submit task via chat participant: `@devtools Add auth to API`
+   - [ ] Submit task via chat participant: `@codechef Add auth to API`
    - [ ] Receives task ID and subtasks
    - [ ] Agent emojis display correctly
    - [ ] Estimated duration shown
 
 4. **Task Status**:
 
-   - [ ] Check status via command: `@devtools /status <task-id>`
+   - [ ] Check status via command: `@codechef /status <task-id>`
    - [ ] Shows workflow state (pending/in_progress/paused/completed)
    - [ ] Shows subtask progress
 
 5. **Approval Workflow**:
 
-   - [ ] High-risk task triggers approval: `@devtools Deploy to production`
+   - [ ] High-risk task triggers approval: `@codechef Deploy to production`
    - [ ] Linear sub-issue created in DEV-68
    - [ ] Approval notification appears (if enabled)
    - [ ] Approve via command or Linear UI
 
 6. **Tools Command**:
 
-   - [ ] List tools: `@devtools /tools`
+   - [ ] List tools: `@codechef /tools`
    - [ ] Shows 150+ tools grouped by server
    - [ ] No errors fetching tool list
 
 7. **Configuration**:
 
-   - [ ] Update orchestrator URL: `Dev-Tools: Configure`
+   - [ ] Update orchestrator URL: `code/chef: Configure`
    - [ ] Change auto-approve threshold
    - [ ] Toggle notifications
 
@@ -492,7 +492,7 @@ if (-not $foundDeprecated) {
 # 3. Check orchestrator health
 Write-Host "`n[CHECK] Orchestrator health..." -ForegroundColor Yellow
 try {
-    $health = Invoke-RestMethod -Uri "http://45.55.173.72:8001/health" -Method GET
+    $health = Invoke-RestMethod -Uri "https://codechef.appsmithery.co/api/health" -Method GET
     if ($health.status -eq "healthy" -or $health.status -eq "ok") {
         Write-Host "  ✅ Orchestrator healthy" -ForegroundColor Green
     } else {
@@ -552,24 +552,24 @@ task extension:validate-v0.3
 
 ```powershell
 # Clean and rebuild
-cd extensions/vscode-devtools-copilot
+cd extensions/vscode-codechef
 npm run clean
 npm install
 npm run compile
 
 # Package extension
 npm run package
-# Creates: vscode-devtools-copilot-0.3.0.vsix
+# Creates: vscode-codechef-0.3.0.vsix
 ```
 
 **Validation**:
 
 ```bash
 # Check package size (should be similar to v0.2.0)
-ls -lh vscode-devtools-copilot-0.3.0.vsix
+ls -lh vscode-codechef-0.3.0.vsix
 
 # Extract and inspect
-unzip -l vscode-devtools-copilot-0.3.0.vsix
+unzip -l vscode-codechef-0.3.0.vsix
 ```
 
 ---
@@ -580,10 +580,10 @@ unzip -l vscode-devtools-copilot-0.3.0.vsix
 
 ```powershell
 # Uninstall old version
-code --uninstall-extension appsmithery.vscode-devtools-copilot
+code --uninstall-extension appsmithery.vscode-codechef
 
 # Install new version
-code --install-extension vscode-devtools-copilot-0.3.0.vsix
+code --install-extension vscode-codechef-0.3.0.vsix
 
 # Restart VS Code and test
 ```
@@ -613,12 +613,12 @@ vsce login appsmithery
 vsce publish 0.3.0
 
 # Or publish from VSIX
-vsce publish --packagePath vscode-devtools-copilot-0.3.0.vsix
+vsce publish --packagePath vscode-codechef-0.3.0.vsix
 ```
 
 **Verification**:
 
-- Check marketplace: https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-devtools-copilot
+- Check marketplace: https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef
 - Verify version shows 0.3.0
 - Test installation from marketplace
 
@@ -657,7 +657,7 @@ python support/scripts/linear/agent-linear-update.py create-issue \
 ✅ Health checks passing
 
 ### Deployment
-✅ Extension packaged: vscode-devtools-copilot-0.3.0.vsix
+✅ Extension packaged: vscode-codechef-0.3.0.vsix
 ✅ Local installation tested
 ✅ Ready for marketplace publish
 
@@ -682,24 +682,24 @@ If v0.3 extension has critical issues:
 
 ```powershell
 # Uninstall v0.3
-code --uninstall-extension appsmithery.vscode-devtools-copilot
+code --uninstall-extension appsmithery.vscode-codechef
 
 # Install v0.2.0 from marketplace
-code --install-extension appsmithery.vscode-devtools-copilot@0.2.0
+code --install-extension appsmithery.vscode-codechef@0.2.0
 ```
 
 ### Step 2: Unpublish v0.3 (if needed)
 
 ```powershell
 # Unpublish specific version
-vsce unpublish appsmithery.vscode-devtools-copilot@0.3.0
+vsce unpublish appsmithery.vscode-codechef@0.3.0
 ```
 
 ### Step 3: Git Revert
 
 ```bash
 # Revert refactoring commits
-git log --oneline extensions/vscode-devtools-copilot
+git log --oneline extensions/vscode-codechef
 git revert <commit-hash>
 git push origin main
 ```
@@ -711,7 +711,7 @@ git push origin main
 ### Functional Requirements
 
 - [x] Extension activates without errors
-- [x] Chat participant (`@devtools`) works
+- [x] Chat participant (`@codechef`) works
 - [x] Task submission successful
 - [x] Task status queries work
 - [x] Approval workflow functions
@@ -754,7 +754,7 @@ git push origin main
 
 ```powershell
 # Run all refactoring tasks in sequence
-cd extensions/vscode-devtools-copilot
+cd extensions/vscode-codechef
 task extension:refactor-all
 
 # Or run individual phases

@@ -43,7 +43,7 @@ const vscode = __importStar(require("vscode"));
  * Works with both single-line and multi-line selections.
  */
 function registerCopyPermalinkCommand(context) {
-    const command = vscode.commands.registerCommand('devtools.copyPermalink', async () => {
+    const command = vscode.commands.registerCommand('codechef.copyPermalink', async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showErrorMessage('No active editor');

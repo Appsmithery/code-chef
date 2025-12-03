@@ -1,8 +1,8 @@
-# Dev-Tools Copilot Extension - Deployment Guide
+# code/chef Copilot Extension - Deployment Guide
 
 ## ✅ Package Built Successfully
 
-**VSIX**: `vscode-devtools-copilot-0.1.0.vsix` (28.6 KB, 19 files)
+**VSIX**: `vscode-codechef-0.1.0.vsix` (28.6 KB, 19 files)
 
 ## Installation Options
 
@@ -10,7 +10,7 @@
 
 ```bash
 # Install from VSIX
-code --install-extension vscode-devtools-copilot-0.1.0.vsix
+code --install-extension vscode-codechef-0.1.0.vsix
 
 # Verify installation
 code --list-extensions | grep devtools
@@ -19,15 +19,15 @@ code --list-extensions | grep devtools
 **Windows PowerShell:**
 
 ```powershell
-cd D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot
-code --install-extension .\vscode-devtools-copilot-0.1.0.vsix
+cd D:\INFRA\code/chef\code/chef\extensions\vscode-codechef
+code --install-extension .\vscode-codechef-0.1.0.vsix
 ```
 
 After installation:
 
 1. Reload VS Code (`Ctrl+Shift+P` → "Reload Window")
 2. Open Copilot Chat (`Ctrl+I`)
-3. Type `@devtools Add JWT authentication to my API`
+3. Type `@codechef Add JWT authentication to my API`
 
 ### Option 2: Workspace Recommendation
 
@@ -35,7 +35,7 @@ Add to `.vscode/extensions.json` in your project:
 
 ```json
 {
-  "recommendations": ["appsmithery.vscode-devtools-copilot"]
+  "recommendations": ["appsmithery.vscode-codechef"]
 }
 ```
 
@@ -73,17 +73,17 @@ For now, distribute via VSIX for internal testing.
 
 ### First-Time Setup
 
-Press `F1` → "Dev-Tools: Configure Orchestrator URL"
+Press `F1` → "code/chef: Configure Orchestrator URL"
 
 Default configuration:
 
 ```json
 {
-  "devtools.orchestratorUrl": "http://45.55.173.72:8001",
-  "devtools.mcpGatewayUrl": "http://45.55.173.72:8000",
-  "devtools.linearHubIssue": "PR-68",
-  "devtools.enableNotifications": true,
-  "devtools.autoApproveThreshold": "low"
+  "codechef.orchestratorUrl": "https://codechef.appsmithery.co/api",
+  "codechef.mcpGatewayUrl": "https://codechef.appsmithery.co/api",
+  "codechef.linearHubIssue": "PR-68",
+  "codechef.enableNotifications": true,
+  "codechef.autoApproveThreshold": "low"
 }
 ```
 
@@ -91,14 +91,14 @@ Default configuration:
 
 Ensure firewall allows outbound connections:
 
-- `45.55.173.72:8001` - Orchestrator API
-- `45.55.173.72:8000` - MCP Gateway (for `/tools` command)
+- `codechef.appsmithery.co:8001` - Orchestrator API
+- `codechef.appsmithery.co:8000` - MCP Gateway (for `/tools` command)
 - `linear.app` - Approval notifications
 
 Test connectivity:
 
 ```bash
-curl http://45.55.173.72:8001/health
+curl https://codechef.appsmithery.co/api/health
 # Expected: {"status": "ok", "mcp_gateway": "connected"}
 ```
 
@@ -107,25 +107,25 @@ curl http://45.55.173.72:8001/health
 ### Submit Development Task
 
 ```
-@devtools Add authentication middleware to my Express API
+@codechef Add authentication middleware to my Express API
 ```
 
 ### Check Task Status
 
 ```
-@devtools /status abc123-def456-...
+@codechef /status abc123-def456-...
 ```
 
 ### List Available Tools
 
 ```
-@devtools /tools
+@codechef /tools
 ```
 
 ### Approve Pending Task
 
 ```
-@devtools /approve abc123 approval-456
+@codechef /approve abc123 approval-456
 ```
 
 ## Troubleshooting
@@ -138,10 +138,10 @@ curl http://45.55.173.72:8001/health
 
 ### Cannot Connect to Orchestrator
 
-1. Verify URL: `F1` → "Dev-Tools: Configure"
-2. Test endpoint: `curl http://45.55.173.72:8001/health`
+1. Verify URL: `F1` → "code/chef: Configure"
+2. Test endpoint: `curl https://codechef.appsmithery.co/api/health`
 3. Check firewall/VPN settings
-4. View status bar (bottom right): Should show "✓ Dev-Tools"
+4. View status bar (bottom right): Should show "✓ code/chef"
 
 ### No Approval Notifications
 
@@ -149,7 +149,7 @@ curl http://45.55.173.72:8001/health
 2. Enable notifications: `F1` → "Preferences: Open Settings (JSON)"
    ```json
    {
-     "devtools.enableNotifications": true
+     "codechef.enableNotifications": true
    }
    ```
 3. Check Linear Watcher connection in Output panel
@@ -167,7 +167,7 @@ curl http://45.55.173.72:8001/health
 ```
 VS Code Workspace
     ↓ (Ctrl+I)
-Copilot Chat → @devtools
+Copilot Chat → @codechef
     ↓ (HTTP POST)
 Orchestrator :8001
     ↓ (Routes tasks)
@@ -193,7 +193,7 @@ All tasks automatically traced:
 
 ### Prometheus Metrics
 
-http://45.55.173.72:9090
+http://codechef.appsmithery.co:9090
 
 Query examples:
 
@@ -224,7 +224,7 @@ All high-risk tasks post approval requests here with:
 ### Build from Source
 
 ```bash
-cd extensions/vscode-devtools-copilot
+cd extensions/vscode-codechef
 npm install
 npm run compile
 npm run package
@@ -248,7 +248,7 @@ npm run compile
 npx @vscode/vsce package --allow-missing-repository
 
 # Reinstall
-code --install-extension vscode-devtools-copilot-0.1.1.vsix
+code --install-extension vscode-codechef-0.1.1.vsix
 ```
 
 ## Related Issues
@@ -260,7 +260,7 @@ code --install-extension vscode-devtools-copilot-0.1.1.vsix
 
 ## Support
 
-- GitHub Issues: https://github.com/Appsmithery/Dev-Tools/issues
+- GitHub Issues: https://github.com/Appsmithery/code/chef/issues
 - Linear Project: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
 - Extension README: [README.md](./README.md)
 
@@ -277,5 +277,5 @@ code --install-extension vscode-devtools-copilot-0.1.1.vsix
 ---
 
 **Status**: ✅ Ready for installation  
-**Next Task**: Install extension and test `@devtools` in Copilot Chat  
+**Next Task**: Install extension and test `@codechef` in Copilot Chat  
 **Blocker**: None (PR-118 optional - doesn't affect core functionality)

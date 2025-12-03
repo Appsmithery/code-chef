@@ -1,17 +1,17 @@
-# @devtools Quick Reference
+# @codechef Quick Reference
 
 ## Setup (One-Time)
 
 1. **Install Extension**:
 
    ```bash
-   code --install-extension vscode-devtools-copilot-0.1.0.vsix
+   code --install-extension vscode-codechef-0.1.0.vsix
    ```
 
 2. **Reload VS Code**: `Ctrl+Shift+P` → "Reload Window"
 
-3. **Configure** (optional): `F1` → "Dev-Tools: Configure"
-   - Default: `http://45.55.173.72:8001` (already set)
+3. **Configure** (optional): `F1` → "code/chef: Configure"
+   - Default: `https://codechef.appsmithery.co/api` (already set)
 
 ## Usage
 
@@ -19,41 +19,41 @@
 
 | Command                                | Description              | Example                                  |
 | -------------------------------------- | ------------------------ | ---------------------------------------- |
-| `@devtools <task>`                     | Submit development task  | `@devtools Add authentication to API`    |
-| `@devtools /status <id>`               | Check task status        | `@devtools /status abc123`               |
-| `@devtools /approve <task> <approval>` | Approve pending task     | `@devtools /approve abc123 approval-456` |
-| `@devtools /tools`                     | List available MCP tools | `@devtools /tools`                       |
+| `@codechef <task>`                     | Submit development task  | `@codechef Add authentication to API`    |
+| `@codechef /status <id>`               | Check task status        | `@codechef /status abc123`               |
+| `@codechef /approve <task> <approval>` | Approve pending task     | `@codechef /approve abc123 approval-456` |
+| `@codechef /tools`                     | List available MCP tools | `@codechef /tools`                       |
 
 ### Real-World Examples
 
 **Feature Development**:
 
 ```
-@devtools Implement JWT authentication middleware for Express
+@codechef Implement JWT authentication middleware for Express
 ```
 
 **Code Review**:
 
 ```
-@devtools Review my authentication changes for security issues
+@codechef Review my authentication changes for security issues
 ```
 
 **Infrastructure**:
 
 ```
-@devtools Add Redis caching layer with Docker Compose
+@codechef Add Redis caching layer with Docker Compose
 ```
 
 **CI/CD**:
 
 ```
-@devtools Create GitHub Actions workflow for automated testing
+@codechef Create GitHub Actions workflow for automated testing
 ```
 
 **Documentation**:
 
 ```
-@devtools Generate API docs from my Express routes
+@codechef Generate API docs from my Express routes
 ```
 
 ### Task Status
@@ -68,7 +68,7 @@ After submitting a task, you'll get:
 Check status anytime:
 
 ```
-@devtools /status abc123
+@codechef /status abc123
 ```
 
 ### Approvals
@@ -79,7 +79,7 @@ High-risk tasks require approval:
 2. **Review**: Check Linear PR-68 for details
 3. **Approve**:
    ```
-   @devtools /approve abc123 approval-456
+   @codechef /approve abc123 approval-456
    ```
    Or use Linear interface directly
 
@@ -88,7 +88,7 @@ High-risk tasks require approval:
 List all 150+ MCP tools:
 
 ```
-@devtools /tools
+@codechef /tools
 ```
 
 **Note**: This command currently returns 404 (PR-118 in progress). Tools are still accessible during task execution.
@@ -97,11 +97,11 @@ List all 150+ MCP tools:
 
 | Command                   | Shortcut | Description                |
 | ------------------------- | -------- | -------------------------- |
-| Dev-Tools: Submit Task    | `F1`     | Submit via input box       |
-| Dev-Tools: Check Status   | `F1`     | Check status via input box |
-| Dev-Tools: Configure      | `F1`     | Update orchestrator URL    |
-| Dev-Tools: Show Approvals | `F1`     | Open Linear PR-68          |
-| Dev-Tools: Clear Cache    | `F1`     | Clear session cache        |
+| code/chef: Submit Task    | `F1`     | Submit via input box       |
+| code/chef: Check Status   | `F1`     | Check status via input box |
+| code/chef: Configure      | `F1`     | Update orchestrator URL    |
+| code/chef: Show Approvals | `F1`     | Open Linear PR-68          |
+| code/chef: Clear Cache    | `F1`     | Clear session cache        |
 
 ## Settings
 
@@ -109,8 +109,8 @@ Access via `F1` → "Preferences: Open Settings" → Search "devtools"
 
 | Setting                | Default                    | Description               |
 | ---------------------- | -------------------------- | ------------------------- |
-| `orchestratorUrl`      | `http://45.55.173.72:8001` | Orchestrator endpoint     |
-| `mcpGatewayUrl`        | `http://45.55.173.72:8000` | MCP gateway endpoint      |
+| `orchestratorUrl`      | `https://codechef.appsmithery.co/api` | Orchestrator endpoint     |
+| `mcpGatewayUrl`        | `https://codechef.appsmithery.co/api` | MCP gateway endpoint      |
 | `linearHubIssue`       | `PR-68`                    | Approval notification hub |
 | `autoApproveThreshold` | `low`                      | Auto-approve risk level   |
 | `enableNotifications`  | `true`                     | Show toast notifications  |
@@ -119,9 +119,9 @@ Access via `F1` → "Preferences: Open Settings" → Search "devtools"
 
 Bottom-right corner shows connection status:
 
-- ✅ **Dev-Tools** - Connected
-- ⚠️ **Dev-Tools** - Unhealthy
-- ❌ **Dev-Tools** - Disconnected
+- ✅ **code/chef** - Connected
+- ⚠️ **code/chef** - Unhealthy
+- ❌ **code/chef** - Disconnected
 
 Click to check status or configure.
 
@@ -135,9 +135,9 @@ Click to check status or configure.
 
 ### Cannot Connect
 
-1. Test endpoint: `curl http://45.55.173.72:8001/health`
+1. Test endpoint: `curl https://codechef.appsmithery.co/api/health`
 2. Check firewall/VPN settings
-3. Reconfigure: `F1` → "Dev-Tools: Configure"
+3. Reconfigure: `F1` → "code/chef: Configure"
 
 ### No Approvals
 
@@ -168,7 +168,7 @@ Agent performance metrics:
 - Processing times
 - Active tasks
 
-**View Metrics**: http://45.55.173.72:9090
+**View Metrics**: http://codechef.appsmithery.co:9090
 
 ### Linear Approvals
 
@@ -182,7 +182,7 @@ https://linear.app/project-roadmaps/issue/PR-68
 Continue refining tasks in same chat:
 
 ```
-@devtools Add authentication
+@codechef Add authentication
 [response with task ID]
 
 Can you also add password reset functionality?
@@ -226,7 +226,7 @@ Tasks automatically routed to best agent:
 Ctrl+I
 
 # 2. Submit complex task
-@devtools Add authentication system with JWT, password reset, and email verification
+@codechef Add authentication system with JWT, password reset, and email verification
 
 # 3. Review routing plan
 # Orchestrator shows:
@@ -238,10 +238,10 @@ Ctrl+I
 # Total: ~85 minutes
 
 # 4. Approve if needed
-@devtools /approve abc123 approval-456
+@codechef /approve abc123 approval-456
 
 # 5. Monitor progress
-@devtools /status abc123
+@codechef /status abc123
 # Shows: 3/5 complete, 2 in progress
 
 # 6. View traces in LangSmith
@@ -259,9 +259,9 @@ Ctrl+I
 ## Support
 
 - **Docs**: [README.md](./README.md), [DEPLOYMENT.md](./DEPLOYMENT.md)
-- **Issues**: https://github.com/Appsmithery/Dev-Tools/issues
+- **Issues**: https://github.com/Appsmithery/code/chef/issues
 - **Linear**: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
 
 ---
 
-**Ready to use!** Open Copilot Chat (`Ctrl+I`) and type `@devtools <your task>`
+**Ready to use!** Open Copilot Chat (`Ctrl+I`) and type `@codechef <your task>`

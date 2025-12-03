@@ -1,14 +1,14 @@
-# Dev-Tools Multi-Agent Orchestrator
+# code/chef Multi-Agent Orchestrator
 
-[![Orchestrator](https://img.shields.io/badge/orchestrator-LangGraph-blue)](https://github.com/Appsmithery/Dev-Tools)
-[![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/Dev-Tools/tree/main/shared/mcp/servers)
+[![Orchestrator](https://img.shields.io/badge/orchestrator-LangGraph-blue)](https://github.com/Appsmithery/code/chef)
+[![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/code/chef/tree/main/shared/mcp/servers)
 [![LangChain](https://img.shields.io/badge/LangChain-enabled-purple)](https://www.langchain.com/)
 
-VS Code extension that integrates Dev-Tools LangGraph orchestrator into Copilot Chat, enabling you to submit development tasks with LangChain-powered function calling and progressive tool disclosure from any workspace.
+VS Code extension that integrates code/chef LangGraph orchestrator into Copilot Chat, enabling you to submit development tasks with LangChain-powered function calling and progressive tool disclosure from any workspace.
 
 ## Features
 
-- **@devtools Chat Participant**: Submit tasks directly from Copilot Chat with natural language
+- **@codechef Chat Participant**: Submit tasks directly from Copilot Chat with natural language
 - **LangGraph Workflow Engine**: Single orchestrator with internal agent nodes and PostgreSQL checkpointing
 - **LangChain Function Calling**: Orchestrator can INVOKE 150+ MCP tools via LangChain's native tool binding
 - **Progressive Tool Disclosure**: 80-90% token reduction through intelligent tool filtering (minimal/agent_profile/progressive/full strategies)
@@ -28,14 +28,14 @@ code --install-extension appsmithery.vscode-devtools-copilot
 
 ### 2. Configure Orchestrator
 
-Press `F1` → "Dev-Tools: Configure" → Enter `http://45.55.173.72:8001`
+Press `F1` → "code/chef: Configure" → Enter `https://codechef.appsmithery.co/api`
 
 ### 3. Use in Copilot Chat
 
 Open Copilot Chat (Ctrl+I) and type:
 
 ```
-@devtools Add JWT authentication to my Express API
+@codechef Add JWT authentication to my Express API
 ```
 
 The orchestrator will decompose your task into subtasks and route them to appropriate agents.
@@ -44,30 +44,30 @@ The orchestrator will decompose your task into subtasks and route them to approp
 
 ### Chat Participant Commands
 
-- `@devtools <task>` - Submit development task
-- `@devtools /status [task-id]` - Check task status
-- `@devtools /approve <task-id> <approval-id>` - Approve pending task
-- `@devtools /tools` - List available MCP tools
+- `@codechef <task>` - Submit development task
+- `@codechef /status [task-id]` - Check task status
+- `@codechef /approve <task-id> <approval-id>` - Approve pending task
+- `@codechef /tools` - List available MCP tools
 
 ### Command Palette
 
-- **Dev-Tools: Submit Task** - Submit task via input box
-- **Dev-Tools: Check Status** - Check task status via input box
-- **Dev-Tools: Configure** - Update orchestrator URL
-- **Dev-Tools: Show Approvals** - Open Linear approval hub
-- **Dev-Tools: Clear Cache** - Clear session cache
+- **code/chef: Submit Task** - Submit task via input box
+- **code/chef: Check Status** - Check task status via input box
+- **code/chef: Configure** - Update orchestrator URL
+- **code/chef: Show Approvals** - Open Linear approval hub
+- **code/chef: Clear Cache** - Clear session cache
 
 ## Configuration
 
 ### Settings
 
-- `devtools.orchestratorUrl` - Orchestrator endpoint (default: `http://45.55.173.72:8001`)
-- `devtools.mcpGatewayUrl` - MCP gateway endpoint (default: `http://45.55.173.72:8000`)
-- `devtools.linearHubIssue` - Linear approval hub issue (default: `DEV-68`)
-- `devtools.linearWorkspaceSlug` - Linear workspace slug for approval links (default: `dev-ops`)
-- `devtools.autoApproveThreshold` - Auto-approve risk level (default: `low`)
-- `devtools.enableNotifications` - Show toast notifications (default: `true`)
-- `devtools.langsmithUrl` - LangSmith project URL for traces
+- `codechef.orchestratorUrl` - Orchestrator endpoint (default: `https://codechef.appsmithery.co/api`)
+- `codechef.mcpGatewayUrl` - MCP gateway endpoint (default: `https://codechef.appsmithery.co/api`)
+- `codechef.linearHubIssue` - Linear approval hub issue (default: `DEV-68`)
+- `codechef.linearWorkspaceSlug` - Linear workspace slug for approval links (default: `dev-ops`)
+- `codechef.autoApproveThreshold` - Auto-approve risk level (default: `low`)
+- `codechef.enableNotifications` - Show toast notifications (default: `true`)
+- `codechef.langsmithUrl` - LangSmith project URL for traces
 
 ### Workspace Configuration
 
@@ -75,9 +75,9 @@ Create `.vscode/settings.json`:
 
 ```json
 {
-  "devtools.orchestratorUrl": "http://45.55.173.72:8001",
-  "devtools.enableNotifications": true,
-  "devtools.autoApproveThreshold": "low"
+  "codechef.orchestratorUrl": "https://codechef.appsmithery.co/api",
+  "codechef.enableNotifications": true,
+  "codechef.autoApproveThreshold": "low"
 }
 ```
 
@@ -86,7 +86,7 @@ Create `.vscode/settings.json`:
 ### Basic Task Submission
 
 ```
-@devtools Add authentication to my API
+@codechef Add authentication to my API
 ```
 
 Response:
@@ -108,7 +108,7 @@ Estimated Duration: 30 minutes
 ### Check Task Status
 
 ```
-@devtools /status abc123
+@codechef /status abc123
 ```
 
 Response:
@@ -128,7 +128,7 @@ Progress: 2/4 subtasks
 ### List MCP Tools
 
 ```
-@devtools /tools
+@codechef /tools
 ```
 
 Response shows 150+ tools across 17 MCP servers:
@@ -164,22 +164,22 @@ High-risk tasks require human approval:
 All tasks are traced and monitored:
 
 - **LangSmith Traces**: [View Project](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
-- **Prometheus Metrics**: http://45.55.173.72:9090
+- **Prometheus Metrics**: https://codechef.appsmithery.co
 - **Linear Approvals**: https://linear.app/dev-ops/issue/DEV-68 (HITL Approvals Hub with sub-issues)
 
 ## Troubleshooting
 
 ### Cannot connect to orchestrator
 
-1. Check URL in settings: `Dev-Tools: Configure`
-2. Verify service health: `curl http://45.55.173.72:8001/health`
+1. Check URL in settings: `code/chef: Configure`
+2. Verify service health: `curl https://codechef.appsmithery.co/api/health`
 3. Check firewall allows outbound connections
 
 ### No tools appearing
 
-1. Clear cache: `Dev-Tools: Clear Cache`
+1. Clear cache: `code/chef: Clear Cache`
 2. Restart VS Code
-3. Check MCP gateway: `curl http://45.55.173.72:8000/health`
+3. Check MCP gateway: `curl https://codechef.appsmithery.co/api/health`
 
 ### Approval notifications not working
 
@@ -227,11 +227,11 @@ task install-local
 │                                      │
 │  ┌────────────────────────────────┐ │
 │  │ Copilot Chat                   │ │
-│  │  @devtools "Add auth to API"  │ │
+│  │  @codechef "Add auth to API"  │ │
 │  └──────────┬─────────────────────┘ │
 │             │                        │
 │  ┌──────────▼─────────────────────┐ │
-│  │ Dev-Tools Chat Participant     │ │
+│  │ code/chef Chat Participant     │ │
 │  │ - Context extraction           │ │
 │  │ - Session management           │ │
 │  │ - Linear notifications         │ │
@@ -240,7 +240,7 @@ task install-local
               │ HTTP POST
               ▼
 ┌──────────────────────────────────────────────────────────────┐
-│ Dev-Tools Droplet (45.55.173.72)                             │
+│ code/chef Droplet (codechef.appsmithery.co)                             │
 │                                                               │
 │  ┌─────────────────────────────────────────────────────────┐ │
 │  │ LangGraph Orchestrator (:8001)                          │ │
@@ -290,7 +290,7 @@ MIT License - see LICENSE file
 
 ## Support
 
-- GitHub Issues: https://github.com/Appsmithery/Dev-Tools/issues
+- GitHub Issues: https://github.com/Appsmithery/code/chef/issues
 - Linear Project: https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b
 - Discord: https://discord.gg/appsmithery
 
@@ -298,11 +298,11 @@ MIT License - see LICENSE file
 
 ### Documentation
 
-- [Dev-Tools Repository](https://github.com/Appsmithery/Dev-Tools)
-- [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
-- [Linear Integration Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/LINEAR_INTEGRATION_GUIDE.md)
-- [Linear HITL Workflow](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/LINEAR_HITL_WORKFLOW.md)
-- [Deployment Guide](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/DEPLOYMENT_GUIDE.md)
+- [code/chef Repository](https://github.com/Appsmithery/code/chef)
+- [Progressive Tool Disclosure Architecture](https://github.com/Appsmithery/code/chef/blob/main/support/docs/PROGRESSIVE_TOOL_DISCLOSURE.md)
+- [Linear Integration Guide](https://github.com/Appsmithery/code/chef/blob/main/support/docs/LINEAR_INTEGRATION_GUIDE.md)
+- [Linear HITL Workflow](https://github.com/Appsmithery/code/chef/blob/main/support/docs/LINEAR_HITL_WORKFLOW.md)
+- [Deployment Guide](https://github.com/Appsmithery/code/chef/blob/main/support/docs/DEPLOYMENT_GUIDE.md)
 
 ### Integrations
 
