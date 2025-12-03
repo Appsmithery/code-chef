@@ -1,177 +1,122 @@
-# Langfuse Tracing Integration
+# LangSmith Tracing Integration
 
 ## Overview
 
-All Dev-Tools agents are instrumented with **Langfuse** for automatic LLM observability. Langfuse provides:
+All Dev-Tools agents are instrumented with **LangSmith** for automatic LLM observability via LangChain's native tracing integration. LangSmith provides:
 
-- 📊 **Automatic tracing** of all OpenAI SDK calls
+- 📊 **Automatic tracing** of all LangChain/LangGraph operations
 - ⏱️ **Latency tracking** for each LLM request
 - 💰 **Token usage and cost** monitoring
-- 🔍 **Prompt/completion visibility** in the Langfuse UI
+- 🔍 **Prompt/completion visibility** in the LangSmith UI
 - 🏷️ **Metadata tagging** for filtering and analysis
+- 🔄 **Workflow visualization** for LangGraph executions
 
-## Architecture
+## Dashboard Access
 
-- **Drop-in replacement**: Agents use `from langfuse.openai import openai` instead of `import openai`
-- **Zero code changes**: Existing OpenAI calls are automatically traced
-- **Environment-based config**: Credentials passed via Docker Compose env vars
-- **US Region default**: Points to `https://us.cloud.langfuse.com`
+**Production Dashboard**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
 
 ## Configuration
 
-### 1. Environment Variables (Required)
+### Required Environment Variables
 
-Set these in your `.env` file or export to shell:
+Set these in `config/env/.env`:
 
 ```bash
-LANGFUSE_SECRET_KEY=sk-lf-51d46621-1aff-4867-be1f-66450c44ef8c
-LANGFUSE_PUBLIC_KEY=pk-lf-7029904c-4cc7-44c4-a470-aa73f1e6a745
-LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
+# Enable LangSmith tracing
+LANGSMITH_TRACING=true
+LANGCHAIN_TRACING_V2=true
+
+# LangSmith connection
+LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
+LANGCHAIN_PROJECT=agents
+
+# API Keys (use service key for production)
+LANGCHAIN_API_KEY=lsv2_sk_***
+LANGSMITH_API_KEY=lsv2_sk_***
+
+# Required for org-scoped service keys
+LANGSMITH_WORKSPACE_ID=5029c640-3f73-480c-82f3-58e402ed4207
 ```
 
-**Get your keys**: https://us.cloud.langfuse.com/
+### Key Types
 
-### 2. Docker Compose Integration
+| Key Type       | Format      | Use Case                        |
+| -------------- | ----------- | ------------------------------- |
+| Service Key    | `lsv2_sk_*` | Production (org-level access)   |
+| Personal Token | `lsv2_pt_*` | Development (user-level access) |
 
-All agent services automatically receive Langfuse credentials:
+**Note**: Service keys require `LANGSMITH_WORKSPACE_ID` to be set.
 
-```yaml
-orchestrator:
-  environment:
-    - LANGFUSE_SECRET_KEY=${LANGFUSE_SECRET_KEY}
-    - LANGFUSE_PUBLIC_KEY=${LANGFUSE_PUBLIC_KEY}
-    - LANGFUSE_BASE_URL=${LANGFUSE_BASE_URL:-https://us.cloud.langfuse.com}
+## Architecture
+
+```
+┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
+│  Orchestrator   │────▶│  LangChain       │────▶│  LangSmith      │
+│  (LangGraph)    │     │  Callbacks       │     │  (Cloud)        │
+└─────────────────┘     └──────────────────┘     └─────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Agent Nodes    │
+│  (feature_dev,  │
+│  code_review,   │
+│  etc.)          │
+└─────────────────┘
 ```
 
-### 3. Agent Code Pattern
+- **Zero code changes**: LangChain automatically sends traces when `LANGCHAIN_TRACING_V2=true`
+- **Environment-based config**: All credentials via environment variables
+- **LangGraph integration**: Workflow graphs are visualized as nested traces
 
-When agents make LLM calls (future enhancement):
+## Automatic Tracking
 
-```python
-# Instead of: import openai
-from langfuse.openai import openai
+LangSmith automatically captures:
 
-# Use OpenAI as normal - tracing happens automatically
-response = openai.chat.completions.create(
-    model="gpt-4",
-    messages=[{"role": "user", "content": "Hello"}],
-    name="agent-task",  # Optional: name for identification
-    metadata={
-        "langfuse_session_id": task_id,  # Group related calls
-        "langfuse_user_id": "orchestrator",
-        "langfuse_tags": ["task-routing"]
-    }
-)
+| Metric                | Description                         |
+| --------------------- | ----------------------------------- |
+| Prompts & completions | Full input/output text              |
+| Model parameters      | Temperature, max_tokens, etc.       |
+| Latencies             | Time to first token, total duration |
+| Token usage           | Prompt tokens, completion tokens    |
+| Cost                  | USD based on model pricing          |
+| Errors                | Exception traces and status codes   |
+| Workflow structure    | LangGraph node execution order      |
+
+## LangGraph Workflow Visualization
+
+LangGraph workflows appear as nested trace hierarchies:
+
 ```
-
-## Features
-
-### Automatic Tracking
-
-Langfuse automatically captures:
-
-- All prompts and completions (with streaming support)
-- Model parameters (temperature, max_tokens, etc.)
-- Latencies (time to first token, total duration)
-- Token usage (prompt tokens, completion tokens, total)
-- Cost in USD (based on model pricing)
-- Errors and status codes
-
-### Custom Metadata
-
-Add context to traces for filtering and analysis:
-
-```python
-# Option 1: Via metadata parameter
-response = openai.chat.completions.create(
-    model="gpt-4",
-    messages=[...],
-    metadata={
-        "langfuse_session_id": "workflow-123",
-        "langfuse_user_id": "feature-dev-agent",
-        "langfuse_tags": ["code-generation", "python"],
-        "task_type": "feature_implementation",  # Custom metadata
-        "priority": "high"
-    }
-)
-
-# Option 2: Via span context managers
-from langfuse import get_client
-
-langfuse = get_client()
-with langfuse.start_as_current_span(name="feature-workflow") as span:
-    span.update_trace(
-        session_id="workflow-123",
-        user_id="feature-dev-agent",
-        tags=["feature", "python"]
-    )
-    # All OpenAI calls in this context inherit these attributes
-    response = openai.chat.completions.create(...)
+Trace: "Process feature request"
+├─ Span: router_node
+├─ Span: supervisor_node (routing decision)
+├─ Span: feature_dev_node
+│   ├─ LLM Call: design solution
+│   └─ LLM Call: generate code
+├─ Span: code_review_node
+│   └─ LLM Call: analyze code
+└─ END
 ```
-
-### Decorator Pattern
-
-Use `@observe()` decorator for automatic function tracing:
-
-```python
-from langfuse import observe
-from langfuse.openai import openai
-
-@observe()
-async def implement_feature(feature_spec: dict):
-    # All LLM calls nested under this span
-    design = await openai.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": f"Design: {feature_spec}"}],
-        name="design-feature"
-    )
-
-    code = await openai.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": f"Implement: {design}"}],
-        name="generate-code"
-    )
-
-    return code
-```
-
-## Flushing Events
-
-For short-lived scripts or shutdown handlers:
-
-```python
-from langfuse import get_client
-
-# At app shutdown or script end
-langfuse = get_client()
-langfuse.flush()  # Ensure all events are sent before exit
-```
-
-FastAPI agents run continuously, so flushing is typically not needed.
 
 ## Debugging
 
-Enable debug mode for troubleshooting:
-
-```python
-from langfuse import Langfuse
-
-# Initialize with debug
-langfuse = Langfuse(debug=True)
-```
-
-Or set environment variable:
+### Check if tracing is enabled
 
 ```bash
-export LANGFUSE_DEBUG=true
+# On droplet
+docker exec deploy-orchestrator-1 printenv | grep -E "LANG(CHAIN|SMITH)"
 ```
 
-## Sampling
+### View traces
 
-Control trace volume (useful for high-traffic production):
+1. Open https://smith.langchain.com
+2. Select project "agents"
+3. Filter by timeframe or metadata
+
+### Enable debug mode
 
 ```bash
-export LANGFUSE_SAMPLE_RATE=0.1  # Collect 10% of traces
+export LANGCHAIN_VERBOSE=true
 ```
 
 ## Disabling Tracing
@@ -179,57 +124,20 @@ export LANGFUSE_SAMPLE_RATE=0.1  # Collect 10% of traces
 Temporarily disable without code changes:
 
 ```bash
-export LANGFUSE_TRACING_ENABLED=false
+export LANGCHAIN_TRACING_V2=false
 ```
 
-## Langfuse UI
+## Deployment Notes
 
-Access your traces at: https://us.cloud.langfuse.com
+After changing tracing configuration:
 
-**Dashboard features:**
-
-- Real-time trace list with filtering
-- Detailed trace views with nested spans
-- Token usage and cost analytics
-- Latency percentiles and distributions
-- Prompt/completion comparison
-- Custom metadata search
-- Export to CSV/JSON
-
-## Integration with MCP Tools
-
-Langfuse tracing is complementary to MCP tool logging:
-
-- **Langfuse**: Tracks LLM calls (prompts, completions, tokens, cost)
-- **MCP Memory Server**: Stores task entities, relationships, and workflow state
-- **Together**: Full observability from task creation → LLM reasoning → MCP tool usage → task completion
-
-Example workflow trace:
-
-```
-Trace: "Implement user authentication"
-├─ Span: orchestrator.plan_task (LLM call)
-├─ Span: feature-dev.design_solution (LLM call)
-├─ Span: feature-dev.generate_code (LLM call)
-├─ Span: mcp-tool.filesystem.write_file (logged to memory)
-├─ Span: code-review.analyze (LLM call)
-└─ Span: mcp-tool.memory.create_entity (task completion)
+```bash
+# Must recreate containers (restart won't reload .env)
+docker compose down && docker compose up -d
 ```
 
-## Roadmap
+## Related Documentation
 
-Future enhancements for Dev-Tools + Langfuse:
-
-1. **Prometheus metrics export** from Langfuse API
-2. **Grafana dashboards** for real-time monitoring
-3. **Cost alerts** when token usage exceeds thresholds
-4. **Prompt version tracking** for A/B testing
-5. **Eval integration** with Langfuse's evaluation framework
-6. **Custom scores** for code quality, test coverage, etc.
-
-## References
-
-- [Langfuse OpenAI Integration Docs](https://langfuse.com/docs/integrations/openai/python/get-started)
-- [Langfuse Tracing Concepts](https://langfuse.com/docs/tracing)
-- [Langfuse Python SDK Reference](https://langfuse.com/docs/sdk/python)
-- [Dev-Tools Tracing Plan](../config/tracing-plan-v2.md)
+- [LangSmith Official Docs](https://docs.smith.langchain.com/)
+- [LangGraph Tracing](https://docs.smith.langchain.com/old/tracing/faq/logging_and_viewing#logging-traces-from-langgraph)
+- [Copilot Instructions - LangSmith Section](../../.github/copilot-instructions.md#langsmith-llm-tracing)
