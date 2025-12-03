@@ -2,7 +2,7 @@
   "name": "vscode-codechef",
   "displayName": "code/chef - AI Agent Orchestrator",
   "description": "AI-powered task orchestration with LangGraph single-orchestrator architecture, 150+ MCP tools, and LangChain function calling. Submit development tasks via Copilot Chat.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "icon.png",
@@ -152,6 +152,12 @@
           "default": "https://codechef.appsmithery.co/api",
           "description": "code/chef orchestrator endpoint",
           "format": "uri"
+        },
+        "codechef.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for authenticating with the code/chef orchestrator. Get this from your administrator.",
+          "markdownDescription": "API key for authenticating with the code/chef orchestrator. Required for production use. Get this from your administrator or generate one with `python -c \"import secrets; print(secrets.token_urlsafe(32))\"`"
         },
         "codechef.linearHubIssue": {
           "type": "string",

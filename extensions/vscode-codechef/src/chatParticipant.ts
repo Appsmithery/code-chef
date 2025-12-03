@@ -11,9 +11,20 @@ export class CodeChefChatParticipant {
 
     constructor(private context: vscode.ExtensionContext) {
         const config = vscode.workspace.getConfiguration('codechef');
-        this.client = new OrchestratorClient(config.get('orchestratorUrl')!);
+        this.client = new OrchestratorClient({
+            baseUrl: config.get('orchestratorUrl')!,
+            apiKey: config.get('apiKey') || undefined
+        });
         this.contextExtractor = new ContextExtractor();
         this.sessionManager = new SessionManager(context);
+
+        // Listen for configuration changes to update API key
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('codechef.apiKey')) {
+                const newApiKey = vscode.workspace.getConfiguration('codechef').get<string>('apiKey');
+                this.client.setApiKey(newApiKey || undefined);
+            }
+        });
     }
 
     async handleChatRequest(

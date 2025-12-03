@@ -163,7 +163,7 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
         // Check orchestrator health on startup
-        checkOrchestratorHealth(config.get('orchestratorUrl')!);
+        checkOrchestratorHealth(config.get('orchestratorUrl')!, config.get('apiKey') || undefined);
 
         console.log('code/chef extension activated');
     } catch (error) {
@@ -172,9 +172,9 @@ export function activate(context: vscode.ExtensionContext) {
     }
 }
 
-async function checkOrchestratorHealth(url: string) {
+async function checkOrchestratorHealth(url: string, apiKey?: string) {
     try {
-        const client = new OrchestratorClient(url);
+        const client = new OrchestratorClient({ baseUrl: url, apiKey });
         const health = await client.health();
         
         if (health.status === 'ok') {
