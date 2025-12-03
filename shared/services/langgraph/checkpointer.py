@@ -56,13 +56,18 @@ def get_postgres_checkpointer() -> Optional[PostgresSaver]:
             f"password={DB_PASSWORD}"
         )
         
-        # Create connection pool
-        connection = psycopg.connect(conn_string)
+        # Create connection with autocommit for schema setup
+        # Required because CREATE INDEX CONCURRENTLY cannot run inside a transaction
+        setup_connection = psycopg.connect(conn_string, autocommit=True)
         
-        # Initialize PostgresSaver with connection
-        # This automatically creates the checkpoints table if it doesn't exist
+        # Initialize PostgresSaver and run schema setup
+        checkpointer = PostgresSaver(setup_connection)
+        checkpointer.setup()  # Creates tables and indexes
+        setup_connection.close()
+        
+        # Create new connection for actual checkpointer operations
+        connection = psycopg.connect(conn_string)
         checkpointer = PostgresSaver(connection)
-        checkpointer.setup()  # Ensure schema is created
         
         logger.info(f"PostgreSQL checkpointer initialized: {DB_HOST}:{DB_PORT}/{DB_NAME}")
         return checkpointer
