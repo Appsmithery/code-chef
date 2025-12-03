@@ -5,6 +5,28 @@ All notable changes to the "code/chef - AI Agent Orchestrator" extension will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-12-03
+
+### Added
+
+- **API Key Authentication**: Secure orchestrator access with API key
+  - New `codechef.apiKey` setting for configuring the API key
+  - Supports both `X-API-Key` header and `Authorization: Bearer` token
+  - Health/metrics endpoints remain public for monitoring
+  - Configuration hot-reload: changing API key applies immediately
+- **Improved OrchestratorClient**: New config-based constructor pattern with type-safe options
+
+### Security
+
+- Orchestrator API now requires authentication when `ORCHESTRATOR_API_KEY` is set
+- Constant-time comparison prevents timing attacks on API key validation
+- Unauthorized requests are logged with client IP for audit
+
+### Changed
+
+- `OrchestratorClient` constructor now accepts config object with `baseUrl`, `timeout`, and `apiKey`
+- Backward-compatible: old `(baseUrl, timeout)` signature still works
+
 ## [0.4.0] - 2025-12-03
 
 ### Added
@@ -30,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Migration Notes
 
 If upgrading from v0.3.x:
+
 1. Settings will need to be reconfigured (new `codechef.*` prefix)
 2. Update any scripts using `@devtools` to use `@codechef`
 3. Bookmarks to old IP-based URLs should be updated to domain

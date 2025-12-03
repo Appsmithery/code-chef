@@ -164,7 +164,7 @@ function activate(context) {
             vscode.window.showInformationMessage('code/chef cache cleared');
         }));
         // Check orchestrator health on startup
-        checkOrchestratorHealth(config.get('orchestratorUrl'));
+        checkOrchestratorHealth(config.get('orchestratorUrl'), config.get('apiKey') || undefined);
         console.log('code/chef extension activated');
     }
     catch (error) {
@@ -172,9 +172,9 @@ function activate(context) {
         vscode.window.showErrorMessage(`code/chef extension failed to activate: ${error}`);
     }
 }
-async function checkOrchestratorHealth(url) {
+async function checkOrchestratorHealth(url, apiKey) {
     try {
-        const client = new orchestratorClient_1.OrchestratorClient(url);
+        const client = new orchestratorClient_1.OrchestratorClient({ baseUrl: url, apiKey });
         const health = await client.health();
         if (health.status === 'ok') {
             statusBarItem.text = '$(check) code/chef';

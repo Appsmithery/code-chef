@@ -6,12 +6,39 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrchestratorClient = void 0;
 const axios_1 = __importDefault(require("axios"));
 class OrchestratorClient {
-    constructor(baseUrl, timeout = 30000) {
+    constructor(configOrBaseUrl, timeout = 30000) {
+        let baseUrl;
+        let timeoutMs = timeout;
+        if (typeof configOrBaseUrl === 'string') {
+            baseUrl = configOrBaseUrl;
+            this.apiKey = undefined;
+        }
+        else {
+            baseUrl = configOrBaseUrl.baseUrl;
+            timeoutMs = configOrBaseUrl.timeout ?? 30000;
+            this.apiKey = configOrBaseUrl.apiKey;
+        }
+        const headers = { 'Content-Type': 'application/json' };
+        if (this.apiKey) {
+            headers['X-API-Key'] = this.apiKey;
+        }
         this.client = axios_1.default.create({
             baseURL: baseUrl,
-            timeout,
-            headers: { 'Content-Type': 'application/json' }
+            timeout: timeoutMs,
+            headers
         });
+    }
+    /**
+     * Update the API key for subsequent requests
+     */
+    setApiKey(apiKey) {
+        this.apiKey = apiKey;
+        if (apiKey) {
+            this.client.defaults.headers.common['X-API-Key'] = apiKey;
+        }
+        else {
+            delete this.client.defaults.headers.common['X-API-Key'];
+        }
     }
     async orchestrate(request) {
         const response = await this.client.post('/orchestrate', request);

@@ -9,7 +9,9 @@ Primary Role: Task delegation, context routing, and workflow coordination
 
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends, Security
+from fastapi.security import APIKeyHeader
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, List, Any
 from enum import Enum
@@ -19,6 +21,7 @@ import os
 import httpx
 import logging
 import uuid
+import secrets
 from prometheus_fastapi_instrumentator import Instrumentator
 from prometheus_client import Counter, Histogram
 from langsmith import traceable
@@ -132,12 +135,87 @@ async def lifespan(app: FastAPI):
         logger.warning(f"⚠️  Failed to unregister from agent registry: {e}")
 
 
+# =============================================================================
+# API KEY AUTHENTICATION
+# =============================================================================
+# Secure the orchestrator API with API key authentication.
+# - Set ORCHESTRATOR_API_KEY in .env to enable authentication
+# - If not set, authentication is disabled (development mode)
+# - Public endpoints: /health, /ready, /metrics, /docs, /openapi.json
+# =============================================================================
+
+# API Key configuration
+ORCHESTRATOR_API_KEY = os.getenv("ORCHESTRATOR_API_KEY")
+API_KEY_ENABLED = bool(ORCHESTRATOR_API_KEY)
+
+# Public endpoints that don't require authentication
+PUBLIC_PATHS = {
+    "/health",
+    "/ready",
+    "/metrics",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/",  # Root path (if exists)
+}
+
+# API Key header definition
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+class APIKeyMiddleware(BaseHTTPMiddleware):
+    """Middleware to validate API key for protected endpoints."""
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip authentication if API key not configured (dev mode)
+        if not API_KEY_ENABLED:
+            return await call_next(request)
+
+        # Allow public endpoints without authentication
+        path = request.url.path.rstrip("/")
+        if path in PUBLIC_PATHS or path == "":
+            return await call_next(request)
+
+        # Check X-API-Key header
+        api_key = request.headers.get("X-API-Key")
+        if not api_key:
+            # Also check Authorization header (Bearer token)
+            auth_header = request.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                api_key = auth_header[7:]
+
+        # Validate API key using constant-time comparison
+        if not api_key or not secrets.compare_digest(api_key, ORCHESTRATOR_API_KEY):
+            logger.warning(
+                f"🔒 Unauthorized API request to {request.url.path} from {request.client.host}"
+            )
+            from fastapi.responses import JSONResponse
+
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or missing API key"},
+                headers={"WWW-Authenticate": "X-API-Key"},
+            )
+
+        return await call_next(request)
+
+
+if API_KEY_ENABLED:
+    logger.info("🔐 API key authentication ENABLED")
+else:
+    logger.warning(
+        "⚠️  API key authentication DISABLED - set ORCHESTRATOR_API_KEY to enable"
+    )
+
 app = FastAPI(
     title="DevOps Orchestrator Agent",
     description="Task delegation, context routing, and workflow coordination",
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Add API key authentication middleware
+app.add_middleware(APIKeyMiddleware)
 
 # Enable Prometheus metrics collection
 Instrumentator().instrument(app).expose(app)

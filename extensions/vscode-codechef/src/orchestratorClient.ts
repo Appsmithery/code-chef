@@ -62,15 +62,53 @@ export interface ChatResponse {
     requires_approval?: boolean;
 }
 
+export interface OrchestratorClientConfig {
+    baseUrl: string;
+    timeout?: number;
+    apiKey?: string;
+}
+
 export class OrchestratorClient {
     private client: AxiosInstance;
+    private apiKey?: string;
 
-    constructor(baseUrl: string, timeout: number = 30000) {
+    constructor(config: OrchestratorClientConfig);
+    constructor(baseUrl: string, timeout?: number);
+    constructor(configOrBaseUrl: OrchestratorClientConfig | string, timeout: number = 30000) {
+        let baseUrl: string;
+        let timeoutMs: number = timeout;
+        
+        if (typeof configOrBaseUrl === 'string') {
+            baseUrl = configOrBaseUrl;
+            this.apiKey = undefined;
+        } else {
+            baseUrl = configOrBaseUrl.baseUrl;
+            timeoutMs = configOrBaseUrl.timeout ?? 30000;
+            this.apiKey = configOrBaseUrl.apiKey;
+        }
+
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (this.apiKey) {
+            headers['X-API-Key'] = this.apiKey;
+        }
+
         this.client = axios.create({
             baseURL: baseUrl,
-            timeout,
-            headers: { 'Content-Type': 'application/json' }
+            timeout: timeoutMs,
+            headers
         });
+    }
+
+    /**
+     * Update the API key for subsequent requests
+     */
+    setApiKey(apiKey: string | undefined): void {
+        this.apiKey = apiKey;
+        if (apiKey) {
+            this.client.defaults.headers.common['X-API-Key'] = apiKey;
+        } else {
+            delete this.client.defaults.headers.common['X-API-Key'];
+        }
     }
 
     async orchestrate(request: TaskRequest): Promise<TaskResponse> {

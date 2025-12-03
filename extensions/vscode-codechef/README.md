@@ -1,10 +1,10 @@
-# code/chef Multi-Agent Orchestrator
+# code/chef Multi-Agent DevOps Team
 
 [![Orchestrator](https://img.shields.io/badge/orchestrator-LangGraph-blue)](https://github.com/Appsmithery/code/chef)
 [![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/code/chef/tree/main/shared/mcp/servers)
 [![LangChain](https://img.shields.io/badge/LangChain-enabled-purple)](https://www.langchain.com/)
 
-VS Code extension that integrates code/chef LangGraph orchestrator into Copilot Chat, enabling you to submit development tasks with LangChain-powered function calling and progressive tool disclosure from any workspace.
+VS Code extension that integrates the head codechef orchestrator into Copilot Chat, enabling you to submit development tasks with LangChain-powered subagents, function calling and progressive tool disclosure from any workspace.
 
 ## Features
 
