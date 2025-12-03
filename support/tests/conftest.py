@@ -299,12 +299,6 @@ async def clean_db(db_pool: asyncpg.Pool):
 
 
 @pytest.fixture
-def gateway_url() -> str:
-    """MCP gateway base URL."""
-    return os.getenv("MCP_GATEWAY_URL", "http://localhost:8000")
-
-
-@pytest.fixture
 def orchestrator_url() -> str:
     """Orchestrator agent base URL."""
     return os.getenv("ORCHESTRATOR_URL", "http://localhost:8001")

@@ -102,7 +102,6 @@ docker-compose up -d
 ```bash
 # .env or shell
 export DATABASE_URL="postgresql://postgres:postgres@localhost:5432/devtools"
-export MCP_GATEWAY_URL="http://localhost:8000"
 export ORCHESTRATOR_URL="http://localhost:8001"
 ```
 
@@ -345,14 +344,14 @@ docker ps | grep postgres
 psql postgresql://postgres:postgres@localhost:5432/test_devtools
 ```
 
-### MCP Gateway Unavailable
+### Orchestrator Unavailable
 
 ```bash
-# Check gateway health
-curl http://localhost:8000/health
+# Check orchestrator health
+curl http://localhost:8001/health
 
-# Restart gateway
-cd deploy && docker-compose restart gateway-mcp
+# Restart orchestrator
+cd deploy && docker-compose restart orchestrator
 ```
 
 ### Import Errors

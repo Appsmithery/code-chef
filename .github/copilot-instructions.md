@@ -2,7 +2,8 @@
 
 ## System Overview
 
-**Production**: Multi-agent DevOps automation platform on DigitalOcean droplet 45.55.173.72  
+**Production**: Multi-agent DevOps automation platform on DigitalOcean droplet  
+**Domain**: codechef.appsmithery.co (A record → 45.55.173.72)  
 **Last Updated**: December 2025 (all 13 containers running, all services healthy)
 
 **Core Architecture**:
@@ -137,11 +138,15 @@ python support/scripts/linear/agent-linear-update.py create-phase --project-id "
 **Health Checks:**
 
 ```bash
-curl http://45.55.173.72:8001/health  # Orchestrator
-curl http://45.55.173.72:8000/health  # Gateway
-curl http://45.55.173.72:8007/health  # RAG
-curl http://45.55.173.72:8008/health  # State
-curl http://45.55.173.72:8010/health  # LangGraph
+# Via Caddy (HTTPS) - Production
+curl https://codechef.appsmithery.co/api/health      # Orchestrator
+curl https://codechef.appsmithery.co/rag/health      # RAG
+curl https://codechef.appsmithery.co/state/health    # State
+curl https://codechef.appsmithery.co/langgraph/health # LangGraph
+
+# Direct (from droplet)
+ssh root@45.55.173.72 "curl http://localhost:8001/health"  # Orchestrator
+ssh root@45.55.173.72 "curl http://localhost:8007/health"  # RAG
 ```
 
 ### ⚠️ Configuration Changes (CRITICAL)

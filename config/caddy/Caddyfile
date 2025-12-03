@@ -3,7 +3,7 @@
 	email {$CADDY_ACME_EMAIL:alex@appsmithery.co}
 }
 
-{$CADDY_DOMAIN:theshop.appsmithery.co} {
+{$CADDY_DOMAIN:codechef.appsmithery.co} {
 	encode gzip zstd
 
 	# Serve frontend files from mounted volume

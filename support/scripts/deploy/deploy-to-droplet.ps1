@@ -359,13 +359,15 @@ Write-Host "Deployment Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "Strategy: $strategy" -ForegroundColor Cyan
-Write-Host "Droplet: $DROPLET_IP ($DEPLOY_PATH)" -ForegroundColor Cyan
+Write-Host "Domain: https://codechef.appsmithery.co" -ForegroundColor Cyan
+Write-Host "Droplet: $DROPLET ($DEPLOY_PATH)" -ForegroundColor Cyan
 Write-Host ""
 
 Write-Host "Quick Checks:" -ForegroundColor Yellow
-Write-Host "  - LangSmith Traces: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046" -ForegroundColor Cyan
-Write-Host "  - Test Orchestrator: ssh $DROPLET" -ForegroundColor Gray
-Write-Host "  - View Logs: ssh $DROPLET 'cd $DEPLOY_PATH/deploy && docker compose logs -f orchestrator'" -ForegroundColor Gray
+Write-Host "  - Health: https://codechef.appsmithery.co/api/health" -ForegroundColor Cyan
+Write-Host "  - LangSmith: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046" -ForegroundColor Cyan
+Write-Host "  - SSH: ssh $DROPLET" -ForegroundColor Gray
+Write-Host "  - Logs: ssh $DROPLET 'cd $DEPLOY_PATH/deploy && docker compose logs -f orchestrator'" -ForegroundColor Gray
 Write-Host ""
 
 if ($strategy -eq 'config') {

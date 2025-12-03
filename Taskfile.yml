@@ -8,6 +8,7 @@ version: "3"
 env:
   DEPLOY_DIR: deploy
   DROPLET_IP: 45.55.173.72
+  DROPLET_HOST: codechef.appsmithery.co
   DROPLET_PATH: /opt/Dev-Tools
 
 tasks:
@@ -285,12 +286,12 @@ tasks:
     desc: Execute PR deployment workflow
     summary: |
       Run full PR deployment workflow: review → test → deploy → approve
-      
+
       Usage:
         task workflow:pr-deploy PR_NUMBER=123 BRANCH=feature/auth
     vars:
-      PR_NUMBER: '{{.PR_NUMBER}}'
-      BRANCH: '{{.BRANCH}}'
+      PR_NUMBER: "{{.PR_NUMBER}}"
+      BRANCH: "{{.BRANCH}}"
       WORKFLOW_ID: 'pr-deploy-{{.PR_NUMBER}}-{{now | date "20060102-150405"}}'
     cmds:
       - |
@@ -332,19 +333,12 @@ tasks:
       - |
         WORKFLOW_ID=$(cat /tmp/workflow_id.txt)
         echo "✓ Hotfix workflow started: $WORKFLOW_ID"
-        echo "Monitor: http://localhost:8001/workflow/status/$WORKFLOW_ID"
-
-  workflow:status:
-    desc: Check workflow status
-    vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
-    cmds:
-      - curl -s http://localhost:8001/workflow/status/{{.WORKFLOW_ID}} | jq .
+        echo "Monitor: task workflow:status WORKFLOW_ID=$WORKFLOW_ID"
 
   workflow:resume:
     desc: Resume a paused workflow (approve/reject)
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
       DECISION: '{{.DECISION | default "approved"}}'
     cmds:
       - |
@@ -365,7 +359,7 @@ tasks:
       Usage:
         task workflow:cancel WORKFLOW_ID=abc-123 REASON="Emergency fix deployed" CANCELLED_BY=alice@example.com
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
       REASON: '{{.REASON | default "User requested cancellation"}}'
       CANCELLED_BY: '{{.CANCELLED_BY | default "unknown"}}'
     cmds:
@@ -442,10 +436,10 @@ tasks:
         task workflow:events WORKFLOW_ID=abc-123 LIMIT=50 OFFSET=0
         task workflow:events WORKFLOW_ID=abc-123 ACTION=COMPLETE_STEP
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
       LIMIT: '{{.LIMIT | default "100"}}'
       OFFSET: '{{.OFFSET | default "0"}}'
-      ACTION: '{{.ACTION}}'
+      ACTION: "{{.ACTION}}"
     cmds:
       - |
         {{if .ACTION}}
@@ -464,7 +458,7 @@ tasks:
         task workflow:export-audit WORKFLOW_ID=abc-123 FORMAT=pdf
         task workflow:export-audit WORKFLOW_ID=abc-123 FORMAT=json
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
       FORMAT: '{{.FORMAT | default "pdf"}}'
     cmds:
       - |
@@ -480,7 +474,7 @@ tasks:
       Usage:
         task workflow:replay WORKFLOW_ID=abc-123
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
     cmds:
       - curl -X POST "http://localhost:8001/workflow/{{.WORKFLOW_ID}}/replay" | jq .
 
@@ -493,8 +487,8 @@ tasks:
       Usage:
         task workflow:time-travel WORKFLOW_ID=abc-123 TIMESTAMP=2024-01-15T10:15:00Z
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
-      TIMESTAMP: '{{.TIMESTAMP}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
+      TIMESTAMP: "{{.TIMESTAMP}}"
     cmds:
       - |
         curl -s "http://localhost:8001/workflow/{{.WORKFLOW_ID}}/state-at/{{.TIMESTAMP}}" | jq .
@@ -508,7 +502,7 @@ tasks:
       Usage:
         task workflow:snapshots WORKFLOW_ID=abc-123
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
     cmds:
       - curl -s "http://localhost:8001/workflow/{{.WORKFLOW_ID}}/snapshots" | jq .
 
@@ -521,10 +515,10 @@ tasks:
       Usage:
         task workflow:annotate WORKFLOW_ID=abc-123 OPERATOR=alice@example.com COMMENT="Emergency approval"
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
       OPERATOR: '{{.OPERATOR | default "system"}}'
       COMMENT: '{{.COMMENT | default "No comment provided"}}'
-      EVENT_ID: '{{.EVENT_ID}}'
+      EVENT_ID: "{{.EVENT_ID}}"
     cmds:
       - |
         curl -X POST "http://localhost:8001/workflow/{{.WORKFLOW_ID}}/annotate" \
@@ -544,8 +538,8 @@ tasks:
       Usage:
         task workflow:retry WORKFLOW_ID=abc-123 STEP_ID=deploy MAX_RETRIES=3
     vars:
-      WORKFLOW_ID: '{{.WORKFLOW_ID}}'
-      STEP_ID: '{{.STEP_ID}}'
+      WORKFLOW_ID: "{{.WORKFLOW_ID}}"
+      STEP_ID: "{{.STEP_ID}}"
       MAX_RETRIES: '{{.MAX_RETRIES | default "3"}}'
     cmds:
       - |
