@@ -1,52 +1,57 @@
 # MCP Tool-to-Agent Mapping
-# Generated: 2025-11-13
-# Based on actual Docker MCP Gateway discovery
+# Generated: 2025-12-03
+# Based on actual Docker MCP Toolkit discovery
 
 discovery_summary:
-  total_servers: 18
-  total_tools: 150
+  total_servers: 20
+  total_tools: 178
   discovery_method: "Docker MCP Toolkit CLI"
   gateway_endpoint: "docker://central-mcp-gateway"
-  discovery_timestamp: "2025-11-13T22:40:00Z"
+  discovery_timestamp: "2025-12-03T00:00:00Z"
 
   enabled_servers:
     - context7
     - dockerhub
-    - fetch
-    - gitmcp
+    - gemini-api-docs
+    - github-official # Full GitHub API with OAuth (replaces gitmcp)
     - gmail-mcp
     - google-maps-comprehensive
+    - grafana
     - hugging-face
-    - memory
+    - llmtxt
+    - mcp-api-gateway
     - next-devtools-mcp
     - notion
-    - perplexity-ask
     - playwright
+    - prometheus
     - rust-mcp-filesystem
     - sequentialthinking
     - stripe
     - time
     - youtube_transcript
+    - zen
 
   server_tool_counts:
-    context7: 2
+    context7: 3
     dockerhub: 13
-    fetch: 1
-    gitmcp: 5
-    gmail-mcp: 3
+    gemini-api-docs: 4
+    github-official: 40 # Comprehensive GitHub API access
+    gmail-mcp: 5
     google-maps-comprehensive: 8
+    grafana: 4
     hugging-face: 9
-    memory: 9
+    llmtxt: 2
+    mcp-api-gateway: 3
     next-devtools-mcp: 5
     notion: 19
-    perplexity-ask: 3
     playwright: 21
+    prometheus: 3
     rust-mcp-filesystem: 24
-    sequentialthinking: 1
+    sequentialthinking: 6
     stripe: 22
     time: 2
-    youtube_transcript: 3
-    prometheus: 0 # Failed to connect
+    youtube_transcript: 2
+    zen: 3
 
 # ============================================================================
 # AGENT-SPECIFIC TOOL MAPPINGS
@@ -60,18 +65,16 @@ agent_tool_mappings:
     mission: "Coordinates task routing, agent hand-offs, workflow state, and global observability"
 
     recommended_tools:
-      - server: "memory"
-        tools:
-          ["create_entities", "create_relations", "read_graph", "search_nodes"]
-        rationale: "Maintain task graph, agent relationships, and workflow state in knowledge graph format"
+      - server: "sequentialthinking"
+        tools: ["sequentialthinking"]
+        rationale: "Break down complex, ambiguous requests into structured subtask plans using step-by-step reasoning"
         priority: "critical"
         use_cases:
-          - "Store task decomposition trees"
-          - "Track agent assignments and dependencies"
-          - "Query historical workflow patterns"
+          - "Decompose vague user requests"
+          - "Plan multi-stage workflows with dependencies"
 
       - server: "context7"
-        tools: ["search_docs", "list_docs"]
+        tools: ["resolve-library-id", "get-library-docs"]
         rationale: "Retrieve orchestration patterns, agent capabilities, and routing rules from documentation corpus"
         priority: "high"
         use_cases:
@@ -110,21 +113,15 @@ agent_tool_mappings:
           - "Send completion notifications"
           - "Escalation emails for SLA breaches"
 
-      - server: "sequentialthinking"
-        tools: ["think_step"]
-        rationale: "Break down complex, ambiguous requests into structured subtask plans using step-by-step reasoning"
-        priority: "high"
-        use_cases:
-          - "Decompose vague user requests"
-          - "Plan multi-stage workflows with dependencies"
-
       - server: "prometheus"
         tools: ["query_metrics", "list_metrics", "get_alerts"]
-        rationale: >-
-          Monitor agent health, track orchestration latency,
-          and aggregate system-wide observability (when available)
+        rationale: "Monitor agent health, track orchestration latency, and aggregate system-wide observability"
         priority: "medium"
-        notes: "Server currently unavailable - consider fallback telemetry"
+
+      - server: "grafana"
+        tools: ["query_dashboard", "list_dashboards", "get_annotations"]
+        rationale: "Access monitoring dashboards and annotations for workflow visibility"
+        priority: "medium"
 
     shared_tools:
       - server: "rust-mcp-filesystem"
@@ -161,21 +158,23 @@ agent_tool_mappings:
           - "Create test scaffolding"
           - "Organize generated artifacts into proper directory structure"
 
-      - server: "gitmcp"
+      - server: "github-official"
         tools:
           [
             "create_branch",
-            "commit_changes",
+            "push_files",
             "create_pull_request",
-            "get_diff",
             "get_file_contents",
+            "search_code",
+            "list_commits",
           ]
-        rationale: "Create feature branches, commit code, and open PRs for review"
+        rationale: "Full GitHub API for branches, commits, PRs, and code search with OAuth"
         priority: "critical"
         use_cases:
           - "Branch from main for new features"
           - "Commit generated code with descriptive messages"
           - "Open draft PRs for orchestrator tracking"
+          - "Search existing code patterns"
 
       - server: "context7"
         tools: ["search_docs", "list_docs"]
@@ -231,10 +230,6 @@ agent_tool_mappings:
           - "Research implementation patterns"
 
     shared_tools:
-      - server: "memory"
-        tools: ["create_entities", "add_observations"]
-        rationale: "Track feature implementation context and learnings"
-
       - server: "time"
         tools: ["get_current_time"]
         rationale: "Timestamp commits and track development velocity"
@@ -246,13 +241,14 @@ agent_tool_mappings:
     mission: "Analyzes code quality, security, style, and maintainability"
 
     recommended_tools:
-      - server: "gitmcp"
+      - server: "github-official"
         tools:
           [
-            "get_diff",
             "get_file_contents",
-            "get_commit_history",
+            "list_commits",
             "get_pull_request",
+            "list_pull_request_files",
+            "create_pull_request_review",
           ]
         rationale: "Retrieve diffs, file contents, and PR context for comprehensive review"
         priority: "critical"
@@ -260,6 +256,7 @@ agent_tool_mappings:
           - "Fetch PR diffs for analysis"
           - "Read modified file contents"
           - "Check commit messages for context"
+          - "Submit PR reviews"
 
       - server: "rust-mcp-filesystem"
         tools: ["read_file", "search_files", "get_file_info"]
@@ -309,10 +306,6 @@ agent_tool_mappings:
         priority: "low"
 
     shared_tools:
-      - server: "memory"
-        tools: ["create_entities", "create_relations", "search_nodes"]
-        rationale: "Track common issues, patterns, and developer-specific learnings"
-
       - server: "time"
         tools: ["get_current_time"]
         rationale: "Timestamp reviews and calculate review turnaround time"
@@ -362,8 +355,8 @@ agent_tool_mappings:
           - "Read environment configs"
           - "Organize IaC repository structure"
 
-      - server: "gitmcp"
-        tools: ["create_branch", "commit_changes", "create_pull_request"]
+      - server: "github-official"
+        tools: ["create_branch", "push_files", "create_pull_request"]
         rationale: "Version control infrastructure code and trigger GitOps workflows"
         priority: "high"
         use_cases:
@@ -412,10 +405,6 @@ agent_tool_mappings:
         tools: ["get_current_time", "convert_timezone"]
         rationale: "Schedule maintenance windows and track deployment timestamps across regions"
 
-      - server: "memory"
-        tools: ["create_entities", "add_observations"]
-        rationale: "Track infrastructure state, configuration drift, and deployment history"
-
   # --------------------------------------------------------------------------
   # CI/CD AGENT
   # --------------------------------------------------------------------------
@@ -423,20 +412,23 @@ agent_tool_mappings:
     mission: "Generates pipelines, orchestrates builds/tests, and manages deployment automation"
 
     recommended_tools:
-      - server: "gitmcp"
+      - server: "github-official"
         tools:
           [
             "create_pull_request",
-            "get_commit_history",
-            "get_diff",
+            "list_commits",
             "create_branch",
+            "get_file_contents",
+            "list_workflow_runs",
+            "get_workflow_run",
           ]
-        rationale: "Trigger pipeline runs on commits, PRs, and branch events"
+        rationale: "Trigger pipeline runs on commits, PRs, and branch events; monitor workflow status"
         priority: "critical"
         use_cases:
           - "Monitor PR events for CI triggers"
           - "Fetch commit metadata for build context"
           - "Create release branches"
+          - "Check workflow run status"
 
       - server: "rust-mcp-filesystem"
         tools: ["read_file", "write_file", "list_directory"]
@@ -505,12 +497,8 @@ agent_tool_mappings:
         tools: ["get_current_time"]
         rationale: "Timestamp builds and calculate pipeline duration"
 
-      - server: "memory"
-        tools: ["create_entities", "add_observations"]
-        rationale: "Track build history and learn from failure patterns"
-
       - server: "context7"
-        tools: ["search_docs"]
+        tools: ["resolve-library-id", "get-library-docs"]
         rationale: "Reference CI/CD best practices and pipeline templates"
 
   # --------------------------------------------------------------------------
@@ -537,9 +525,8 @@ agent_tool_mappings:
           - "Create API reference docs"
           - "Organize docs/ directory structure"
 
-      - server: "gitmcp"
-        tools:
-          ["get_file_contents", "get_commit_history", "create_pull_request"]
+      - server: "github-official"
+        tools: ["get_file_contents", "list_commits", "create_pull_request"]
         rationale: "Track code changes, generate changelogs, and submit documentation updates"
         priority: "high"
         use_cases:
@@ -618,10 +605,6 @@ agent_tool_mappings:
         tools: ["get_current_time"]
         rationale: "Timestamp documentation updates and track freshness"
 
-      - server: "memory"
-        tools: ["create_entities", "create_relations", "search_nodes"]
-        rationale: "Build knowledge graph of documentation topics and cross-references"
-
       - server: "gmail-mcp"
         tools: ["send_email"]
         rationale: "Notify stakeholders of documentation updates"
@@ -632,15 +615,6 @@ agent_tool_mappings:
 
 all_agents:
   shared_tools:
-    - server: "memory"
-      tools:
-        ["create_entities", "create_relations", "read_graph", "search_nodes"]
-      rationale: "Every agent contributes to shared knowledge graph for cross-agent context and learning"
-      use_cases:
-        - "Log agent activities and outcomes"
-        - "Query for relevant historical context"
-        - "Build relationships between tasks, code, and documentation"
-
     - server: "time"
       tools: ["get_current_time", "convert_timezone"]
       rationale: "Universal timestamping for audit trails and SLA tracking"
@@ -658,7 +632,7 @@ all_agents:
         - "Validate file existence"
 
     - server: "context7"
-      tools: ["search_docs", "list_docs"]
+      tools: ["resolve-library-id", "get-library-docs"]
       rationale: "Access shared documentation corpus for policies, standards, and guidelines"
       use_cases:
         - "Look up organizational policies"
@@ -721,25 +695,25 @@ unmapped_tools:
 
 integration_guidance:
   cross_agent_coordination:
-    - "All agents MUST log to memory server to build shared knowledge graph"
+    - "Use LangGraph checkpointing for workflow state persistence"
     - "Use notion as single source of truth for task specifications and status"
-    - "Prefer gitmcp for all source control operations to maintain consistent commit context"
+    - "Prefer github-official for all source control operations to maintain consistent commit context"
     - "Route all container operations through dockerhub server for unified image management"
 
   access_control:
     - "Orchestrator has unrestricted access to all tools"
     - "Feature-dev and infrastructure have write access to rust-mcp-filesystem"
-    - "Code-review has read-only access to gitmcp and filesystem"
+    - "Code-review has read-only access to github-official and filesystem"
     - "CI/CD has container exec privileges via dockerhub"
     - "Documentation has read-mostly access with targeted write for docs/ directories"
 
   failure_handling:
     - "When prometheus unavailable, agents should fall back to local logging"
-    - "If gitmcp fails, agents can use rust-mcp-filesystem as temporary storage"
-    - "Memory server outages should trigger local caching with eventual consistency sync"
+    - "If github-official fails, agents can use rust-mcp-filesystem as temporary storage"
+    - "LangGraph checkpointer handles workflow state persistence and recovery"
 
   observability:
-    - "Every agent operation should create memory entities with timestamps"
+    - "Use LangSmith for LLM call tracing and token usage"
     - "Use notion comments for human-readable status updates"
     - "prometheus metrics (when available) provide quantitative health signals"
     - "gmail notifications only for critical/blocking events to avoid noise"
@@ -758,27 +732,27 @@ orchestrator_routing_rules:
   task_classification:
     feature_request:
       primary_agent: "feature_dev"
-      required_tools: ["rust-mcp-filesystem", "gitmcp", "playwright"]
+      required_tools: ["rust-mcp-filesystem", "github-official", "playwright"]
       optional_tools: ["hugging-face", "context7"]
 
     code_quality_check:
       primary_agent: "code_review"
-      required_tools: ["gitmcp", "rust-mcp-filesystem"]
+      required_tools: ["github-official", "rust-mcp-filesystem"]
       optional_tools: ["hugging-face", "notion"]
 
     infrastructure_change:
       primary_agent: "infrastructure"
-      required_tools: ["dockerhub", "rust-mcp-filesystem", "gitmcp"]
+      required_tools: ["dockerhub", "rust-mcp-filesystem", "github-official"]
       optional_tools: ["prometheus", "notion"]
 
     pipeline_setup:
       primary_agent: "cicd"
-      required_tools: ["gitmcp", "rust-mcp-filesystem", "dockerhub"]
+      required_tools: ["github-official", "rust-mcp-filesystem", "dockerhub"]
       optional_tools: ["playwright", "notion"]
 
     documentation_update:
       primary_agent: "documentation"
-      required_tools: ["rust-mcp-filesystem", "gitmcp"]
+      required_tools: ["rust-mcp-filesystem", "github-official"]
       optional_tools: ["notion", "hugging-face", "context7"]
 
   tool_availability_checks:
@@ -796,11 +770,20 @@ orchestrator_routing_rules:
 # ============================================================================
 
 metadata:
-  version: "1.0.0"
-  last_updated: "2025-11-13T22:40:00Z"
+  version: "2.0.0"
+  last_updated: "2025-12-03T00:00:00Z"
   maintainer: "Dev-Tools Orchestration Team"
   review_schedule: "Monthly or upon new MCP server additions"
+  changelog:
+    - version: "2.0.0"
+      date: "2025-12-03"
+      changes:
+        - "Replaced gitmcp with github-official (40 tools with OAuth)"
+        - "Removed memory server (using LangGraph checkpointing + Qdrant)"
+        - "Removed fetch and perplexity-ask (redundant)"
+        - "Added grafana, prometheus, gemini-api-docs, llmtxt, zen servers"
+        - "Updated tool counts: 18 servers → 20 servers, 150 tools → 178 tools"
   related_docs:
     - "agents/*/README.md"
-    - "docs/AGENT_ENDPOINTS.md"
+    - "support/docs/ARCHITECTURE.md"
     - ".github/copilot-instructions.md"

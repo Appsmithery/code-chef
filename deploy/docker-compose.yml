@@ -15,21 +15,18 @@ services:
       - AGENT_NAME=orchestrator
       - PORT=8001
       - GRADIENT_MODEL=llama3.3-70b-instruct
-      - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - RAG_SERVICE_URL=http://rag-context:8007
       - STATE_SERVICE_URL=http://state-persistence:8008
       - AGENT_REGISTRY_URL=http://agent-registry:8009
       - EVENT_BUS_URL=redis://redis:6379
       - HITL_POLICIES_PATH=/app/config/hitl/approval-policies.yaml
       - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
-      - LINEAR_OAUTH_DEV_TOKEN_FILE=/run/secrets/linear_oauth_token
       - LINEAR_WEBHOOK_SIGNING_SECRET_FILE=/run/secrets/linear_webhook_secret
     env_file:
       - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
-      - gateway-mcp
       - rag-context
       - state-persistence
       - agent-registry
@@ -46,7 +43,6 @@ services:
       - ../support/scripts:/app/support/scripts:ro
     secrets:
       - db_password
-      - linear_oauth_token
       - linear_webhook_secret
     restart: unless-stopped
     deploy:
@@ -61,38 +57,6 @@ services:
   # ============================================================================
   # INFRASTRUCTURE SERVICES
   # ============================================================================
-
-  # MCP Gateway - Tool routing and Linear integration
-  gateway-mcp:
-    image: ${DOCKER_USERNAME:-alextorelli28}/appsmithery:gateway-${IMAGE_TAG:-latest}
-    build:
-      context: ..
-      dockerfile: shared/gateway/Dockerfile
-    ports:
-      - "8000:8000"
-    environment:
-      - SERVICE_NAME=gateway-mcp
-      - NODE_ENV=production
-      - LINEAR_OAUTH_DEV_TOKEN_FILE=/run/secrets/linear_oauth_token
-      - LINEAR_WEBHOOK_SIGNING_SECRET_FILE=/run/secrets/linear_webhook_secret
-    env_file:
-      - ../config/env/.env
-    networks:
-      - devtools-network
-    volumes:
-      - mcp-config:/app/config
-    secrets:
-      - linear_oauth_token
-      - linear_webhook_secret
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 256M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
 
   # RAG Context Manager
   rag-context:
@@ -110,14 +74,10 @@ services:
       - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://inference.do-ai.run/v1}
       - GRADIENT_EMBEDDING_MODEL=${GRADIENT_EMBEDDING_MODEL:-text-embedding-ada-002}
       - EMBEDDING_TIMEOUT=${EMBEDDING_TIMEOUT:-60}
-      - MCP_GATEWAY_URL=http://gateway-mcp:8000
-      - MCP_TIMEOUT=30
     env_file:
       - ../config/env/.env
     networks:
       - devtools-network
-    depends_on:
-      - gateway-mcp
     restart: unless-stopped
     deploy:
       resources:
@@ -274,7 +234,6 @@ services:
       - DB_USER=devtools
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_PASSWORD_FILE=/run/secrets/db_password
-      - MCP_GATEWAY_URL=http://gateway-mcp:8000
       - GRADIENT_MODEL=${GRADIENT_MODEL:-meta-llama-3.1-8b-instruct}
     env_file:
       - ../config/env/.env
@@ -282,7 +241,6 @@ services:
       - devtools-network
     depends_on:
       - postgres
-      - gateway-mcp
     secrets:
       - db_password
     restart: unless-stopped
@@ -369,7 +327,7 @@ services:
     networks:
       - devtools-network
     depends_on:
-      - gateway-mcp
+      - orchestrator
       - oauth2-proxy
     restart: unless-stopped
     deploy:
@@ -473,7 +431,6 @@ services:
 
 volumes:
   orchestrator-data:
-  mcp-config:
   postgres-data:
   redis-data:
   prometheus-data:
@@ -485,8 +442,6 @@ volumes:
 secrets:
   db_password:
     file: ../config/env/secrets/db_password.txt
-  linear_oauth_token:
-    file: ../config/env/secrets/linear_oauth_token.txt
   linear_webhook_secret:
     file: ../config/env/secrets/linear_webhook_secret.txt
 

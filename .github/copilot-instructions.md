@@ -3,17 +3,17 @@
 ## System Overview
 
 **Production**: Multi-agent DevOps automation platform on DigitalOcean droplet 45.55.173.72  
-**Last Updated**: December 2025 (all 14 containers running, all services healthy)
+**Last Updated**: December 2025 (all 13 containers running, all services healthy)
 
 **Core Architecture**:
 
 - Single orchestrator (`agent_orchestrator/`) with 6 agent nodes (supervisor, feature_dev, code_review, infrastructure, cicd, documentation)
 - LangGraph StateGraph workflow with LangChain tool binding
-- MCP gateway (port 8000): 150+ tools across 17 servers, progressive disclosure (80-90% token savings)
+- MCP Tools: Docker MCP Toolkit (20 servers, 178+ tools), progressive disclosure (80-90% token savings)
 - LLM: DigitalOcean Gradient AI (llama3.3-70b orchestrator, per-node optimization)
 - Observability: LangSmith tracing, Grafana/Prometheus metrics
 - HITL: Risk-based approvals via Linear (DEV-68 hub), LangGraph checkpointing
-- Service ports: gateway:8000, orchestrator:8001, rag:8007, state:8008, langgraph:8010
+- Service ports: orchestrator:8001, rag:8007, state:8008, langgraph:8010
 - **RAG Semantic Search (DEV-184, completed Nov 2025)**: Qdrant Cloud with 1,218 vectors across 7 collections (code_patterns, issue_tracker, feature_specs, vendor-docs, the-shop)
 - **Zen Pattern Integration (DEV-175, completed Nov 2025)**: Parent workflow chains, resource deduplication (80-90% token savings), workflow TTL management
 - **Memory Optimization (Nov 2025)**: 2GB droplet with optimized container limits (256MB-512MB per service), 2GB swap enabled
@@ -35,12 +35,11 @@ Dev-Tools/
 │   │   ├── templates/       # pr-deployment.workflow.yaml, hotfix.workflow.yaml
 │   │   └── *.py             # Workflow implementations
 │   ├── graph.py             # LangGraph StateGraph definition
-│   └── main.py              # Orchestrator FastAPI service
+│   └── main.py              # Orchestrator FastAPI service + Linear webhooks
 ├── shared/
-│   ├── lib/                 # Core libraries (mcp_client, gradient_client, progressive_mcp_loader)
+│   ├── lib/                 # Core libraries (mcp_client, gradient_client, progressive_mcp_loader, linear_workspace_client)
 │   ├── services/            # langgraph:8010, rag:8007, state:8008
-│   ├── gateway/             # MCP gateway:8000
-│   └── mcp/servers/         # 17 MCP servers
+│   └── mcp/servers/         # MCP server definitions
 ├── config/
 │   ├── env/.env             # Secrets (gitignored, use .env.template)
 │   ├── linear/              # linear-config.yaml, project-registry.yaml
@@ -335,19 +334,18 @@ ufw status                    # Verify rules
   - **Workspace ID** is REQUIRED for org-scoped service keys (extract from URL: `/o/{workspace-id}/`)
   - Both `LANGCHAIN_API_KEY` and `LANGSMITH_API_KEY` must be set (SDK compatibility)
 - **Deployment**: After changing tracing config, must run `docker compose down && docker compose up -d` (restart alone won't reload `.env`)
-- **Deprecation Note**: Langfuse has been completely removed. All tracing now uses LangSmith only. No `LANGFUSE_*` environment variables should be present. Gateway instrumentation.js contains only OpenTelemetry, no Langfuse imports.
+- **Deprecation Note**: Langfuse has been completely removed. All tracing now uses LangSmith only. No `LANGFUSE_*` environment variables should be present.
 
 ### Grafana Cloud (Prometheus Metrics)
 
-- **Metrics Collection**: Grafana Alloy v1.11.3 installed on droplet (45.55.173.72), scrapes 4 services every 15s
+- **Metrics Collection**: Grafana Alloy v1.11.3 installed on droplet (45.55.173.72), scrapes services every 15s
 - **Dashboard**: https://appsmithery.grafana.net (Stack 1376474-hm, Org ID 1534681, User ID 2677183)
 - **Remote Write**: https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push
 - **Configuration** (on droplet at `/etc/alloy/config.alloy`):
-  - **Instrumented Services**: orchestrator:8001, gateway-mcp:8000, state-persistence:8008, prometheus:9090
+  - **Instrumented Services**: orchestrator:8001, state-persistence:8008, langgraph:8010, prometheus:9090
   - **Scrape Interval**: 15s
-  - **Metrics Exposed**: `/metrics` endpoints on all 4 services
-  - **Gateway (Node.js)**: prom-client with default metrics (CPU, memory, event loop, GC)
-  - **State/Orchestrator (Python)**: prometheus-fastapi-instrumentator with HTTP request metrics
+  - **Metrics Exposed**: `/metrics` endpoints on all services
+  - **State/Orchestrator/LangGraph (Python)**: prometheus-fastapi-instrumentator with HTTP request metrics
 - **Alloy Service Management**:
 
   ```bash

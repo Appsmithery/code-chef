@@ -13,12 +13,12 @@
 	# Try files first, then fall back to index.html for SPA routing
 	try_files {path} /index.html
 
-	# API endpoints proxy to MCP gateway
+	# API endpoints proxy to orchestrator
 	handle_path /api/* {
-		reverse_proxy gateway-mcp:8000
+		reverse_proxy orchestrator:8001
 	}
 
-	# Linear webhooks proxy to orchestrator
+	# Linear webhooks proxy to orchestrator (HITL approvals)
 	reverse_proxy /webhooks/linear orchestrator:8001
 
 	# Prometheus monitoring with OAuth protection

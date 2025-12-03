@@ -1,8 +1,9 @@
 # Dev-Tools Architecture
 
-**Version:** v0.3  
-**Status:**  Production  
-**Last Updated:** November 25, 2025
+**Version:** v0.4  
+**Status:** Production  
+**Last Updated:** December 3, 2025  
+**Product:** code/chef (https://theshop.appsmithery.co)
 
 See [QUICKSTART.md](QUICKSTART.md) for setup | [DEPLOYMENT.md](DEPLOYMENT.md) for deployment
 
@@ -10,19 +11,21 @@ See [QUICKSTART.md](QUICKSTART.md) for setup | [DEPLOYMENT.md](DEPLOYMENT.md) fo
 
 ## Overview
 
-Dev-Tools is a **LangGraph-powered AI agent orchestration platform** with 6 specialized agent nodes, 150+ MCP tools, and RAG-based context management.
+Dev-Tools is a **LangGraph-powered AI agent orchestration platform** with 6 specialized agent nodes, 150+ MCP tools via Docker MCP Toolkit, and RAG-based context management.
 
 ### Core Architecture
 
 ```
 Orchestrator (8001) - Single FastAPI service
- LangGraph StateGraph Workflow
-     Supervisor Node (llama-3.1-70b)
-     Feature-Dev Node (codellama-13b)
-     Code-Review Node (llama-3.1-70b)
-     Infrastructure Node (llama-3.1-8b)
-     CI/CD Node (llama-3.1-8b)
-     Documentation Node (mistral-7b)
+ ├─ LangGraph StateGraph Workflow
+ │   ├─ Supervisor Node (llama-3.3-70b)
+ │   ├─ Feature-Dev Node (codellama-13b)
+ │   ├─ Code-Review Node (llama-3.3-70b)
+ │   ├─ Infrastructure Node (llama-3.1-8b)
+ │   ├─ CI/CD Node (llama-3.1-8b)
+ │   └─ Documentation Node (mistral-7b)
+ ├─ Linear Integration (GraphQL via LinearWorkspaceClient)
+ └─ HITL Webhook Handler (/webhooks/linear)
 ```
 
 **Key Point:** All 6 agents are **nodes** within one LangGraph workflow, not separate microservices.
@@ -31,13 +34,15 @@ Orchestrator (8001) - Single FastAPI service
 
 ## Services
 
-| Service      | Port | Purpose                          |
-|--------------|------|----------------------------------|
-| orchestrator | 8001 | LangGraph workflow + 6 agents    |
-| gateway-mcp  | 8000 | Linear OAuth + MCP coordination  |
-| rag-context  | 8007 | Vector search (Qdrant)           |
-| state        | 8008 | Workflow persistence (Postgres)  |
-| postgres     | 5432 | Checkpointing + HITL approvals   |
+| Service      | Port | Purpose                                    |
+| ------------ | ---- | ------------------------------------------ |
+| orchestrator | 8001 | LangGraph workflow + 6 agents + Linear API |
+| rag-context  | 8007 | Vector search (Qdrant Cloud)               |
+| state        | 8008 | Workflow persistence (PostgreSQL)          |
+| langgraph    | 8010 | LangGraph checkpointing service            |
+| postgres     | 5432 | Checkpointing + HITL approvals             |
+
+**Note:** MCP tools are accessed via Docker MCP Toolkit (local gateway), not a Docker service.
 
 ---
 
@@ -46,49 +51,61 @@ Orchestrator (8001) - Single FastAPI service
 ### Supervisor (LangGraph Routing Node)
 
 - **Purpose:** Task decomposition and agent routing
-- **Model:** llama-3.1-70b-instruct
-- **Tools:** memory, sequential-thinking, time
+- **Model:** llama-3.3-70b-instruct
+- **Tools:** sequential-thinking, time
 
 ### Feature-Dev (Code Generation Node)
 
 - **Purpose:** Code generation, scaffolding, test creation
 - **Model:** codellama-13b-instruct
-- **Tools:** rust-mcp-filesystem, gitmcp, playwright, hugging-face
+- **Tools:** rust-mcp-filesystem, github-official, playwright, hugging-face
 
 ### Code-Review (Quality Analysis Node)
 
 - **Purpose:** Security analysis, quality checks, standards
-- **Model:** llama-3.1-70b-instruct
-- **Tools:** gitmcp, rust-mcp-filesystem, hugging-face
+- **Model:** llama-3.3-70b-instruct
+- **Tools:** github-official, rust-mcp-filesystem, hugging-face
 
 ### Infrastructure (IaC Node)
 
 - **Purpose:** IaC authoring, deployment automation
 - **Model:** llama-3.1-8b-instruct
-- **Tools:** dockerhub, rust-mcp-filesystem, gitmcp
+- **Tools:** dockerhub, rust-mcp-filesystem, github-official
 
 ### CI/CD (Pipeline Node)
 
 - **Purpose:** Pipeline generation, workflow execution
 - **Model:** llama-3.1-8b-instruct
-- **Tools:** gitmcp, dockerhub, playwright
+- **Tools:** github-official, dockerhub, playwright
 
 ### Documentation (Docs Node)
 
 - **Purpose:** Technical documentation, API docs
 - **Model:** mistral-7b-instruct
-- **Tools:** rust-mcp-filesystem, gitmcp, notion, hugging-face
+- **Tools:** rust-mcp-filesystem, github-official, notion, hugging-face
 
 ---
 
 ## MCP Integration
+
+### Docker MCP Toolkit (20 servers, 178+ tools)
+
+MCP tools are managed via **Docker MCP Toolkit** in Docker Desktop. The orchestrator accesses tools via the local MCP gateway (not a Docker service).
+
+```bash
+# List configured servers
+docker mcp server list
+
+# View server tools
+docker mcp catalog
+```
 
 ### Progressive Tool Disclosure (80-90% Token Savings)
 
 ```python
 from shared.lib.progressive_mcp_loader import ToolLoadingStrategy
 
-# Filter 150+ tools  10-30 relevant tools
+# Filter 178+ tools → 10-30 relevant tools
 relevant_tools = progressive_loader.get_tools_for_task(
     task_description="Review auth code for vulnerabilities",
     strategy=ToolLoadingStrategy.PROGRESSIVE
@@ -101,20 +118,26 @@ langchain_tools = mcp_client.to_langchain_tools(relevant_tools)
 llm_with_tools = gradient_client.get_llm_with_tools(tools=langchain_tools)
 ```
 
-### Available Tool Servers (17 servers, 150+ tools)
+### Available Tool Servers
 
-| Server           | Tools | Key Capabilities            |
-|------------------|-------|-----------------------------|
-| rust-filesystem  | 24    | File I/O, directory nav     |
-| playwright       | 21    | Browser automation          |
-| stripe           | 22    | Payment testing             |
-| notion           | 19    | Documentation mgmt          |
-| dockerhub        | 13    | Container operations        |
-| memory           | 9     | Knowledge graph             |
-| hugging-face     | 9     | Code analysis               |
-| gitmcp           | 5     | Git operations              |
+| Server           | Tools | Key Capabilities               |
+| ---------------- | ----- | ------------------------------ |
+| github-official  | 40    | Full GitHub API with OAuth     |
+| rust-filesystem  | 24    | File I/O, directory navigation |
+| playwright       | 21    | Browser automation, testing    |
+| stripe           | 22    | Payment operations, testing    |
+| notion           | 19    | Documentation management       |
+| dockerhub        | 13    | Container operations           |
+| sequential-think | 6     | Step-by-step reasoning         |
+| hugging-face     | 9     | ML model analysis              |
+| context7         | 3     | Library documentation lookup   |
+| grafana          | 4     | Dashboard/metrics queries      |
+| prometheus       | 3     | Metrics queries                |
+| gmail-mcp        | 5     | Email operations               |
+| google-maps      | 8     | Location services              |
+| youtube-trans    | 2     | Video transcript extraction    |
 
-See `config/mcp-agent-tool-mapping.yaml` for complete catalog.
+See `config/mcp-agent-tool-mapping.yaml` for complete agent-to-tool mapping.
 
 ---
 
@@ -170,24 +193,24 @@ class WorkflowState(TypedDict):
 
 ## Data Flow
 
-### Task Submission  Execution
+### Task Submission Execution
 
 ```
 POST /orchestrate
-  
+
 LangGraph Workflow Starts
-  
+
 Supervisor Decomposes Task
-  
+
 Routes to Agent Node (conditional_edges)
-  
+
 Agent Node Executes:
   - Progressive Tool Loading (filter 150  10-30 tools)
   - LangChain Tool Binding (MCP  BaseTool)
   - LLM Function Calling (Gradient AI)
   - Tool Execution (MCP stdio)
   - State Update (PostgreSQL checkpoint)
-  
+
 Return to Supervisor or END
 ```
 
@@ -211,7 +234,7 @@ feature_dev:
   cost_per_1m_tokens: 0.30
 ```
 
-**Hot-reload:** Edit YAML  Restart orchestrator (no rebuild required)
+**Hot-reload:** Edit YAML Restart orchestrator (no rebuild required)
 
 ### Environment Variables (`config/env/.env`)
 
@@ -242,7 +265,7 @@ LINEAR_TEAM_ID=<team-uuid>
 
 - **Dashboard:** https://appsmithery.grafana.net
 - **Metrics:** HTTP requests, response times, error rates
-- **Scrape:** orchestrator:8001, gateway:8000, state:8008
+- **Scrape:** orchestrator:8001, state:8008, langgraph:8010
 
 ### PostgreSQL (Audit Trail)
 
@@ -265,13 +288,13 @@ LINEAR_TEAM_ID=<team-uuid>
 
 ### Secrets Management
 
-- **Docker Secrets:** Linear OAuth, GitHub PAT as mounted files
 - **Environment:** API keys in `.env` (gitignored)
+- **Docker Secrets:** Sensitive config as mounted files (optional)
 - **Validation:** `support/scripts/automation/validate-secrets.ts`
 
 ### HITL Approval
 
-- **Risk Levels:** Low (auto-approve)  Critical (manual approve)
+- **Risk Levels:** Low (auto-approve) Critical (manual approve)
 - **Linear Integration:** Approval requests as sub-issues in DEV-68
 - **Audit:** All approvals logged in PostgreSQL
 
