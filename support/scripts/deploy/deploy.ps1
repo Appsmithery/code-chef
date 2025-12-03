@@ -224,10 +224,11 @@ if ($Target -eq 'remote') {
     Write-Step "Deploying to remote droplet..."
     
     $DROPLET_IP = "45.55.173.72"
+    $DROPLET_HOST = "codechef.appsmithery.co"
     $DROPLET_USER = "root"
     $DEPLOY_PATH = "/opt/Dev-Tools"
     
-    Write-Info "Target: $DROPLET_USER@$DROPLET_IP $DEPLOY_PATH"
+    Write-Info "Target: $DROPLET_USER@$DROPLET_IP ($DROPLET_HOST) $DEPLOY_PATH"
     
     # Check SSH access
     Write-Info "Testing SSH connection..."

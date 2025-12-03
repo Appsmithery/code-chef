@@ -317,7 +317,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      - CADDY_DOMAIN=${CADDY_DOMAIN:-theshop.appsmithery.co}
+      - CADDY_DOMAIN=${CADDY_DOMAIN:-codechef.appsmithery.co}
       - CADDY_ACME_EMAIL=${CADDY_ACME_EMAIL:-alex@appsmithery.co}
     volumes:
       - ../config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro

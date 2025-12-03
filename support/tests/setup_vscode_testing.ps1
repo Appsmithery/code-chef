@@ -119,7 +119,7 @@ if (Test-Path "config/env/.env") {
     
     # Check for important keys
     $envContent = Get-Content "config/env/.env" -Raw
-    $keys = @("DATABASE_URL", "MCP_GATEWAY_URL", "GRADIENT_API_KEY")
+    $keys = @("DATABASE_URL", "GRADIENT_API_KEY", "LINEAR_API_KEY")
     
     foreach ($key in $keys) {
         if ($envContent -match "$key=") {
