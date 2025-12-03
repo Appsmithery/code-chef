@@ -2,7 +2,8 @@
 
 ## System Overview
 
-**Production**: Multi-agent DevOps automation platform on DigitalOcean droplet 45.55.173.72
+**Production**: Multi-agent DevOps automation platform on DigitalOcean droplet 45.55.173.72  
+**Last Updated**: December 2025 (all 14 containers running, all services healthy)
 
 **Core Architecture**:
 
@@ -51,7 +52,11 @@ Dev-Tools/
 └── support/
     ├── scripts/
     │   ├── deploy/deploy-to-droplet.ps1  # Deployment (config/full/auto)
-    │   └── linear/agent-linear-update.py # Linear roadmap management
+    │   ├── linear/agent-linear-update.py # Linear roadmap management
+    │   └── rag/                          # RAG indexing scripts
+    │       ├── index_code_patterns.py    # Python AST extraction
+    │       ├── index_issue_tracker.py    # Linear issues indexing
+    │       └── index_vendor_docs.py      # API documentation
     ├── docs/                # QUICKSTART.md, ARCHITECTURE.md, DEPLOYMENT.md
     └── tests/               # Test suites
 ```
@@ -63,6 +68,7 @@ Dev-Tools/
 - **LLM**: `config/agents/models.yaml` - All agent models, costs, parameters; hot-reload on restart
 - **HITL**: `config/hitl/risk-assessment-rules.yaml`, `config/hitl/approval-policies.yaml`
 - **State**: `config/state/schema.sql` - PostgreSQL schema for checkpointing
+- **LangGraph**: PostgreSQL checkpointer with autocommit schema setup (`shared/services/langgraph/checkpointer.py`)
 - **RAG/Vector DB**: Qdrant Cloud (`QDRANT_URL`, `QDRANT_API_KEY` in `.env`), OpenAI embeddings (`text-embedding-3-small`)
 - **Observability**: LangSmith (`.env` keys), Prometheus (`config/prometheus/prometheus.yml`)
 
@@ -136,6 +142,7 @@ curl http://45.55.173.72:8001/health  # Orchestrator
 curl http://45.55.173.72:8000/health  # Gateway
 curl http://45.55.173.72:8007/health  # RAG
 curl http://45.55.173.72:8008/health  # State
+curl http://45.55.173.72:8010/health  # LangGraph
 ```
 
 ### ⚠️ Configuration Changes (CRITICAL)
@@ -154,6 +161,37 @@ curl http://45.55.173.72:8008/health  # State
 5. **Verify**: Check health endpoints and verify environment variables loaded correctly
 
 **Why This Matters**: Docker Compose reads `.env` at startup. Simple `docker compose restart` does NOT reload environment variables from disk. You must use `down && up` to pick up `.env` changes.
+
+### Environment Variable Troubleshooting (Updated Dec 2025)
+
+**Common Issues:**
+
+1. **Duplicate Variables**: Docker uses the FIRST occurrence. Check for duplicates:
+   ```bash
+   grep -n 'VAR_NAME' /opt/Dev-Tools/config/env/.env
+   ```
+
+2. **Docker-Compose Interpolation**: Variables in `environment:` section need to be in `deploy/.env` for `${VAR}` substitution:
+   ```yaml
+   # docker-compose.yml
+   environment:
+     - DB_PASSWORD=${DB_PASSWORD}  # Requires DB_PASSWORD in deploy/.env
+   ```
+
+3. **Container Not Picking Up Changes**: Must recreate, not restart:
+   ```bash
+   docker compose up -d --force-recreate <service>
+   ```
+
+4. **Verify Container Environment**:
+   ```bash
+   docker exec <container> printenv | grep VAR_NAME
+   ```
+
+**Critical Variables to Check:**
+- `DB_PASSWORD`: Must be in both `config/env/.env` AND `deploy/.env`
+- `QDRANT_API_KEY`: Full JWT token (starts with `eyJ...`), no comments on same line
+- `OAUTH2_PROXY_COOKIE_SECRET`: Required in `deploy/.env` for docker-compose interpolation
 
 ### Deployment Strategies
 
@@ -504,6 +542,41 @@ This pattern provides:
 - Workflow conversation memory (planned Q2 2026)
 - Continuation API for resumed workflows
 
+### LangGraph PostgreSQL Checkpointer (DEV-186, Fixed December 2025)
+
+**Overview:** Durable state persistence for LangGraph workflows using PostgreSQL.
+
+**Architecture:**
+- Uses `langgraph-checkpoint-postgres` with `psycopg` driver
+- Autocommit connection for schema setup (required for `CREATE INDEX CONCURRENTLY`)
+- Separate connection for runtime operations
+
+**Configuration:**
+```bash
+# Required in config/env/.env AND deploy/.env
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=devtools
+DB_USER=devtools
+DB_PASSWORD=<your-secure-password>  # NOT "changeme"
+```
+
+**Health Check:**
+```bash
+curl http://45.55.173.72:8010/health
+# Returns: {"status":"healthy","postgres_checkpointer":"connected"}
+```
+
+**Key Files:**
+- `shared/services/langgraph/checkpointer.py`: Checkpointer initialization with autocommit fix
+- `shared/services/langgraph/workflow.py`: Workflow compilation with checkpointer
+- `deploy/docker-compose.yml`: LangGraph service with `DB_PASSWORD` env var
+
+**Troubleshooting:**
+- If `postgres_checkpointer: disconnected`, check `DB_PASSWORD` is not "changeme"
+- If schema errors, run with fresh database or check migration status
+- Logs: `docker logs deploy-langgraph-1 | grep checkpointer`
+
 ### RAG Semantic Search (DEV-184, Completed November 2025)
 
 **Overview:** Production-ready semantic search across codebase, Linear issues, and documentation using Qdrant Cloud.
@@ -512,7 +585,8 @@ This pattern provides:
 
 - **Cluster**: `83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io`
 - **Embeddings**: OpenAI `text-embedding-3-small` (1536 dimensions)
-- **API Key**: Non-expiring (created Nov 26, 2025)
+- **API Key**: JWT format (starts with `eyJ...`, ends with `cp7SYu90`), non-expiring
+- **CRITICAL**: API key must be the full JWT token, no comments on same line, no truncation
 
 **Indexed Collections:**
 
