@@ -13,7 +13,7 @@ on:
 
 env:
   DOCR_REGISTRY: registry.digitalocean.com/the-shop-infra
-  DROPLET_HOST: do-mcp-gateway
+  DROPLET_HOST: do-codechef-droplet
   DEPLOY_PATH: /opt/Dev-Tools
 
 jobs:

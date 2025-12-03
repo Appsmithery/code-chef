@@ -149,7 +149,7 @@ docker system prune -a --volumes -f
 
 ```bash
 # SSH to droplet
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 
 # Check current usage
 docker system df

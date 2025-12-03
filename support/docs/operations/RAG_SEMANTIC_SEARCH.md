@@ -205,7 +205,7 @@ OPENAI_API_KEY=sk-proj-...
 2. Generate new key if expired
 3. Update `.env` on droplet:
    ```bash
-   ssh do-mcp-gateway
+   ssh do-codechef-droplet
    nano /opt/Dev-Tools/config/env/.env
    # Update QDRANT_API_KEY
    ```
@@ -263,10 +263,10 @@ OPENAI_API_KEY=sk-proj-...
 
 ```bash
 # View RAG service logs
-ssh do-mcp-gateway "docker logs deploy-rag-context-1 --tail=100 -f"
+ssh do-codechef-droplet "docker logs deploy-rag-context-1 --tail=100 -f"
 
 # Filter for errors
-ssh do-mcp-gateway "docker logs deploy-rag-context-1 2>&1 | grep -i error"
+ssh do-codechef-droplet "docker logs deploy-rag-context-1 2>&1 | grep -i error"
 ```
 
 ### Health Monitoring
@@ -299,7 +299,7 @@ curl -s https://codechef.appsmithery.co/rag/health | jq .
 **Full re-index:**
 
 ```bash
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 cd /opt/Dev-Tools
 export OPENAI_API_KEY="sk-proj-..."
 export LINEAR_API_KEY="lin_oauth_..."

@@ -380,7 +380,7 @@ CREATE INDEX idx_approval_requests_workflow ON approval_requests(workflow_id);
 
 ```bash
 # SSH to droplet
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 
 # Apply schema
 cd /opt/Dev-Tools
@@ -543,7 +543,7 @@ task workflow:status WORKFLOW_ID=32467165-c04f-49fa-9e41-8b4bbb775253
 ### View Orchestrator Logs
 
 ```bash
-ssh do-mcp-gateway "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'HITL\|approval'"
+ssh do-codechef-droplet "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'HITL\|approval'"
 
 # Look for:
 # - "HITL approval required for high-risk task"
@@ -564,7 +564,7 @@ ssh do-mcp-gateway "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'HITL
 
 1. Check webhook processed successfully:
    ```bash
-   ssh do-mcp-gateway "docker logs deploy-orchestrator-1 | grep 'webhook\|approval'"
+   ssh do-codechef-droplet "docker logs deploy-orchestrator-1 | grep 'webhook\|approval'"
    ```
 2. Verify approval status in PostgreSQL:
    ```sql
@@ -609,7 +609,7 @@ ssh do-mcp-gateway "docker logs deploy-orchestrator-1 --tail 100 | grep -i 'HITL
 task workflow:clean-expired
 
 # Manual cleanup
-ssh do-mcp-gateway 'docker exec deploy-postgres-1 psql -U devtools -d devtools -c "DELETE FROM approval_requests WHERE status = '\''pending'\'' AND expires_at < NOW();"'
+ssh do-codechef-droplet 'docker exec deploy-postgres-1 psql -U devtools -d devtools -c "DELETE FROM approval_requests WHERE status = '\''pending'\'' AND expires_at < NOW();"'
 ```
 
 ---

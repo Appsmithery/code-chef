@@ -94,7 +94,7 @@ async def test_high_priority_approval():
         print()
         print("3. Watch the orchestrator logs for webhook events:")
         print(
-            '   ssh do-mcp-gateway "docker logs deploy-orchestrator-1 -f | grep -i webhook"'
+            '   ssh do-codechef-droplet "docker logs deploy-orchestrator-1 -f | grep -i webhook"'
         )
         print()
         print("4. The webhook will:")

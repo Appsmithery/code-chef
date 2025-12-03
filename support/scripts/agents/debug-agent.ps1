@@ -58,7 +58,7 @@ function Write-Info { param($Message) Write-Host "  -> $Message" -ForegroundColo
 function Write-Success { param($Message) Write-Host "  [OK] $Message" -ForegroundColor Green }
 function Write-Failure { param($Message) Write-Host "  [ERROR] $Message" -ForegroundColor Red }
 
-$DROPLET = "do-mcp-gateway"
+$DROPLET = "do-codechef-droplet"
 $DEPLOY_PATH = "/opt/Dev-Tools"
 
 # Port mapping

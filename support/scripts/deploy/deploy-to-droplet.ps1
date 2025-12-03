@@ -38,7 +38,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$DROPLET = "do-mcp-gateway"
+$DROPLET = "do-codechef-droplet"
 $DEPLOY_PATH = "/opt/Dev-Tools"
 $LOCAL_ENV_PATH = "config/env/.env"
 

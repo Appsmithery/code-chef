@@ -206,7 +206,7 @@ See [guides/LANGSMITH_TRACING.md](guides/LANGSMITH_TRACING.md) for examples.
 docker compose logs -f orchestrator
 
 # Remote (use SSH alias)
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
 ```
 
 ### Restart Services
@@ -216,7 +216,7 @@ ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestra
 docker compose restart orchestrator
 
 # Remote (config changes require down+up)
-ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
+ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
 ```
 
 ### Clean Up Docker Resources

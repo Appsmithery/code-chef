@@ -266,7 +266,7 @@ url = generate_permalink("agent_orchestrator/main.py", line_start=45, line_end=6
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
 
 # Verify deployment
-ssh do-mcp-gateway "curl -s http://localhost:8001/health | jq"
+ssh do-codechef-droplet "curl -s http://localhost:8001/health | jq"
 ```
 
 ---

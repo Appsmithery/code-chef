@@ -59,7 +59,7 @@ git push origin main  # Pushes to GitHub
 
 ```powershell
 # Run before any major deployment
-ssh do-mcp-gateway
+ssh do-codechef-droplet
 cd /opt/Dev-Tools
 
 # Full system snapshot

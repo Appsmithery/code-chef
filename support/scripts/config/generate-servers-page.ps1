@@ -1,7 +1,7 @@
 # Generate servers.html from actual MCP server definitions on droplet
 
 $ErrorActionPreference = "Continue"
-$DROPLET = "do-mcp-gateway"  # SSH config alias for root@45.55.173.72
+$DROPLET = "do-codechef-droplet"  # SSH config alias for root@45.55.173.72
 
 Write-Host "Fetching server list from droplet ($DROPLET)..."
 $serverDirs = ssh $DROPLET "ls -1 /opt/central-mcp-gateway/servers/ | grep -v -E '(README|client|index)'" | Where-Object { $_ -and $_.Trim() }
