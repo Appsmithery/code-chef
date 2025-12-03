@@ -11,17 +11,22 @@
 ### 1. Environment Verification
 
 ```powershell
-# Check all services are healthy
-ssh root@45.55.173.72 "curl -s http://localhost:8001/health"  # Orchestrator
-ssh root@45.55.173.72 "curl -s http://localhost:8000/health"  # Gateway
-ssh root@45.55.173.72 "curl -s http://localhost:8007/health"  # RAG
-ssh root@45.55.173.72 "curl -s http://localhost:8008/health"  # State
+# Check all services are healthy via HTTPS
+curl https://codechef.appsmithery.co/api/health    # Orchestrator
+curl https://codechef.appsmithery.co/rag/health    # RAG
+curl https://codechef.appsmithery.co/state/health  # State
+
+# Or via SSH for internal ports
+ssh do-mcp-gateway "curl -s http://localhost:8001/health"  # Orchestrator
+ssh do-mcp-gateway "curl -s http://localhost:8000/health"  # Gateway
+ssh do-mcp-gateway "curl -s http://localhost:8007/health"  # RAG
+ssh do-mcp-gateway "curl -s http://localhost:8008/health"  # State
 ```
 
 ### 2. Container Status
 
 ```powershell
-ssh root@45.55.173.72 "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
+ssh do-mcp-gateway "docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
 ```
 
 Expected: 13 containers running
@@ -36,7 +41,7 @@ Expected: 13 containers running
 
 - [ ] **Health check shows qdrant_status: connected**
   ```bash
-  curl http://45.55.173.72:8007/health | jq '.qdrant_status'
+  curl https://codechef.appsmithery.co/rag/health | jq '.qdrant_status'
   # Expected: "connected"
   ```
 
@@ -44,7 +49,7 @@ Expected: 13 containers running
 
 - [ ] **All 7 collections exist with correct counts**
   ```bash
-  curl http://45.55.173.72:8007/collections | jq .
+  curl https://codechef.appsmithery.co/rag/collections | jq .
   # Expected counts:
   # - code_patterns: 505
   # - issue_tracker: 155
@@ -60,7 +65,7 @@ Expected: 13 containers running
 - [ ] **Query code_patterns**
 
   ```bash
-  curl -X POST http://45.55.173.72:8007/query \
+  curl -X POST https://codechef.appsmithery.co/rag/query \
     -H "Content-Type: application/json" \
     -d '{"query": "workflow execution", "collection": "code_patterns", "limit": 3}'
   # Expected: 3 results with scores > 0.5
@@ -69,7 +74,7 @@ Expected: 13 containers running
 - [ ] **Query issue_tracker**
 
   ```bash
-  curl -X POST http://45.55.173.72:8007/query \
+  curl -X POST https://codechef.appsmithery.co/rag/query \
     -H "Content-Type: application/json" \
     -d '{"query": "deployment automation", "collection": "issue_tracker", "limit": 3}'
   # Expected: Results with issue metadata
@@ -77,7 +82,7 @@ Expected: 13 containers running
 
 - [ ] **Query feature_specs**
   ```bash
-  curl -X POST http://45.55.173.72:8007/query \
+  curl -X POST https://codechef.appsmithery.co/rag/query \
     -H "Content-Type: application/json" \
     -d '{"query": "AI DevOps agent platform", "collection": "feature_specs", "limit": 2}'
   # Expected: Project specifications returned
@@ -91,7 +96,7 @@ Expected: 13 containers running
 
 - [ ] **2GB swap active**
   ```bash
-  ssh root@45.55.173.72 "free -h | grep Swap"
+  ssh do-mcp-gateway "free -h | grep Swap"
   # Expected: Swap: 2.0Gi (some amount used)
   ```
 
@@ -99,7 +104,7 @@ Expected: 13 containers running
 
 - [ ] **All containers within limits**
   ```bash
-  ssh root@45.55.173.72 "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}'"
+  ssh do-mcp-gateway "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}'"
   # Expected: No container exceeding its limit
   # - gateway-mcp: < 256MB
   # - rag-context: < 512MB
@@ -111,7 +116,7 @@ Expected: 13 containers running
 
 - [ ] **Available memory > 500MB**
   ```bash
-  ssh root@45.55.173.72 "free -h"
+  ssh do-mcp-gateway "free -h"
   # Expected: available > 500Mi
   ```
 
@@ -123,7 +128,7 @@ Expected: 13 containers running
 
 - [ ] **Orchestrator healthy**
   ```bash
-  curl http://45.55.173.72:8001/health
+  curl https://codechef.appsmithery.co/api/health
   # Expected: {"status":"ok","service":"orchestrator"}
   ```
 
@@ -131,7 +136,7 @@ Expected: 13 containers running
 
 - [ ] **Token tracking endpoint accessible**
   ```bash
-  curl http://45.55.173.72:8001/metrics/tokens | jq '.totals'
+  curl https://codechef.appsmithery.co/api/metrics/tokens | jq '.totals'
   # Expected: JSON with total_tokens, total_cost, total_calls
   ```
 
@@ -139,7 +144,7 @@ Expected: 13 containers running
 
 - [ ] **Prometheus metrics exposed**
   ```bash
-  curl -s http://45.55.173.72:8001/metrics | grep llm_
+  ssh do-mcp-gateway "curl -s http://localhost:8001/metrics | grep llm_"
   # Expected: llm_tokens_total, llm_cost_usd_total metrics
   ```
 
@@ -151,7 +156,7 @@ Expected: 13 containers running
 
 - [ ] **Gateway operational**
   ```bash
-  curl http://45.55.173.72:8000/health
+  ssh do-mcp-gateway "curl http://localhost:8000/health"
   # Expected: {"status":"ok","service":"mcp-gateway"}
   ```
 
@@ -159,7 +164,7 @@ Expected: 13 containers running
 
 - [ ] **Tools available**
   ```bash
-  curl http://45.55.173.72:8000/tools | jq '. | length'
+  ssh do-mcp-gateway "curl http://localhost:8000/tools | jq '. | length'"
   # Expected: 150+ tools
   ```
 
@@ -207,7 +212,7 @@ Expected: 13 containers running
 
 - [ ] **All services being scraped**
   ```bash
-  ssh root@45.55.173.72 "curl -s http://localhost:9090/api/v1/targets" | jq '.data.activeTargets | length'
+  ssh do-mcp-gateway "curl -s http://localhost:9090/api/v1/targets" | jq '.data.activeTargets | length'
   # Expected: 4+ active targets
   ```
 
@@ -219,7 +224,7 @@ Expected: 13 containers running
 
 - [ ] **Database accessible**
   ```bash
-  ssh root@45.55.173.72 "docker exec deploy-postgres-1 pg_isready"
+  ssh do-mcp-gateway "docker exec deploy-postgres-1 pg_isready"
   # Expected: accepting connections
   ```
 
@@ -227,7 +232,7 @@ Expected: 13 containers running
 
 - [ ] **Redis operational**
   ```bash
-  ssh root@45.55.173.72 "docker exec deploy-redis-1 redis-cli ping"
+  ssh do-mcp-gateway "docker exec deploy-redis-1 redis-cli ping"
   # Expected: PONG
   ```
 
@@ -239,7 +244,7 @@ Expected: 13 containers running
 
 - [ ] **WORKFLOW_TTL_HOURS set**
   ```bash
-  ssh root@45.55.173.72 "grep WORKFLOW_TTL_HOURS /opt/Dev-Tools/config/env/.env"
+  ssh do-mcp-gateway "grep WORKFLOW_TTL_HOURS /opt/Dev-Tools/config/env/.env"
   # Expected: WORKFLOW_TTL_HOURS=24
   ```
 
@@ -247,7 +252,7 @@ Expected: 13 containers running
 
 - [ ] **workflow_events table exists (if deployed)**
   ```bash
-  ssh root@45.55.173.72 "docker exec deploy-postgres-1 psql -U devtools -c '\dt workflow_*'"
+  ssh do-mcp-gateway "docker exec deploy-postgres-1 psql -U devtools -c '\dt workflow_*'"
   # Expected: Tables listed (or error if not yet migrated)
   ```
 
@@ -300,7 +305,7 @@ Expected: 13 containers running
 
 4. **Metrics not appearing in Grafana**
    - Cause: Alloy not scraping
-   - Fix: `ssh root@45.55.173.72 "systemctl restart alloy"`
+   - Fix: `ssh do-mcp-gateway "systemctl restart alloy"`
 
 ---
 

@@ -18,14 +18,15 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$DROPLET_IP = "45.55.173.72"
+$DROPLET_HOST = "codechef.appsmithery.co"
+$DROPLET_IP = "45.55.173.72"  # For SSH access
 $DROPLET_USER = "root"
 $AGENT_VERSION = "v0.38.1"
 $CONFIG_LOCAL = "config/grafana/agent-config.yaml"
 $CONFIG_REMOTE = "/etc/grafana-agent/config.yaml"
 
 Write-Host "=== Grafana Cloud Agent Deployment ===" -ForegroundColor Cyan
-Write-Host "Target: $DROPLET_USER@$DROPLET_IP"
+Write-Host "Target: $DROPLET_USER@$DROPLET_IP ($DROPLET_HOST)"
 Write-Host "Version: $AGENT_VERSION"
 Write-Host ""
 

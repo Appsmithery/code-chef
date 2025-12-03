@@ -1,7 +1,7 @@
 #!/bin/bash
 # Deploy minimal working Alloy config
 
-ssh root@45.55.173.72 << 'ENDSSH'
+ssh do-mcp-gateway << 'ENDSSH'
 # Stop service
 systemctl stop alloy
 systemctl reset-failed alloy

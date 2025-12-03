@@ -674,7 +674,7 @@ Before deploying to production droplet:
 1. **Database Migration**
 
    ```bash
-   ssh root@45.55.173.72
+   ssh do-mcp-gateway
    cd /opt/Dev-Tools
    task workflow:init-db
    ```
@@ -694,13 +694,13 @@ Before deploying to production droplet:
 
    ```bash
    task health:remote
-   curl http://45.55.173.72:8001/health
+   curl https://codechef.appsmithery.co/api/health
    ```
 
 5. **Test Approval Flow**
    ```bash
    # From local machine targeting droplet
-   curl -X POST http://45.55.173.72:8001/orchestrate \
+   curl -X POST https://codechef.appsmithery.co/api/orchestrate \
      -H "Content-Type: application/json" \
      -d '{"description": "test approval", "priority": "high"}'
    ```

@@ -159,7 +159,7 @@ class LinearWorkspaceClient:
 - ❌ Reject: Change issue status to "Rejected" or "Canceled"
 - Or comment: `approve REQUEST_ID={approval_id}` or `reject REQUEST_ID={approval_id} REASON="<reason>"`
 
-**Details**: [View in dashboard](http://45.55.173.72:8001/approvals/{approval_id})
+**Details**: [View in dashboard](https://codechef.appsmithery.co/api/approvals/{approval_id})
 """
 
         if metadata:

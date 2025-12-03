@@ -65,7 +65,7 @@ If you want auto-provisioned dashboards:
 
 ```powershell
 # Access local Grafana on droplet
-ssh -L 3000:localhost:3000 root@45.55.173.72
+ssh -L 3000:localhost:3000 do-mcp-gateway
 
 # Open in browser
 http://localhost:3000

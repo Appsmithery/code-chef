@@ -6,7 +6,7 @@
     Creates a Grafana API key (service account token) for MCP server integration.
     This key allows the MCP server to query Grafana dashboards and datasources.
 .PARAMETER GrafanaUrl
-    Grafana URL (default: http://45.55.173.72:3000)
+    Grafana URL - now uses Grafana Cloud (default: https://appsmithery.grafana.net)
 .PARAMETER AdminUser
     Admin username (default: admin)
 .PARAMETER AdminPassword
@@ -22,7 +22,7 @@
 #>
 
 param(
-    [string]$GrafanaUrl = "http://45.55.173.72:3000",
+    [string]$GrafanaUrl = "https://appsmithery.grafana.net",
     [string]$AdminUser = "admin",
     [string]$AdminPassword = "devtools_grafana_2024",
     [string]$KeyName = "MCP Server Access",

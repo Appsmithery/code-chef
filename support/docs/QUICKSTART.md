@@ -110,7 +110,14 @@ curl -X POST http://localhost:8001/orchestrate \
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType full
 ```
 
-**Production URL**: http://45.55.173.72:8001
+**Production URL**: https://codechef.appsmithery.co
+
+**API Endpoints**:
+
+- Orchestrator: https://codechef.appsmithery.co/api
+- RAG: https://codechef.appsmithery.co/rag
+- State: https://codechef.appsmithery.co/state
+- LangGraph: https://codechef.appsmithery.co/langgraph
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide.
 
@@ -123,9 +130,10 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment guide.
 | Service      | Port | Purpose                          |
 | ------------ | ---- | -------------------------------- |
 | orchestrator | 8001 | LangGraph workflow with 6 agents |
-| gateway-mcp  | 8000 | MCP tool routing (150+ tools)    |
 | rag-context  | 8007 | Vector search (Qdrant)           |
 | state        | 8008 | Workflow persistence (Postgres)  |
+| langgraph    | 8010 | LangGraph checkpoint service     |
+| caddy        | 443  | Reverse proxy + SSL              |
 | postgres     | 5432 | Database                         |
 
 ### Agent Nodes (within Orchestrator)
@@ -197,8 +205,8 @@ See [guides/LANGSMITH_TRACING.md](guides/LANGSMITH_TRACING.md) for examples.
 # Local
 docker compose logs -f orchestrator
 
-# Remote
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
+# Remote (use SSH alias)
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose logs -f orchestrator"
 ```
 
 ### Restart Services
@@ -208,7 +216,7 @@ ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose logs -f orches
 docker compose restart orchestrator
 
 # Remote (config changes require down+up)
-ssh root@45.55.173.72 "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
+ssh do-mcp-gateway "cd /opt/Dev-Tools/deploy && docker compose down && docker compose up -d"
 ```
 
 ### Clean Up Docker Resources

@@ -8,7 +8,7 @@ param(
 )
 
 if ($Remote) {
-    $OrchestratorUrl = "http://45.55.173.72:8001"
+    $OrchestratorUrl = "https://codechef.appsmithery.co/api"
 }
 
 Write-Host "Connecting to Linear Project: AI DevOps Agent Platform" -ForegroundColor Cyan

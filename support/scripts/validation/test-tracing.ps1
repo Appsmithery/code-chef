@@ -7,54 +7,46 @@
 #>
 
 param(
-    [string]$DropletIp = "45.55.173.72"
+    [string]$DropletHost = "codechef.appsmithery.co",
+    [string]$DropletIp = "45.55.173.72"  # For SSH fallback
 )
 
 $ErrorActionPreference = "Continue"
 
 Write-Host "`n=== Testing Agent Tracing ===" -ForegroundColor Cyan
-Write-Host "Droplet: $DropletIp`n" -ForegroundColor Gray
+Write-Host "Domain: https://$DropletHost`n" -ForegroundColor Gray
 
-# Test 1: Orchestrator health
-Write-Host "[1/5] Testing orchestrator health..." -ForegroundColor Yellow
+# Test 1: Orchestrator health (via Caddy)
+Write-Host "[1/4] Testing orchestrator health..." -ForegroundColor Yellow
 try {
-    $response = Invoke-RestMethod -Uri "http://${DropletIp}:8001/health" -TimeoutSec 5 -ErrorAction Stop
+    $response = Invoke-RestMethod -Uri "https://${DropletHost}/api/health" -TimeoutSec 5 -ErrorAction Stop
     Write-Host "  ✓ Orchestrator: $($response.status)" -ForegroundColor Green
 } catch {
     Write-Host "  ✗ Orchestrator unavailable: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Test 2: Gateway MCP tools
-Write-Host "`n[2/5] Testing MCP Gateway..." -ForegroundColor Yellow
+# Test 2: RAG Service (via Caddy)
+Write-Host "`n[2/4] Testing RAG Service..." -ForegroundColor Yellow
 try {
-    $response = Invoke-RestMethod -Uri "http://${DropletIp}:8000/health" -TimeoutSec 5 -ErrorAction Stop
-    Write-Host "  ✓ Gateway: $($response.status)" -ForegroundColor Green
-} catch {
-    Write-Host "  ✗ Gateway failed: $($_.Exception.Message)" -ForegroundColor Red
-}
-
-# Test 3: RAG Service
-Write-Host "`n[3/5] Testing RAG Service..." -ForegroundColor Yellow
-try {
-    $response = Invoke-RestMethod -Uri "http://${DropletIp}:8007/health" -TimeoutSec 5 -ErrorAction Stop
+    $response = Invoke-RestMethod -Uri "https://${DropletHost}/rag/health" -TimeoutSec 5 -ErrorAction Stop
     Write-Host "  ✓ RAG: $($response.status), Qdrant: $($response.qdrant_status)" -ForegroundColor Green
 } catch {
     Write-Host "  ✗ RAG failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Test 4: State Persistence
-Write-Host "`n[4/5] Testing State Persistence..." -ForegroundColor Yellow
+# Test 3: State Persistence (via Caddy)
+Write-Host "`n[3/4] Testing State Persistence..." -ForegroundColor Yellow
 try {
-    $response = Invoke-RestMethod -Uri "http://${DropletIp}:8008/health" -TimeoutSec 5 -ErrorAction Stop
+    $response = Invoke-RestMethod -Uri "https://${DropletHost}/state/health" -TimeoutSec 5 -ErrorAction Stop
     Write-Host "  ✓ State: $($response.status)" -ForegroundColor Green
 } catch {
     Write-Host "  ✗ State failed: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-# Test 5: LangGraph
-Write-Host "`n[5/5] Testing LangGraph Service..." -ForegroundColor Yellow
+# Test 4: LangGraph (via Caddy)
+Write-Host "`n[4/4] Testing LangGraph Service..." -ForegroundColor Yellow
 try {
-    $response = Invoke-RestMethod -Uri "http://${DropletIp}:8010/health" -TimeoutSec 5 -ErrorAction Stop
+    $response = Invoke-RestMethod -Uri "https://${DropletHost}/langgraph/health" -TimeoutSec 5 -ErrorAction Stop
     Write-Host "  ✓ LangGraph: $($response.status), Checkpointer: $($response.postgres_checkpointer)" -ForegroundColor Green
 } catch {
     Write-Host "  ✗ LangGraph failed: $($_.Exception.Message)" -ForegroundColor Red

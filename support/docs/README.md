@@ -4,18 +4,18 @@
 
 ---
 
-##  Quick Start
+## Quick Start
 
-| Document | Description |
-|----------|-------------|
-| **[QUICKSTART.md](QUICKSTART.md)** | 15-minute setup guide |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)** | System design + LangGraph workflow |
-| **[DEPLOYMENT.md](DEPLOYMENT.md)** | Production deployment |
-| **[OBSERVABILITY.md](OBSERVABILITY.md)** | Monitoring + tracing |
+| Document                                 | Description                        |
+| ---------------------------------------- | ---------------------------------- |
+| **[QUICKSTART.md](QUICKSTART.md)**       | 15-minute setup guide              |
+| **[ARCHITECTURE.md](ARCHITECTURE.md)**   | System design + LangGraph workflow |
+| **[DEPLOYMENT.md](DEPLOYMENT.md)**       | Production deployment              |
+| **[OBSERVABILITY.md](OBSERVABILITY.md)** | Monitoring + tracing               |
 
 ---
 
-##  Structure
+## Structure
 
 ```
 support/docs/
@@ -31,35 +31,35 @@ support/docs/
 
 ---
 
-##  Find What You Need
+## Find What You Need
 
 ### Setup & Deployment
 
-- Local setup  [QUICKSTART.md](QUICKSTART.md)
-- Production deploy  [DEPLOYMENT.md](DEPLOYMENT.md)
-- Manage secrets  [operations/SECRETS_MANAGEMENT.md](operations/SECRETS_MANAGEMENT.md)
+- Local setup [QUICKSTART.md](QUICKSTART.md)
+- Production deploy [DEPLOYMENT.md](DEPLOYMENT.md)
+- Manage secrets [operations/SECRETS_MANAGEMENT.md](operations/SECRETS_MANAGEMENT.md)
 
 ### Architecture & Design
 
-- System overview  [ARCHITECTURE.md](ARCHITECTURE.md)
-- LangGraph workflow  [architecture/LANGGRAPH_INTEGRATION.md](architecture/LANGGRAPH_INTEGRATION.md)
-- MCP tools (150+)  [architecture/MCP_INTEGRATION.md](architecture/MCP_INTEGRATION.md)
+- System overview [ARCHITECTURE.md](ARCHITECTURE.md)
+- LangGraph workflow [architecture/LANGGRAPH_INTEGRATION.md](architecture/LANGGRAPH_INTEGRATION.md)
+- MCP tools (150+) [architecture/MCP_INTEGRATION.md](architecture/MCP_INTEGRATION.md)
 
 ### Integrations
 
-- Linear + HITL  [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
-- LangSmith tracing  [guides/LANGSMITH_TRACING.md](guides/LANGSMITH_TRACING.md)
-- Gradient AI  [guides/GRADIENT_AI_SETUP.md](guides/GRADIENT_AI_SETUP.md)
+- Linear + HITL [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
+- LangSmith tracing [guides/LANGSMITH_TRACING.md](guides/LANGSMITH_TRACING.md)
+- Gradient AI [guides/GRADIENT_AI_SETUP.md](guides/GRADIENT_AI_SETUP.md)
 
 ### Operations
 
-- Monitor services  [OBSERVABILITY.md](OBSERVABILITY.md)
-- Clean Docker  [operations/CLEANUP_QUICK_REFERENCE.md](operations/CLEANUP_QUICK_REFERENCE.md)
-- Disaster recovery  [operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)
+- Monitor services [OBSERVABILITY.md](OBSERVABILITY.md)
+- Clean Docker [operations/CLEANUP_QUICK_REFERENCE.md](operations/CLEANUP_QUICK_REFERENCE.md)
+- Disaster recovery [operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)
 
 ---
 
-##  System Overview
+## System Overview
 
 **v0.3 Architecture:**
 
@@ -71,7 +71,7 @@ support/docs/
 
 **Key Features:**
 
- LangGraph workflows with PostgreSQL checkpointing  
+LangGraph workflows with PostgreSQL checkpointing  
  Progressive tool disclosure (80-90% token savings)  
  LangChain function calling (LLM invokes tools directly)  
  HITL approvals via Linear integration  
@@ -80,46 +80,47 @@ support/docs/
 
 ---
 
-##  Production Status
+## Production Status
 
-**Environment:**  Running on 45.55.173.72  
-**Version:** v0.3  
-**Updated:** November 25, 2025
+**Domain:** https://codechef.appsmithery.co  
+**Droplet:** mcp-gateway (codechef.appsmithery.co, 45.55.173.72)  
+**Version:** v0.4  
+**Updated:** December 2025
 
 ### Services
 
-- **orchestrator** (8001):  LangGraph + 6 agents
-- **gateway-mcp** (8000):  Linear OAuth + MCP
-- **rag-context** (8007):  Vector search
-- **state** (8008):  Workflow persistence
+- **orchestrator** (/api): LangGraph + 6 agents
+- **rag-context** (/rag): Vector search (Qdrant Cloud)
+- **state** (/state): Workflow persistence
+- **langgraph** (/langgraph): Checkpoint service
 
 ### Monitoring
 
 - **LangSmith**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207
 - **Grafana**: https://appsmithery.grafana.net
-- **Linear**: https://linear.app/appsmithery
+- **Linear**: https://linear.app/dev-ops
 
 ---
 
-##  Recent Changes (November 25, 2025)
+## Recent Changes (November 25, 2025)
 
 **Documentation Consolidation:**
 
--  Created QUICKSTART.md (all-in-one setup guide)
--  Rewrote ARCHITECTURE.md (v0.3 LangGraph focus)
--  Unified DEPLOYMENT.md (all strategies in one doc)
--  Consolidated LINEAR_INTEGRATION.md (combined 5 Linear docs)
--  Removed 40+ redundant/outdated files
--  **Net reduction**: 60+ files  15 essential docs (~75%)
+- Created QUICKSTART.md (all-in-one setup guide)
+- Rewrote ARCHITECTURE.md (v0.3 LangGraph focus)
+- Unified DEPLOYMENT.md (all strategies in one doc)
+- Consolidated LINEAR_INTEGRATION.md (combined 5 Linear docs)
+- Removed 40+ redundant/outdated files
+- **Net reduction**: 60+ files 15 essential docs (~75%)
 
 **Deprecated Paths** (update bookmarks):
 
-- ~~WORKSPACE_AWARE_ARCHITECTURE.md~~  [ARCHITECTURE.md](ARCHITECTURE.md)
-- ~~DEPLOYMENT_GUIDE.md~~  [DEPLOYMENT.md](DEPLOYMENT.md)
-- ~~SETUP_GUIDE.md~~  [QUICKSTART.md](QUICKSTART.md)
-- ~~api/AGENT_ENDPOINTS.md~~  [ARCHITECTURE.md](ARCHITECTURE.md)
-- ~~guides/integration/LINEAR_SETUP.md~~  [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
+- ~~WORKSPACE_AWARE_ARCHITECTURE.md~~ [ARCHITECTURE.md](ARCHITECTURE.md)
+- ~~DEPLOYMENT_GUIDE.md~~ [DEPLOYMENT.md](DEPLOYMENT.md)
+- ~~SETUP_GUIDE.md~~ [QUICKSTART.md](QUICKSTART.md)
+- ~~api/AGENT_ENDPOINTS.md~~ [ARCHITECTURE.md](ARCHITECTURE.md)
+- ~~guides/integration/LINEAR_SETUP.md~~ [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
 
 ---
 
-*For documentation issues, open an issue on GitHub.*
+_For documentation issues, open an issue on GitHub._

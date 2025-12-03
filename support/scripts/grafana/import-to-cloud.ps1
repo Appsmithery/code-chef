@@ -92,8 +92,8 @@ try {
     Write-Host ""
     Write-Host "Next steps:" -ForegroundColor Yellow
     Write-Host "1. Configure Prometheus datasource in Grafana Cloud" -ForegroundColor White
-    Write-Host "   - URL: http://45.55.173.72:9090" -ForegroundColor Gray
-    Write-Host "   - Or use Grafana Cloud Agent to scrape metrics" -ForegroundColor Gray
+    Write-Host "   - Prometheus is scraped by Grafana Alloy on the droplet" -ForegroundColor Gray
+    Write-Host "   - Use datasource: grafanacloud-appsmithery-prom" -ForegroundColor Gray
     Write-Host "2. Open dashboard and verify metrics are flowing" -ForegroundColor White
     
     exit 0

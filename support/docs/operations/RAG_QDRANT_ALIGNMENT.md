@@ -41,7 +41,7 @@
 - **Status**: ✅ Connected to Qdrant Cloud
 - **MCP Gateway**: ✅ Connected (http://gateway-mcp:8000)
 - **Default Collection**: `the-shop`
-- **Health**: http://45.55.173.72:8007/health
+- **Health**: https://codechef.appsmithery.co/rag/health
 
 ## Changes Made (November 26, 2025)
 
@@ -114,7 +114,7 @@ env_file:
 SSH to droplet and update `/opt/Dev-Tools/config/env/.env`:
 
 ```bash
-ssh root@45.55.173.72
+ssh do-mcp-gateway
 
 # Edit .env file
 cd /opt/Dev-Tools
@@ -145,14 +145,14 @@ From local machine:
 
 ```bash
 # Check RAG service health
-curl http://45.55.173.72:8007/health
+curl https://codechef.appsmithery.co/rag/health
 
 # Should show:
 # - qdrant_status: "connected"
 # - mcp_gateway_status: "connected"
 
 # Test embeddings with Gradient
-curl -X POST http://45.55.173.72:8007/query \
+curl -X POST https://codechef.appsmithery.co/rag/query \
   -H "Content-Type: application/json" \
   -d '{
     "query": "How do I use Gradient AI for embeddings?",
@@ -202,13 +202,13 @@ python support/scripts/rag/index_vendor_docs.py --source langsmith-api
 
 ```bash
 # RAG service status
-curl http://45.55.173.72:8007/health
+curl https://codechef.appsmithery.co/rag/health
 
 # List collections
-curl http://45.55.173.72:8007/collections
+curl https://codechef.appsmithery.co/rag/collections
 
 # Query vendor docs
-curl -X POST http://45.55.173.72:8007/query \
+curl -X POST https://codechef.appsmithery.co/rag/query \
   -H "Content-Type: application/json" \
   -d '{"query": "test", "collection": "vendor-docs", "n_results": 1}'
 ```
@@ -217,7 +217,7 @@ curl -X POST http://45.55.173.72:8007/query \
 
 ```bash
 # View RAG service logs
-ssh root@45.55.173.72
+ssh do-mcp-gateway
 cd /opt/Dev-Tools/deploy
 docker compose logs rag-context --tail=100 -f
 
@@ -286,7 +286,7 @@ python support/scripts/rag/test_embeddings.py
 **Check**:
 
 ```bash
-curl http://45.55.173.72:8007/collections
+curl https://codechef.appsmithery.co/rag/collections
 ```
 
 **Solution**:

@@ -12,20 +12,20 @@
 ### Health Check
 
 ```bash
-curl http://45.55.173.72:8007/health
+curl https://codechef.appsmithery.co/rag/health
 # Expected: {"status":"ok","qdrant_status":"connected","mcp_gateway_status":"connected"}
 ```
 
 ### List Collections
 
 ```bash
-curl http://45.55.173.72:8007/collections
+curl https://codechef.appsmithery.co/rag/collections
 ```
 
 ### Query Semantic Search
 
 ```bash
-curl -X POST http://45.55.173.72:8007/query \
+curl -X POST https://codechef.appsmithery.co/rag/query \
   -H "Content-Type: application/json" \
   -d '{"query": "workflow execution patterns", "collection": "code_patterns", "limit": 5}'
 ```
@@ -205,7 +205,7 @@ OPENAI_API_KEY=sk-proj-...
 2. Generate new key if expired
 3. Update `.env` on droplet:
    ```bash
-   ssh root@45.55.173.72
+   ssh do-mcp-gateway
    nano /opt/Dev-Tools/config/env/.env
    # Update QDRANT_API_KEY
    ```
@@ -233,7 +233,7 @@ OPENAI_API_KEY=sk-proj-...
 
 **Solution**:
 
-1. List collections: `curl http://45.55.173.72:8007/collections`
+1. List collections: `curl https://codechef.appsmithery.co/rag/collections`
 2. Check vector count > 0
 3. Re-index if needed:
    ```bash
@@ -263,17 +263,17 @@ OPENAI_API_KEY=sk-proj-...
 
 ```bash
 # View RAG service logs
-ssh root@45.55.173.72 "docker logs deploy-rag-context-1 --tail=100 -f"
+ssh do-mcp-gateway "docker logs deploy-rag-context-1 --tail=100 -f"
 
 # Filter for errors
-ssh root@45.55.173.72 "docker logs deploy-rag-context-1 2>&1 | grep -i error"
+ssh do-mcp-gateway "docker logs deploy-rag-context-1 2>&1 | grep -i error"
 ```
 
 ### Health Monitoring
 
 ```bash
 # Automated health check
-curl -s http://45.55.173.72:8007/health | jq .
+curl -s https://codechef.appsmithery.co/rag/health | jq .
 
 # Expected response:
 {
@@ -299,7 +299,7 @@ curl -s http://45.55.173.72:8007/health | jq .
 **Full re-index:**
 
 ```bash
-ssh root@45.55.173.72
+ssh do-mcp-gateway
 cd /opt/Dev-Tools
 export OPENAI_API_KEY="sk-proj-..."
 export LINEAR_API_KEY="lin_oauth_..."

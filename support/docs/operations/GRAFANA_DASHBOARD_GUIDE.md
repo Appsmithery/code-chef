@@ -57,10 +57,10 @@
 
 ```bash
 # Check HTTP metrics (should have data)
-ssh root@45.55.173.72 "curl -s http://localhost:8001/metrics | grep http_requests_total"
+ssh do-mcp-gateway "curl -s http://localhost:8001/metrics | grep http_requests_total"
 
 # Check LLM metrics (defined but may be zero)
-ssh root@45.55.173.72 "curl -s http://localhost:8001/metrics | grep llm_"
+ssh do-mcp-gateway "curl -s http://localhost:8001/metrics | grep llm_"
 ```
 
 ### 2. Test LLM Metrics Collection
@@ -69,7 +69,7 @@ ssh root@45.55.173.72 "curl -s http://localhost:8001/metrics | grep llm_"
 
 ```bash
 # Example: Make orchestrator decompose a task (this will call LLM)
-curl -X POST http://45.55.173.72:8001/api/v1/decompose \
+curl -X POST https://codechef.appsmithery.co/api/v1/decompose \
   -H "Content-Type: application/json" \
   -d '{"task": "Create a simple Python hello world script"}'
 ```
@@ -77,7 +77,7 @@ curl -X POST http://45.55.173.72:8001/api/v1/decompose \
 **Watch metrics update:**
 
 ```bash
-ssh root@45.55.173.72 "watch -n 5 'curl -s http://localhost:8001/metrics | grep llm_'"
+ssh do-mcp-gateway "watch -n 5 'curl -s http://localhost:8001/metrics | grep llm_'"
 ```
 
 ### 3. Validate in Grafana
@@ -90,7 +90,7 @@ ssh root@45.55.173.72 "watch -n 5 'curl -s http://localhost:8001/metrics | grep 
 
 **Prometheus Direct:**
 
-1. Navigate to http://45.55.173.72:9090/graph
+1. Navigate to Prometheus (via SSH tunnel or internal: http://localhost:9090/graph)
 2. Query examples:
 
    ```promql
@@ -155,7 +155,7 @@ ssh root@45.55.173.72 "watch -n 5 'curl -s http://localhost:8001/metrics | grep 
 
 **Check:**
 
-1. Prometheus scraping: `http://45.55.173.72:9090/targets` (all should be UP)
+1. Prometheus scraping: Access via SSH tunnel (`ssh -L 9090:localhost:9090 do-mcp-gateway`, then http://localhost:9090/targets)
 2. Grafana data source: Settings > Data Sources > Prometheus (should be healthy)
 3. Time range: Try "Last 6 hours" or "Last 24 hours"
 

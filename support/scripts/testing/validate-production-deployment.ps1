@@ -36,14 +36,16 @@ function Write-Info { param($Message) Write-Host "  -> $Message" -ForegroundColo
 function Write-Success { param($Message) Write-Host "  [OK] $Message" -ForegroundColor Green }
 function Write-Failure { param($Message) Write-Host "  [ERROR] $Message" -ForegroundColor Red }
 
-$DROPLET = "root@45.55.173.72"
-$ORCHESTRATOR_URL = if ($Target -eq 'production') { "http://45.55.173.72:8001" } else { "http://localhost:8001" }
-$GATEWAY_URL = if ($Target -eq 'production') { "http://45.55.173.72:8000" } else { "http://localhost:8000" }
+$DROPLET_HOST = "codechef.appsmithery.co"
+$DROPLET_IP = "45.55.173.72"  # For SSH
+$DROPLET = "root@$DROPLET_IP"
+$ORCHESTRATOR_URL = if ($Target -eq 'production') { "https://codechef.appsmithery.co/api" } else { "http://localhost:8001" }
 
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "Production Deployment Validation" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Target: $Target"
+Write-Host "Domain: https://$DROPLET_HOST"
 Write-Host "Orchestrator: $ORCHESTRATOR_URL"
 Write-Host ""
 
@@ -218,7 +220,10 @@ Write-Step "Validating Prometheus Configuration"
 
 if ($Target -eq 'production') {
     try {
-        $promTargets = Invoke-RestMethod -Uri "http://45.55.173.72:9090/api/v1/targets" -TimeoutSec 10
+        # Prometheus is scraped by Alloy and sent to Grafana Cloud
+        # Check via SSH to local Prometheus
+        $promCheck = ssh $DROPLET "curl -s http://localhost:9090/api/v1/targets 2>/dev/null"
+        $promTargets = $promCheck | ConvertFrom-Json
         
         $activeTargets = $promTargets.data.activeTargets | Where-Object { $_.health -eq 'up' }
         Write-Info "Prometheus scraping $($activeTargets.Count) healthy targets"
@@ -294,8 +299,8 @@ Write-Host "  3. Clean up duplicate Prometheus dashboards" -ForegroundColor Gray
 Write-Host "  4. Run integration tests: pytest support/tests/integration/ -v" -ForegroundColor Gray
 
 Write-Host "`n🔗 Quick Links:" -ForegroundColor Yellow
+Write-Host "  • Production: https://codechef.appsmithery.co" -ForegroundColor Gray
 Write-Host "  • Grafana: https://appsmithery.grafana.net" -ForegroundColor Gray
-Write-Host "  • Prometheus: http://45.55.173.72:9090" -ForegroundColor Gray
 Write-Host "  • LangSmith: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects" -ForegroundColor Gray
 
 Write-Host ""
