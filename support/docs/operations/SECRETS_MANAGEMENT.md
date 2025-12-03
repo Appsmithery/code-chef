@@ -157,7 +157,7 @@ Copy the tracked template into the runtime location whenever the Docker stack ne
 cp config/env/.env.template config/env/.env
 ```
 
-Update `config/env/.env` with values for Langfuse, Gradient (including `GRADIENT_MODEL_ACCESS_KEY`), Supabase, and any other stack-level integrations described in `config/env/README.md`.
+Update `config/env/.env` with values for LangSmith, Gradient, Qdrant, and any other stack-level integrations described in `config/env/README.md`.
 
 ### CI/CD Environment
 
@@ -246,12 +246,12 @@ These values flow into Docker Compose automatically and should be managed like a
 
 Gradient introduces three distinct credential classes plus a bit of metadata. Keep them separated so rotations stay painless and you can regenerate assets programmatically.
 
-| Category                                     | Where it lives                                                                                                                           | Purpose                                                                                                                                                                                                     |
-| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Control-plane + model access**             | `config/env/.env` (`DIGITALOCEAN_TOKEN`, `DIGITAL_OCEAN_PAT`, `GRADIENT_API_KEY`, `GRADIENT_MODEL_ACCESS_KEY`, Langfuse, Supabase, etc.) | Lets the stack talk to Gradient + observability services. These settings deploy with `scripts/deploy.ps1`.                                                                                                  |
-| **Partner provider keys (OpenAI/Anthropic)** | `config/env/secrets/openai_api_key.txt`, `config/env/secrets/anthropic_api_key.txt` (or extend `secrets.template.json`)                  | Raw vendor keys you register in the Gradient UI/API. Keeping them as standalone files mirrors the Linear/GitHub secrets pattern and keeps `.env` slim.                                                      |
-| **Agent endpoint API keys**                  | `config/env/secrets/agent-access/<workspace>/<agent>.txt` (JSON blob)                                                                    | Each exposed agent endpoint issues one or more API keys via `/v2/gen-ai/agents/{agent_uuid}/api_keys`. Treat them like per-agent secrets so rotation is a file delete/regenerate instead of editing `.env`. |
-| **Workspace + knowledge base metadata**      | `config/env/workspaces/*.json`                                                                                                           | Tracked manifests that describe workspaces, knowledge bases, and the agents that should exist. These files are lintable alongside the main schema and make automation repeatable.                           |
+| Category                                     | Where it lives                                                                                                          | Purpose                                                                                                                                                                                                     |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Control-plane + model access**             | `config/env/.env` (`DIGITALOCEAN_TOKEN`, `DIGITAL_OCEAN_PAT`, `GRADIENT_API_KEY`, LangSmith, Qdrant, etc.)              | Lets the stack talk to Gradient + observability services. These settings deploy with `scripts/deploy.ps1`.                                                                                                  |
+| **Partner provider keys (OpenAI/Anthropic)** | `config/env/secrets/openai_api_key.txt`, `config/env/secrets/anthropic_api_key.txt` (or extend `secrets.template.json`) | Raw vendor keys you register in the Gradient UI/API. Keeping them as standalone files mirrors the Linear/GitHub secrets pattern and keeps `.env` slim.                                                      |
+| **Agent endpoint API keys**                  | `config/env/secrets/agent-access/<workspace>/<agent>.txt` (JSON blob)                                                   | Each exposed agent endpoint issues one or more API keys via `/v2/gen-ai/agents/{agent_uuid}/api_keys`. Treat them like per-agent secrets so rotation is a file delete/regenerate instead of editing `.env`. |
+| **Workspace + knowledge base metadata**      | `config/env/workspaces/*.json`                                                                                          | Tracked manifests that describe workspaces, knowledge bases, and the agents that should exist. These files are lintable alongside the main schema and make automation repeatable.                           |
 
 ### Agent key file format
 

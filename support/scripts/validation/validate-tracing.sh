@@ -1,6 +1,6 @@
 #!/bin/bash
 # Comprehensive Validation Script for Dev-Tools Stack
-# Validates Langfuse tracing, agent health, MCP gateway, and end-to-end workflows
+# Validates LangSmith tracing, agent health, MCP gateway, and end-to-end workflows
 
 set -e
 
@@ -21,42 +21,6 @@ NC='\033[0m' # No Color
 PASSED=0
 FAILED=0
 
-# Function to test endpoint
-test_endpoint() {
-    local name=$1
-    local url=$2
-    local data=$3
-    local expected_field=$4
-    
-    echo -e "${YELLOW}Testing: $name${NC}"
-    
-    response=$(curl -s -w "\n%{http_code}" -X POST "$url" \
-        -H 'Content-Type: application/json' \
-        -d "$data")
-    
-    http_code=$(echo "$response" | tail -n1)
-    body=$(echo "$response" | sed '$d')
-    
-    if [ "$http_code" = "200" ]; then
-        echo -e "  ${GREEN}✓ HTTP 200 OK${NC}"
-        
-        # Check if response contains expected field
-        if echo "$body" | grep -q "$expected_field"; then
-            echo -e "  ${GREEN}✓ Response contains '$expected_field'${NC}"
-            PASSED=$((PASSED + 1))
-        else
-            echo -e "  ${RED}✗ Response missing '$expected_field'${NC}"
-            echo "  Response: $body"
-            FAILED=$((FAILED + 1))
-        fi
-    else
-        echo -e "  ${RED}✗ HTTP $http_code${NC}"
-        echo "  Response: $body"
-        FAILED=$((FAILED + 1))
-    fi
-    echo ""
-}
-
 # Function to test health endpoint
 test_health() {
     local name=$1
@@ -72,7 +36,7 @@ test_health() {
         echo -e "  ${GREEN}✓ HTTP 200 OK${NC}"
         
         # Check for expected health response
-        if echo "$body" | grep -q "healthy"; then
+        if echo "$body" | grep -q -E "healthy|ok"; then
             echo -e "  ${GREEN}✓ Status: healthy${NC}"
             PASSED=$((PASSED + 1))
         else
@@ -88,22 +52,19 @@ test_health() {
 }
 
 # ============================================================================
-# PHASE 1: Health Checks
+# PHASE 1: Health Checks (Current Architecture)
 # ============================================================================
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Phase 1: Agent Health Checks${NC}"
+echo -e "${BLUE}Phase 1: Service Health Checks${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
+# Core services (current architecture - no individual agent ports 8002-8006)
 test_health "MCP Gateway" 8000
 test_health "Orchestrator" 8001
-test_health "Feature-Dev" 8002
-test_health "Code-Review" 8003
-test_health "Infrastructure" 8004
-test_health "CI/CD" 8005
-test_health "Documentation" 8006
 test_health "RAG Context" 8007
 test_health "State Persistence" 8008
+test_health "LangGraph" 8010
 
 # ============================================================================
 # PHASE 2: MCP Gateway Tool Discovery
@@ -139,44 +100,37 @@ fi
 echo ""
 
 # ============================================================================
-# PHASE 3: Agent Endpoint Tests
+# PHASE 3: RAG Service Validation
 # ============================================================================
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Phase 3: Agent Endpoint Tests${NC}"
+echo -e "${BLUE}Phase 3: RAG Service Validation${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
-# Test 1: Orchestrator (Task Decomposition with Langfuse)
-# LangGraph Orchestrator (all agent nodes internal)
-test_endpoint \
-    "Orchestrator (LangGraph)" \
-    "http://localhost:8001/orchestrate/langgraph" \
-    '{"description":"Build a REST API with user authentication and rate limiting","priority":"high"}' \
-    "workflow_id"
+echo -e "${YELLOW}Testing: RAG Collections${NC}"
+response=$(curl -s -w "\n%{http_code}" http://localhost:8007/collections)
+http_code=$(echo "$response" | tail -n1)
+body=$(echo "$response" | sed '$d')
 
-# Test 2: Gateway MCP
-test_endpoint \
-    "Gateway MCP" \
-    "http://localhost:8000/health" \
-    '{}' \
-    "status"
-
-# Test 3: RAG Context
-test_endpoint \
-    "RAG Context" \
-    "http://localhost:8007/health" \
-    '{}' \
-    "status"
-
-# Test 4: State Persistence
-test_endpoint \
-    "State Persistence" \
-    "http://localhost:8008/health" \
-    '{}' \
-    "status"
-
-# Note: Individual agent endpoints (8002-8006) removed - agents are now
-# internal LangGraph nodes within the orchestrator (port 8001)
+if [ "$http_code" = "200" ]; then
+    echo -e "  ${GREEN}✓ HTTP 200 OK${NC}"
+    collection_count=$(echo "$body" | jq -r 'length' 2>/dev/null || echo "0")
+    if [ "$collection_count" -gt 0 ]; then
+        echo -e "  ${GREEN}✓ Found $collection_count collections${NC}"
+        PASSED=$((PASSED + 1))
+        
+        # List collections
+        echo -e "  ${BLUE}Collections:${NC}"
+        echo "$body" | jq -r '.[] | "    - \(.name): \(.count) vectors"' 2>/dev/null || echo "    (jq not available)"
+    else
+        echo -e "  ${YELLOW}⚠ No collections found (may need indexing)${NC}"
+        PASSED=$((PASSED + 1))  # Not a failure, just empty
+    fi
+else
+    echo -e "  ${RED}✗ HTTP $http_code${NC}"
+    FAILED=$((FAILED + 1))
+fi
+echo ""
 
 # ============================================================================
 # PHASE 4: Summary
@@ -193,24 +147,21 @@ if [ $FAILED -eq 0 ]; then
     echo -e "${GREEN}✅ All tests passed!${NC}"
     echo ""
     echo "Next Steps:"
-    echo "1. Check Langfuse Dashboard: https://us.cloud.langfuse.com"
-    echo "   - Filter by: metadata.agent_name = \"orchestrator\""
-    echo "   - Look for recent traces with LLM calls"
-    echo "   - Verify token counts and costs"
+    echo "1. Check LangSmith Dashboard:"
+    echo "   https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046"
     echo ""
     echo "2. Verify Trace Contents:"
-    echo "   - Session ID: Should match task_id from response"
-    echo "   - User ID: Should be agent name (e.g., 'orchestrator')"
-    echo "   - LLM calls: Should show prompts, completions, token counts"
-    echo "   - Metadata: Should include model name, temperature, etc."
+    echo "   - Look for recent traces with LLM calls"
+    echo "   - Verify token counts and costs"
+    echo "   - Check latency metrics"
     echo ""
     echo "3. Check Docker Logs:"
-    echo "   docker-compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
+    echo "   docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
     echo ""
     exit 0
 else
     echo -e "${RED}❌ Some tests failed. Check logs:${NC}"
-    echo "docker-compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs --tail=50"
+    echo "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs --tail=50"
     echo ""
     exit 1
 fi

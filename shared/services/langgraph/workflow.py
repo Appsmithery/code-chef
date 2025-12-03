@@ -24,29 +24,10 @@ from services.langgraph.checkpointer import get_postgres_checkpointer
 if TYPE_CHECKING:  # pragma: no cover - used only for typing
     from langgraph.graph import CompiledGraph
 
-# Initialize Langfuse callback handler for LangGraph workflows
-_langgraph_langfuse_handler = None
-try:
-    if all([
-        os.getenv("LANGFUSE_SECRET_KEY"),
-        os.getenv("LANGFUSE_PUBLIC_KEY"),
-        os.getenv("LANGFUSE_HOST")
-    ]):
-        from langfuse.callback import CallbackHandler
-        _langgraph_langfuse_handler = CallbackHandler(
-            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
-            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
-            host=os.getenv("LANGFUSE_HOST")
-        )
-        logger = logging.getLogger(__name__)
-        logger.info("Langfuse callback handler initialized for LangGraph workflows")
-except ImportError:
-    pass  # Langfuse not installed
-except Exception as e:
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Failed to initialize Langfuse handler for LangGraph: {e}")
-
 logger = logging.getLogger(__name__)
+
+# Note: Tracing is handled by LangSmith via LangChain's native integration
+# (LANGCHAIN_TRACING_V2=true in environment). No explicit callback handlers needed.
 
 NODE_REGISTRY = {
     "feature-dev": feature_dev_node,
@@ -80,7 +61,9 @@ def _serialize_request_payload(payload: object) -> Mapping[str, Any]:
     )
 
 
-def _apply_request_payloads(state: AgentState, payloads: Mapping[str, object]) -> AgentState:
+def _apply_request_payloads(
+    state: AgentState, payloads: Mapping[str, object]
+) -> AgentState:
     """Merge *_request payloads into the shared state with validation."""
 
     if not payloads:
@@ -113,10 +96,10 @@ def router_node(state: AgentState) -> AgentState:
 def build_workflow(*, enable_checkpointing: bool = True) -> "CompiledGraph":
     """
     Create and compile the LangGraph workflow for Dev-Tools agents.
-    
+
     Args:
         enable_checkpointing: If True, uses PostgreSQL checkpointer for state persistence
-        
+
     Returns:
         CompiledGraph ready for invocation or streaming
     """
@@ -153,8 +136,10 @@ def build_workflow(*, enable_checkpointing: bool = True) -> "CompiledGraph":
         if checkpointer:
             logger.info("LangGraph workflow compiled with PostgreSQL checkpointer")
         else:
-            logger.warning("LangGraph workflow compiled WITHOUT checkpointer (state will not persist)")
-    
+            logger.warning(
+                "LangGraph workflow compiled WITHOUT checkpointer (state will not persist)"
+            )
+
     return workflow.compile(checkpointer=checkpointer)
 
 
@@ -169,7 +154,7 @@ def invoke_workflow(
 ) -> AgentState:
     """
     Helper to run the workflow end-to-end for the provided state.
-    
+
     Args:
         graph: Pre-compiled graph (builds new one if None)
         task_description: Description for new workflow (required if initial_state is None)
@@ -177,7 +162,7 @@ def invoke_workflow(
         request_payloads: Agent-specific requests to inject into state
         thread_id: Checkpoint thread ID for resuming workflows
         enable_checkpointing: Whether to persist state in PostgreSQL
-        
+
     Returns:
         Final AgentState after workflow completion
     """
@@ -186,7 +171,9 @@ def invoke_workflow(
 
     if initial_state is None:
         if not task_description:
-            raise ValueError("task_description is required when initial_state is not provided")
+            raise ValueError(
+                "task_description is required when initial_state is not provided"
+            )
         state = empty_agent_state(task_description)
     else:
         state = ensure_agent_state(initial_state)
@@ -198,10 +185,6 @@ def invoke_workflow(
     config = {}
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
-
-    # Add Langfuse callbacks if available
-    if _langgraph_langfuse_handler:
-        config["callbacks"] = [_langgraph_langfuse_handler]
 
     return graph.invoke(state, config=config if config else None)
 
@@ -218,7 +201,7 @@ async def stream_workflow(
 ) -> AsyncIterator[dict[str, Any]]:
     """
     Stream workflow execution events in real-time.
-    
+
     Args:
         graph: Pre-compiled graph (builds new one if None)
         task_description: Description for new workflow (required if initial_state is None)
@@ -230,7 +213,7 @@ async def stream_workflow(
             - "values": Stream full state after each node
             - "updates": Stream only state updates from each node
             - "debug": Stream detailed execution events
-        
+
     Yields:
         Dict events containing state snapshots or updates
     """
@@ -239,7 +222,9 @@ async def stream_workflow(
 
     if initial_state is None:
         if not task_description:
-            raise ValueError("task_description is required when initial_state is not provided")
+            raise ValueError(
+                "task_description is required when initial_state is not provided"
+            )
         state = empty_agent_state(task_description)
     else:
         state = ensure_agent_state(initial_state)
@@ -252,12 +237,10 @@ async def stream_workflow(
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
 
-    # Add Langfuse callbacks if available
-    if _langgraph_langfuse_handler:
-        config["callbacks"] = [_langgraph_langfuse_handler]
-
     # Stream events using LangGraph's async streaming
-    async for event in graph.astream(state, config=config if config else None, stream_mode=stream_mode):
+    async for event in graph.astream(
+        state, config=config if config else None, stream_mode=stream_mode
+    ):
         yield event
 
 
@@ -272,10 +255,10 @@ async def stream_workflow_events(
 ) -> AsyncIterator[dict[str, Any]]:
     """
     Stream detailed workflow events including node execution and LLM calls.
-    
+
     Uses LangGraph's astream_events for fine-grained event streaming,
     useful for progress tracking, debugging, and real-time UI updates.
-    
+
     Args:
         graph: Pre-compiled graph (builds new one if None)
         task_description: Description for new workflow
@@ -283,7 +266,7 @@ async def stream_workflow_events(
         request_payloads: Agent-specific requests to inject
         thread_id: Checkpoint thread ID for resuming workflows
         enable_checkpointing: Whether to persist state in PostgreSQL
-        
+
     Yields:
         Dict events with structure:
             {
@@ -298,7 +281,9 @@ async def stream_workflow_events(
 
     if initial_state is None:
         if not task_description:
-            raise ValueError("task_description is required when initial_state is not provided")
+            raise ValueError(
+                "task_description is required when initial_state is not provided"
+            )
         state = empty_agent_state(task_description)
     else:
         state = ensure_agent_state(initial_state)
@@ -311,10 +296,8 @@ async def stream_workflow_events(
     if thread_id:
         config["configurable"] = {"thread_id": thread_id}
 
-    # Add Langfuse callbacks if available
-    if _langgraph_langfuse_handler:
-        config["callbacks"] = [_langgraph_langfuse_handler]
-
     # Stream detailed events using astream_events
-    async for event in graph.astream_events(state, config=config if config else None, version="v1"):
+    async for event in graph.astream_events(
+        state, config=config if config else None, version="v1"
+    ):
         yield event

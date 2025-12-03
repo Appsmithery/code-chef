@@ -194,7 +194,7 @@ embeddings = get_embeddings()  # Uses OpenAI if EMBEDDING_PROVIDER=gradient
 
 1. **Use llama3-8b for most tasks** (~$0.20/1M tokens)
 2. **Upgrade to llama3-70b for complex reasoning** (~$0.60/1M tokens)
-3. **Monitor token usage** in Langfuse traces
+3. **Monitor token usage** in LangSmith traces
 4. **Fallback to OpenAI/Claude** for critical tasks requiring latest models
 5. **Test locally** before deploying: `python support/scripts/test_llm_provider.py`
 
@@ -202,5 +202,5 @@ embeddings = get_embeddings()  # Uses OpenAI if EMBEDDING_PROVIDER=gradient
 
 - [Multi-Provider Configuration](LLM_MULTI_PROVIDER.md)
 - [Cost Optimization Strategies](LLM_MULTI_PROVIDER.md#cost-optimization-strategies)
-- [Langfuse Tracing Setup](LANGFUSE_TRACING.md)
+- [LangSmith Tracing Setup](LANGSMITH_TRACING.md)
 - [DO API Reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform)
