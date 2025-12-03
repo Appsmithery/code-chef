@@ -167,18 +167,21 @@ curl http://45.55.173.72:8010/health  # LangGraph
 **Common Issues:**
 
 1. **Duplicate Variables**: Docker uses the FIRST occurrence. Check for duplicates:
+
    ```bash
    grep -n 'VAR_NAME' /opt/Dev-Tools/config/env/.env
    ```
 
 2. **Docker-Compose Interpolation**: Variables in `environment:` section need to be in `deploy/.env` for `${VAR}` substitution:
+
    ```yaml
    # docker-compose.yml
    environment:
-     - DB_PASSWORD=${DB_PASSWORD}  # Requires DB_PASSWORD in deploy/.env
+     - DB_PASSWORD=${DB_PASSWORD} # Requires DB_PASSWORD in deploy/.env
    ```
 
 3. **Container Not Picking Up Changes**: Must recreate, not restart:
+
    ```bash
    docker compose up -d --force-recreate <service>
    ```
@@ -189,6 +192,7 @@ curl http://45.55.173.72:8010/health  # LangGraph
    ```
 
 **Critical Variables to Check:**
+
 - `DB_PASSWORD`: Must be in both `config/env/.env` AND `deploy/.env`
 - `QDRANT_API_KEY`: Full JWT token (starts with `eyJ...`), no comments on same line
 - `OAUTH2_PROXY_COOKIE_SECRET`: Required in `deploy/.env` for docker-compose interpolation
@@ -547,11 +551,13 @@ This pattern provides:
 **Overview:** Durable state persistence for LangGraph workflows using PostgreSQL.
 
 **Architecture:**
+
 - Uses `langgraph-checkpoint-postgres` with `psycopg` driver
 - Autocommit connection for schema setup (required for `CREATE INDEX CONCURRENTLY`)
 - Separate connection for runtime operations
 
 **Configuration:**
+
 ```bash
 # Required in config/env/.env AND deploy/.env
 DB_HOST=postgres
@@ -562,17 +568,20 @@ DB_PASSWORD=<your-secure-password>  # NOT "changeme"
 ```
 
 **Health Check:**
+
 ```bash
 curl http://45.55.173.72:8010/health
 # Returns: {"status":"healthy","postgres_checkpointer":"connected"}
 ```
 
 **Key Files:**
+
 - `shared/services/langgraph/checkpointer.py`: Checkpointer initialization with autocommit fix
 - `shared/services/langgraph/workflow.py`: Workflow compilation with checkpointer
 - `deploy/docker-compose.yml`: LangGraph service with `DB_PASSWORD` env var
 
 **Troubleshooting:**
+
 - If `postgres_checkpointer: disconnected`, check `DB_PASSWORD` is not "changeme"
 - If schema errors, run with fresh database or check migration status
 - Logs: `docker logs deploy-langgraph-1 | grep checkpointer`
