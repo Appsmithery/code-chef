@@ -2,12 +2,12 @@
 
 **Date**: November 20, 2025
 **Phase**: Phase 5 - LangSmith + HITL + Copilot Integration
-**Issue**: PR-113 - Build VS Code Extension with @devtools Chat Participant
+**Issue**: PR-113 - Build VS Code Extension with @codechef Chat Participant
 **Status**: ✅ COMPLETE
 
 ## Summary
 
-Successfully built fully functional VS Code extension enabling @devtools chat participant for zero-clone Dev-Tools agent access from any workspace.
+Successfully built fully functional VS Code extension enabling @codechef chat participant for zero-clone code/chef agent access from any workspace.
 
 ## Deliverables
 
@@ -22,7 +22,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 
 2. **chatParticipant.ts** (320 lines)
 
-   - Main @devtools chat request handler
+   - Main @codechef chat request handler
    - Command routing (/status, /approve, /tools)
    - Task submission with workspace context
    - Progress streaming and formatting
@@ -63,7 +63,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 1. **package.json**
 
    - Extension manifest with metadata
-   - Chat participant contribution (`@devtools`)
+   - Chat participant contribution (`@codechef`)
    - 8 configuration properties
    - 5 command contributions
    - Dependencies: axios, eventsource, TypeScript, ESLint
@@ -79,7 +79,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 
 3. **prompts/system.md** (200+ lines)
 
-   - @devtools participant behavior definition
+   - @codechef participant behavior definition
    - Identity and capabilities
    - Agent ecosystem overview
    - Command reference
@@ -137,7 +137,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 
 ## Integration Points
 
-1. **Orchestrator API** (http://45.55.173.72:8001)
+1. **Orchestrator API** (https://codechef.appsmithery.co/api)
 
    - POST /orchestrate - Task submission
    - GET /tasks/{task_id}/status - Status checks
@@ -147,7 +147,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
    - GET /health - Health checks
    - GET /metrics - Prometheus metrics
 
-2. **MCP Gateway** (http://45.55.173.72:8000)
+2. **MCP Gateway** (https://codechef.appsmithery.co/api)
 
    - GET /tools - Tool catalog (150+ tools)
    - POST /tools/{tool_name} - Tool invocation
@@ -171,22 +171,22 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 
 ```json
 {
-  "devtools.orchestratorUrl": "http://45.55.173.72:8001",
-  "devtools.mcpGatewayUrl": "http://45.55.173.72:8000",
-  "devtools.linearHubIssue": "PR-68",
-  "devtools.autoApproveThreshold": "low",
-  "devtools.enableNotifications": true,
-  "devtools.langsmithUrl": "https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046"
+  "codechef.orchestratorUrl": "https://codechef.appsmithery.co/api",
+  "codechef.mcpGatewayUrl": "https://codechef.appsmithery.co/api",
+  "codechef.linearHubIssue": "PR-68",
+  "codechef.autoApproveThreshold": "low",
+  "codechef.enableNotifications": true,
+  "codechef.langsmithUrl": "https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046"
 }
 ```
 
 ### Commands
 
-1. `devtools.submitTask` - Submit task via input box
-2. `devtools.checkStatus` - Check status via input box
-3. `devtools.configure` - Update orchestrator URL
-4. `devtools.showApprovals` - Open Linear approval hub
-5. `devtools.clearCache` - Clear session cache
+1. `codechef.submitTask` - Submit task via input box
+2. `codechef.checkStatus` - Check status via input box
+3. `codechef.configure` - Update orchestrator URL
+4. `codechef.showApprovals` - Open Linear approval hub
+5. `codechef.clearCache` - Clear session cache
 
 ## Testing Status
 
@@ -195,13 +195,13 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 - Dependencies installed: 315 packages
 - TypeScript compilation: SUCCESS (no errors)
 - Output files: 6 JavaScript files + source maps in `out/`
-- Orchestrator connectivity: HEALTHY (http://45.55.173.72:8001/health)
-- MCP Gateway connectivity: AVAILABLE (http://45.55.173.72:8000)
+- Orchestrator connectivity: HEALTHY (https://codechef.appsmithery.co/api/health)
+- MCP Gateway connectivity: AVAILABLE (https://codechef.appsmithery.co/api)
 
 ### Pending Manual Testing
 
 - [ ] Launch Extension Development Host (F5)
-- [ ] Test @devtools participant activation
+- [ ] Test @codechef participant activation
 - [ ] Submit test task ("Add JWT auth to API")
 - [ ] Verify task decomposition (6 subtasks expected)
 - [ ] Check status command (/status task-id)
@@ -222,11 +222,11 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 │                                      │
 │  ┌────────────────────────────────┐ │
 │  │ GitHub Copilot Chat             │ │
-│  │  User: @devtools "Add auth"    │ │
+│  │  User: @codechef "Add auth"    │ │
 │  └──────────┬─────────────────────┘ │
 │             │                        │
 │  ┌──────────▼─────────────────────┐ │
-│  │ vscode-devtools-copilot        │ │
+│  │ vscode-codechef        │ │
 │  │                                 │ │
 │  │  chatParticipant.ts            │ │
 │  │  ├─ handleChatRequest()        │ │
@@ -254,7 +254,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
               ▼
 ┌─────────────────────────────────────┐
 │ DigitalOcean Droplet                │
-│ 45.55.173.72                        │
+│ codechef.appsmithery.co                        │
 │                                      │
 │  ┌────────────────────────────────┐ │
 │  │ Orchestrator (:8001)           │ │
@@ -283,7 +283,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 
 ## Key Features
 
-1. **Zero-Clone Workflow**: Use agents from any workspace without cloning Dev-Tools repo
+1. **Zero-Clone Workflow**: Use agents from any workspace without cloning code/chef repo
 2. **Workspace Context**: Automatically extracts git, files, project type, editor context
 3. **Multi-Turn Conversations**: Session management with persistent state
 4. **Real-Time Approvals**: Linear integration with <1s notification latency
@@ -344,9 +344,9 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 
 ## Resources
 
-- **Source Code**: `D:\INFRA\Dev-Tools\Dev-Tools\extensions\vscode-devtools-copilot`
+- **Source Code**: `D:\INFRA\code/chef\code/chef\extensions\vscode-codechef`
 - **Implementation Plan**: `support/docs/INTEGRATION_IMPLEMENTATION_PLAN.md`
-- **Quick Start**: `extensions/vscode-devtools-copilot/QUICKSTART.md`
+- **Quick Start**: `extensions/vscode-codechef/QUICKSTART.md`
 - **Linear Parent**: [PR-112](https://linear.app/project-roadmaps/issue/PR-112)
 - **Linear Issue**: [PR-113](https://linear.app/project-roadmaps/issue/PR-113) ✅ DONE
 - **LangSmith**: [agents project](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
@@ -364,7 +364,7 @@ Successfully built fully functional VS Code extension enabling @devtools chat pa
 
 ## Conclusion
 
-PR-113 successfully delivered a production-ready VS Code extension enabling @devtools chat participant integration. Extension provides zero-clone workflow, workspace context extraction, multi-turn conversations, real-time approvals, and full observability. Ready for manual testing in Extension Development Host, then packaging for distribution.
+PR-113 successfully delivered a production-ready VS Code extension enabling @codechef chat participant integration. Extension provides zero-clone workflow, workspace context extraction, multi-turn conversations, real-time approvals, and full observability. Ready for manual testing in Extension Development Host, then packaging for distribution.
 
 **Status**: ✅ COMPLETE
 **Next**: Manual testing → Package VSIX → PR-114 (MCP Bridge)

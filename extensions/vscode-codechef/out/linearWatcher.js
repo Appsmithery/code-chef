@@ -41,9 +41,9 @@ class LinearWatcher {
         this.isWatching = false;
         this.workspaceSlug = 'project-roadmaps';
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-        this.statusBarItem.text = '$(check) Dev-Tools';
-        this.statusBarItem.tooltip = 'Dev-Tools Orchestrator - Click to view approvals';
-        this.statusBarItem.command = 'devtools.showApprovals';
+        this.statusBarItem.text = '$(check) code/chef';
+        this.statusBarItem.tooltip = 'code/chef Orchestrator - Click to view approvals';
+        this.statusBarItem.command = 'codechef.showApprovals';
     }
     start(linearHubIssue, workspaceSlug) {
         if (this.isWatching) {
@@ -82,7 +82,7 @@ class LinearWatcher {
         if (linear && typeof linear.subscribeToIssue === 'function') {
             linear.subscribeToIssue(issueId, (update) => {
                 if (update.type === 'comment' &&
-                    (update.body.includes('@devtools') || update.body.includes('approval'))) {
+                    (update.body.includes('@codechef') || update.body.includes('approval'))) {
                     this.showApprovalNotification(update);
                 }
             });
@@ -93,7 +93,7 @@ class LinearWatcher {
         }
     }
     pollForApprovals() {
-        const config = vscode.workspace.getConfiguration('devtools');
+        const config = vscode.workspace.getConfiguration('codechef');
         const orchestratorUrl = config.get('orchestratorUrl');
         if (!orchestratorUrl) {
             return;
@@ -114,21 +114,21 @@ class LinearWatcher {
                     }
                 }
                 else {
-                    this.statusBarItem.text = '$(check) Dev-Tools';
+                    this.statusBarItem.text = '$(check) code/chef';
                     this.statusBarItem.backgroundColor = undefined;
                 }
             }
             catch (error) {
                 console.error('Failed to poll approvals:', error);
-                this.statusBarItem.text = '$(error) Dev-Tools';
+                this.statusBarItem.text = '$(error) code/chef';
             }
         }, 30000); // Poll every 30 seconds
     }
     showApprovalNotification(update) {
-        const message = update.title || update.description || 'Dev-Tools approval needed';
+        const message = update.title || update.description || 'code/chef approval needed';
         vscode.window.showInformationMessage(message, 'View in Linear', 'Approve', 'Dismiss').then(selection => {
             if (selection === 'View in Linear') {
-                const config = vscode.workspace.getConfiguration('devtools');
+                const config = vscode.workspace.getConfiguration('codechef');
                 const linearHub = config.get('linearHubIssue', 'PR-68');
                 const url = `https://linear.app/${this.workspaceSlug}/issue/${linearHub}`;
                 vscode.env.openExternal(vscode.Uri.parse(url));
@@ -136,7 +136,7 @@ class LinearWatcher {
             else if (selection === 'Approve') {
                 // Open Copilot chat with pre-filled approval command
                 vscode.commands.executeCommand('workbench.action.chat.open', {
-                    query: `@devtools /approve ${update.task_id || update.id} ${update.approval_id || ''}`
+                    query: `@codechef /approve ${update.task_id || update.id} ${update.approval_id || ''}`
                 });
             }
         });

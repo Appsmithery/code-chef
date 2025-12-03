@@ -30,7 +30,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Migration Notes
 
 If upgrading from v0.3.x:
-
 1. Settings will need to be reconfigured (new `codechef.*` prefix)
 2. Update any scripts using `@devtools` to use `@codechef`
 3. Bookmarks to old IP-based URLs should be updated to domain

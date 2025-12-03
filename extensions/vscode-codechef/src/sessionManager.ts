@@ -6,7 +6,7 @@ export class SessionManager {
 
     constructor(private context: vscode.ExtensionContext) {
         // Load persisted sessions
-        const saved = context.globalState.get<Record<string, string>>('devtools.sessions', {});
+        const saved = context.globalState.get<Record<string, string>>('codechef.sessions', {});
         this.sessions = new Map(Object.entries(saved));
 
         // Cleanup old sessions periodically
@@ -44,7 +44,7 @@ export class SessionManager {
     }
 
     private generateSessionId(): string {
-        return `devtools_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        return `codechef_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }
 
     private hashString(str: string): string {
@@ -59,7 +59,7 @@ export class SessionManager {
 
     private persistSessions(): void {
         const obj = Object.fromEntries(this.sessions);
-        this.context.globalState.update('devtools.sessions', obj);
+        this.context.globalState.update('codechef.sessions', obj);
     }
 
     private cleanupSessions(): void {
@@ -74,6 +74,6 @@ export class SessionManager {
 
     clearSessions(): void {
         this.sessions.clear();
-        this.context.globalState.update('devtools.sessions', {});
+        this.context.globalState.update('codechef.sessions', {});
     }
 }

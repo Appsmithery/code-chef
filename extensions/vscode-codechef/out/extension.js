@@ -57,7 +57,7 @@ let linearWatcher;
 let statusBarItem;
 let extensionContext;
 function buildLinearIssueUrl(issueId, workspaceSlug) {
-    const slug = workspaceSlug ?? vscode.workspace.getConfiguration('devtools').get('linearWorkspaceSlug', 'project-roadmaps');
+    const slug = workspaceSlug ?? vscode.workspace.getConfiguration('codechef').get('linearWorkspaceSlug', 'project-roadmaps');
     return `https://linear.app/${slug}/issue/${issueId}`;
 }
 function getAgentIconPath(agentName) {
@@ -79,28 +79,28 @@ function getAgentColor(agentName) {
     return colors[agentName] || colors['orchestrator'];
 }
 function activate(context) {
-    console.log('Dev-Tools extension activating...');
+    console.log('code/chef extension activating...');
     extensionContext = context;
     try {
         // Initialize status bar
         statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-        statusBarItem.text = '$(rocket) Dev-Tools';
-        statusBarItem.tooltip = 'Dev-Tools LangGraph Orchestrator - Click to check status';
-        statusBarItem.command = 'devtools.checkStatus';
+        statusBarItem.text = '$(rocket) code/chef';
+        statusBarItem.tooltip = 'code/chef LangGraph Orchestrator - Click to check status';
+        statusBarItem.command = 'codechef.checkStatus';
         statusBarItem.show();
         context.subscriptions.push(statusBarItem);
-        console.log('Dev-Tools: Status bar created');
+        console.log('code/chef: Status bar created');
         // Initialize chat participant
-        chatParticipant = new chatParticipant_1.DevToolsChatParticipant(context);
+        chatParticipant = new chatParticipant_1.CodeChefChatParticipant(context);
         // Register chat participant (may fail if Copilot Chat not available)
         try {
-            const participant = vscode.chat.createChatParticipant('devtools', chatParticipant.handleChatRequest.bind(chatParticipant));
+            const participant = vscode.chat.createChatParticipant('codechef', chatParticipant.handleChatRequest.bind(chatParticipant));
             context.subscriptions.push(participant);
-            console.log('Dev-Tools: Chat participant registered as @devtools');
+            console.log('code/chef: Chat participant registered as @codechef');
         }
         catch (chatError) {
-            console.warn('Dev-Tools: Could not register chat participant (Copilot Chat may not be available):', chatError);
-            vscode.window.showWarningMessage('Dev-Tools: Chat participant requires GitHub Copilot. Use Command Palette commands instead.', 'Open Commands').then(selection => {
+            console.warn('code/chef: Could not register chat participant (Copilot Chat may not be available):', chatError);
+            vscode.window.showWarningMessage('code/chef: Chat participant requires GitHub Copilot. Use Command Palette commands instead.', 'Open Commands').then(selection => {
                 if (selection === 'Open Commands') {
                     vscode.commands.executeCommand('workbench.action.showCommands');
                 }
@@ -108,7 +108,7 @@ function activate(context) {
         }
         // Initialize Linear watcher for approval notifications
         linearWatcher = new linearWatcher_1.LinearWatcher(context);
-        const config = vscode.workspace.getConfiguration('devtools');
+        const config = vscode.workspace.getConfiguration('codechef');
         const workspaceSlug = config.get('linearWorkspaceSlug', 'dev-ops');
         if (config.get('enableNotifications')) {
             linearWatcher.start(config.get('linearHubIssue', 'DEV-68'), workspaceSlug);
@@ -117,7 +117,7 @@ function activate(context) {
         // Register copy permalink command
         (0, copyPermalink_1.registerCopyPermalinkCommand)(context);
         // Register commands
-        context.subscriptions.push(vscode.commands.registerCommand('devtools.orchestrate', async () => {
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.orchestrate', async () => {
             const task = await vscode.window.showInputBox({
                 prompt: 'Describe your development task',
                 placeHolder: 'e.g., Add JWT authentication to my Express API'
@@ -126,7 +126,7 @@ function activate(context) {
                 await chatParticipant.submitTask(task);
             }
         }));
-        context.subscriptions.push(vscode.commands.registerCommand('devtools.checkStatus', async () => {
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.checkStatus', async () => {
             const taskId = await vscode.window.showInputBox({
                 prompt: 'Enter task ID',
                 placeHolder: 'e.g., a1b2c3d4-e5f6-7890-abcd-ef1234567890'
@@ -135,7 +135,7 @@ function activate(context) {
                 await chatParticipant.checkTaskStatus(taskId);
             }
         }));
-        context.subscriptions.push(vscode.commands.registerCommand('devtools.configure', async () => {
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.configure', async () => {
             const url = await vscode.window.showInputBox({
                 prompt: 'Enter orchestrator URL',
                 value: config.get('orchestratorUrl'),
@@ -154,22 +154,22 @@ function activate(context) {
                 vscode.window.showInformationMessage(`Orchestrator URL updated to ${url}`);
             }
         }));
-        context.subscriptions.push(vscode.commands.registerCommand('devtools.showApprovals', async () => {
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.showApprovals', async () => {
             const linearHubIssue = config.get('linearHubIssue', 'PR-68');
             const linearUrl = buildLinearIssueUrl(linearHubIssue, workspaceSlug);
             vscode.env.openExternal(vscode.Uri.parse(linearUrl));
         }));
-        context.subscriptions.push(vscode.commands.registerCommand('devtools.clearCache', () => {
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.clearCache', () => {
             chatParticipant.clearCache();
-            vscode.window.showInformationMessage('Dev-Tools cache cleared');
+            vscode.window.showInformationMessage('code/chef cache cleared');
         }));
         // Check orchestrator health on startup
         checkOrchestratorHealth(config.get('orchestratorUrl'));
-        console.log('Dev-Tools extension activated');
+        console.log('code/chef extension activated');
     }
     catch (error) {
-        console.error('Dev-Tools: Fatal activation error:', error);
-        vscode.window.showErrorMessage(`Dev-Tools extension failed to activate: ${error}`);
+        console.error('code/chef: Fatal activation error:', error);
+        vscode.window.showErrorMessage(`code/chef extension failed to activate: ${error}`);
     }
 }
 async function checkOrchestratorHealth(url) {
@@ -177,20 +177,20 @@ async function checkOrchestratorHealth(url) {
         const client = new orchestratorClient_1.OrchestratorClient(url);
         const health = await client.health();
         if (health.status === 'ok') {
-            statusBarItem.text = '$(check) Dev-Tools';
+            statusBarItem.text = '$(check) code/chef';
             statusBarItem.tooltip = `Connected to ${url}`;
         }
         else {
-            statusBarItem.text = '$(warning) Dev-Tools';
+            statusBarItem.text = '$(warning) code/chef';
             statusBarItem.tooltip = 'Orchestrator unhealthy';
         }
     }
     catch (error) {
-        statusBarItem.text = '$(error) Dev-Tools';
+        statusBarItem.text = '$(error) code/chef';
         statusBarItem.tooltip = `Cannot reach orchestrator at ${url}`;
-        vscode.window.showErrorMessage('Cannot connect to Dev-Tools orchestrator. Check configuration.', 'Configure').then(selection => {
+        vscode.window.showErrorMessage('Cannot connect to code/chef orchestrator. Check configuration.', 'Configure').then(selection => {
             if (selection === 'Configure') {
-                vscode.commands.executeCommand('devtools.configure');
+                vscode.commands.executeCommand('codechef.configure');
             }
         });
     }
