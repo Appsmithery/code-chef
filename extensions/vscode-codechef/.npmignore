@@ -1,0 +1,24 @@
+# Don't include VSIX files in npm package
+*.vsix
+
+# Don't include source maps
+*.map
+
+# Don't include dev/test files
+.vscode-test/
+test/
+tests/
+**/*.test.ts
+**/*.spec.ts
+*.test.js
+*.spec.js
+
+# Don't include CI/CD
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+
+# Temporary files
+*.tmp
+*.temp
+*.log
