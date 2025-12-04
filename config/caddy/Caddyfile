@@ -6,20 +6,30 @@
 {$CADDY_DOMAIN:codechef.appsmithery.co} {
 	encode gzip zstd
 
-	# Serve frontend files from mounted volume
-	root * /srv/frontend
-	file_server
-	
-	# Try files first, then fall back to index.html for SPA routing
-	try_files {path} /index.html
-
-	# API endpoints proxy to orchestrator
+	# API endpoints proxy to orchestrator (MUST come before file_server)
 	handle_path /api/* {
 		reverse_proxy orchestrator:8001
 	}
 
 	# Linear webhooks proxy to orchestrator (HITL approvals)
-	reverse_proxy /webhooks/linear orchestrator:8001
+	handle /webhooks/linear {
+		reverse_proxy orchestrator:8001
+	}
+
+	# RAG service endpoints
+	handle_path /rag/* {
+		reverse_proxy rag-context:8007
+	}
+
+	# State persistence endpoints
+	handle_path /state/* {
+		reverse_proxy state-persistence:8008
+	}
+
+	# LangGraph endpoints
+	handle_path /langgraph/* {
+		reverse_proxy langgraph:8010
+	}
 
 	# Prometheus monitoring with OAuth protection
 	redir /prometheus /prometheus/
@@ -50,6 +60,13 @@
 	}
 	handle_path /documentation/* {
 		reverse_proxy documentation:8006
+	}
+
+	# Serve frontend files from mounted volume (MUST come after API handlers)
+	handle {
+		root * /srv/frontend
+		try_files {path} /index.html
+		file_server
 	}
 
 	# HTTPS configuration with automatic certificates
