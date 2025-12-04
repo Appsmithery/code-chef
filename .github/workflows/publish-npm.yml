@@ -1,17 +1,28 @@
 name: Publish NPM Package
 
+# DEPRECATED: The @appsmithery/mcp-bridge-client package is deprecated.
+# The MCP Gateway approach has been superseded by Docker MCP Toolkit.
+# This workflow is kept for historical reference but should not be triggered.
+# See: packages/MCP_GATEWAY_IMPLEMENTATION_GAP.md
+
 on:
-    push:
-        tags:
-            - "npm-v*"
-    workflow_dispatch:
+  # Disabled - package is deprecated
+  # push:
+  #   tags:
+  #     - "npm-v*"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'DEPRECATED' to confirm publishing deprecated package"
+        required: true
 
 jobs:
-    publish-npm:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            packages: write
+  publish-npm:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'DEPRECATED'
+    permissions:
+      contents: read
+      packages: write
 
         steps:
             - name: Checkout code
