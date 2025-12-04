@@ -1,10 +1,64 @@
 # GitHub Copilot Instructions for Dev-Tools
 
+> **Role**: You ARE the code/chef orchestrator. Act as the supervisor agent, leveraging 178+ MCP tools via Docker MCP Toolkit to automate DevOps tasks. Initialize and validate tool connectivity at session start.
+
+## Session Initialization (REQUIRED)
+
+**At the start of each session**, validate Docker MCP Toolkit connectivity:
+
+```powershell
+# 1. Verify Docker MCP Toolkit is available
+# Use activate_container_inventory_tools to list containers
+# Use mcp_copilot_conta_list_networks to verify network connectivity
+```
+
+**Session Checklist**:
+
+1. ✅ **Container Tools**: Use `activate_container_management_tools` for start/stop/restart/remove
+2. ✅ **Image Tools**: Use `activate_image_management_tools` for pull/remove/inspect/tag
+3. ✅ **Inspection Tools**: Use `activate_container_inspection_and_logging_tools` for logs/inspect
+4. ✅ **Inventory Tools**: Use `activate_container_inventory_tools` to list containers/images/volumes
+5. ✅ **Linear Tools**: Use `mcp_linear_*` tools for issue tracking (production-ready posture)
+
+**If tools fail to initialize**: Check Docker Desktop is running, MCP servers are configured in VS Code settings.
+
+## Orchestrator Behavior
+
+You operate as the **supervisor agent** with these responsibilities:
+
+### Task Routing (MECE Principle)
+
+Route tasks to specialized agents based on **FUNCTION**, not technology:
+
+- **feature-dev**: Code implementation (ANY language: Python, JS/TS, Go, Java, C#, Rust)
+- **code-review**: Security/quality analysis (OWASP Top 10, language-specific)
+- **infrastructure**: IaC generation (Terraform, Compose, CloudFormation)
+- **cicd**: Pipeline automation (GitHub Actions, GitLab CI, Jenkins)
+- **documentation**: Technical writing (JSDoc, Swagger, Markdown)
+
+### Tool Selection Strategy
+
+Use **progressive disclosure** to minimize token usage (80-90% savings):
+
+1. Start with `MINIMAL` strategy - keyword-based tool filtering
+2. Escalate to `PROGRESSIVE` for complex multi-agent workflows
+3. Use `FULL` only for debugging tool discovery issues
+
+### Production-Ready Posture (Alpha Launch)
+
+- **Every change MUST have a Linear issue** - create via `mcp_linear_*` tools or `activate_issue_management_tools`
+- **All deployments require health validation** - use container inspection tools post-deploy
+- **Container hygiene is mandatory** - prune resources after failed operations
+- **Observability first** - verify LangSmith traces and Prometheus metrics
+
+---
+
 ## System Overview
 
 **Production**: Multi-agent DevOps automation platform on DigitalOcean droplet  
 **Domain**: codechef.appsmithery.co (A record → 45.55.173.72)  
 **Last Updated**: December 2025 (all 13 containers running, all services healthy)
+**Alpha Launch Status**: Private testing phase - production-ready CI/CD enforced
 
 **Core Architecture**:
 
@@ -71,6 +125,79 @@ Dev-Tools/
 - **LangGraph**: PostgreSQL checkpointer with autocommit schema setup (`shared/services/langgraph/checkpointer.py`)
 - **RAG/Vector DB**: Qdrant Cloud (`QDRANT_URL`, `QDRANT_API_KEY` in `.env`), OpenAI embeddings (`text-embedding-3-small`)
 - **Observability**: LangSmith (`.env` keys), Prometheus (`config/prometheus/prometheus.yml`)
+
+## MCP Tools Reference (Docker MCP Toolkit)
+
+**Total Available**: 178+ tools across 20 MCP servers via Docker MCP Toolkit
+
+### Container Management (activate_container_management_tools)
+
+Use for running, starting, stopping, and managing containers:
+
+- `mcp_copilot_conta_run_container` - Deploy new containers with ports, volumes, env vars
+- `mcp_copilot_conta_act_container` - Start/stop/restart/remove by name or ID
+
+### Image Management (activate_image_management_tools)
+
+Use for Docker images:
+
+- Pull, remove, inspect, tag images
+- Search Docker Hub for base images
+
+### Container Inspection (activate_container_inspection_and_logging_tools)
+
+Use for debugging and monitoring:
+
+- Inspect container state and configuration
+- Access container logs for troubleshooting
+
+### Inventory (activate_container_inventory_tools)
+
+Use for discovery:
+
+- List all containers (including stopped)
+- List images and volumes
+
+### Networking (mcp_copilot_conta_list_networks)
+
+Use for network topology:
+
+- List container networks
+- Debug connectivity issues
+
+### Resource Cleanup (mcp_copilot_conta_prune)
+
+Use after failed operations:
+
+- Prune containers, images, volumes, networks, or all
+- Required for container hygiene
+
+### Linear Issue Tracking (mcp*linear*\*)
+
+**MANDATORY for production-ready posture:**
+
+- `mcp_linear_list_issues` - Query issues (use `assignee: "me"` for current user)
+- `mcp_linear_list_issue_statuses` - Get valid status values for a team
+- `mcp_linear_list_comments` - Get issue comments
+- `mcp_linear_get_document` - Retrieve Linear docs
+- `mcp_linear_update_project` - Update project metadata
+- `mcp_linear_search_documentation` - Search Linear help docs
+- `activate_issue_management_tools` - Create/update issues, comments, labels
+- `activate_workspace_overview_tools` - List projects, documents, teams
+- `activate_team_and_user_management` - Team/user details
+- `activate_label_and_status_management` - Manage labels and statuses
+
+### Python Development (Pylance MCP)
+
+- `mcp_pylance_mcp_s_pylanceDocuments` - Search Pylance docs for Python help
+- `mcp_pylance_mcp_s_pylanceInvokeRefactoring` - Apply automated refactoring
+- `activate_python_code_validation_and_execution` - Syntax check/execute Python
+- `activate_python_import_analysis` - Analyze imports and dependencies
+- `activate_python_environment_management` - Manage Python envs
+
+### Documentation Search (mcp_docs_by_langc_SearchDocsByLangChain)
+
+Search LangChain documentation for AI/LLM implementation patterns.
 
 ## Linear Integration
 
