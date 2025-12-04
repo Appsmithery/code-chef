@@ -1,17 +1,28 @@
 name: Publish Python Package
 
+# DEPRECATED: The mcp-bridge-client-py package is deprecated.
+# The MCP Gateway approach has been superseded by Docker MCP Toolkit.
+# This workflow is kept for historical reference but should not be triggered.
+# See: packages/MCP_GATEWAY_IMPLEMENTATION_GAP.md
+
 on:
-    push:
-        tags:
-            - "py-v*"
-    workflow_dispatch:
+  # Disabled - package is deprecated
+  # push:
+  #   tags:
+  #     - "py-v*"
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Type 'DEPRECATED' to confirm publishing deprecated package"
+        required: true
 
 jobs:
-    publish-python:
-        runs-on: ubuntu-latest
-        permissions:
-            contents: read
-            packages: write
+  publish-python:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'DEPRECATED'
+    permissions:
+      contents: read
+      packages: write
 
         steps:
             - name: Checkout code
