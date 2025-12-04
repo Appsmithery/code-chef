@@ -23,6 +23,13 @@ from lib.agent_config_schema import AgentConfig, ModelsConfig
 class TestConfigLoader:
     """Test suite for ConfigLoader class"""
 
+    @pytest.fixture(autouse=True)
+    def reset_singleton(self):
+        """Reset ConfigLoader singleton between tests"""
+        ConfigLoader._instance = None
+        yield
+        ConfigLoader._instance = None
+
     @pytest.fixture
     def sample_yaml_config(self):
         """Sample valid YAML config for testing"""
@@ -40,7 +47,7 @@ agents:
     context_window: 128000
     use_case: complex_reasoning
     tags: [routing, orchestration]
-    langsmith_project: agents-orchestrator
+    langsmith_project: code-chef-orchestrator
 
   feature-dev:
     model: codellama-13b
@@ -51,7 +58,51 @@ agents:
     context_window: 16000
     use_case: code_generation
     tags: [feature-development, python]
-    langsmith_project: agents-feature-dev
+    langsmith_project: code-chef-feature-dev
+
+  code-review:
+    model: llama3.3-70b-instruct
+    provider: gradient
+    temperature: 0.3
+    max_tokens: 4000
+    cost_per_1m_tokens: 0.60
+    context_window: 128000
+    use_case: code_analysis
+    tags: [quality-assurance, security]
+    langsmith_project: code-chef-code-review
+
+  infrastructure:
+    model: llama3-8b-instruct
+    provider: gradient
+    temperature: 0.5
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 128000
+    use_case: infrastructure_config
+    tags: [terraform, kubernetes, docker]
+    langsmith_project: code-chef-infrastructure
+
+  cicd:
+    model: llama3-8b-instruct
+    provider: gradient
+    temperature: 0.5
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 128000
+    use_case: pipeline_generation
+    tags: [github-actions, jenkins]
+    langsmith_project: code-chef-cicd
+
+  documentation:
+    model: mistral-nemo-instruct-2407
+    provider: gradient
+    temperature: 0.7
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 8192
+    use_case: documentation_generation
+    tags: [markdown, technical-writing]
+    langsmith_project: code-chef-documentation
 
 environments:
   development:
@@ -80,7 +131,7 @@ environments:
         assert loader._config is not None
         assert loader._config.version == "1.0"
         assert loader._config.provider == "gradient"
-        assert len(loader._config.agents) == 2
+        assert len(loader._config.agents) == 6
 
     def test_get_agent_config(self, temp_config_file):
         """Test retrieving specific agent config"""
@@ -108,9 +159,13 @@ environments:
 
         all_agents = loader.get_all_agents()
 
-        assert len(all_agents) == 2
+        assert len(all_agents) == 6
         assert "orchestrator" in all_agents
         assert "feature-dev" in all_agents
+        assert "code-review" in all_agents
+        assert "infrastructure" in all_agents
+        assert "cicd" in all_agents
+        assert "documentation" in all_agents
         assert isinstance(all_agents["orchestrator"], AgentConfig)
 
     def test_environment_override_production(self, temp_config_file):
@@ -177,7 +232,7 @@ agents:
     context_window: 128000
     use_case: complex_reasoning
     tags: []
-    langsmith_project: agents-orchestrator
+    langsmith_project: code-chef-orchestrator
 """
         with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
             f.write(invalid_config)
@@ -218,7 +273,62 @@ agents:
     context_window: 128000
     use_case: complex_reasoning
     tags: [routing, orchestration]
-    langsmith_project: agents-orchestrator
+    langsmith_project: code-chef-orchestrator
+
+  feature-dev:
+    model: codellama-13b
+    provider: gradient
+    temperature: 0.7
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.30
+    context_window: 16000
+    use_case: code_generation
+    tags: [feature-development, python]
+    langsmith_project: code-chef-feature-dev
+
+  code-review:
+    model: llama3.3-70b-instruct
+    provider: gradient
+    temperature: 0.3
+    max_tokens: 4000
+    cost_per_1m_tokens: 0.60
+    context_window: 128000
+    use_case: code_analysis
+    tags: [quality-assurance, security]
+    langsmith_project: code-chef-code-review
+
+  infrastructure:
+    model: llama3-8b-instruct
+    provider: gradient
+    temperature: 0.5
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 128000
+    use_case: infrastructure_config
+    tags: [terraform, kubernetes, docker]
+    langsmith_project: code-chef-infrastructure
+
+  cicd:
+    model: llama3-8b-instruct
+    provider: gradient
+    temperature: 0.5
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 128000
+    use_case: pipeline_generation
+    tags: [github-actions, jenkins]
+    langsmith_project: code-chef-cicd
+
+  documentation:
+    model: mistral-nemo-instruct-2407
+    provider: gradient
+    temperature: 0.7
+    max_tokens: 2000
+    cost_per_1m_tokens: 0.20
+    context_window: 8192
+    use_case: documentation_generation
+    tags: [markdown, technical-writing]
+    langsmith_project: code-chef-documentation
 """
         with open(temp_config_file, "w") as f:
             f.write(modified_config)

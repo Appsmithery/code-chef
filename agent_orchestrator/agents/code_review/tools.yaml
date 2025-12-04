@@ -48,5 +48,5 @@ tools:
     - context7 # Codebase understanding
 
 langsmith:
-  project: agents-code-review
+  project: code-chef-code-review
   tags: [code-review, security, quality-assurance, polyglot]

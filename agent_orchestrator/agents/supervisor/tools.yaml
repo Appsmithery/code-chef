@@ -43,5 +43,5 @@ tools:
     - context7 # Repository analysis for tech stack detection
 
 langsmith:
-  project: agents-supervisor
+  project: code-chef-supervisor
   tags: [orchestration, routing, multi-agent, polyglot]

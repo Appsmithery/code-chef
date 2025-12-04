@@ -80,7 +80,7 @@ class BaseAgent:
             - git
 
         langsmith:
-          project: agents-feature-dev
+          project: code-chef-feature-dev
           tags: [feature-development]
         ```
         """

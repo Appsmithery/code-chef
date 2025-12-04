@@ -57,5 +57,5 @@ tools:
     - context7
 
 langsmith:
-  project: agents-cicd
+  project: code-chef-cicd
   tags: [cicd, deployment, automation, multi-platform]
