@@ -1,230 +1,230 @@
 name: Cleanup Docker Resources
 
 on:
-    # Manual trigger
-    workflow_dispatch:
-        inputs:
-            cleanup_type:
-                description: "Cleanup Type"
-                required: true
-                default: "standard"
-                type: choice
-                options:
-                    - standard
-                    - aggressive
-                    - full
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      cleanup_type:
+        description: "Cleanup Type"
+        required: true
+        default: "standard"
+        type: choice
+        options:
+          - standard
+          - aggressive
+          - full
 
-    # Run after successful deployments
-    workflow_run:
-        workflows: ["Deploy to Production"]
-        types:
-            - completed
-        branches:
-            - main
+  # Run after successful deployments
+  workflow_run:
+    workflows: ["Deploy to Production"]
+    types:
+      - completed
+    branches:
+      - main
 
-    # Weekly scheduled cleanup (Sundays at 3 AM UTC)
-    schedule:
-        - cron: "0 3 * * 0"
+  # Weekly scheduled cleanup (Sundays at 3 AM UTC)
+  schedule:
+    - cron: "0 3 * * 0"
 
 env:
-    DROPLET_IP: 45.55.173.72
-    DROPLET_USER: root
-    DEPLOY_PATH: /opt/Dev-Tools
+  DROPLET_IP: 45.55.173.72
+  DROPLET_USER: root
+  DEPLOY_PATH: /opt/Dev-Tools
 
 jobs:
-    cleanup:
-        name: Clean Docker Resources
-        runs-on: ubuntu-latest
-        if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event.workflow_run.conclusion == 'success') }}
+  cleanup:
+    name: Clean Docker Resources
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event.workflow_run.conclusion == 'success') }}
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-            - name: Setup SSH Key
-              run: |
-                  mkdir -p ~/.ssh
-                  echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/deploy_key
-                  chmod 600 ~/.ssh/deploy_key
-                  ssh-keyscan -H ${{ env.DROPLET_IP }} >> ~/.ssh/known_hosts
+      - name: Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ env.DROPLET_IP }} >> ~/.ssh/known_hosts
 
-            - name: Determine Cleanup Strategy
-              id: strategy
-              run: |
-                  if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-                    echo "type=${{ github.event.inputs.cleanup_type }}" >> $GITHUB_OUTPUT
-                  elif [[ "${{ github.event_name }}" == "schedule" ]]; then
-                    echo "type=aggressive" >> $GITHUB_OUTPUT
-                  else
-                    echo "type=standard" >> $GITHUB_OUTPUT
-                  fi
+      - name: Determine Cleanup Strategy
+        id: strategy
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "type=${{ github.event.inputs.cleanup_type }}" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event_name }}" == "schedule" ]]; then
+            echo "type=aggressive" >> $GITHUB_OUTPUT
+          else
+            echo "type=standard" >> $GITHUB_OUTPUT
+          fi
 
-            - name: Pre-Cleanup Metrics
-              run: |
-                  echo "📊 Pre-Cleanup Metrics"
-                  ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
-                    echo "=== Memory Usage ==="
-                    free -h
-                    echo ""
-                    echo "=== Disk Usage ==="
-                    df -h /
-                    echo ""
-                    echo "=== Docker Disk Usage ==="
-                    docker system df
-                    echo ""
-                    echo "=== Container Status ==="
-                    docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Size}}"
-                  EOF
+      - name: Pre-Cleanup Metrics
+        run: |
+          echo "📊 Pre-Cleanup Metrics"
+          ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
+            echo "=== Memory Usage ==="
+            free -h
+            echo ""
+            echo "=== Disk Usage ==="
+            df -h /
+            echo ""
+            echo "=== Docker Disk Usage ==="
+            docker system df
+            echo ""
+            echo "=== Container Status ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Size}}"
+          EOF
 
-            - name: Standard Cleanup (Post-Deployment)
-              if: steps.strategy.outputs.type == 'standard'
-              run: |
-                  echo "🧹 Running Standard Cleanup (Post-Deployment)"
-                  ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
-                    set -e
-                    cd ${{ env.DEPLOY_PATH }}/deploy
-                    
-                    # Remove dangling images
-                    echo "Removing dangling images..."
-                    docker image prune -f
-                    
-                    # Remove build cache
-                    echo "Removing build cache..."
-                    docker builder prune -f
-                    
-                    # Remove stopped containers older than 1 hour
-                    echo "Removing old stopped containers..."
-                    docker container prune -f --filter "until=1h"
-                    
-                    echo "✅ Standard cleanup complete"
-                  EOF
+      - name: Standard Cleanup (Post-Deployment)
+        if: steps.strategy.outputs.type == 'standard'
+        run: |
+          echo "🧹 Running Standard Cleanup (Post-Deployment)"
+          ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}/deploy
+            
+            # Remove dangling images
+            echo "Removing dangling images..."
+            docker image prune -f
+            
+            # Remove build cache
+            echo "Removing build cache..."
+            docker builder prune -f
+            
+            # Remove stopped containers older than 1 hour
+            echo "Removing old stopped containers..."
+            docker container prune -f --filter "until=1h"
+            
+            echo "✅ Standard cleanup complete"
+          EOF
 
-            - name: Aggressive Cleanup (Weekly)
-              if: steps.strategy.outputs.type == 'aggressive'
-              run: |
-                  echo "🧹 Running Aggressive Cleanup (Weekly Maintenance)"
-                  ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
-                    set -e
-                    cd ${{ env.DEPLOY_PATH }}/deploy
-                    
-                    # Remove unused images older than 7 days
-                    echo "Removing unused images..."
-                    docker image prune -af --filter "until=168h"
-                    
-                    # Remove stopped containers older than 7 days
-                    echo "Removing old stopped containers..."
-                    docker container prune -f --filter "until=168h"
-                    
-                    # Remove build cache older than 7 days
-                    echo "Removing old build cache..."
-                    docker builder prune -af --filter "until=168h"
-                    
-                    # Remove unused networks
-                    echo "Removing unused networks..."
-                    docker network prune -f
-                    
-                    # Show current state
-                    echo ""
-                    echo "✅ Aggressive cleanup complete"
-                    docker system df
-                  EOF
+      - name: Aggressive Cleanup (Weekly)
+        if: steps.strategy.outputs.type == 'aggressive'
+        run: |
+          echo "🧹 Running Aggressive Cleanup (Weekly Maintenance)"
+          ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}/deploy
+            
+            # Remove unused images older than 7 days
+            echo "Removing unused images..."
+            docker image prune -af --filter "until=168h"
+            
+            # Remove stopped containers older than 7 days
+            echo "Removing old stopped containers..."
+            docker container prune -f --filter "until=168h"
+            
+            # Remove build cache older than 7 days
+            echo "Removing old build cache..."
+            docker builder prune -af --filter "until=168h"
+            
+            # Remove unused networks
+            echo "Removing unused networks..."
+            docker network prune -f
+            
+            # Show current state
+            echo ""
+            echo "✅ Aggressive cleanup complete"
+            docker system df
+          EOF
 
-            - name: Full Cleanup (Emergency)
-              if: steps.strategy.outputs.type == 'full'
-              run: |
-                  echo "⚠️  Running Full Cleanup (Emergency Mode)"
-                  ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
-                    set -e
-                    cd ${{ env.DEPLOY_PATH }}/deploy
-                    
-                    # Stop all containers
-                    echo "Stopping all containers..."
-                    docker compose down
-                    
-                    # Remove ALL unused images
-                    echo "Removing all unused images..."
-                    docker image prune -af
-                    
-                    # Remove all stopped containers
-                    echo "Removing all stopped containers..."
-                    docker container prune -f
-                    
-                    # Remove all build cache
-                    echo "Removing all build cache..."
-                    docker builder prune -af
-                    
-                    # Remove unused networks
-                    echo "Removing unused networks..."
-                    docker network prune -f
-                    
-                    # Restart services
-                    echo "Restarting services..."
-                    docker compose up -d
-                    
-                    # Wait for services
-                    echo "Waiting for services to start..."
-                    sleep 15
-                    
-                    echo ""
-                    echo "✅ Full cleanup complete"
-                    docker system df
-                  EOF
+      - name: Full Cleanup (Emergency)
+        if: steps.strategy.outputs.type == 'full'
+        run: |
+          echo "⚠️  Running Full Cleanup (Emergency Mode)"
+          ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}/deploy
+            
+            # Stop all containers
+            echo "Stopping all containers..."
+            docker compose down
+            
+            # Remove ALL unused images
+            echo "Removing all unused images..."
+            docker image prune -af
+            
+            # Remove all stopped containers
+            echo "Removing all stopped containers..."
+            docker container prune -f
+            
+            # Remove all build cache
+            echo "Removing all build cache..."
+            docker builder prune -af
+            
+            # Remove unused networks
+            echo "Removing unused networks..."
+            docker network prune -f
+            
+            # Restart services
+            echo "Restarting services..."
+            docker compose up -d
+            
+            # Wait for services
+            echo "Waiting for services to start..."
+            sleep 15
+            
+            echo ""
+            echo "✅ Full cleanup complete"
+            docker system df
+          EOF
 
-            - name: Post-Cleanup Metrics
-              run: |
-                  echo "📊 Post-Cleanup Metrics"
-                  ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
-                    echo "=== Memory Usage ==="
-                    free -h
-                    echo ""
-                    echo "=== Disk Usage ==="
-                    df -h /
-                    echo ""
-                    echo "=== Docker Disk Usage ==="
-                    docker system df
-                  EOF
+      - name: Post-Cleanup Metrics
+        run: |
+          echo "📊 Post-Cleanup Metrics"
+          ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
+            echo "=== Memory Usage ==="
+            free -h
+            echo ""
+            echo "=== Disk Usage ==="
+            df -h /
+            echo ""
+            echo "=== Docker Disk Usage ==="
+            docker system df
+          EOF
 
-            - name: Verify Services Health
-              run: |
-                  echo "🔍 Verifying service health..."
-                  ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
-                    cd ${{ env.DEPLOY_PATH }}/deploy
-                    
-                    # Check container status
-                    echo "=== Container Status ==="
-                    docker compose ps
-                    
-                    # Wait for services to stabilize
-                    sleep 10
-                    
-                    # Check health endpoints
-                    echo ""
-                    echo "=== Health Checks ==="
-                    for port in 8001 8007 8008 8009 8010; do
-                      if curl -sf http://localhost:$port/health > /dev/null 2>&1; then
-                        echo "✓ Port $port: OK"
-                      else
-                        echo "✗ Port $port: FAIL"
-                      fi
-                    done
-                  EOF
+      - name: Verify Services Health
+        run: |
+          echo "🔍 Verifying service health..."
+          ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
+            cd ${{ env.DEPLOY_PATH }}/deploy
+            
+            # Check container status
+            echo "=== Container Status ==="
+            docker compose ps
+            
+            # Wait for services to stabilize
+            sleep 10
+            
+            # Check health endpoints
+            echo ""
+            echo "=== Health Checks ==="
+            for port in 8001 8007 8008 8009 8010; do
+              if curl -sf http://localhost:$port/health > /dev/null 2>&1; then
+                echo "✓ Port $port: OK"
+              else
+                echo "✗ Port $port: FAIL"
+              fi
+            done
+          EOF
 
-            - name: Report Cleanup Summary
-              run: |
-                  echo "## 🧹 Cleanup Summary" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Cleanup Type**: ${{ steps.strategy.outputs.type }}" >> $GITHUB_STEP_SUMMARY
-                  echo "**Triggered By**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-                  echo "**Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Report Cleanup Summary
+        run: |
+          echo "## 🧹 Cleanup Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cleanup Type**: ${{ steps.strategy.outputs.type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered By**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-                  # Get metrics
-                  METRICS=$(ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
-                    docker system df --format "{{.Type}}: {{.Size}} ({{.Reclaimable}} reclaimable)"
-                  EOF
-                  )
+          # Get metrics
+          METRICS=$(ssh -i ~/.ssh/deploy_key ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} << 'EOF'
+            docker system df --format "{{.Type}}: {{.Size}} ({{.Reclaimable}} reclaimable)"
+          EOF
+          )
 
-                  echo "### Docker Resource Usage" >> $GITHUB_STEP_SUMMARY
-                  echo '```' >> $GITHUB_STEP_SUMMARY
-                  echo "$METRICS" >> $GITHUB_STEP_SUMMARY
-                  echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "### Docker Resource Usage" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "$METRICS" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
