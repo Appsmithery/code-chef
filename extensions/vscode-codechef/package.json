@@ -1,9 +1,9 @@
 {
   "name": "vscode-codechef",
   "displayName": "code/chef - AI DevOps Team",
-  "description": "AI DevOps Team, orchestrated by your Head Chef. LangGraph single-orchestrator architecture with 150+ MCP tools and LangChain function calling.",
+  "description": "Your personal AI DevOps Team, orchestrated by the Head Chef.",
   "version": "0.5.2",
-  "publisher": "appsmithery",
+  "publisher": "appsmithery.co",
   "license": "MIT",
   "icon": "icon.png",
   "private": false,
@@ -13,10 +13,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Appsmithery/Dev-Tools"
+    "url": "https://github.com/Appsmithery/code-chef"
   },
   "bugs": {
-    "url": "https://github.com/Appsmithery/Dev-Tools/issues"
+    "url": "https://github.com/Appsmithery/code-chef/issues"
   },
   "homepage": "https://codechef.appsmithery.co",
   "badges": [
@@ -38,9 +38,14 @@
   },
   "categories": [
     "AI",
+    "development-tools",
+    "Productivity",
     "Other"
   ],
   "keywords": [
+    "devops",
+    "dev-tools",
+    "dev-team",
     "copilot",
     "ai",
     "codechef",
@@ -62,10 +67,7 @@
     "progressive-disclosure"
   ],
   "extensionDependencies": [
-    "linear.linear-connect"
-  ],
-  "extensionPack": [
-    "graphql.vscode-graphql"
+    "github.copilot-chat"
   ],
   "activationEvents": [
     "onStartupFinished",
