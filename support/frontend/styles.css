@@ -302,22 +302,19 @@ body {
 }
 
 .agent-card.infrastructure {
-    border-left-color: var(--salmon);
+    border-left-color: var(--lavender);
 }
 
 .agent-card.code-review {
-    border-left-color: var(--gray-blue);
+    border-left-color: var(--lavender);
 }
 
 .agent-card.cicd {
-    border-left-color: var(--light-yellow);
-    border-left-width: 6px;
-    border-left-style: solid;
-    box-shadow: var(--shadow-md), inset 0 0 0 1px var(--border);
+    border-left-color: var(--lavender);
 }
 
 .agent-card.documentation {
-    border-left-color: var(--mint);
+    border-left-color: var(--lavender);
 }
 
 .agent-card.supervisor {
