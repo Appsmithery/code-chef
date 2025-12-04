@@ -592,129 +592,12 @@ pre code {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* Day Mode: Light Purple Background for server cards */
-body:not([data-theme="dark"]) .server-card {
-    background-color: #887bb0;
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .server-card .server-info h2 {
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .server-card .meta-value {
-    color: #bcece0;
-}
-
 /* Update Badges to use new font and styling */
 .param-badge {
     font-family: 'Google Sans Code', monospace;
     background: rgba(188, 236, 224, 0.2);
     color: #bcece0;
     border: 1px solid rgba(188, 236, 224, 0.4);
-}
-
-/* Day Mode Badge Adjustment */
-body:not([data-theme="dark"]) .param-badge {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.5);
-}
-
-/* Recipe Cards in Day Mode (for docs-overview-new.html) */
-body:not([data-theme="dark"]) .recipe-card {
-    background-color: #887bb0;
-    color: #fff;
-    border: none;
-}
-
-body:not([data-theme="dark"]) .recipe-card h2,
-body:not([data-theme="dark"]) .recipe-card h3 {
-    color: #bcece0 !important;
-}
-
-body:not([data-theme="dark"]) .recipe-card p,
-body:not([data-theme="dark"]) .recipe-card li {
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .recipe-card code {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-}
-
-/* Day Mode: Table styling in recipe cards */
-body:not([data-theme="dark"]) .recipe-card table {
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .recipe-card th {
-    color: #bcece0;
-    border-bottom-color: rgba(255, 255, 255, 0.3);
-}
-
-body:not([data-theme="dark"]) .recipe-card td {
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .recipe-card tr:nth-child(even) {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-/* Day Mode: Agent cards - ensure proper contrast */
-body:not([data-theme="dark"]) .agent-card {
-    background-color: #887bb0;
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .agent-card h3 {
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .agent-card .agent-description {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-body:not([data-theme="dark"]) .agent-card .capability-tag {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .agent-card code {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-}
-
-/* Day Mode: Card styling */
-body:not([data-theme="dark"]) .card {
-    background-color: #887bb0;
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .card h3 {
-    color: #bcece0;
-}
-
-body:not([data-theme="dark"]) .card p {
-    color: #fff;
-}
-
-/* Day Mode: Service cards */
-body:not([data-theme="dark"]) .service-card {
-    background-color: #887bb0;
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .service-card h3 {
-    color: #fff;
-}
-
-body:not([data-theme="dark"]) .service-card .service-description {
-    color: rgba(255, 255, 255, 0.9);
-}
-
-body:not([data-theme="dark"]) .service-card .service-port {
-    color: #bcece0;
 }
 
 /* Force Google Sans Code on interactive elements */
