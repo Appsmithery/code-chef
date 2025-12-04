@@ -5,7 +5,7 @@
   "version": "0.5.2",
   "publisher": "appsmithery",
   "license": "MIT",
-  "icon": "src/icons/hat_icon_vsc.png",
+  "icon": "icon.png",
   "private": false,
   "publishConfig": {
     "access": "public",
