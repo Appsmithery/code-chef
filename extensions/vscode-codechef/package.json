@@ -2,7 +2,7 @@
   "name": "vscode-codechef",
   "displayName": "code/chef - AI DevOps Team",
   "description": "AI DevOps Team, orchestrated by your Head Chef. LangGraph single-orchestrator architecture with 150+ MCP tools and LangChain function calling.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "src/icons/hat_icon_vsc.png",
