@@ -192,13 +192,14 @@ function Test-HealthEndpoints {
     Write-Info "Waiting 15 seconds for services to stabilize..."
     Start-Sleep -Seconds 15
     
-    # Updated for LangGraph single-orchestrator architecture (no more microservices on 8002-8006)
+    # Core services for LangGraph single-orchestrator architecture
+    # Gateway-MCP deprecated Dec 2025 - see _archive/gateway-deprecated-2025-12-03/
     $endpoints = @(
-        @{Port=8000; Name="Gateway-MCP"},
         @{Port=8001; Name="Orchestrator"},
         @{Port=8007; Name="RAG-Context"},
         @{Port=8008; Name="State-Persistence"},
-        @{Port=8009; Name="Agent-Registry"}
+        @{Port=8009; Name="Agent-Registry"},
+        @{Port=8010; Name="LangGraph"}
     )
     
     $healthyCount = 0

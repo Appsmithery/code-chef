@@ -138,10 +138,10 @@ jobs:
 
       - name: Health checks
         run: |
-          for port in 8000 8001 8007 8008 8009; do
+          for port in 8001 8007 8008 8009 8010; do
             status=$(ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:${port}/health" | jq -r '.status // empty')
             if [ "$status" == "healthy" ] || [ "$status" == "ok" ]; then
-              echo "✓ Port ${port} is healthy (gateway:8000, orchestrator:8001, rag:8007, state:8008, registry:8009)"
+              echo "✓ Port ${port} is healthy (orchestrator:8001, rag:8007, state:8008, registry:8009, langgraph:8010)"
             else
               echo "✗ Port ${port} is unhealthy"
               exit 1
@@ -192,10 +192,10 @@ jobs:
 
       - name: Health checks
         run: |
-          for port in 8000 8001 8007 8008 8009; do
+          for port in 8001 8007 8008 8009 8010; do
             status=$(ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:${port}/health" | jq -r '.status // empty')
             if [ "$status" == "healthy" ] || [ "$status" == "ok" ]; then
-              echo "✓ Port ${port} is healthy (gateway:8000, orchestrator:8001, rag:8007, state:8008, registry:8009)"
+              echo "✓ Port ${port} is healthy (orchestrator:8001, rag:8007, state:8008, registry:8009, langgraph:8010)"
             else
               echo "✗ Port ${port} is unhealthy"
               exit 1
@@ -234,10 +234,10 @@ jobs:
 
       - name: Health checks
         run: |
-          for port in 8000 8001 8007 8008 8009; do
+          for port in 8001 8007 8008 8009 8010; do
             status=$(ssh ${{ env.DROPLET_HOST }} "curl -s http://localhost:${port}/health" | jq -r '.status // empty')
             if [ "$status" == "healthy" ] || [ "$status" == "ok" ]; then
-              echo "✓ Port ${port} is healthy (gateway:8000, orchestrator:8001, rag:8007, state:8008, registry:8009)"
+              echo "✓ Port ${port} is healthy (orchestrator:8001, rag:8007, state:8008, registry:8009, langgraph:8010)"
             else
               echo "✗ Port ${port} is unhealthy"
               exit 1

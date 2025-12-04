@@ -114,9 +114,9 @@ tasks:
   #============================================================================
 
   health:local:
-    desc: Check health of local services (ports 8000-8008)
+    desc: Check health of local services (ports 8001-8010)
     summary: |
-      Checks /health endpoints for all 9 services on localhost. Reports
+      Checks /health endpoints for all core services on localhost. Reports
       status with check indicators. Use after 'up' or 'rebuild'.
     cmds:
       - '{{if eq OS "windows"}}powershell -NoProfile -ExecutionPolicy Bypass -File ./support/scripts/validation/health-check-local.ps1{{else}}bash ./support/scripts/validation/health-check-local.sh{{end}}'
@@ -196,15 +196,16 @@ tasks:
   utilities:ports:
     desc: Show port mappings and service URLs
     summary: |
-      Reference guide showing all service port mappings (8000-8008, 9090)
+      Reference guide showing all service port mappings (8001-8010, 9090)
       and their purposes. Useful for debugging connectivity issues.
     cmds:
       - |
         echo "Service Port Mappings:"
-        echo "  8000 → gateway-mcp (MCP tool routing)"
         echo "  8001 → orchestrator (LangGraph multi-agent workflows)"
-        echo "  8007 → rag-context (vector search)"
+        echo "  8007 → rag-context (vector search via Qdrant)"
         echo "  8008 → state-persistence (workflow DB)"
+        echo "  8009 → agent-registry (agent coordination)"
+        echo "  8010 → langgraph (durable workflow execution)"
         echo "  9090 → prometheus (metrics)"
         echo ""
         echo "LangGraph Agent Nodes (internal to orchestrator):"
