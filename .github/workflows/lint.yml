@@ -24,11 +24,11 @@ jobs:
 
       - name: Run Black
         run: |
-          black --check agents/ mcp/ || true
+          black --check agent_orchestrator/ shared/ || true
 
       - name: Run Pylint
         run: |
-          pylint agents/**/*.py mcp/**/*.py || true
+          pylint agent_orchestrator/**/*.py shared/**/*.py || true
 
   lint-yaml:
     runs-on: ubuntu-latest

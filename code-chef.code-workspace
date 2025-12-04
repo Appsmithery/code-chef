@@ -43,7 +43,9 @@
     "github.copilot.chat.responsesApiReasoningSummary": "off",
     "github.copilot.chat.summarizeAgentConversationHistory.enabled": true,
     "editor.aiStats.enabled": true,
-    "github-actions.workflows.pinned.workflows": [],
+    "github-actions.workflows.pinned.workflows": [
+      ".github/workflows/deploy-intelligent.yml"
+    ],
     "chat.mcp.serverSampling": {
       "dev-tools.code-workspace: Docs by LangChain": {
         "allowedModels": [

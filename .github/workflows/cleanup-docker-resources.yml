@@ -16,7 +16,7 @@ on:
 
   # Run after successful deployments
   workflow_run:
-    workflows: ["Deploy to Production"]
+    workflows: ["Intelligent Deploy to Droplet"]
     types:
       - completed
     branches:
