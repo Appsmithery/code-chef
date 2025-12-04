@@ -115,11 +115,19 @@ jobs:
       - name: Prepare .env file
         run: |
           cp config/env/.env.template config/env/.env
+          # LLM & Tracing
           echo "GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}" >> config/env/.env
           echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+          # Linear Integration
+          echo "LINEAR_API_KEY=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
           echo "LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
+          # RAG/Qdrant
+          echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> config/env/.env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> config/env/.env
+          # Database
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> config/env/.env
 
       - name: Upload .env to droplet
         run: |
@@ -168,11 +176,19 @@ jobs:
       - name: Prepare .env file
         run: |
           cp config/env/.env.template config/env/.env
+          # LLM & Tracing
           echo "GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}" >> config/env/.env
           echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+          # Linear Integration
+          echo "LINEAR_API_KEY=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
           echo "LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
+          # RAG/Qdrant
+          echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> config/env/.env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> config/env/.env
+          # Database
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> config/env/.env
 
       - name: Upload .env to droplet
         run: |
