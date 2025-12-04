@@ -191,6 +191,7 @@ body {
     transition: all 0.2s ease;
     border: none;
     cursor: pointer;
+    font-family: 'Google Sans Code', monospace;
 }
 
 .btn-primary {
@@ -495,7 +496,7 @@ body {
 
 /* Code Blocks */
 code {
-    font-family: 'Monaco', 'Consolas', 'Fira Code', monospace;
+    font-family: 'Google Sans Code', 'Monaco', 'Consolas', monospace;
     background: var(--bg);
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
@@ -503,10 +504,13 @@ code {
 }
 
 pre {
-    background: var(--gray-blue);
-    color: var(--mint);
-    padding: 1rem;
+    font-family: 'Google Sans Code', monospace;
+    background: #2a2e3f;
+    color: #bcece0;
     border-radius: 8px;
+    border-left: 4px solid #bcece0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 1rem;
     overflow-x: auto;
     margin: 1rem 0;
 }
@@ -580,6 +584,73 @@ pre code {
     .container {
         padding: 1rem;
     }
+}
+
+/* Server Card Styling (for servers.html) */
+.server-card {
+    border: 1px solid rgba(136, 123, 176, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Day Mode: Light Purple Background for server cards */
+body:not([data-theme="dark"]) .server-card {
+    background-color: #887bb0;
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .server-card .server-info h2 {
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .server-card .meta-value {
+    color: #bcece0;
+}
+
+/* Update Badges to use new font and styling */
+.param-badge {
+    font-family: 'Google Sans Code', monospace;
+    background: rgba(188, 236, 224, 0.2);
+    color: #bcece0;
+    border: 1px solid rgba(188, 236, 224, 0.4);
+}
+
+/* Day Mode Badge Adjustment */
+body:not([data-theme="dark"]) .param-badge {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Recipe Cards in Day Mode (for docs-overview-new.html) */
+body:not([data-theme="dark"]) .recipe-card {
+    background-color: #887bb0;
+    color: #fff;
+    border: none;
+}
+
+body:not([data-theme="dark"]) .recipe-card h2,
+body:not([data-theme="dark"]) .recipe-card h3 {
+    color: #bcece0 !important;
+}
+
+body:not([data-theme="dark"]) .recipe-card p,
+body:not([data-theme="dark"]) .recipe-card li {
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .recipe-card code {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* Force Google Sans Code on interactive elements */
+button,
+input,
+select,
+textarea,
+.badge,
+.tag {
+    font-family: 'Google Sans Code', monospace;
 }
 
 /* Focus States for Accessibility */
