@@ -643,6 +643,80 @@ body:not([data-theme="dark"]) .recipe-card code {
     color: #fff;
 }
 
+/* Day Mode: Table styling in recipe cards */
+body:not([data-theme="dark"]) .recipe-card table {
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .recipe-card th {
+    color: #bcece0;
+    border-bottom-color: rgba(255, 255, 255, 0.3);
+}
+
+body:not([data-theme="dark"]) .recipe-card td {
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .recipe-card tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Day Mode: Agent cards - ensure proper contrast */
+body:not([data-theme="dark"]) .agent-card {
+    background-color: #887bb0;
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .agent-card h3 {
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .agent-card .agent-description {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+body:not([data-theme="dark"]) .agent-card .capability-tag {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .agent-card code {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+/* Day Mode: Card styling */
+body:not([data-theme="dark"]) .card {
+    background-color: #887bb0;
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .card h3 {
+    color: #bcece0;
+}
+
+body:not([data-theme="dark"]) .card p {
+    color: #fff;
+}
+
+/* Day Mode: Service cards */
+body:not([data-theme="dark"]) .service-card {
+    background-color: #887bb0;
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .service-card h3 {
+    color: #fff;
+}
+
+body:not([data-theme="dark"]) .service-card .service-description {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+body:not([data-theme="dark"]) .service-card .service-port {
+    color: #bcece0;
+}
+
 /* Force Google Sans Code on interactive elements */
 button,
 input,

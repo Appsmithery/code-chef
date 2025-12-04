@@ -506,46 +506,48 @@
             <pre class="mermaid">
 %%{init: { 'theme': 'base', 'themeVariables': { 'primaryColor': '#887bb0', 'primaryTextColor': '#fff', 'primaryBorderColor': '#bcece0', 'lineColor': '#4c5270', 'secondaryColor': '#2a2e3f', 'tertiaryColor': '#fff9c4' } }}%%
 graph TB
-    Client[("👤<br/>User")]
-    
-    Orchestrator{"🎯<br/>Head Chef<br/><small>Port 8001</small>"}
-    
-    FeatureDev[["💻<br/>Sous-Chef"]]
-    CodeReview[["🔍<br/>Code Review"]]
-    Infrastructure[["☁️<br/>Infrastructure"]]
-    CICD[["🚀<br/>CI/CD"]]
-    Documentation[["📝<br/>Docs"]]
-    
-    MCP[("🔌<br/>MCP Gateway<br/><small>178+ Tools</small>")]
-    
-    RAG[("<br/>📚 RAG<br/><small>Qdrant</small>")]
-    State[("<br/>💾 State<br/><small>PostgreSQL</small>")]
-    Gradient[("<br/>⚡ Gradient<br/><small>LLM</small>")]
-    
-    Client -->|Task| Orchestrator
-    
-    Orchestrator -.->|Route| FeatureDev
-    Orchestrator -.->|Route| CodeReview
-    Orchestrator -.->|Route| Infrastructure
-    Orchestrator -.->|Route| CICD
-    Orchestrator -.->|Route| Documentation
-    
-    FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|Tools| MCP
-    
-    Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|Context| RAG
-    Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|State| State
-    Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|LLM| Gradient
-    
-    classDef client fill:#bcece0,stroke:#887bb0,stroke-width:3px,color:#4c5270
+    %% Nodes
+    User[("👤 User")]
+    Orchestrator{"🎯 Head Chef<br/><small>Orchestrator</small>"}
+
+    subgraph Agents ["The Kitchen Team"]
+        direction LR
+        FeatureDev[["💻 Sous-Chef"]]
+        CodeReview[["🔍 Code Review"]]
+        Infra[["☁️ Infra"]]
+        CICD[["🚀 CI/CD"]]
+        Docs[["📝 Docs"]]
+    end
+
+    subgraph Foundation ["Foundation Stack"]
+        direction LR
+        Runtime{{"⚡ Agent Runtime"}}
+        MCP[("🔌 MCP Tools")]
+        RAG[("📚 RAG")]
+        State[("💾 State")]
+        LLM[("⚡ Gradient")]
+
+        Runtime -.-> MCP & RAG & State & LLM
+    end
+
+    %% Connections
+    User ==> Orchestrator
+    Orchestrator ==> FeatureDev & CodeReview & Infra & CICD & Docs
+    FeatureDev & CodeReview & Infra & CICD & Docs -.-> Runtime
+
+    %% Styling
+    classDef user fill:#bcece0,stroke:#887bb0,stroke-width:2px,color:#4c5270
     classDef orchestrator fill:#887bb0,stroke:#bcece0,stroke-width:3px,color:#fff
     classDef agent fill:#f4b9b8,stroke:#4c5270,stroke-width:2px,color:#4c5270
-    classDef service fill:#2a2e3f,stroke:#bcece0,stroke-width:2px,color:#bcece0
-    
-    class Client client
+    classDef foundation fill:#2a2e3f,stroke:#bcece0,stroke-width:2px,color:#bcece0
+    classDef runtime fill:#4c5270,stroke:#fff,stroke-width:2px,color:#fff,stroke-dasharray: 5 5
+
+    class User user
     class Orchestrator orchestrator
-    class FeatureDev,CodeReview,Infrastructure,CICD,Documentation agent
-    class MCP,RAG,State,Gradient service
-                    </pre>
+    class FeatureDev,CodeReview,Infra,CICD,Docs agent
+    class MCP,RAG,State,LLM foundation
+    class Runtime runtime
+            </pre>
           </div>
 
           <!-- Workflow Diagram -->
