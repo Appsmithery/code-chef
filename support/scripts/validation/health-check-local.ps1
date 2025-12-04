@@ -6,8 +6,8 @@ Write-Host "[HEALTH] Checking local service health..."
 # NOTE: Post-DEV-123 LangGraph migration
 # Agent nodes (feature-dev, code-review, infrastructure, cicd, documentation) are NOT separate services
 # They are LangGraph workflow nodes within orchestrator (port 8001)
+# Gateway-MCP deprecated Dec 2025 - see _archive/gateway-deprecated-2025-12-03/
 $services = @(
-    @{Port=8000; Name="gateway-mcp"},
     @{Port=8001; Name="orchestrator (includes all agent nodes)"},
     @{Port=8007; Name="rag-context"},
     @{Port=8008; Name="state-persistence"},

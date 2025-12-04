@@ -200,7 +200,7 @@ jobs:
                     # Check health endpoints
                     echo ""
                     echo "=== Health Checks ==="
-                    for port in 8000 8001 8007 8008 8009 8010; do
+                    for port in 8001 8007 8008 8009 8010; do
                       if curl -sf http://localhost:$port/health > /dev/null 2>&1; then
                         echo "✓ Port $port: OK"
                       else

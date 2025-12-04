@@ -294,7 +294,7 @@ ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose restart orch
 ```bash
 ssh do-codechef-droplet
 ufw allow 22/tcp              # SSH (CRITICAL)
-ufw allow 8000:8008/tcp       # Agent services
+ufw allow 8001:8010/tcp       # Agent services
 ufw allow 80/tcp              # HTTP (Caddy)
 ufw allow 443/tcp             # HTTPS (Caddy with Let's Encrypt)
 ufw status                    # Verify rules
