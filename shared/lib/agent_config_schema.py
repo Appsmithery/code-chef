@@ -46,7 +46,7 @@ class AgentConfig(BaseModel):
     )
     langsmith_project: str = Field(
         ...,
-        description="LangSmith project name for tracing (format: agents-{agent_name})",
+        description="LangSmith project name for tracing (format: code-chef-{agent_name})",
     )
 
     @field_validator("max_tokens")
@@ -64,9 +64,11 @@ class AgentConfig(BaseModel):
     @field_validator("langsmith_project")
     @classmethod
     def validate_langsmith_project_format(cls, v: str) -> str:
-        """Ensure LangSmith project follows agents-{name} convention."""
-        if not v.startswith("agents-"):
-            raise ValueError(f"LangSmith project must start with 'agents-', got: {v}")
+        """Ensure LangSmith project follows code-chef-{name} convention."""
+        if not v.startswith("code-chef-"):
+            raise ValueError(
+                f"LangSmith project must start with 'code-chef-', got: {v}"
+            )
         return v
 
 

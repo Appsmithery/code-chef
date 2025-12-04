@@ -329,7 +329,7 @@ ufw status                    # Verify rules
   LANGSMITH_TRACING=true                                              # Enable LangSmith SDK tracing
   LANGCHAIN_TRACING_V2=true                                           # Enable LangChain tracing
   LANGCHAIN_ENDPOINT=https://api.smith.langchain.com                  # LangSmith API endpoint
-  LANGCHAIN_PROJECT=agents                                            # Project name (auto-created if missing)
+  LANGCHAIN_PROJECT=code-chef                                         # Project name (auto-created if missing)
   LANGCHAIN_API_KEY=lsv2_sk_***                                       # Service key (full org access)
   LANGSMITH_API_KEY=lsv2_sk_***                                       # Same key (both vars supported)
   LANGSMITH_WORKSPACE_ID=5029c640-3f73-480c-82f3-58e402ed4207        # Workspace/Org ID from URL
@@ -401,7 +401,7 @@ agent_orchestrator/agents/<agent_name>/
 5. **Add node to LangGraph StateGraph** in `agent_orchestrator/graph.py`
 6. **Update conditional edges** for supervisor routing
 7. **Update `config/mcp-agent-tool-mapping.yaml`** with tool access
-8. **Add LangSmith tracing** with project: `agents-<agent>`
+8. **Add LangSmith tracing** with project: `code-chef-<agent>`
 9. **(Optional) Create agent-specific workflows** in `workflows/` subdirectory
 
 **Key Principles**:
