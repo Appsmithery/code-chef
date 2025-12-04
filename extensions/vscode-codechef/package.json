@@ -3,7 +3,7 @@
   "displayName": "code/chef - AI DevOps Team",
   "description": "Your personal AI DevOps Team, orchestrated by the Head Chef.",
   "version": "0.5.2",
-  "publisher": "appsmithery.co",
+  "publisher": "appsmithery",
   "license": "MIT",
   "icon": "icon.png",
   "private": false,
@@ -134,6 +134,31 @@
       {
         "command": "codechef.copyPermalink",
         "title": "Copy GitHub Permalink",
+        "category": "code/chef"
+      },
+      {
+        "command": "codechef.showMenu",
+        "title": "Show Menu",
+        "category": "code/chef"
+      },
+      {
+        "command": "codechef.healthCheck",
+        "title": "Health Check",
+        "category": "code/chef"
+      },
+      {
+        "command": "codechef.openLangsmith",
+        "title": "Open LangSmith Traces",
+        "category": "code/chef"
+      },
+      {
+        "command": "codechef.openGrafana",
+        "title": "Open Grafana Metrics",
+        "category": "code/chef"
+      },
+      {
+        "command": "codechef.openSettings",
+        "title": "Open Settings",
         "category": "code/chef"
       }
     ],
