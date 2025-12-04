@@ -1,173 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MCP Servers — code/chef</title>
-    <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="logos/hat_logo.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        .server-card {
-            background: var(--card-bg);
-            border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: var(--shadow-md);
-            margin-bottom: 1.5rem;
-        }
-        .server-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            cursor: pointer;
-            user-select: none;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid var(--mint);
-        }
-        .server-icon {
-            font-size: 2.5rem;
-        }
-        .server-info h2 {
-            font-size: 1.5rem;
-            color: var(--text);
-            margin: 0 0 0.25rem 0;
-        }
-        .server-meta {
-            display: flex;
-            gap: 2rem;
-            margin: 1rem 0;
-            flex-wrap: wrap;
-        }
-        .meta-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.25rem;
-        }
-        .meta-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .meta-value {
-            font-size: 1rem;
-            color: var(--lavender);
-            font-weight: 600;
-        }
-        .tools-section {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-        .tools-section.open {
-            max-height: 2000px;
-        }
-        .tools-section h3 {
-            font-size: 1.1rem;
-            color: var(--lavender);
-            margin: 1rem 0;
-        }
-        .tools-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1rem;
-        }
-        .tool-card {
-            background: var(--bg);
-            border-radius: 8px;
-            padding: 1rem;
-            border-left: 4px solid var(--mint);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .tool-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-        .tool-name {
-            font-weight: 700;
-            color: var(--text);
-            margin-bottom: 0.5rem;
-            font-family: monospace;
-        }
-        .tool-desc {
-            font-size: 0.875rem;
-            color: var(--text-muted);
-            line-height: 1.5;
-        }
-        .tool-params {
-            margin-top: 0.75rem;
-            padding-top: 0.75rem;
-            border-top: 1px solid var(--border);
-        }
-        .param-badge {
-            display: inline-block;
-            background: var(--lavender);
-            color: white;
-            padding: 0.2rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            margin-right: 0.25rem;
-            margin-bottom: 0.25rem;
-            font-family: monospace;
-        }
-        .toggle-icon {
-            margin-left: auto;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 8px 14px 8px 0;
-            border-color: transparent var(--text-muted) transparent transparent;
-            transition: transform 0.3s;
-        }
-        .toggle-icon.open {
-            border-width: 14px 8px 0 8px;
-            border-color: var(--text-muted) transparent transparent transparent;
-        }
+      .server-card {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: var(--shadow-md);
+        margin-bottom: 1.5rem;
+      }
+      .server-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+        user-select: none;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--mint);
+      }
+      .server-icon {
+        font-size: 2.5rem;
+      }
+      .server-info h2 {
+        font-size: 1.5rem;
+        color: var(--text);
+        margin: 0 0 0.25rem 0;
+      }
+      .server-meta {
+        display: flex;
+        gap: 2rem;
+        margin: 1rem 0;
+        flex-wrap: wrap;
+      }
+      .meta-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .meta-label {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .meta-value {
+        font-size: 1rem;
+        color: var(--lavender);
+        font-weight: 600;
+      }
+      .tools-section {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+      }
+      .tools-section.open {
+        max-height: 2000px;
+      }
+      .tools-section h3 {
+        font-size: 1.1rem;
+        color: var(--lavender);
+        margin: 1rem 0;
+      }
+      .tools-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1rem;
+      }
+      .tool-card {
+        background: var(--bg);
+        border-radius: 8px;
+        padding: 1rem;
+        border-left: 4px solid var(--mint);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .tool-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+      }
+      .tool-name {
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 0.5rem;
+        font-family: monospace;
+      }
+      .tool-desc {
+        font-size: 0.875rem;
+        color: var(--text-muted);
+        line-height: 1.5;
+      }
+      .tool-params {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border);
+      }
+      .param-badge {
+        display: inline-block;
+        background: var(--lavender);
+        color: white;
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.7rem;
+        margin-right: 0.25rem;
+        margin-bottom: 0.25rem;
+        font-family: monospace;
+      }
+      .toggle-icon {
+        margin-left: auto;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 8px 14px 8px 0;
+        border-color: transparent var(--text-muted) transparent transparent;
+        transition: transform 0.3s;
+      }
+      .toggle-icon.open {
+        border-width: 14px 8px 0 8px;
+        border-color: var(--text-muted) transparent transparent transparent;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <!-- Header -->
     <header class="header">
-        <a href="index.html" class="header-brand">
-            <img src="assets/codechef-logo.png" alt="code/chef logo">
-            <h1>code/chef</h1>
-        </a>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="agents.html">Agents</a>
-            <a href="servers.html" class="active">Servers</a>
-            <a href="docs-overview-new.html">Cookbook</a>
-            <button id="themeToggle" aria-label="Toggle dark mode">🌙</button>
-        </nav>
+      <a href="index.html" class="header-brand">
+        <img src="logos/banner_logo.svg" alt="code/chef logo" />
+        <h1>code/chef</h1>
+      </a>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="servers.html" class="active">Servers</a>
+        <a href="docs-overview-new.html">Cookbook</a>
+        <button id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+      </nav>
     </header>
 
     <!-- Hero Section -->
-    <section class="hero" style="margin-bottom: 0;">
-        <img src="assets/codechef-logo.png" alt="code/chef" class="hero-logo">
-        <div class="hero-content">
-            <h1>MCP Servers</h1>
-            <p>Docker MCP Toolkit — Model Context Protocol integration for AI agents</p>
-            <div class="hero-stats">
-                <div class="stat">
-                    <div class="stat-number">20+</div>
-                    <div class="stat-label">Servers</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">178+</div>
-                    <div class="stat-label">Tools</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-number">80-90%</div>
-                    <div class="stat-label">Token Savings</div>
-                </div>
-            </div>
+    <section class="hero" style="margin-bottom: 0">
+      <img src="logos/banner_logo.svg" alt="code/chef" class="hero-logo" />
+      <div class="hero-content">
+        <h1>MCP Servers</h1>
+        <p>
+          Docker MCP Toolkit — Model Context Protocol integration for AI agents
+        </p>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-number">20+</div>
+            <div class="stat-label">Servers</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">178+</div>
+            <div class="stat-label">Tools</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">80-90%</div>
+            <div class="stat-label">Token Savings</div>
+          </div>
         </div>
+      </div>
     </section>
 
     <!-- Main Content -->
     <main class="container">
-        <div class="info-box" style="margin-bottom: 2rem;">
-            <strong>Progressive Disclosure:</strong> Tools are loaded on-demand based on task context, saving 80-90% on token costs. The Head Chef (Orchestrator) selects relevant tools for each agent delegation.
-        </div>
+      <div class="info-box" style="margin-bottom: 2rem">
+        <strong>Progressive Disclosure:</strong> Tools are loaded on-demand
+        based on task context, saving 80-90% on token costs. The Head Chef
+        (Orchestrator) selects relevant tools for each agent delegation.
+      </div>
 
       <!-- Docker Hub Server -->
       <div class="server-card">
@@ -1258,38 +1266,40 @@
 
     <!-- Footer -->
     <footer class="footer">
-        <img src="assets/codechef-logo.png" alt="code/chef">
-        <span class="footer-text">© 2025 code/chef — "Yes, Chef!"</span>
-        <span>|</span>
-        <a href="docs-overview-new.html">Documentation</a>
-        <span>|</span>
-        <a href="https://github.com/Appsmithery/Dev-Tools" target="_blank">GitHub</a>
+      <img src="logos/hat_logo.svg" alt="code/chef" />
+      <span class="footer-text">© 2025 code/chef — "Yes, Chef!"</span>
+      <span>|</span>
+      <a href="docs-overview-new.html">Documentation</a>
+      <span>|</span>
+      <a href="https://github.com/Appsmithery/Dev-Tools" target="_blank"
+        >GitHub</a
+      >
     </footer>
 
     <script>
-        // Theme Toggle
-        const themeToggle = document.getElementById('themeToggle');
-        const savedTheme = localStorage.getItem('theme');
-        
-        if (savedTheme === 'dark') {
-            document.body.dataset.theme = 'dark';
-            themeToggle.textContent = '☀️';
-        }
-        
-        themeToggle.addEventListener('click', function() {
-            const isDark = document.body.dataset.theme === 'dark';
-            document.body.dataset.theme = isDark ? '' : 'dark';
-            themeToggle.textContent = isDark ? '🌙' : '☀️';
-            localStorage.setItem('theme', isDark ? '' : 'dark');
-        });
+      // Theme Toggle
+      const themeToggle = document.getElementById("themeToggle");
+      const savedTheme = localStorage.getItem("theme");
 
-        // Server card toggle
-        function toggleServerCard(header) {
-            const toolsSection = header.nextElementSibling.nextElementSibling;
-            const icon = header.querySelector('.toggle-icon');
-            toolsSection.classList.toggle('open');
-            icon.classList.toggle('open');
-        }
+      if (savedTheme === "dark") {
+        document.body.dataset.theme = "dark";
+        themeToggle.textContent = "☀️";
+      }
+
+      themeToggle.addEventListener("click", function () {
+        const isDark = document.body.dataset.theme === "dark";
+        document.body.dataset.theme = isDark ? "" : "dark";
+        themeToggle.textContent = isDark ? "🌙" : "☀️";
+        localStorage.setItem("theme", isDark ? "" : "dark");
+      });
+
+      // Server card toggle
+      function toggleServerCard(header) {
+        const toolsSection = header.nextElementSibling.nextElementSibling;
+        const icon = header.querySelector(".toggle-icon");
+        toolsSection.classList.toggle("open");
+        icon.classList.toggle("open");
+      }
     </script>
-</body>
+  </body>
 </html>

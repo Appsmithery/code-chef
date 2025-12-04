@@ -3,521 +3,383 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MCP Gateway + Dev-Tools - Complete Overview</title>
-    <style>
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#333;min-height:100vh;padding:2rem}
-      .container{max-width:1000px;margin:0 auto;background:white;border-radius:12px;padding:3rem;box-shadow:0 20px 60px rgba(0,0,0,.3)}
-      .header{border-bottom:3px solid #667eea;padding-bottom:1.5rem;margin-bottom:2rem}
-      h1{font-size:2.5rem;color:#667eea;margin-bottom:.5rem}
-      h2{font-size:1.8rem;color:#764ba2;margin-top:2rem;margin-bottom:1rem;border-left:4px solid #667eea;padding-left:1rem}
-      h3{font-size:1.3rem;color:#555;margin-top:1.5rem;margin-bottom:.75rem}
-      p,li{line-height:1.8;color:#555;margin-bottom:.75rem}
-      ul{margin-left:1.5rem}
-      ol{margin-left:1.5rem}
-      .info-box{background:#f8f9fa;border-left:4px solid #667eea;padding:1rem;margin:1rem 0;border-radius:4px}
-      .warning-box{background:#fff3cd;border-left:4px solid:#ffc107;padding:1rem;margin:1rem 0;border-radius:4px}
-      .success-box{background:#d4edda;border-left:4px solid:#28a745;padding:1rem;margin:1rem 0;border-radius:4px}
-      .back-btn{display:inline-block;margin-top:2rem;padding:.75rem 1.5rem;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;text-decoration:none;border-radius:8px;font-weight:600;transition:transform .2s}
-      .back-btn:hover{transform:translateY(-2px)}
-      code{background:#f8f9fa;padding:.2rem .4rem;border-radius:4px;font-family:'Courier New',monospace;color:#667eea;font-size:.9em}
-      .agent-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1rem;margin:1rem 0}
-      .agent-card{background:#f8f9fa;padding:1rem;border-radius:8px;border-left:4px solid #764ba2}
-      .agent-card h4{color:#764ba2;margin-bottom:.5rem}
-      .agent-card .port{color:#999;font-size:.9em;margin-top:.5rem}
-    </style>
+    <title>Cookbook — code/chef</title>
+    <link rel="icon" type="image/svg+xml" href="logos/hat_logo.svg" />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div class="container">
-      <div class="header">
-        <h1>📖 MCP Gateway + Dev-Tools Platform</h1>
-        <p>
-          Complete documentation for the integrated AI-powered development
-          platform
-        </p>
-      </div>
+    <!-- Header -->
+    <header class="header">
+      <a href="index.html" class="header-brand">
+        <img src="logos/banner_logo.svg" alt="code/chef logo" />
+        <h1>code/chef</h1>
+      </a>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="agents.html">Agents</a>
+        <a href="servers.html">Servers</a>
+        <a href="docs-overview-new.html" class="active">Cookbook</a>
+        <button id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+      </nav>
+    </header>
 
+    <!-- Hero Section -->
+    <section class="hero" style="margin-bottom: 0">
+      <img src="logos/banner_logo.svg" alt="code/chef" class="hero-logo" />
+      <div class="hero-content">
+        <h1>The Cookbook</h1>
+        <p>Complete documentation for the code/chef platform</p>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container">
       <div class="success-box">
-        <strong>🎉 Latest Update:</strong> The MCP Central Gateway now
-        integrates with the Dev-Tools Agent System, providing a unified platform
-        for AI-powered development workflows and MCP server orchestration.
+        <strong>🎉 Latest Update (Dec 2025):</strong> All 13 containers running
+        healthy on production. LangSmith tracing enabled, RAG semantic search
+        with 1,200+ vectors, and progressive MCP disclosure saving 80-90%
+        tokens.
       </div>
 
-      <h2>🎯 Platform Overview</h2>
-      <p>This platform combines two powerful systems:</p>
-      <ul>
-        <li>
-          <strong>MCP Central Gateway:</strong> Unified API gateway
-          orchestrating 10+ Model Context Protocol (MCP) servers with
-          centralized authentication and observability
-        </li>
-        <li>
-          <strong>Dev-Tools Agent System:</strong> AI-powered development agents
-          for feature implementation, code review, infrastructure management,
-          CI/CD automation, and documentation generation
-        </li>
-      </ul>
-
-      <div class="info-box">
-        <strong>Key Integration:</strong> The platform provides a single sign-on
-        experience via GitHub OAuth, allowing developers to authenticate once
-        and access both MCP tools and Dev-Tools agents seamlessly.
-      </div>
-
-      <h2>🤖 Dev-Tools Agent System</h2>
-      <p>
-        Six specialized AI agents handle the complete software development
-        lifecycle:
-      </p>
-
-      <div class="agent-grid">
-        <div class="agent-card">
-          <h4>🎯 Orchestrator</h4>
-          <p>
-            Coordinates task routing and agent hand-offs across the development
+      <!-- Platform Overview -->
+      <div class="recipe-card">
+        <h2 class="recipe-title">🎯 Platform Overview</h2>
+        <p>code/chef combines two powerful systems:</p>
+        <ul style="margin: 1rem 0; margin-left: 1.5rem">
+          <li>
+            <strong>Multi-Agent Orchestration:</strong> 6 specialized AI agents
+            powered by Gradient AI (llama3.3-70b) with LangGraph StateGraph
             workflow
-          </p>
-          <div class="port">
-            Port: 8001 | Endpoints: /orchestrate, /task, /route
-          </div>
-        </div>
-
-        <div class="agent-card">
-          <h4>💻 Feature Development</h4>
-          <p>
-            Handles feature implementation, code generation, and development
-            tasks
-          </p>
-          <div class="port">Port: 8002 | Endpoints: /feature, /code</div>
-        </div>
-
-        <div class="agent-card">
-          <h4>🔍 Code Review</h4>
-          <p>
-            Performs automated code reviews, linting, security scanning, and
-            quality checks
-          </p>
-          <div class="port">Port: 8003 | Endpoints: /review, /results</div>
-        </div>
-
-        <div class="agent-card">
-          <h4>🏗️ Infrastructure</h4>
-          <p>
-            Manages infrastructure as code, deployments, and system
-            configuration
-          </p>
-          <div class="port">
-            Port: 8004 | Endpoints: /infrastructure, /deploy
-          </div>
-        </div>
-
-        <div class="agent-card">
-          <h4>⚙️ CI/CD</h4>
-          <p>Manages continuous integration and deployment pipelines</p>
-          <div class="port">Port: 8005 | Endpoints: /pipeline, /trigger</div>
-        </div>
-
-        <div class="agent-card">
-          <h4>📚 Documentation</h4>
-          <p>
-            Generates and maintains project documentation, READMEs, and API docs
-          </p>
-          <div class="port">
-            Port: 8006 | Endpoints: /documentation, /update
-          </div>
-        </div>
-      </div>
-
-      <h3>Agent Workflow Example</h3>
-      <ol>
-        <li>
-          <strong>Submit Task:</strong> POST to <code>/orchestrate</code> with
-          your development request
-        </li>
-        <li>
-          <strong>Task Analysis:</strong> Orchestrator analyzes requirements and
-          routes to appropriate agents
-        </li>
-        <li>
-          <strong>Agent Execution:</strong> Agents collaborate to implement
-          features, review code, generate tests
-        </li>
-        <li>
-          <strong>Results:</strong> Receive complete implementation with code,
-          tests, docs, and deployment pipeline
-        </li>
-      </ol>
-
-      <h2>🏗️ MCP Gateway Architecture</h2>
-
-      <h3>1. MCP Registry & Router</h3>
-      <ul>
-        <li>
-          <strong>Dynamic Discovery:</strong> Automatically detects MCP servers
-          from Docker containers at startup
-        </li>
-        <li>
-          <strong>Schema Caching:</strong> Fetches and caches tool schemas for
-          fast access
-        </li>
-        <li>
-          <strong>Intelligent Routing:</strong> Routes requests to appropriate
-          MCP servers based on tool names
-        </li>
-        <li>
-          <strong>Health Monitoring:</strong> Tracks server availability with
-          circuit breaker patterns
-        </li>
-      </ul>
-
-      <h3>2. OAuth & Authentication</h3>
-      <ul>
-        <li>
-          <strong>GitHub OAuth:</strong> Single sign-on authentication shared
-          across all services
-        </li>
-        <li>
-          <strong>Token Management:</strong> Encrypted token storage with
-          automatic refresh
-        </li>
-        <li><strong>Session Handling:</strong> Secure cookie-based sessions</li>
-        <li>
-          <strong>Dynamic UI Updates:</strong> Auth button reflects login state
-          (green when authenticated)
-        </li>
-      </ul>
-
-      <h3>3. MCP Server Ecosystem</h3>
-      <p>10+ integrated MCP servers providing specialized capabilities:</p>
-      <ul>
-        <li>
-          <strong>Docker Hub:</strong> Container registry search, image
-          management, repository operations
-        </li>
-        <li>
-          <strong>Context7:</strong> Advanced code understanding and semantic
-          search
-        </li>
-        <li>
-          <strong>Fetch (Reference):</strong> Web content retrieval and
-          processing
-        </li>
-        <li>
-          <strong>Google Maps:</strong> Location services, geocoding, place
-          details, directions
-        </li>
-        <li>
-          <strong>Memory (Reference):</strong> Knowledge graph operations and
-          entity management
-        </li>
-        <li>
-          <strong>Next.js DevTools:</strong> Framework-specific development
-          utilities
-        </li>
-        <li>
-          <strong>Node.js Sandbox:</strong> Safe code execution environment
-        </li>
-        <li>
-          <strong>Notion:</strong> Workspace integration, page management,
-          database operations
-        </li>
-        <li>
-          <strong>Perplexity:</strong> AI-powered research and question
-          answering
-        </li>
-        <li><strong>Playwright:</strong> Browser automation and web testing</li>
-      </ul>
-
-      <div class="info-box">
-        <strong>View All Servers:</strong> Visit
-        <a href="/servers" style="color: #667eea; font-weight: 600">/servers</a>
-        to see detailed tool documentation for each MCP server.
-      </div>
-
-      <h2>🚀 Production Deployment</h2>
-
-      <h3>Current Infrastructure</h3>
-      <ul>
-        <li>
-          <strong>Platform:</strong> DigitalOcean VPS (Ubuntu 22.04, 2GB RAM)
-        </li>
-        <li><strong>Domain:</strong> <code>theshop.appsmithery.co</code></li>
-        <li>
-          <strong>Reverse Proxy:</strong> Caddy v2 with automatic HTTPS via
-          Let's Encrypt
-        </li>
-        <li>
-          <strong>Gateway Port:</strong> 3456 (internal), 443 (external HTTPS)
-        </li>
-        <li>
-          <strong>Agent Ports:</strong> 8001-8006 (internal, CORS-enabled)
-        </li>
-      </ul>
-
-      <h3>Docker Configuration</h3>
-      <ul>
-        <li>
-          <strong>Multi-stage Builds:</strong> Optimized production images
-        </li>
-        <li>
-          <strong>Security:</strong> Non-root user (1001:1001), read-only
-          filesystem
-        </li>
-        <li>
-          <strong>Health Checks:</strong> Built-in Docker health monitoring
-        </li>
-        <li>
-          <strong>Networking:</strong> Custom Docker network for service
-          communication
-        </li>
-      </ul>
-
-      <h3>Caddy Reverse Proxy Features</h3>
-      <ul>
-        <li>
-          <strong>Automatic HTTPS:</strong> Zero-config SSL/TLS with Let's
-          Encrypt
-        </li>
-        <li>
-          <strong>Security Headers:</strong> HSTS, X-Frame-Options, CSP
-          automatically applied
-        </li>
-        <li>
-          <strong>Health Probes:</strong> Routes traffic only to healthy
-          services
-        </li>
-        <li>
-          <strong>Logging:</strong> JSON-formatted access logs for analysis
-        </li>
-      </ul>
-
-      <h2>📊 API Endpoints</h2>
-
-      <h3>Landing & Navigation</h3>
-      <ul>
-        <li>
-          <code>GET /</code> - Main dashboard with system status and quick
-          actions
-        </li>
-        <li>
-          <code>GET /servers</code> - Complete MCP server catalog with tool
-          documentation
-        </li>
-        <li><code>GET /docs/overview</code> - This documentation page</li>
-      </ul>
-
-      <h3>Gateway Core</h3>
-      <ul>
-        <li><code>GET /health</code> - Health check for load balancers</li>
-        <li><code>GET /mcp/health</code> - MCP subsystem health status</li>
-        <li>
-          <code>GET /mcp/servers</code> - JSON list of available MCP servers
-        </li>
-        <li>
-          <code>GET /mcp/capabilities</code> - All available tools across
-          servers
-        </li>
-        <li>
-          <code>POST /mcp/servers/:serverName/:toolName</code> - Invoke specific
-          MCP tool
-        </li>
-      </ul>
-
-      <h3>Authentication</h3>
-      <ul>
-        <li>
-          <code>GET /oauth/github/authorize</code> - Initiate GitHub OAuth flow
-        </li>
-        <li>
-          <code>GET /oauth/github/callback</code> - OAuth callback handler
-        </li>
-        <li>
-          <code>GET /oauth/github/status</code> - Check authentication status
-        </li>
-        <li>
-          <code>POST /oauth/github/logout</code> - Logout and clear session
-        </li>
-        <li><code>POST /oauth/github/refresh</code> - Refresh access tokens</li>
-      </ul>
-
-      <h3>Dev-Tools Agents</h3>
-      <ul>
-        <li>
-          <code>POST http://45.55.173.72:8001/orchestrate</code> - Submit task
-          to orchestrator
-        </li>
-        <li>
-          <code>GET http://45.55.173.72:8001/health</code> - Check orchestrator
-          health
-        </li>
-        <li>
-          <code>POST http://45.55.173.72:800X/[endpoint]</code> - Direct agent
-          access (replace X with agent port)
-        </li>
-      </ul>
-
-      <div class="warning-box">
-        <strong>Note:</strong> Dev-Tools agents are currently exposed on direct
-        IP:port. Future updates will route them through the gateway at
-        <code>/agents/:agentName/:endpoint</code>.
-      </div>
-
-      <h2>🔐 Security Features</h2>
-      <ul>
-        <li>
-          <strong>GitHub OAuth:</strong> Secure authentication with token
-          encryption
-        </li>
-        <li>
-          <strong>CORS Configuration:</strong> Enabled for Dev-Tools agents on
-          ports 8000-8008
-        </li>
-        <li>
-          <strong>Rate Limiting:</strong> Per-agent quotas (1000 req/min
-          default)
-        </li>
-        <li><strong>HTTPS Only:</strong> TLS 1.2+ enforced via Caddy</li>
-        <li>
-          <strong>Read-only Containers:</strong> Immutable runtime environment
-        </li>
-        <li>
-          <strong>Security Headers:</strong> HSTS, CSP, X-Frame-Options,
-          X-Content-Type-Options
-        </li>
-      </ul>
-
-      <h2>🛠️ Development Workflow</h2>
-
-      <h3>Local Development</h3>
-      <ol>
-        <li>
-          <strong>Clone Repository:</strong> Get the Dev-Tools source code
-        </li>
-        <li>
-          <strong>Configure Environment:</strong> Copy
-          <code>.env.example</code> to <code>.env</code>
-        </li>
-        <li>
-          <strong>Start Services:</strong> <code>make up</code> or
-          <code>docker compose up</code>
-        </li>
-        <li>
-          <strong>Access Gateway:</strong> <code>http://localhost:3456</code>
-        </li>
-        <li>
-          <strong>Access Agents:</strong>
-          <code>http://localhost:8001-8006</code>
-        </li>
-      </ol>
-
-      <h3>Making Changes</h3>
-      <ol>
-        <li>
-          <strong>Edit Frontend:</strong> Modify files in
-          <code>frontend/</code> directory
-        </li>
-        <li>
-          <strong>Upload to Gateway:</strong>
-          <code
-            >scp frontend/*.html
-            root@server:/opt/central-mcp-gateway/src/views/</code
-          >
-        </li>
-        <li>
-          <strong>Rebuild Container:</strong>
-          <code
-            >cd /opt/central-mcp-gateway && docker compose down && docker
-            compose up -d --build</code
-          >
-        </li>
-        <li>
-          <strong>Verify Deployment:</strong> Check
-          <code>https://theshop.appsmithery.co</code>
-        </li>
-      </ol>
-
-      <h3>Agent Development</h3>
-      <ol>
-        <li>
-          <strong>Create Agent:</strong> Add new directory in
-          <code>agents/</code>
-        </li>
-        <li>
-          <strong>Implement FastAPI App:</strong> Create
-          <code>main.py</code> with endpoints
-        </li>
-        <li>
-          <strong>Add Dependencies:</strong> Create
-          <code>requirements.txt</code>
-        </li>
-        <li>
-          <strong>Create Dockerfile:</strong> Add in
-          <code>agent_[agent-name]/</code>
-        </li>
-        <li>
-          <strong>Update Compose:</strong> Add service to
-          <code>deploy/docker-compose.yml</code>
-        </li>
-        <li>
-          <strong>Enable CORS:</strong> Run
-          <code>support/scripts/enable_cors.sh [agent-name]</code>
-        </li>
-      </ol>
-
-      <h2>📚 Additional Resources</h2>
-      <ul>
-        <li>
-          <strong>MCP Specification:</strong>
+          </li>
+          <li>
+            <strong>Docker MCP Toolkit:</strong> 20+ MCP servers providing 178+
+            tools with progressive disclosure (80-90% token savings)
+          </li>
+        </ul>
+        <div class="info-box">
+          <strong>Production Domain:</strong>
           <a
-            href="https://github.com/modelcontextprotocol/servers"
+            href="https://codechef.appsmithery.co"
             target="_blank"
-            style="color: #667eea"
-            >Official MCP Documentation</a
+            style="color: var(--lavender)"
+            >codechef.appsmithery.co</a
           >
-        </li>
-        <li>
-          <strong>Repository Structure:</strong> See
-          <code>support/docs/CODEBASE_INDEX.md</code>
-        </li>
-        <li>
-          <strong>Agent Endpoints:</strong> See
-          <code>support/docs/AGENT_ENDPOINTS.md</code>
-        </li>
-        <li>
-          <strong>Deployment Guide:</strong> See
-          <code>support/docs/DEPLOYMENT.md</code>
-        </li>
-        <li>
-          <strong>Secrets Management:</strong> See
-          <code>support/docs/SECRETS_MANAGEMENT.md</code>
-        </li>
-      </ul>
+          (DigitalOcean droplet 45.55.173.72)
+        </div>
+      </div>
 
-      <h2>🔄 What's Next?</h2>
-      <ul>
-        <li>
-          <strong>Agent Gateway Integration:</strong> Route Dev-Tools agents
-          through <code>/agents/:agentName</code>
-        </li>
-        <li>
-          <strong>Unified Monitoring:</strong> Single dashboard for both MCP and
-          agent metrics
-        </li>
-        <li>
-          <strong>Workflow Templates:</strong> Pre-built automation workflows
-          for common tasks
-        </li>
-        <li>
-          <strong>Multi-Model Support:</strong> Agent swarm coordination with
-          different LLM backends
-        </li>
-        <li>
-          <strong>Real-time Collaboration:</strong> WebSocket support for live
-          agent interaction
-        </li>
-      </ul>
+      <!-- AI Agents Section -->
+      <div class="recipe-card">
+        <h2 class="recipe-title">👨‍🍳 The Kitchen Team</h2>
+        <p>
+          Six specialized AI agents handle the complete software development
+          lifecycle:
+        </p>
 
-      <a href="/" class="back-btn">← Back to Dashboard</a>
-    </div>
+        <div class="agent-grid" style="margin-top: 1rem">
+          <div class="agent-card head-chef">
+            <div class="agent-header">
+              <h3>Head Chef (Orchestrator)</h3>
+            </div>
+            <p class="agent-description">
+              Coordinates task routing and workflow hand-offs
+            </p>
+            <code style="font-size: 0.8rem">:8001 | llama3.3-70b-instruct</code>
+          </div>
+          <div class="agent-card sous-chef">
+            <div class="agent-header">
+              <h3>Sous-Chef (Feature Dev)</h3>
+            </div>
+            <p class="agent-description">
+              Feature implementation and code generation
+            </p>
+            <code style="font-size: 0.8rem">codellama-13b</code>
+          </div>
+          <div class="agent-card code-review">
+            <div class="agent-header">
+              <h3>Code Review</h3>
+            </div>
+            <p class="agent-description">
+              Automated reviews and security scanning
+            </p>
+            <code style="font-size: 0.8rem">llama-3.1-70b-instruct</code>
+          </div>
+          <div class="agent-card infrastructure">
+            <div class="agent-header">
+              <h3>Infrastructure</h3>
+            </div>
+            <p class="agent-description">IaC, Docker, Kubernetes, Terraform</p>
+            <code style="font-size: 0.8rem">llama-3.1-8b-instruct</code>
+          </div>
+          <div class="agent-card cicd">
+            <div class="agent-header">
+              <h3>CI/CD</h3>
+            </div>
+            <p class="agent-description">
+              Pipeline generation and deployment automation
+            </p>
+            <code style="font-size: 0.8rem">llama-3.1-8b-instruct</code>
+          </div>
+          <div class="agent-card documentation">
+            <div class="agent-header">
+              <h3>Documentation</h3>
+            </div>
+            <p class="agent-description">
+              Technical writing, READMEs, API docs
+            </p>
+            <code style="font-size: 0.8rem">mistral-7b</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architecture Section -->
+      <div class="recipe-card">
+        <h2 class="recipe-title">🏗️ Architecture</h2>
+
+        <h3 style="margin-top: 1rem; color: var(--lavender)">Core Services</h3>
+        <ul style="margin: 1rem 0; margin-left: 1.5rem">
+          <li>
+            <strong>Orchestrator (:8001):</strong> Main API entry point, task
+            routing, LangGraph workflow
+          </li>
+          <li>
+            <strong>RAG Service (:8007):</strong> Semantic search via Qdrant
+            Cloud (1,200+ vectors)
+          </li>
+          <li>
+            <strong>State Service (:8008):</strong> PostgreSQL persistence,
+            workflow checkpointing
+          </li>
+          <li>
+            <strong>LangGraph Service (:8010):</strong> Durable workflow
+            execution with checkpointing
+          </li>
+        </ul>
+
+        <h3 style="margin-top: 1.5rem; color: var(--lavender)">
+          Observability Stack
+        </h3>
+        <ul style="margin: 1rem 0; margin-left: 1.5rem">
+          <li>
+            <strong>LangSmith:</strong>
+            <a
+              href="https://smith.langchain.com"
+              target="_blank"
+              style="color: var(--lavender)"
+              >LLM tracing and debugging</a
+            >
+          </li>
+          <li>
+            <strong>Grafana Cloud:</strong>
+            <a
+              href="https://appsmithery.grafana.net"
+              target="_blank"
+              style="color: var(--lavender)"
+              >Prometheus metrics dashboards</a
+            >
+          </li>
+          <li>
+            <strong>Grafana Alloy:</strong> Metrics collection agent (scrapes
+            every 15s)
+          </li>
+        </ul>
+
+        <h3 style="margin-top: 1.5rem; color: var(--lavender)">
+          RAG Collections (Qdrant Cloud)
+        </h3>
+        <table style="width: 100%; margin: 1rem 0; border-collapse: collapse">
+          <tr style="background: var(--bg)">
+            <th
+              style="
+                padding: 0.5rem;
+                text-align: left;
+                border-bottom: 2px solid var(--mint);
+              "
+            >
+              Collection
+            </th>
+            <th
+              style="
+                padding: 0.5rem;
+                text-align: right;
+                border-bottom: 2px solid var(--mint);
+              "
+            >
+              Vectors
+            </th>
+            <th
+              style="
+                padding: 0.5rem;
+                text-align: left;
+                border-bottom: 2px solid var(--mint);
+              "
+            >
+              Source
+            </th>
+          </tr>
+          <tr>
+            <td style="padding: 0.5rem">code_patterns</td>
+            <td style="padding: 0.5rem; text-align: right">505</td>
+            <td style="padding: 0.5rem">Python AST extraction</td>
+          </tr>
+          <tr>
+            <td style="padding: 0.5rem">issue_tracker</td>
+            <td style="padding: 0.5rem; text-align: right">155</td>
+            <td style="padding: 0.5rem">Linear GraphQL API</td>
+          </tr>
+          <tr>
+            <td style="padding: 0.5rem">the-shop</td>
+            <td style="padding: 0.5rem; text-align: right">460</td>
+            <td style="padding: 0.5rem">DO Knowledge Base</td>
+          </tr>
+          <tr>
+            <td style="padding: 0.5rem">vendor-docs</td>
+            <td style="padding: 0.5rem; text-align: right">94</td>
+            <td style="padding: 0.5rem">API documentation</td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- API Endpoints Section -->
+      <div class="recipe-card">
+        <h2 class="recipe-title">📊 API Endpoints</h2>
+
+        <h3 style="margin-top: 1rem; color: var(--lavender)">Health Checks</h3>
+        <pre
+          style="
+            background: var(--gray-blue);
+            color: var(--mint);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+          "
+        >
+# Via Caddy (HTTPS) - Production
+curl https://codechef.appsmithery.co/api/health      # Orchestrator
+curl https://codechef.appsmithery.co/rag/health      # RAG
+curl https://codechef.appsmithery.co/state/health    # State
+curl https://codechef.appsmithery.co/langgraph/health # LangGraph</pre
+        >
+
+        <h3 style="margin-top: 1.5rem; color: var(--lavender)">
+          Core Endpoints
+        </h3>
+        <ul style="margin: 1rem 0; margin-left: 1.5rem">
+          <li><code>POST /api/orchestrate</code> — Submit task to Head Chef</li>
+          <li>
+            <code>GET /rag/query</code> — Semantic search across collections
+          </li>
+          <li>
+            <code>GET /rag/collections</code> — List available RAG collections
+          </li>
+          <li><code>GET /state/workflows/:id</code> — Get workflow state</li>
+        </ul>
+      </div>
+
+      <!-- Deployment Section -->
+      <div class="recipe-card">
+        <h2 class="recipe-title">🚀 Deployment</h2>
+
+        <h3 style="margin-top: 1rem; color: var(--lavender)">
+          Quick Reference
+        </h3>
+        <pre
+          style="
+            background: var(--gray-blue);
+            color: var(--mint);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+          "
+        >
+# Auto-detect changes and deploy
+.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType auto
+
+# Config-only (30s - for .env changes)
+.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
+
+# Full rebuild (10min - for code changes)
+.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType full</pre
+        >
+
+        <div class="warning-box" style="margin-top: 1rem">
+          <strong>⚠️ Config Changes:</strong> Docker Compose reads
+          <code>.env</code> at startup. Simple
+          <code>docker compose restart</code> does NOT reload environment
+          variables. You must use <code>down && up</code> to pick up
+          <code>.env</code> changes.
+        </div>
+      </div>
+
+      <!-- Resources Section -->
+      <div class="recipe-card">
+        <h2 class="recipe-title">📚 Additional Resources</h2>
+        <ul style="margin: 1rem 0; margin-left: 1.5rem">
+          <li>
+            <strong>GitHub Repository:</strong>
+            <a
+              href="https://github.com/Appsmithery/Dev-Tools"
+              target="_blank"
+              style="color: var(--lavender)"
+              >Appsmithery/Dev-Tools</a
+            >
+          </li>
+          <li>
+            <strong>Architecture Guide:</strong>
+            <code>support/docs/ARCHITECTURE.md</code>
+          </li>
+          <li>
+            <strong>Deployment Guide:</strong>
+            <code>support/docs/DEPLOYMENT.md</code>
+          </li>
+          <li>
+            <strong>Quickstart:</strong> <code>support/docs/QUICKSTART.md</code>
+          </li>
+          <li>
+            <strong>MCP Specification:</strong>
+            <a
+              href="https://github.com/modelcontextprotocol/servers"
+              target="_blank"
+              style="color: var(--lavender)"
+              >Official MCP Documentation</a
+            >
+          </li>
+        </ul>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <img src="logos/hat_logo.svg" alt="code/chef" />
+      <span class="footer-text">© 2025 code/chef — "Yes, Chef!"</span>
+      <span>|</span>
+      <a href="docs-overview-new.html">Documentation</a>
+      <span>|</span>
+      <a href="https://github.com/Appsmithery/Dev-Tools" target="_blank"
+        >GitHub</a
+      >
+    </footer>
+
+    <script>
+      // Theme Toggle
+      const themeToggle = document.getElementById("themeToggle");
+      const savedTheme = localStorage.getItem("theme");
+
+      if (savedTheme === "dark") {
+        document.body.dataset.theme = "dark";
+        themeToggle.textContent = "☀️";
+      }
+
+      themeToggle.addEventListener("click", function () {
+        const isDark = document.body.dataset.theme === "dark";
+        document.body.dataset.theme = isDark ? "" : "dark";
+        themeToggle.textContent = isDark ? "🌙" : "☀️";
+        localStorage.setItem("theme", isDark ? "" : "dark");
+      });
+    </script>
   </body>
 </html>
