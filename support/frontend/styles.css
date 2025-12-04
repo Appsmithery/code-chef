@@ -10,7 +10,7 @@
 
     /* Semantic Colors - Light Mode */
     --bg: var(--light-yellow);
-    --card-bg: #ffffff;
+    --card-bg: #887bb0;
     --text: var(--gray-blue);
     --text-muted: #6b7280;
     --accent: var(--mint);
