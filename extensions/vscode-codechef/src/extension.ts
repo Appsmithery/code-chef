@@ -57,8 +57,8 @@ export function activate(context: vscode.ExtensionContext) {
             100
         );
         statusBarItem.text = '$(rocket) code/chef';
-        statusBarItem.tooltip = 'code/chef LangGraph Orchestrator - Click to check status';
-        statusBarItem.command = 'codechef.checkStatus';
+        statusBarItem.tooltip = 'code/chef LangGraph Orchestrator - Click for menu';
+        statusBarItem.command = 'codechef.showMenu';
         statusBarItem.show();
         context.subscriptions.push(statusBarItem);
         console.log('code/chef: Status bar created');
@@ -159,6 +159,114 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('codechef.clearCache', () => {
             chatParticipant.clearCache();
             vscode.window.showInformationMessage('code/chef cache cleared');
+        })
+    );
+
+    // Register status bar menu command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.showMenu', async () => {
+            const config = vscode.workspace.getConfiguration('codechef');
+            const orchestratorUrl = config.get('orchestratorUrl', 'https://codechef.appsmithery.co/api');
+            const langsmithUrl = config.get('langsmithUrl', '');
+            
+            const items: vscode.QuickPickItem[] = [
+                {
+                    label: '$(rocket) Submit Task',
+                    description: 'Send a development task to the orchestrator',
+                    detail: 'codechef.orchestrate'
+                },
+                {
+                    label: '$(search) Check Task Status',
+                    description: 'Check the status of a submitted task',
+                    detail: 'codechef.checkStatus'
+                },
+                {
+                    label: '$(checklist) View Pending Approvals',
+                    description: 'Open Linear to see HITL approval requests',
+                    detail: 'codechef.showApprovals'
+                },
+                { label: '', kind: vscode.QuickPickItemKind.Separator },
+                {
+                    label: '$(pulse) Health Check',
+                    description: `Test connection to ${orchestratorUrl}`,
+                    detail: 'codechef.healthCheck'
+                },
+                {
+                    label: '$(link-external) Open LangSmith Traces',
+                    description: 'View LLM traces and debugging',
+                    detail: 'codechef.openLangsmith'
+                },
+                {
+                    label: '$(graph) Open Grafana Metrics',
+                    description: 'View Prometheus dashboards',
+                    detail: 'codechef.openGrafana'
+                },
+                { label: '', kind: vscode.QuickPickItemKind.Separator },
+                {
+                    label: '$(gear) Configure Orchestrator URL',
+                    description: 'Change the orchestrator endpoint',
+                    detail: 'codechef.configure'
+                },
+                {
+                    label: '$(settings-gear) Open Settings',
+                    description: 'View all code/chef settings',
+                    detail: 'codechef.openSettings'
+                },
+                {
+                    label: '$(trash) Clear Cache',
+                    description: 'Clear session and tool cache',
+                    detail: 'codechef.clearCache'
+                }
+            ];
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: 'code/chef - Select an action',
+                matchOnDescription: true
+            });
+
+            if (selected && selected.detail) {
+                vscode.commands.executeCommand(selected.detail);
+            }
+        })
+    );
+
+    // Register health check command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.healthCheck', async () => {
+            const config = vscode.workspace.getConfiguration('codechef');
+            const url = config.get<string>('orchestratorUrl', 'https://codechef.appsmithery.co/api');
+            const apiKey = config.get<string>('apiKey') || undefined;
+            
+            vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: 'Checking orchestrator health...',
+                cancellable: false
+            }, async () => {
+                await checkOrchestratorHealth(url, apiKey);
+            });
+        })
+    );
+
+    // Register open LangSmith command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.openLangsmith', () => {
+            const config = vscode.workspace.getConfiguration('codechef');
+            const url = config.get('langsmithUrl', 'https://smith.langchain.com');
+            vscode.env.openExternal(vscode.Uri.parse(url));
+        })
+    );
+
+    // Register open Grafana command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.openGrafana', () => {
+            vscode.env.openExternal(vscode.Uri.parse('https://appsmithery.grafana.net'));
+        })
+    );
+
+    // Register open settings command
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.openSettings', () => {
+            vscode.commands.executeCommand('workbench.action.openSettings', 'codechef');
         })
     );
 
