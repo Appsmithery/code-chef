@@ -3,464 +3,470 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>🤖 AI Agents - Dev-Tools</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          sans-serif;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: #333;
-        min-height: 100vh;
-        padding: 2rem;
-      }
-      .container {
-        max-width: 1400px;
-        margin: 0 auto;
-        background: white;
-        border-radius: 12px;
-        padding: 3rem;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      }
-      .header {
-        border-bottom: 3px solid #667eea;
-        padding-bottom: 1.5rem;
-        margin-bottom: 2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      h1 {
-        font-size: 2.5rem;
-        color: #667eea;
-        margin-bottom: 0.5rem;
-      }
-      .subtitle {
-        color: #666;
-        font-size: 1.1rem;
-      }
-      .back-link {
-        display: inline-block;
-        padding: 0.75rem 1.5rem;
-        background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
-        color: white;
-        text-decoration: none;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: transform 0.2s;
-      }
-      .back-link:hover {
-        transform: translateY(-2px);
-      }
-      .agent-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
-        gap: 2rem;
-        margin-top: 2rem;
-      }
-      .agent-card {
-        background: #f8f9fa;
-        border-radius: 12px;
-        padding: 2rem;
-        border-left: 6px solid #667eea;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        transition: transform 0.2s, box-shadow 0.2s;
-      }
-      .agent-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-      }
-      .agent-card.orchestrator {
-        border-left-color: #667eea;
-      }
-      .agent-card.feature-dev {
-        border-left-color: #28a745;
-      }
-      .agent-card.code-review {
-        border-left-color: #ffc107;
-      }
-      .agent-card.infrastructure {
-        border-left-color: #17a2b8;
-      }
-      .agent-card.cicd {
-        border-left-color: #fd7e14;
-      }
-      .agent-card.documentation {
-        border-left-color: #6f42c1;
-      }
-      .agent-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 1.5rem;
-      }
-      .agent-title {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-      }
-      .agent-title h2 {
-        font-size: 1.75rem;
-        color: #333;
-        margin: 0;
-      }
-      .agent-icon {
-        font-size: 2rem;
-      }
-      .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        background: #d4edda;
-        color: #155724;
-      }
-      .agent-meta {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: 1rem;
-        margin: 1.5rem 0;
-        padding: 1rem;
-        background: white;
-        border-radius: 8px;
-      }
-      .meta-item {
-        display: flex;
-        flex-direction: column;
-      }
-      .meta-label {
-        font-size: 0.85rem;
-        color: #666;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.25rem;
-      }
-      .meta-value {
-        font-size: 1rem;
-        color: #333;
-        font-family: "Courier New", monospace;
-      }
-      .agent-description {
-        color: #555;
-        line-height: 1.6;
-        margin-bottom: 1.5rem;
-        font-size: 1.05rem;
-      }
-      .endpoints-section {
-        margin-top: 1.5rem;
-        padding-top: 1.5rem;
-        border-top: 2px solid #e0e0e0;
-      }
-      .endpoints-section h3 {
-        color: #667eea;
-        margin-bottom: 1rem;
-        font-size: 1.25rem;
-      }
-      .endpoint {
-        background: white;
-        padding: 1rem;
-        margin-bottom: 0.75rem;
-        border-radius: 6px;
-        border-left: 3px solid #667eea;
-      }
-      .endpoint-method {
-        display: inline-block;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        font-family: "Courier New", monospace;
-        margin-right: 0.5rem;
-      }
-      .method-get {
-        background: #d4edda;
-        color: #155724;
-      }
-      .method-post {
-        background: #d1ecf1;
-        color: #0c5460;
-      }
-      .endpoint-path {
-        font-family: "Courier New", monospace;
-        color: #333;
-        font-weight: 600;
-      }
-      .endpoint-description {
-        color: #666;
-        font-size: 0.9rem;
-        margin-top: 0.5rem;
-        line-height: 1.4;
-      }
-      .metadata-section {
-        margin-top: 1.5rem;
-        padding: 1rem;
-        background: #e7f3ff;
-        border-radius: 8px;
-        border-left: 4px solid #0066cc;
-      }
-      .metadata-section h4 {
-        color: #0066cc;
-        margin-bottom: 0.75rem;
-        font-size: 1rem;
-      }
-      .metadata-list {
-        list-style: none;
-        padding: 0;
-      }
-      .metadata-list li {
-        padding: 0.25rem 0;
-        color: #555;
-        font-size: 0.9rem;
-      }
-      .metadata-list code {
-        background: white;
-        padding: 0.2rem 0.5rem;
-        border-radius: 3px;
-        font-family: "Courier New", monospace;
-        color: #d63384;
-      }
-      .info-box {
-        background: #fff3cd;
-        border-left: 4px solid #ffc107;
-        padding: 1rem;
-        margin: 2rem 0;
-        border-radius: 4px;
-      }
-      .info-box strong {
-        color: #856404;
-      }
-    </style>
+    <title>Agents — code/chef</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div class="container">
-      <div class="header">
-        <div>
-          <h1>🤖 AI Agent System</h1>
-          <p class="subtitle">
-            6 specialized agents powered by Gradient AI with Langfuse tracing
-          </p>
-        </div>
-        <a href="/production-landing.html" class="back-link">← Back to Home</a>
-      </div>
+    <!-- Header -->
+    <header class="header">
+      <a href="index.html" class="header-brand">
+        <img src="assets/codechef-logo.png" alt="code/chef logo" />
+        <h1>code/chef</h1>
+      </a>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="agents.html" class="active">Agents</a>
+        <a href="servers.html">Servers</a>
+        <a href="docs-overview-new.html">Cookbook</a>
+        <button id="themeToggle" aria-label="Toggle dark mode">🌙</button>
+      </nav>
+    </header>
 
-      <div class="info-box">
+    <!-- Hero Section -->
+    <section class="hero" style="margin-bottom: 0">
+      <img src="assets/codechef-logo.png" alt="code/chef" class="hero-logo" />
+      <div class="hero-content">
+        <h1>The Kitchen Team</h1>
+        <p>
+          6 specialized AI agents powered by Gradient AI with LangSmith tracing
+        </p>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-number">6</div>
+            <div class="stat-label">Agents</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">5</div>
+            <div class="stat-label">LLM Models</div>
+          </div>
+          <div class="stat">
+            <div class="stat-number">178+</div>
+            <div class="stat-label">Tools</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container">
+      <div class="info-box" style="margin-bottom: 2rem">
         <strong>Architecture:</strong> Each agent is a specialized node in the
         LangGraph workflow with dedicated LLM models, MCP tool access, RAG
         context, and comprehensive observability via LangSmith + Prometheus.
       </div>
 
       <div class="agent-grid">
-        <!-- Orchestrator Agent -->
-        <div class="agent-card orchestrator">
+        <!-- Orchestrator Agent (Head Chef) -->
+        <div class="agent-card head-chef">
           <div class="agent-header">
-            <div class="agent-title">
-              <span class="agent-icon">🎯</span>
-              <h2>Orchestrator</h2>
-            </div>
-            <span class="status-badge">✓ Online</span>
+            <img
+              src="assets/codechef-logo.png"
+              alt="Head Chef"
+              style="height: 32px"
+            />
+            <h3>Orchestrator</h3>
+            <span class="agent-role">Head Chef</span>
           </div>
-
           <p class="agent-description">
             Coordinates task routing and workflow hand-offs across all
             specialized agents. Acts as the central coordinator for complex
             multi-agent development workflows.
           </p>
-
-          <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Model</span>
-              <span class="meta-value">llama3.3-70b-instruct</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Capabilities</span>
-              <span class="meta-value"
-                >Task Routing, Delegation, Coordination</span
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+              margin: 1rem 0;
+              padding: 1rem;
+              background: var(--bg);
+              border-radius: 8px;
+            "
+          >
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Model</span
               >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                llama3.3-70b-instruct
+              </div>
             </div>
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Port</span
+              >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                8001
+              </div>
+            </div>
+          </div>
+          <div class="agent-capabilities">
+            <span class="capability-tag">Task Routing</span>
+            <span class="capability-tag">Delegation</span>
+            <span class="capability-tag">Coordination</span>
+            <span class="capability-tag">Workflow Management</span>
           </div>
         </div>
 
-        <!-- Feature Development Agent -->
-        <div class="agent-card feature-dev">
+        <!-- Feature Development Agent (Sous-Chef) -->
+        <div class="agent-card sous-chef">
           <div class="agent-header">
-            <div class="agent-title">
-              <span class="agent-icon">💻</span>
-              <h2>Feature Development</h2>
-            </div>
-            <span class="status-badge">✓ Online</span>
+            <span style="font-size: 1.5rem">💻</span>
+            <h3>Feature Development</h3>
+            <span
+              class="agent-role"
+              style="background: var(--lavender); color: white"
+              >Sous-Chef</span
+            >
           </div>
-
           <p class="agent-description">
             Handles feature implementation and code generation. Specializes in
             creating new features, writing application code, and implementing
             business logic across the stack.
           </p>
-
-          <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Model</span>
-              <span class="meta-value">codellama-13b</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Capabilities</span>
-              <span class="meta-value"
-                >Feature Implementation, Refactoring, Code Generation</span
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+              margin: 1rem 0;
+              padding: 1rem;
+              background: var(--bg);
+              border-radius: 8px;
+            "
+          >
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Model</span
               >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                codellama-13b
+              </div>
             </div>
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Specialization</span
+              >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                Code Generation
+              </div>
+            </div>
+          </div>
+          <div class="agent-capabilities">
+            <span class="capability-tag">Feature Implementation</span>
+            <span class="capability-tag">Refactoring</span>
+            <span class="capability-tag">Code Generation</span>
           </div>
         </div>
 
         <!-- Code Review Agent -->
         <div class="agent-card code-review">
           <div class="agent-header">
-            <div class="agent-title">
-              <span class="agent-icon">🔍</span>
-              <h2>Code Review</h2>
-            </div>
-            <span class="status-badge">✓ Online</span>
+            <span style="font-size: 1.5rem">🔍</span>
+            <h3>Code Review</h3>
+            <span
+              class="agent-role"
+              style="background: var(--gray-blue); color: white"
+              >Agent</span
+            >
           </div>
-
           <p class="agent-description">
             Performs automated code reviews, static analysis, and security
             scanning. Ensures code quality, identifies bugs, and enforces best
             practices across the codebase.
           </p>
-
-          <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Model</span>
-              <span class="meta-value">llama-3.1-70b-instruct</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Capabilities</span>
-              <span class="meta-value"
-                >Code Review, Quality Analysis, Best Practices</span
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+              margin: 1rem 0;
+              padding: 1rem;
+              background: var(--bg);
+              border-radius: 8px;
+            "
+          >
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Model</span
               >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                llama-3.1-70b-instruct
+              </div>
             </div>
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Specialization</span
+              >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                Quality Analysis
+              </div>
+            </div>
+          </div>
+          <div class="agent-capabilities">
+            <span class="capability-tag">Code Review</span>
+            <span class="capability-tag">Quality Analysis</span>
+            <span class="capability-tag">Best Practices</span>
           </div>
         </div>
 
         <!-- Infrastructure Agent -->
         <div class="agent-card infrastructure">
           <div class="agent-header">
-            <div class="agent-title">
-              <span class="agent-icon">🏗️</span>
-              <h2>Infrastructure</h2>
-            </div>
-            <span class="status-badge">✓ Online</span>
+            <span style="font-size: 1.5rem">🏗️</span>
+            <h3>Infrastructure</h3>
+            <span
+              class="agent-role"
+              style="background: var(--salmon); color: var(--gray-blue)"
+              >Agent</span
+            >
           </div>
-
           <p class="agent-description">
             Manages infrastructure as code, Docker, Kubernetes, and Terraform
             configurations. Handles provisioning, scaling, and deployment
             infrastructure across cloud providers.
           </p>
-
-          <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Model</span>
-              <span class="meta-value">llama-3.1-8b-instruct</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Capabilities</span>
-              <span class="meta-value"
-                >Infrastructure Provisioning, Docker, Kubernetes</span
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+              margin: 1rem 0;
+              padding: 1rem;
+              background: var(--bg);
+              border-radius: 8px;
+            "
+          >
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Model</span
               >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                llama-3.1-8b-instruct
+              </div>
             </div>
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Specialization</span
+              >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                IaC / DevOps
+              </div>
+            </div>
+          </div>
+          <div class="agent-capabilities">
+            <span class="capability-tag">Docker</span>
+            <span class="capability-tag">Kubernetes</span>
+            <span class="capability-tag">Terraform</span>
+            <span class="capability-tag">Provisioning</span>
           </div>
         </div>
 
         <!-- CI/CD Agent -->
         <div class="agent-card cicd">
           <div class="agent-header">
-            <div class="agent-title">
-              <span class="agent-icon">⚙️</span>
-              <h2>CI/CD</h2>
-            </div>
-            <span class="status-badge">✓ Online</span>
+            <span style="font-size: 1.5rem">⚙️</span>
+            <h3>CI/CD</h3>
+            <span
+              class="agent-role"
+              style="background: var(--light-yellow); color: var(--gray-blue)"
+              >Agent</span
+            >
           </div>
-
           <p class="agent-description">
             Manages continuous integration and deployment pipelines. Creates and
             maintains CI/CD workflows for GitHub Actions, GitLab CI, and
             Jenkins.
           </p>
-
-          <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Model</span>
-              <span class="meta-value">llama-3.1-8b-instruct</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Capabilities</span>
-              <span class="meta-value"
-                >Pipeline Generation, Deployment Automation</span
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+              margin: 1rem 0;
+              padding: 1rem;
+              background: var(--bg);
+              border-radius: 8px;
+            "
+          >
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Model</span
               >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                llama-3.1-8b-instruct
+              </div>
             </div>
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Specialization</span
+              >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                Pipelines
+              </div>
+            </div>
+          </div>
+          <div class="agent-capabilities">
+            <span class="capability-tag">GitHub Actions</span>
+            <span class="capability-tag">GitLab CI</span>
+            <span class="capability-tag">Deployment</span>
           </div>
         </div>
 
         <!-- Documentation Agent -->
         <div class="agent-card documentation">
           <div class="agent-header">
-            <div class="agent-title">
-              <span class="agent-icon">📚</span>
-              <h2>Documentation</h2>
-            </div>
-            <span class="status-badge">✓ Online</span>
+            <span style="font-size: 1.5rem">📚</span>
+            <h3>Documentation</h3>
+            <span class="agent-role">Agent</span>
           </div>
-
           <p class="agent-description">
             Generates and maintains project documentation, READMEs, API docs,
             and guides. Keeps technical documentation up-to-date and accessible
             for the team.
           </p>
-
-          <div class="agent-meta">
-            <div class="meta-item">
-              <span class="meta-label">Model</span>
-              <span class="meta-value">mistral-7b</span>
-            </div>
-            <div class="meta-item">
-              <span class="meta-label">Capabilities</span>
-              <span class="meta-value"
-                >Documentation Generation, Technical Writing</span
+          <div
+            style="
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 1rem;
+              margin: 1rem 0;
+              padding: 1rem;
+              background: var(--bg);
+              border-radius: 8px;
+            "
+          >
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Model</span
               >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                mistral-7b
+              </div>
             </div>
+            <div>
+              <span
+                style="
+                  font-size: 0.75rem;
+                  color: var(--text-muted);
+                  text-transform: uppercase;
+                  letter-spacing: 0.05em;
+                "
+                >Specialization</span
+              >
+              <div style="font-family: monospace; margin-top: 0.25rem">
+                Technical Writing
+              </div>
+            </div>
+          </div>
+          <div class="agent-capabilities">
+            <span class="capability-tag">README Generation</span>
+            <span class="capability-tag">API Docs</span>
+            <span class="capability-tag">Guides</span>
           </div>
         </div>
       </div>
 
-      <div class="info-box" style="margin-top: 3rem">
-        <strong>Observability:</strong> All agents automatically trace to
+      <!-- Observability Info -->
+      <div class="info-box" style="margin-top: 2rem">
+        <strong>📊 Observability:</strong> All agents automatically trace to
         <a
           href="https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/"
           target="_blank"
-          style="color: #667eea"
+          style="color: var(--lavender)"
           >LangSmith</a
         >
         with comprehensive metadata (agent_name, task_id, thread_id, model,
-        execution timing, token usage, costs). Prometheus metrics available on
-        port 9090.
+        execution timing, token usage, costs). Prometheus metrics available via
+        <a
+          href="https://appsmithery.grafana.net"
+          target="_blank"
+          style="color: var(--lavender)"
+          >Grafana Cloud</a
+        >.
       </div>
 
-      <!-- Architecture Visualizations -->
-      <div
+      <!-- Architecture Visualization -->
+      <section
         style="
           margin-top: 3rem;
           padding-top: 2rem;
-          border-top: 3px solid #667eea;
+          border-top: 2px solid var(--mint);
         "
       >
-        <h2 style="color: #667eea; margin-bottom: 2rem; font-size: 2rem">
-          🏗️ System Architecture
-        </h2>
+        <div class="section-header">
+          <h2>🏗️ System Architecture</h2>
+        </div>
 
         <!-- Tab Navigation -->
         <div
@@ -472,35 +478,12 @@
           "
         >
           <button
-            class="diagram-tab active"
+            class="diagram-tab active btn btn-secondary"
             data-diagram="simplified-arch"
-            style="
-              padding: 0.75rem 1.5rem;
-              background: #667eea;
-              color: white;
-              border: none;
-              border-radius: 8px;
-              cursor: pointer;
-              font-weight: 600;
-              transition: all 0.3s;
-            "
           >
             System Overview
           </button>
-          <button
-            class="diagram-tab"
-            data-diagram="workflow"
-            style="
-              padding: 0.75rem 1.5rem;
-              background: #f8f9fa;
-              color: #666;
-              border: 2px solid #dee2e6;
-              border-radius: 8px;
-              cursor: pointer;
-              font-weight: 600;
-              transition: all 0.3s;
-            "
-          >
+          <button class="diagram-tab btn btn-outline" data-diagram="workflow">
             Request Flow
           </button>
         </div>
@@ -509,31 +492,31 @@
         <div
           id="diagram-container"
           style="
-            background: #1e1e2e;
+            background: var(--gray-blue);
             padding: 2rem;
             border-radius: 12px;
             overflow-x: auto;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            box-shadow: var(--shadow-lg);
           "
         >
           <!-- Simplified Architecture Diagram -->
           <div class="diagram-content active" id="simplified-arch">
             <pre class="mermaid">
-%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#667eea','primaryTextColor':'#fff','primaryBorderColor':'#764ba2','lineColor':'#a0a0ff','secondaryColor':'#1e1e2e','tertiaryColor':'#2d2d44'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#bcece0','primaryTextColor':'#4c5270','primaryBorderColor':'#887bb0','lineColor':'#bcece0','secondaryColor':'#2a2e3f','tertiaryColor':'#4c5270'}}}%%
 graph TB
     Client[("👤<br/>User")]
     
-    Orchestrator{"🎯<br/>Orchestrator<br/><small>Port 8001</small>"}
+    Orchestrator{"🎯<br/>Head Chef<br/><small>Port 8001</small>"}
     
-    FeatureDev[["💻<br/>Feature Dev"]]
+    FeatureDev[["💻<br/>Sous-Chef"]]
     CodeReview[["🔍<br/>Code Review"]]
     Infrastructure[["☁️<br/>Infrastructure"]]
     CICD[["🚀<br/>CI/CD"]]
     Documentation[["📝<br/>Docs"]]
     
-    MCP[("🔌<br/>MCP Gateway<br/><small>150+ Tools</small>")]
+    MCP[("🔌<br/>MCP Gateway<br/><small>178+ Tools</small>")]
     
-    RAG[("<br/>📚 RAG<br/><small>Context</small>")]
+    RAG[("<br/>📚 RAG<br/><small>Qdrant</small>")]
     State[("<br/>💾 State<br/><small>PostgreSQL</small>")]
     Gradient[("<br/>⚡ Gradient<br/><small>LLM</small>")]
     
@@ -551,25 +534,25 @@ graph TB
     Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|State| State
     Orchestrator & FeatureDev & CodeReview & Infrastructure & CICD & Documentation -.->|LLM| Gradient
     
-    classDef client fill:#667eea,stroke:#764ba2,stroke-width:3px,color:#fff
-    classDef orchestrator fill:#764ba2,stroke:#667eea,stroke-width:3px,color:#fff
-    classDef agent fill:#4a9eff,stroke:#3d7dcc,stroke-width:2px,color:#fff
-    classDef service fill:#2d2d44,stroke:#667eea,stroke-width:2px,color:#a0a0ff
+    classDef client fill:#bcece0,stroke:#887bb0,stroke-width:3px,color:#4c5270
+    classDef orchestrator fill:#887bb0,stroke:#bcece0,stroke-width:3px,color:#fff
+    classDef agent fill:#f4b9b8,stroke:#4c5270,stroke-width:2px,color:#4c5270
+    classDef service fill:#2a2e3f,stroke:#bcece0,stroke-width:2px,color:#bcece0
     
     class Client client
     class Orchestrator orchestrator
     class FeatureDev,CodeReview,Infrastructure,CICD,Documentation agent
     class MCP,RAG,State,Gradient service
-            </pre>
+                    </pre>
           </div>
 
           <!-- Workflow Diagram -->
           <div class="diagram-content" id="workflow" style="display: none">
             <pre class="mermaid">
-%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#667eea','primaryTextColor':'#fff','primaryBorderColor':'#764ba2','lineColor':'#a0a0ff','secondaryColor':'#1e1e2e','tertiaryColor':'#2d2d44'}}}%%
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#bcece0','primaryTextColor':'#4c5270','primaryBorderColor':'#887bb0','lineColor':'#bcece0','secondaryColor':'#2a2e3f','tertiaryColor':'#4c5270'}}}%%
 sequenceDiagram
     participant U as 👤 User
-    participant O as 🎯 Orchestrator
+    participant O as 🎯 Head Chef
     participant A as 🤖 Agent
     participant M as 🔌 MCP Tools
     participant L as ⚡ Gradient AI
@@ -584,22 +567,48 @@ sequenceDiagram
     L-->>A: LLM Response
     A-->>O: Task Complete
     O-->>U: Result
-            </pre>
+                    </pre
+            >
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <img src="assets/codechef-logo.png" alt="code/chef" />
+      <span class="footer-text">© 2025 code/chef — "Yes, Chef!"</span>
+      <span>|</span>
+      <a href="docs-overview-new.html">Documentation</a>
+      <span>|</span>
+      <a href="https://github.com/Appsmithery/Dev-Tools" target="_blank"
+        >GitHub</a
+      >
+    </footer>
 
     <!-- Mermaid.js -->
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
-      mermaid.initialize({
-        startOnLoad: true,
-        theme: "dark",
-      });
+      mermaid.initialize({ startOnLoad: true, theme: "dark" });
     </script>
 
     <script>
+      // Theme Toggle
+      const themeToggle = document.getElementById("themeToggle");
+      const savedTheme = localStorage.getItem("theme");
+
+      if (savedTheme === "dark") {
+        document.body.dataset.theme = "dark";
+        themeToggle.textContent = "☀️";
+      }
+
+      themeToggle.addEventListener("click", function () {
+        const isDark = document.body.dataset.theme === "dark";
+        document.body.dataset.theme = isDark ? "" : "dark";
+        themeToggle.textContent = isDark ? "🌙" : "☀️";
+        localStorage.setItem("theme", isDark ? "" : "dark");
+      });
+
       // Diagram tab switching
       document.addEventListener("DOMContentLoaded", () => {
         const tabs = document.querySelectorAll(".diagram-tab");
@@ -607,20 +616,18 @@ sequenceDiagram
 
         tabs.forEach((tab) => {
           tab.addEventListener("click", () => {
-            // Remove active class
+            // Update button styles
             tabs.forEach((t) => {
-              t.style.background = "#f8f9fa";
-              t.style.color = "#666";
-              t.style.border = "2px solid #dee2e6";
+              t.classList.remove("btn-secondary");
+              t.classList.add("btn-outline");
             });
+            tab.classList.remove("btn-outline");
+            tab.classList.add("btn-secondary");
+
+            // Hide all content
             contents.forEach((c) => (c.style.display = "none"));
 
-            // Add active class
-            tab.style.background = "#667eea";
-            tab.style.color = "white";
-            tab.style.border = "none";
-
-            // Show content
+            // Show selected content
             const diagramId = tab.getAttribute("data-diagram");
             document.getElementById(diagramId).style.display = "block";
           });
