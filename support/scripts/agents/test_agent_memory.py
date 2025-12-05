@@ -10,81 +10,84 @@ from pathlib import Path
 # Add agents to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "agents"))
 
+
 def test_basic_memory():
     """Test basic conversation memory"""
     print("Testing basic conversation memory...")
-    
+
     from shared.lib.langchain_memory import create_conversation_memory
-    
+
     memory = create_conversation_memory()
-    
+
     # Save conversation
     memory.save_context(
         {"input": "What is Docker?"},
-        {"output": "Docker is a containerization platform that packages applications with their dependencies."}
+        {
+            "output": "Docker is a containerization platform that packages applications with their dependencies."
+        },
     )
-    
+
     memory.save_context(
         {"input": "How do I deploy with Docker?"},
-        {"output": "Use docker-compose.yml to define services, then run `docker compose up -d` to deploy."}
+        {
+            "output": "Use docker-compose.yml to define services, then run `docker compose up -d` to deploy."
+        },
     )
-    
+
     # Load memory
     loaded = memory.load_memory_variables({})
     print(f"✅ Conversation memory: {len(loaded.get('chat_history', []))} messages")
-    
+
     return True
 
 
 def test_vector_memory():
     """Test vector store memory with Qdrant"""
     print("\nTesting vector memory (Qdrant Cloud)...")
-    
+
     from shared.lib.langchain_memory import create_vector_memory
-    
+
     memory = create_vector_memory(
-        collection_name="agent_memory",
-        search_kwargs={"k": 3}
+        collection_name="agent_memory", search_kwargs={"k": 3}
     )
-    
+
     if memory is None:
         print("⚠ Vector memory disabled (Qdrant not available)")
         return False
-    
+
     print("✅ Vector memory created")
-    
+
     # Save some context
     test_conversations = [
         {
             "input": "Explain the agent architecture",
-            "output": "The system has 6 agents: orchestrator, feature-dev, code-review, infrastructure, cicd, and documentation. They coordinate via MCP gateway."
+            "output": "The system has 6 agents: orchestrator, feature-dev, code-review, infrastructure, cicd, and documentation. They coordinate via MCP gateway.",
         },
         {
             "input": "How does MCP work?",
-            "output": "MCP (Model Context Protocol) provides 150+ tools across 17 servers. Agents access tools via the gateway at port 8000."
+            "output": "MCP (Model Context Protocol) provides 150+ tools across 17 servers. Agents access tools via the gateway at port 8000.",
         },
         {
             "input": "What is Qdrant used for?",
-            "output": "Qdrant Cloud stores vector embeddings for 6 collections: code_patterns (default), issue_tracker, library_registry, vendor-docs, feature_specs, agent_memory, and task_context."
-        }
+            "output": "Qdrant Cloud stores vector embeddings for 6 collections: code_patterns (default), issue_tracker, library_registry, vendor-docs, feature_specs, agent_memory, and task_context.",
+        },
     ]
-    
+
     print("Saving test conversations...")
     for i, conv in enumerate(test_conversations):
         try:
-            memory.save_context(
-                {"input": conv["input"]},
-                {"output": conv["output"]}
-            )
+            memory.save_context({"input": conv["input"]}, {"output": conv["output"]})
             print(f"  ✓ Saved conversation {i+1}/{len(test_conversations)}")
         except Exception as e:
             print(f"  ✗ Failed to save conversation {i+1}: {e}")
             return False
-    
+
     # Try to retrieve
     print("\nRetrieving related memories...")
     try:
-        result = memory.load_memory_variables({"input": "Tell me about the agent system"})
+        result = memory.load_memory_variables(
+            {"input": "Tell me about the agent system"}
+        )
         history = result.get("history", "")
         if history:
             print(f"✅ Retrieved memory: {len(history)} characters")
@@ -101,24 +104,24 @@ def test_vector_memory():
 def verify_qdrant_collection():
     """Verify agent_memory collection in Qdrant"""
     print("\nVerifying Qdrant Cloud collection...")
-    
+
     from shared.lib.qdrant_client import get_qdrant_client
-    
+
     client = get_qdrant_client()
-    
+
     if not client.is_enabled():
         print("✗ Qdrant Cloud not available")
         return False
-    
+
     try:
         import asyncio
-        
+
         # Check collection info
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         info = loop.run_until_complete(client.get_collection_info())
         loop.close()
-        
+
         if info:
             print(f"✅ Collection 'agent_memory':")
             print(f"   Points: {info.get('points_count', 0)}")
@@ -136,22 +139,22 @@ def main():
     print("=" * 60)
     print("Agent Memory Integration Test")
     print("=" * 60)
-    
+
     results = {
         "Basic Memory": test_basic_memory(),
         "Vector Memory": test_vector_memory(),
-        "Qdrant Collection": verify_qdrant_collection()
+        "Qdrant Collection": verify_qdrant_collection(),
     }
-    
+
     print("\n" + "=" * 60)
     print("Results:")
     print("-" * 60)
     for test, passed in results.items():
         status = "✅ PASS" if passed else "⚠ SKIP/FAIL"
         print(f"{test:.<40} {status}")
-    
+
     print("=" * 60)
-    
+
     # Overall
     if results["Basic Memory"]:
         print("\n✅ Agent memory system operational")

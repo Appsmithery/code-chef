@@ -33,15 +33,15 @@ curl -X POST http://localhost:8007/index \
 
 ## Collections
 
-| Collection         | Vectors | Description                          | Indexing Script                                  |
-| ------------------ | ------- | ------------------------------------ | ------------------------------------------------ |
-| `code_patterns`    | ~505    | Python AST extraction from codebase  | `support/scripts/rag/index_code_patterns.py`     |
-| `issue_tracker`    | ~155    | Linear issues                        | `support/scripts/rag/index_issue_tracker.py`     |
-| `library_registry` | ~56     | Context7 library IDs (DEV-194)       | `support/scripts/rag/index_library_registry.py`  |
-| `vendor-docs`      | ~94     | API documentation                    | `support/scripts/rag/index_vendor_docs.py`       |
-| `feature_specs`    | ~4      | Linear project descriptions          | `support/scripts/rag/index_feature_specs.py`     |
-| `task_context`     | 0       | Workflow events (future)             | N/A                                              |
-| `agent_memory`     | 0       | Agent conversations (future)         | N/A                                              |
+| Collection         | Vectors | Description                         | Indexing Script                                 |
+| ------------------ | ------- | ----------------------------------- | ----------------------------------------------- |
+| `code_patterns`    | ~505    | Python AST extraction from codebase | `support/scripts/rag/index_code_patterns.py`    |
+| `issue_tracker`    | ~155    | Linear issues                       | `support/scripts/rag/index_issue_tracker.py`    |
+| `library_registry` | ~56     | Context7 library IDs (DEV-194)      | `support/scripts/rag/index_library_registry.py` |
+| `vendor-docs`      | ~94     | API documentation                   | `support/scripts/rag/index_vendor_docs.py`      |
+| `feature_specs`    | ~4      | Linear project descriptions         | `support/scripts/rag/index_feature_specs.py`    |
+| `task_context`     | 0       | Workflow events (future)            | N/A                                             |
+| `agent_memory`     | 0       | Agent conversations (future)        | N/A                                             |
 
 > **Note**: `the-shop` collection was deleted (Jan 2025) - contained stale DigitalOcean KB data.
 
