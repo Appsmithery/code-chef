@@ -33,15 +33,17 @@ curl -X POST http://localhost:8007/index \
 
 ## Collections
 
-| Collection      | Vectors | Description                         | Indexing Script                              |
-| --------------- | ------- | ----------------------------------- | -------------------------------------------- |
-| `code_patterns` | ~505    | Python AST extraction from codebase | `support/scripts/rag/index_code_patterns.py` |
-| `issue_tracker` | ~155    | Linear issues                       | `support/scripts/rag/index_issue_tracker.py` |
-| `feature_specs` | ~4      | Linear project descriptions         | `support/scripts/rag/index_feature_specs.py` |
-| `vendor-docs`   | ~94     | API documentation                   | `support/scripts/rag/index_vendor_docs.py`   |
-| `the-shop`      | ~460    | DigitalOcean knowledge base         | External sync                                |
-| `task_context`  | 0       | Workflow events (future)            | N/A                                          |
-| `agent_memory`  | 0       | Agent conversations (future)        | N/A                                          |
+| Collection         | Vectors | Description                          | Indexing Script                                  |
+| ------------------ | ------- | ------------------------------------ | ------------------------------------------------ |
+| `code_patterns`    | ~505    | Python AST extraction from codebase  | `support/scripts/rag/index_code_patterns.py`     |
+| `issue_tracker`    | ~155    | Linear issues                        | `support/scripts/rag/index_issue_tracker.py`     |
+| `library_registry` | ~56     | Context7 library IDs (DEV-194)       | `support/scripts/rag/index_library_registry.py`  |
+| `vendor-docs`      | ~94     | API documentation                    | `support/scripts/rag/index_vendor_docs.py`       |
+| `feature_specs`    | ~4      | Linear project descriptions          | `support/scripts/rag/index_feature_specs.py`     |
+| `task_context`     | 0       | Workflow events (future)             | N/A                                              |
+| `agent_memory`     | 0       | Agent conversations (future)         | N/A                                              |
+
+> **Note**: `the-shop` collection was deleted (Jan 2025) - contained stale DigitalOcean KB data.
 
 ## Configuration
 
@@ -51,6 +53,7 @@ curl -X POST http://localhost:8007/index \
 # Qdrant Cloud (production)
 QDRANT_URL=https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io:6333
 QDRANT_API_KEY=<full-jwt-token>  # Starts with eyJ..., non-expiring
+QDRANT_COLLECTION=code_patterns  # Default collection
 
 # OpenAI Embeddings
 OPENAI_API_KEY=sk-...

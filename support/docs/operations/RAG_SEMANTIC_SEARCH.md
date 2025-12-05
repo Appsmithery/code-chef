@@ -32,17 +32,19 @@ curl -X POST https://codechef.appsmithery.co/rag/query \
 
 ---
 
-## Production Collections (1,218 Total Vectors)
+## Production Collections (814 Total Vectors)
 
-| Collection        | Vectors | Source                | Purpose                               | Update Frequency                     |
-| ----------------- | ------- | --------------------- | ------------------------------------- | ------------------------------------ |
-| **code_patterns** | 505     | Python AST extraction | Codebase patterns, functions, classes | On deployment                        |
-| **issue_tracker** | 155     | Linear GraphQL API    | Issue search, project context         | On demand                            |
-| **feature_specs** | 4       | Linear Projects       | Project specifications                | On demand                            |
-| **the-shop**      | 460     | DigitalOcean KB       | DigitalOcean documentation            | Scheduled sync                       |
-| **vendor-docs**   | 94      | API documentation     | Vendor API references                 | Manual                               |
-| **task_context**  | 0       | Workflow events       | Task execution history                | Future (needs workflow_events table) |
-| **agent_memory**  | 0       | Agent conversations   | Episodic agent memory                 | Future                               |
+| Collection           | Vectors | Source                | Purpose                               | Update Frequency                     |
+| -------------------- | ------- | --------------------- | ------------------------------------- | ------------------------------------ |
+| **code_patterns**    | 505     | Python AST extraction | Codebase patterns, functions, classes | On deployment [DEFAULT]              |
+| **issue_tracker**    | 155     | Linear GraphQL API    | Issue search, project context         | On demand                            |
+| **library_registry** | 56      | Context7 library IDs  | MCP library resolution cache          | On demand (DEV-194)                  |
+| **vendor-docs**      | 94      | API documentation     | Vendor API references                 | Manual                               |
+| **feature_specs**    | 4       | Linear Projects       | Project specifications                | On demand                            |
+| **task_context**     | 0       | Workflow events       | Task execution history                | Future (needs workflow_events table) |
+| **agent_memory**     | 0       | Agent conversations   | Episodic agent memory                 | Future                               |
+
+> **Note**: `the-shop` collection was deleted (Jan 2025) - contained stale DigitalOcean KB data with mock embeddings.
 
 ---
 
@@ -138,7 +140,7 @@ Required in `config/env/.env`:
 # Qdrant Cloud
 QDRANT_URL=https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io
 QDRANT_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-QDRANT_COLLECTION=the-shop
+QDRANT_COLLECTION=code_patterns
 QDRANT_VECTOR_SIZE=1536
 QDRANT_DISTANCE=cosine
 
@@ -152,10 +154,11 @@ OPENAI_API_KEY=sk-proj-...
 
 ### Endpoints
 
-| Endpoint       | Method | Description                                  |
-| -------------- | ------ | -------------------------------------------- |
-| `/health`      | GET    | Service health with Qdrant connection status |
-| `/collections` | GET    | List all collections with vector counts      |
+| Endpoint               | Method | Description                                  |
+| ---------------------- | ------ | -------------------------------------------- |
+| `/health`              | GET    | Service health with Qdrant connection status |
+| `/collections`         | GET    | List all collections with vector counts      |
+| `/library-cache/stats` | GET    | Context7 library cache statistics (DEV-194)  |
 | `/query`       | POST   | Semantic search across collections           |
 | `/index`       | POST   | Index new documents (internal)               |
 

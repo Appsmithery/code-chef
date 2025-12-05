@@ -425,20 +425,28 @@ completed_at TIMESTAMP
 ### Long-Term Memory (Qdrant Cloud - rag-context:8007)
 
 **Purpose**: Vector search for documentation, code context, historical patterns  
-**Collections**: `the-shop` (main knowledge base)  
+**Collections**: `code_patterns` (default), `issue_tracker`, `library_registry`, `vendor-docs`, `feature_specs`  
 **Access**: RAG service or direct Qdrant API
 
 ```python
-# Example: Search for similar past tasks
+# Example: Search for similar code patterns
 from shared.lib.qdrant_client import get_qdrant_client
 
 client = get_qdrant_client()
 results = client.search(
-    collection_name="the-shop",
+    collection_name="code_patterns",
     query_vector=embed("implement JWT authentication"),
     limit=5
 )
-# Returns: Similar tasks with outcomes and code examples
+# Returns: Similar code patterns with implementations
+
+# Example: Lookup Context7 library ID
+results = client.search(
+    collection_name="library_registry",
+    query_vector=embed("langchain"),
+    limit=1
+)
+# Returns: {"library_id": "/langchain-ai/langchain", "library_name": "langchain"}
 ```
 
 ### Hybrid Memory (Buffer + Vector)

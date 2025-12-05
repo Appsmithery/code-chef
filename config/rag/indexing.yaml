@@ -1,20 +1,34 @@
 # RAG Indexing Configuration
 
 indexing:
-  strategy: "digitalocean-kb-sync"
+  strategy: "code-patterns-primary"
   schedule: "0 */6 * * *" # Every 6 hours
-  entrypoint: "scripts/sync_kb_to_qdrant.py"
-  kb_ref: "the-shop"
-  collection: "the-shop"
+  entrypoint: "scripts/rag/index_code_patterns.py"
+  collection: "code_patterns"
 
 sources:
-  - type: "digitalocean-knowledge-base"
-    knowledge_base_uuid: "3120c1c2-c1c0-11f0-b074-4e013e2ddde4"
-    manifest: "config/env/workspaces/the-shop.json"
-    signed_url_endpoint: "/v2/gen-ai/indexing_jobs/{job_uuid}/details:signed_url"
-    export_format: "ndjson"
-    includes_embeddings: true
-
+  # Primary: Code patterns from workspace (Python AST extraction)
+  - type: "codebase"
+    name: "code-patterns"
+    collection: "code_patterns"
+    paths:
+      - "agent_orchestrator/"
+      - "shared/"
+    include:
+      - "*.py"
+    exclude:
+      - "__pycache__/**"
+      - "*.pyc"
+    chunk_size: 1500
+    overlap: 200
+    
+  # Context7 Library Registry (DEV-194)
+  - type: "library-registry"
+    name: "context7-cache"
+    collection: "library_registry"
+    seed_file: "config/rag/library-seed.yaml"
+    
+  # Git repositories (future)
   - type: "git"
     repositories:
       - "https://github.com/Appsmithery/*"
