@@ -250,7 +250,8 @@ class CodeChefChatParticipant {
         if (langsmithUrl) {
             stream.markdown(`- [LangSmith Traces](${langsmithUrl})\n`);
         }
-        stream.markdown(`- [Prometheus Metrics](https://codechef.appsmithery.co)\n`);
+        const grafanaUrl = vscode.workspace.getConfiguration('codechef').get('grafanaUrl', 'https://appsmithery.grafana.net');
+        stream.markdown(`- [Grafana Metrics](${grafanaUrl})\n`);
         stream.markdown(`- Check status: \`@codechef /status ${response.task_id}\`\n`);
         return {
             metadata: {

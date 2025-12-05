@@ -278,7 +278,9 @@ export function activate(context: vscode.ExtensionContext) {
     // Register open Grafana command
     context.subscriptions.push(
         vscode.commands.registerCommand('codechef.openGrafana', () => {
-            vscode.env.openExternal(vscode.Uri.parse('https://appsmithery.grafana.net'));
+            const config = vscode.workspace.getConfiguration('codechef');
+            const url = config.get('grafanaUrl', 'https://appsmithery.grafana.net');
+            vscode.env.openExternal(vscode.Uri.parse(url));
         })
     );
 
