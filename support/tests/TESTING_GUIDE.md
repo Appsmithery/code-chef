@@ -1,23 +1,38 @@
-# Testing Guide: Event Sourcing Tests
+# Testing Guide: Dev-Tools Test Suite
+
+**Last Updated**: December 5, 2025
 
 ## Quick Start
 
 ```powershell
 # Install test dependencies
-pip install -r support/tests/requirements-test.txt
+pip install -r support/tests/requirements.txt
 
-# Run all event sourcing tests
-pytest support/tests/unit/test_workflow_reducer.py -v
+# Run all tests (via VS Code Task or terminal)
+pytest support/tests -v
 
-# Run integration tests (requires services)
-pytest support/tests/integration/test_event_replay.py -v
+# Run specific test categories
+pytest support/tests/unit -v                    # Unit tests (fast, mocked)
+pytest support/tests/integration -v             # Integration (requires services)
+pytest support/tests/e2e -v                     # End-to-end workflows
 
 # Run with coverage
-pytest support/tests -v --cov=shared.lib.workflow_reducer --cov=shared.lib.workflow_events --cov-report=html
+pytest support/tests -v --cov=agent_orchestrator --cov=shared --cov-report=html
 
 # Run property-based tests with more examples
-HYPOTHESIS_PROFILE=thorough pytest support/tests/unit/test_workflow_reducer.py -v
+$env:HYPOTHESIS_PROFILE="thorough"; pytest support/tests/unit/test_workflow_reducer.py -v
 ```
+
+## VS Code Integration
+
+Tests are fully integrated with VS Code's Test Explorer:
+
+1. **Open Test Explorer**: Click beaker icon in Activity Bar (or `Ctrl+Shift+P` → "Testing: Focus on Test Explorer View")
+2. **Run tests**: Click ▶️ next to test file, class, or method
+3. **Debug tests**: Right-click → "Debug Test"
+4. **Use Tasks**: `Ctrl+Shift+P` → "Tasks: Run Task" → Select test task
+
+See `support/tests/VSCODE_TESTING.md` for complete VS Code testing guide.
 
 ## Test Structure
 
@@ -135,11 +150,51 @@ Available fixtures in `conftest.py`:
 - `secret_key` - HMAC secret key for event signatures
 - `sample_workflow_template` - Sample workflow with 3 steps
 - `sample_workflow_context` - Sample context (pr_number, repo, branch, author)
-- `mock_gradient_client` - Mock Gradient AI client
+- `mock_gradient_client` - Mock Gradient AI client (model-agnostic)
 - `mock_mcp_client` - Mock MCP client
 - `mock_linear_client` - Mock Linear GraphQL client
+- `mock_rag_client` - Mock RAG semantic search client
 - `db_pool` - PostgreSQL connection pool
 - `clean_db` - Clean database before each test
+
+## RAG Testing
+
+### RAG Collection Validation
+
+Validate RAG collections are properly indexed:
+
+```powershell
+# Test Qdrant Cloud connectivity
+python support/scripts/validation/test_qdrant_cloud.py
+
+# Verify collection health
+curl http://localhost:8007/collections
+curl http://localhost:8007/health
+```
+
+**Active Collections** (as of December 2025):
+| Collection | Vectors | Purpose |
+|------------|---------|---------|
+| `code_patterns` | 505 | Python AST patterns |
+| `issue_tracker` | 155 | Linear issues |
+| `library_registry` | 56 | Context7 library IDs |
+| `vendor-docs` | 94 | API documentation |
+| `feature_specs` | 4 | Linear projects |
+
+### Semantic Search Testing
+
+```python
+# Test RAG query
+import httpx
+
+response = httpx.post("http://localhost:8007/query", json={
+    "query": "workflow execution patterns",
+    "collection": "code_patterns",
+    "limit": 5
+})
+assert response.status_code == 200
+assert len(response.json()["results"]) > 0
+```
 
 ## Running Tests in CI/CD
 
@@ -147,7 +202,7 @@ Available fixtures in `conftest.py`:
 
 ```yaml
 - name: Install test dependencies
-  run: pip install -r support/tests/requirements-test.txt
+  run: pip install -r support/tests/requirements.txt
 
 - name: Run unit tests
   run: pytest support/tests/unit/test_workflow_reducer.py -v --hypothesis-profile=ci
