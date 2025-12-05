@@ -5,6 +5,30 @@ All notable changes to the "code/chef - AI Agent Orchestrator" extension will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1-alpha.1] - 2025-12-05
+
+### Added
+
+- **Context7 Library Cache (DEV-194)**: RAG-based caching for library ID lookups
+  - 56 libraries pre-seeded across 6 categories (ai-ml, web-frameworks, devops, data, testing, utilities)
+  - New `library_registry` collection in Qdrant Cloud
+  - 93-97% token savings on repeat library lookups
+  - New `/library-cache/stats` endpoint for cache monitoring
+
+### Changed
+
+- **Default RAG Collection**: Changed from `the-shop` to `code_patterns`
+- **RAG Collections**: Now 6 active collections (814 total vectors)
+  - `code_patterns` (505) - Python AST extraction [DEFAULT]
+  - `issue_tracker` (155) - Linear issues
+  - `library_registry` (56) - Context7 cache (NEW)
+  - `vendor-docs` (94) - API documentation
+  - `feature_specs` (4) - Linear projects
+
+### Removed
+
+- **`the-shop` collection**: Deleted stale DigitalOcean KB collection (460 vectors of outdated data)
+
 ## [0.5.0] - 2025-12-03
 
 ### Added
