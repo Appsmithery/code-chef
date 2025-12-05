@@ -69,7 +69,7 @@ export function activate(context: vscode.ExtensionContext) {
         // Register chat participant (may fail if Copilot Chat not available)
         try {
             const participant = vscode.chat.createChatParticipant(
-                'codechef',
+                'vscode-codechef.chef',
                 chatParticipant.handleChatRequest.bind(chatParticipant)
             );
             

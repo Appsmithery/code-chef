@@ -94,7 +94,7 @@ function activate(context) {
         chatParticipant = new chatParticipant_1.CodeChefChatParticipant(context);
         // Register chat participant (may fail if Copilot Chat not available)
         try {
-            const participant = vscode.chat.createChatParticipant('codechef', chatParticipant.handleChatRequest.bind(chatParticipant));
+            const participant = vscode.chat.createChatParticipant('vscode-codechef.chef', chatParticipant.handleChatRequest.bind(chatParticipant));
             // Set icon for the chat participant
             participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
             context.subscriptions.push(participant);
