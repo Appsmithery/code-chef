@@ -72,6 +72,10 @@ export function activate(context: vscode.ExtensionContext) {
                 'codechef',
                 chatParticipant.handleChatRequest.bind(chatParticipant)
             );
+            
+            // Set icon for the chat participant
+            participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
+            
             context.subscriptions.push(participant);
             console.log('code/chef: Chat participant registered as @codechef');
         } catch (chatError) {
