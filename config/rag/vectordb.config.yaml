@@ -28,13 +28,13 @@ collections:
     description: "Context7 library ID cache with semantic aliases for token-efficient lookups (DEV-194)"
   - name: "feature_specs"
     description: "Feature specifications, PRDs, and requirements documents (RAG Phase 1)"
-  
+
   # Planned collections (empty, to be populated by agents)
   - name: "agent_memory"
     description: "Agent conversation history and episodic memory (planned DEV-167)"
   - name: "task_context"
     description: "Task-specific context, requirements, and execution history (RAG Phase 2)"
-  
+
   # Deprecated - deleted 2025-12-05
   # - name: "the-shop"
   #   description: "DELETED - was stale DigitalOcean KB sync with mock embeddings"
