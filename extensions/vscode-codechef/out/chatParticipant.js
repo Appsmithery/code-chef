@@ -79,9 +79,9 @@ class CodeChefChatParticipant {
                 session_id: sessionId
             });
             this.lastTaskId = response.task_id;
-            // Cache Linear project ID if returned (for new projects)
-            if (response.linear_project?.id && !workspaceContext.linear_project_id) {
-                await this.contextExtractor.saveLinearProjectId(response.linear_project.id);
+            // Log Linear project creation (team-level, no workspace save needed)
+            if (response.linear_project?.id) {
+                console.log(`code/chef: Created Linear project ${response.linear_project.id} under team`);
                 stream.markdown(`\n✨ Created Linear project: **${response.linear_project.name}**\n`);
                 if (response.linear_project.url) {
                     stream.markdown(`📋 [View in Linear](${response.linear_project.url})\n\n`);

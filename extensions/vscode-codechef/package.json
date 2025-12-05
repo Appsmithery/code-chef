@@ -357,6 +357,12 @@
           "description": "Linear workspace slug for approval links",
           "order": 43
         },
+        "codechef.linearTeamId": {
+          "type": "string",
+          "default": "f5b610be-ac34-4983-918b-2c9d00aa9b7a",
+          "description": "Linear team ID - @chef can create projects and access all issues under this team (code-chef/CHEF)",
+          "order": 44
+        },
         "codechef.langsmithUrl": {
           "type": "string",
           "default": "https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046",
