@@ -72,19 +72,35 @@ class ProgressiveMCPLoader:
             "container": ["dockerhub"],
             "image": ["dockerhub"],
             "deploy": ["dockerhub", "rust-mcp-filesystem"],
-            # Documentation
-            "document": ["notion", "rust-mcp-filesystem"],
+            # Documentation & Library Lookup (Context7 integration)
+            "document": ["notion", "rust-mcp-filesystem", "context7"],
             "readme": ["rust-mcp-filesystem"],
-            "doc": ["notion", "rust-mcp-filesystem"],
-            "api doc": ["notion"],
+            "doc": ["notion", "rust-mcp-filesystem", "context7"],
+            "api doc": ["notion", "context7"],
+            "library": ["context7"],
+            "langchain": ["context7"],
+            "fastapi": ["context7"],
+            "pydantic": ["context7"],
+            "openai": ["context7"],
+            "anthropic": ["context7"],
+            "pytorch": ["context7"],
+            "tensorflow": ["context7"],
+            "pandas": ["context7"],
+            "numpy": ["context7"],
+            "react": ["context7"],
+            "nextjs": ["context7"],
+            "flask": ["context7"],
+            "django": ["context7"],
             # Testing
             "test": ["playwright", "rust-mcp-filesystem"],
             "e2e": ["playwright"],
             "selenium": ["playwright"],
+            "pytest": ["context7"],
+            "jest": ["context7"],
             # Infrastructure
-            "terraform": ["rust-mcp-filesystem"],
-            "k8s": ["rust-mcp-filesystem"],
-            "kubernetes": ["rust-mcp-filesystem"],
+            "terraform": ["rust-mcp-filesystem", "context7"],
+            "k8s": ["rust-mcp-filesystem", "context7"],
+            "kubernetes": ["rust-mcp-filesystem", "context7"],
             # CI/CD
             "pipeline": ["gitmcp", "rust-mcp-filesystem"],
             "workflow": ["gitmcp", "rust-mcp-filesystem"],
@@ -93,9 +109,16 @@ class ProgressiveMCPLoader:
             "metrics": ["prometheus"],
             "alert": ["prometheus"],
             "monitor": ["prometheus"],
+            "grafana": ["context7", "grafana"],
+            "prometheus": ["prometheus", "context7"],
             # Communication
             "email": ["gmail-mcp"],
             "notify": ["gmail-mcp", "notion"],
+            # Vector DB & RAG
+            "qdrant": ["context7"],
+            "vector": ["context7"],
+            "embedding": ["context7"],
+            "rag": ["context7"],
         }
 
         # Universal tools that are always available (minimal set)

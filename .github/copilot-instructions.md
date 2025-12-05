@@ -783,6 +783,49 @@ curl http://45.55.173.72:8007/health
 - `config/rag/vectordb.config.yaml`: Collection schemas
 - `support/scripts/rag/`: Indexing scripts
 
+### Context7 Library Cache (DEV-194, Completed January 2025)
+
+**Overview:** Cache-first library ID resolution for 80-90% token savings when using Context7 MCP tools.
+
+**Architecture:**
+
+1. **Qdrant RAG first**: Check `library_registry` collection (56 pre-indexed libraries)
+2. **In-memory cache**: 1-hour TTL for repeat lookups within session
+3. **MCP fallback**: Only calls Context7 MCP if cache misses
+
+**Key Files:**
+
+- `shared/lib/context7_cache.py`: Cache middleware (328 lines)
+- `config/rag/library-seed.yaml`: 56 libraries across 6 categories
+- `support/scripts/rag/index_library_registry.py`: Indexing script with UUID5
+- `agent_orchestrator/agents/_shared/tool_guides/context7-tools.prompt.md`: Usage patterns
+
+**Progressive MCP Integration:**
+
+The `shared/lib/progressive_mcp_loader.py` maps library-related keywords to context7 server:
+
+- Keywords: `library`, `langchain`, `fastapi`, `pydantic`, `openai`, `anthropic`, `pytorch`, `react`, `nextjs`, etc.
+- Pattern: Task mentioning "how to use LangChain" → auto-loads context7 tools
+
+**Library Categories (56 libraries):**
+
+- **AI/ML**: langchain, openai, anthropic, huggingface, pytorch, tensorflow, scikit-learn
+- **Web Frameworks**: fastapi, flask, django, nextjs, react, vue, express, nestjs
+- **DevOps**: docker, kubernetes, terraform, ansible, prometheus, grafana
+- **Data**: pandas, numpy, postgresql, mongodb, redis, elasticsearch, qdrant
+- **Testing**: pytest, playwright, jest, cypress
+- **Utilities**: pydantic, httpx, aiohttp, requests, typer, click, rich
+
+**Usage:**
+
+```python
+from shared.lib.context7_cache import Context7CacheClient
+
+cache = Context7CacheClient()
+library_id = await cache.resolve_library_id("langchain")
+# Returns: /langchain/python/langchain-ai (from cache or MCP fallback)
+```
+
 ## Quality bar
 
 - **Typing**: Use Pydantic models, FastAPI dependency injection, type hints on all functions.
