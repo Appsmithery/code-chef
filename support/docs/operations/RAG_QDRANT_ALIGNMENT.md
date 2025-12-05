@@ -8,15 +8,15 @@
 
 ### Qdrant Cloud Collections
 
-| Collection          | Points | Status     | Purpose                                              |
-| ------------------- | ------ | ---------- | ---------------------------------------------------- |
-| `code_patterns`     | 505    | ✅ Active  | Python code patterns (AST extraction)                |
-| `issue_tracker`     | 155    | ✅ Active  | Linear issues semantic search                        |
-| `feature_specs`     | 4      | ✅ Active  | Linear project specifications                        |
-| `vendor-docs`       | 94     | ✅ Active  | Vendor API documentation                             |
-| `library_registry`  | 56     | ✅ Active  | Context7 library ID cache (DEV-194)                  |
-| `agent_memory`      | 0      | ⏳ Planned | Agent conversation memory                            |
-| `task_context`      | 0      | ⏳ Planned | Task-specific context                                |
+| Collection         | Points | Status     | Purpose                               |
+| ------------------ | ------ | ---------- | ------------------------------------- |
+| `code_patterns`    | 505    | ✅ Active  | Python code patterns (AST extraction) |
+| `issue_tracker`    | 155    | ✅ Active  | Linear issues semantic search         |
+| `feature_specs`    | 4      | ✅ Active  | Linear project specifications         |
+| `vendor-docs`      | 94     | ✅ Active  | Vendor API documentation              |
+| `library_registry` | 56     | ✅ Active  | Context7 library ID cache (DEV-194)   |
+| `agent_memory`     | 0      | ⏳ Planned | Agent conversation memory             |
+| `task_context`     | 0      | ⏳ Planned | Task-specific context                 |
 
 > **Note**: `the-shop` collection was deleted (Jan 2025) - contained stale DigitalOcean KB data with mock embeddings.
 
@@ -320,11 +320,11 @@ curl https://codechef.appsmithery.co/rag/collections
 
 ### Active Collections (Production)
 
-| Collection         | Points | Status    | Purpose                                                 |
-| ------------------ | ------ | --------- | ------------------------------------------------------- |
+| Collection         | Points | Status    | Purpose                                                |
+| ------------------ | ------ | --------- | ------------------------------------------------------ |
 | `code_patterns`    | 505    | ✅ Active | Python code patterns from workspace (AST extraction)   |
-| `issue_tracker`    | 155    | ✅ Active | Linear issues semantic search                           |
-| `feature_specs`    | 4      | ✅ Active | Linear project specifications                           |
+| `issue_tracker`    | 155    | ✅ Active | Linear issues semantic search                          |
+| `feature_specs`    | 4      | ✅ Active | Linear project specifications                          |
 | `vendor-docs`      | 94     | ✅ Active | Vendor API documentation (Gradient, Linear, LangSmith) |
 | `library_registry` | 56     | ✅ Active | Context7 MCP library ID cache (DEV-194)                |
 

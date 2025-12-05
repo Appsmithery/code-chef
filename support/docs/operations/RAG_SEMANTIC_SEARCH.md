@@ -159,8 +159,8 @@ OPENAI_API_KEY=sk-proj-...
 | `/health`              | GET    | Service health with Qdrant connection status |
 | `/collections`         | GET    | List all collections with vector counts      |
 | `/library-cache/stats` | GET    | Context7 library cache statistics (DEV-194)  |
-| `/query`       | POST   | Semantic search across collections           |
-| `/index`       | POST   | Index new documents (internal)               |
+| `/query`               | POST   | Semantic search across collections           |
+| `/index`               | POST   | Index new documents (internal)               |
 
 ### Query Request Format
 

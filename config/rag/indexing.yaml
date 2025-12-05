@@ -21,13 +21,13 @@ sources:
       - "*.pyc"
     chunk_size: 1500
     overlap: 200
-    
+
   # Context7 Library Registry (DEV-194)
   - type: "library-registry"
     name: "context7-cache"
     collection: "library_registry"
     seed_file: "config/rag/library-seed.yaml"
-    
+
   # Git repositories (future)
   - type: "git"
     repositories:
