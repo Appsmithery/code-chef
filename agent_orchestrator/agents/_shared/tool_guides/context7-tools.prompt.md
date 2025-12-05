@@ -22,6 +22,7 @@
 **Use when**: Before calling `get-library-docs`, you need the official library ID.
 
 **Common library mappings** (cached in RAG):
+
 - `langchain` → LangChain core + ecosystem docs
 - `fastapi` → FastAPI web framework
 - `pydantic` → Pydantic data validation
@@ -47,6 +48,7 @@
 **Use when**: You need to understand how a library works or find code examples.
 
 **Example topics**:
+
 - `"tool binding"` - How to bind tools to LLMs
 - `"chain composition"` - Building LangChain chains
 - `"async patterns"` - Async/await usage
