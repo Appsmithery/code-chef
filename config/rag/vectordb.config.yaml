@@ -33,3 +33,5 @@ collections:
     description: "Feature specifications, PRDs, and requirements documents (RAG Phase 1)"
   - name: "issue_tracker"
     description: "Linear issues, bugs, and project management context (Linear integration)"
+  - name: "library_registry"
+    description: "Context7 library ID cache with semantic aliases for token-efficient lookups (DEV-194)"

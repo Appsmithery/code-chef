@@ -1,0 +1,200 @@
+# Context7 Library ID Cache Seed List
+# Pre-populated libraries for the library_registry collection
+# These are resolved once and cached for 80-90% token savings
+# Related: DEV-194
+
+version: "1.0"
+ttl_days: 30 # Refresh libraries after 30 days
+
+categories:
+  ai-ml:
+    description: "AI/ML frameworks and tools"
+    libraries:
+      - name: langchain
+        aliases: ["lc", "langchain-core", "langchain python"]
+        library_id: "/langchain-ai/langchain/libs/langchain"
+      - name: langgraph
+        aliases: ["lg", "langgraph python", "langchain graph"]
+        library_id: "/langchain-ai/langgraph"
+      - name: langsmith
+        aliases: ["ls", "langchain smith", "langsmith python"]
+        library_id: "/langchain-ai/langsmith-sdk"
+      - name: openai
+        aliases: ["openai-python", "gpt", "chatgpt api"]
+        library_id: "/openai/openai-python"
+      - name: anthropic
+        aliases: ["claude", "anthropic-python", "claude api"]
+        library_id: "/anthropics/anthropic-sdk-python"
+      - name: huggingface
+        aliases: ["hf", "transformers", "huggingface-hub"]
+        library_id: "/huggingface/transformers"
+      - name: ollama
+        aliases: ["ollama-python", "local llm"]
+        library_id: "/ollama/ollama-python"
+      - name: chromadb
+        aliases: ["chroma", "chromadb-python"]
+        library_id: "/chroma-core/chroma"
+      - name: qdrant
+        aliases: ["qdrant-client", "qdrant python"]
+        library_id: "/qdrant/qdrant-client"
+      - name: pinecone
+        aliases: ["pinecone-client", "pinecone python"]
+        library_id: "/pinecone-io/pinecone-python-client"
+      - name: llamaindex
+        aliases: ["llama-index", "gpt-index"]
+        library_id: "/run-llama/llama_index"
+      - name: instructor
+        aliases: ["instructor-ai", "structured outputs"]
+        library_id: "/jxnl/instructor"
+
+  web-frameworks:
+    description: "Web frameworks and HTTP libraries"
+    libraries:
+      - name: fastapi
+        aliases: ["fast-api", "fastapi python", "starlette"]
+        library_id: "/tiangolo/fastapi"
+      - name: pydantic
+        aliases: ["pydantic v2", "pydantic python"]
+        library_id: "/pydantic/pydantic"
+      - name: httpx
+        aliases: ["httpx python", "async http"]
+        library_id: "/encode/httpx"
+      - name: requests
+        aliases: ["python requests", "http client"]
+        library_id: "/psf/requests"
+      - name: aiohttp
+        aliases: ["aiohttp python", "async aiohttp"]
+        library_id: "/aio-libs/aiohttp"
+      - name: uvicorn
+        aliases: ["uvicorn python", "asgi server"]
+        library_id: "/encode/uvicorn"
+      - name: flask
+        aliases: ["flask python", "flask web"]
+        library_id: "/pallets/flask"
+      - name: django
+        aliases: ["django python", "django web"]
+        library_id: "/django/django"
+      - name: starlette
+        aliases: ["starlette python", "asgi framework"]
+        library_id: "/encode/starlette"
+
+  devops:
+    description: "DevOps and infrastructure tools"
+    libraries:
+      - name: docker
+        aliases: ["docker-py", "docker python", "docker sdk"]
+        library_id: "/docker/docker-py"
+      - name: kubernetes
+        aliases: ["k8s", "kubernetes-client", "kubectl python"]
+        library_id: "/kubernetes-client/python"
+      - name: terraform
+        aliases: ["tf", "terraform python", "cdktf"]
+        library_id: "/hashicorp/terraform-cdk"
+      - name: ansible
+        aliases: ["ansible python", "ansible runner"]
+        library_id: "/ansible/ansible"
+      - name: github
+        aliases: ["github-actions", "pygithub", "github api"]
+        library_id: "/PyGithub/PyGithub"
+      - name: gitlab
+        aliases: ["python-gitlab", "gitlab api"]
+        library_id: "/python-gitlab/python-gitlab"
+      - name: prometheus
+        aliases: ["prometheus-client", "prometheus python"]
+        library_id: "/prometheus/client_python"
+      - name: grafana
+        aliases: ["grafana-api", "grafana python"]
+        library_id: "/grafana/grafana-api-python-client"
+      - name: boto3
+        aliases: ["aws", "aws-sdk", "amazon web services"]
+        library_id: "/boto/boto3"
+      - name: azure
+        aliases: ["azure-sdk", "azure python"]
+        library_id: "/Azure/azure-sdk-for-python"
+
+  data:
+    description: "Data processing and databases"
+    libraries:
+      - name: pandas
+        aliases: ["pd", "pandas python", "dataframe"]
+        library_id: "/pandas-dev/pandas"
+      - name: numpy
+        aliases: ["np", "numpy python", "numerical python"]
+        library_id: "/numpy/numpy"
+      - name: sqlalchemy
+        aliases: ["sa", "sqlalchemy python", "sql orm"]
+        library_id: "/sqlalchemy/sqlalchemy"
+      - name: asyncpg
+        aliases: ["asyncpg python", "postgres async"]
+        library_id: "/MagicStack/asyncpg"
+      - name: psycopg
+        aliases: ["psycopg2", "psycopg3", "postgres python"]
+        library_id: "/psycopg/psycopg"
+      - name: redis
+        aliases: ["redis-py", "redis python"]
+        library_id: "/redis/redis-py"
+      - name: pymongo
+        aliases: ["mongodb", "mongo python"]
+        library_id: "/mongodb/mongo-python-driver"
+      - name: polars
+        aliases: ["polars python", "fast dataframe"]
+        library_id: "/pola-rs/polars"
+      - name: duckdb
+        aliases: ["duckdb python", "analytical database"]
+        library_id: "/duckdb/duckdb"
+
+  testing:
+    description: "Testing frameworks and tools"
+    libraries:
+      - name: pytest
+        aliases: ["py.test", "pytest python"]
+        library_id: "/pytest-dev/pytest"
+      - name: hypothesis
+        aliases: ["hypothesis python", "property testing"]
+        library_id: "/HypothesisWorks/hypothesis"
+      - name: respx
+        aliases: ["respx python", "httpx mock"]
+        library_id: "/lundberg/respx"
+      - name: pytest-asyncio
+        aliases: ["async pytest", "asyncio testing"]
+        library_id: "/pytest-dev/pytest-asyncio"
+      - name: unittest-mock
+        aliases: ["mock", "python mock", "unittest.mock"]
+        library_id: "/python/cpython"
+      - name: faker
+        aliases: ["faker python", "fake data"]
+        library_id: "/joke2k/faker"
+
+  utilities:
+    description: "Common utility libraries"
+    libraries:
+      - name: pyyaml
+        aliases: ["yaml", "yaml python"]
+        library_id: "/yaml/pyyaml"
+      - name: python-dotenv
+        aliases: ["dotenv", "env files"]
+        library_id: "/theskumar/python-dotenv"
+      - name: typer
+        aliases: ["typer cli", "cli python"]
+        library_id: "/tiangolo/typer"
+      - name: rich
+        aliases: ["rich python", "terminal formatting"]
+        library_id: "/Textualize/rich"
+      - name: loguru
+        aliases: ["loguru python", "logging"]
+        library_id: "/Delgan/loguru"
+      - name: tenacity
+        aliases: ["retry", "tenacity python"]
+        library_id: "/jd/tenacity"
+      - name: structlog
+        aliases: ["structured logging", "structlog python"]
+        library_id: "/hynek/structlog"
+      - name: click
+        aliases: ["click cli", "command line"]
+        library_id: "/pallets/click"
+      - name: jinja2
+        aliases: ["jinja", "templating"]
+        library_id: "/pallets/jinja"
+      - name: pydantic-settings
+        aliases: ["settings", "config management"]
+        library_id: "/pydantic/pydantic-settings"

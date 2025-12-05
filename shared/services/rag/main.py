@@ -569,6 +569,42 @@ async def list_collections():
         )
 
 
+# Library cache stats endpoint (DEV-194)
+@app.get("/library-cache/stats")
+async def library_cache_stats():
+    """
+    Get library cache statistics and collection info.
+
+    Returns information about the library_registry collection
+    used for Context7 library ID caching.
+    """
+    if not qdrant_client:
+        return {"error": "Qdrant not available", "status": "disconnected"}
+
+    try:
+        collection_info = qdrant_client.get_collection("library_registry")
+
+        return {
+            "collection": "library_registry",
+            "total_libraries": collection_info.points_count,
+            "status": "active",
+            "description": "Context7 library ID cache for token-efficient lookups",
+            "related_issue": "DEV-194",
+            "estimated_savings": {
+                "tokens_per_hit": 1000,
+                "potential_daily_savings": collection_info.points_count * 10 * 1000,
+                "note": "Assuming ~10 lookups per library per day",
+            },
+        }
+    except Exception as e:
+        return {
+            "collection": "library_registry",
+            "status": "not_initialized",
+            "error": str(e),
+            "action": "Run: python support/scripts/rag/index_library_registry.py",
+        }
+
+
 # Mock query endpoint for development/testing
 @app.post("/query/mock", response_model=QueryResponse)
 async def mock_query(request: QueryRequest):
