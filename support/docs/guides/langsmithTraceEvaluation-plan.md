@@ -157,43 +157,43 @@ The scenarios below map to **IB-Agent Platform** implementation phases:
 
 #### Phase 1: Data Layer Foundation (MCP Servers)
 
-| #   | Scenario                                             | Expected Agents          | Risk Level | IB-Agent Step |
-| --- | ---------------------------------------------------- | ------------------------ | ---------- | ------------- |
-| 1   | Build EDGAR MCP server with `search_filings` tool    | feature_dev, code_review | high       | Step 1.3      |
-| 2   | Configure Qdrant collection for SEC filing embeddings| infrastructure           | medium     | Step 1.4      |
-| 3   | Clone and integrate Nasdaq Data Link MCP server      | infrastructure, cicd     | medium     | Step 1.2      |
-| 4   | Write Docker Compose for IB Agent stack              | infrastructure           | medium     | Step 1.1      |
+| #   | Scenario                                              | Expected Agents          | Risk Level | IB-Agent Step |
+| --- | ----------------------------------------------------- | ------------------------ | ---------- | ------------- |
+| 1   | Build EDGAR MCP server with `search_filings` tool     | feature_dev, code_review | high       | Step 1.3      |
+| 2   | Configure Qdrant collection for SEC filing embeddings | infrastructure           | medium     | Step 1.4      |
+| 3   | Clone and integrate Nasdaq Data Link MCP server       | infrastructure, cicd     | medium     | Step 1.2      |
+| 4   | Write Docker Compose for IB Agent stack               | infrastructure           | medium     | Step 1.1      |
 
 #### Phase 2: Core Agent Development
 
-| #   | Scenario                                             | Expected Agents          | Risk Level | IB-Agent Step |
-| --- | ---------------------------------------------------- | ------------------------ | ---------- | ------------- |
-| 5   | Implement Comps Analysis Agent with LangGraph        | feature_dev, code_review | high       | Step 2.2      |
-| 6   | Build RAG pipeline for 10-K filing ingestion         | feature_dev              | medium     | Step 2.3      |
-| 7   | Create `/api/v1/research/comps` FastAPI endpoint     | feature_dev, code_review | medium     | Step 2.1      |
-| 8   | Add task store for async workflow tracking           | feature_dev              | low        | Step 2.1      |
+| #   | Scenario                                         | Expected Agents          | Risk Level | IB-Agent Step |
+| --- | ------------------------------------------------ | ------------------------ | ---------- | ------------- |
+| 5   | Implement Comps Analysis Agent with LangGraph    | feature_dev, code_review | high       | Step 2.2      |
+| 6   | Build RAG pipeline for 10-K filing ingestion     | feature_dev              | medium     | Step 2.3      |
+| 7   | Create `/api/v1/research/comps` FastAPI endpoint | feature_dev, code_review | medium     | Step 2.1      |
+| 8   | Add task store for async workflow tracking       | feature_dev              | low        | Step 2.1      |
 
 #### Phase 3: UI Integration
 
-| #   | Scenario                                             | Expected Agents          | Risk Level | IB-Agent Step |
-| --- | ---------------------------------------------------- | ------------------------ | ---------- | ------------- |
-| 9   | Update Chainlit UI to call comps endpoint            | feature_dev              | low        | Step 3.1      |
-| 10  | Implement Excel export service for comps results     | feature_dev, code_review | medium     | Step 3.2      |
+| #   | Scenario                                         | Expected Agents          | Risk Level | IB-Agent Step |
+| --- | ------------------------------------------------ | ------------------------ | ---------- | ------------- |
+| 9   | Update Chainlit UI to call comps endpoint        | feature_dev              | low        | Step 3.1      |
+| 10  | Implement Excel export service for comps results | feature_dev, code_review | medium     | Step 3.2      |
 
 #### Phase 4: Excel Add-in ("The Sidecar")
 
-| #   | Scenario                                             | Expected Agents          | Risk Level | IB-Agent Step |
-| --- | ---------------------------------------------------- | ------------------------ | ---------- | ------------- |
-| 11  | Create Office.js manifest for Excel task pane        | feature_dev              | high       | Step 4.1      |
-| 12  | Build React task pane with Excel.run() integration   | feature_dev, code_review | high       | Step 4.2      |
+| #   | Scenario                                           | Expected Agents          | Risk Level | IB-Agent Step |
+| --- | -------------------------------------------------- | ------------------------ | ---------- | ------------- |
+| 11  | Create Office.js manifest for Excel task pane      | feature_dev              | high       | Step 4.1      |
+| 12  | Build React task pane with Excel.run() integration | feature_dev, code_review | high       | Step 4.2      |
 
 #### Cross-Cutting Scenarios
 
-| #   | Scenario                                             | Expected Agents          | Risk Level |
-| --- | ---------------------------------------------------- | ------------------------ | ---------- |
-| 13  | Review MCP client for OWASP Top 10 vulnerabilities   | code_review              | high       |
-| 14  | Write API documentation for IB Agent endpoints       | documentation            | low        |
-| 15  | Configure GitHub Actions for IB Agent CI/CD          | cicd                     | medium     |
+| #   | Scenario                                           | Expected Agents | Risk Level |
+| --- | -------------------------------------------------- | --------------- | ---------- |
+| 13  | Review MCP client for OWASP Top 10 vulnerabilities | code_review     | high       |
+| 14  | Write API documentation for IB Agent endpoints     | documentation   | low        |
+| 15  | Configure GitHub Actions for IB Agent CI/CD        | cicd            | medium     |
 
 ---
 
