@@ -48,6 +48,66 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "slow: Tests that take >10 seconds")
     config.addinivalue_line("markers", "asyncio: Async tests using pytest-asyncio")
 
+    # IB-Agent Phase markers
+    config.addinivalue_line("markers", "phase1: Phase 1 - Data Layer Foundation tests")
+    config.addinivalue_line("markers", "phase2: Phase 2 - Core Agent Development tests")
+    config.addinivalue_line("markers", "phase3: Phase 3 - UI Integration tests")
+    config.addinivalue_line("markers", "phase4: Phase 4 - Excel Add-in tests")
+
+    # LangSmith trace markers
+    config.addinivalue_line("markers", "trace: Tests that generate LangSmith traces")
+    config.addinivalue_line("markers", "mcp: MCP server integration tests")
+    config.addinivalue_line("markers", "langgraph: LangGraph workflow tests")
+    config.addinivalue_line("markers", "rag: RAG pipeline tests")
+    config.addinivalue_line("markers", "infra: Infrastructure/Docker tests")
+    config.addinivalue_line("markers", "api: FastAPI endpoint tests")
+
+
+# ============================================================================
+# LangSmith Configuration
+# ============================================================================
+
+# Check if LangSmith is available
+try:
+    from langsmith import Client as LangSmithClient
+
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    LANGSMITH_AVAILABLE = False
+    LangSmithClient = None
+
+
+@pytest.fixture(scope="session")
+def langsmith_client():
+    """Provide LangSmith client for trace evaluation tests."""
+    if not LANGSMITH_AVAILABLE:
+        pytest.skip("LangSmith SDK not installed")
+
+    api_key = os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY")
+    if not api_key:
+        pytest.skip("LANGCHAIN_API_KEY not set")
+
+    return LangSmithClient()
+
+
+@pytest.fixture
+def langsmith_project():
+    """Get current LangSmith project for test isolation."""
+    return os.getenv("LANGCHAIN_PROJECT", "code-chef-testing")
+
+
+@pytest.fixture
+def langsmith_test_metadata(request):
+    """Generate metadata for trace tagging based on test markers."""
+    markers = [m.name for m in request.node.iter_markers()]
+    return {
+        "test_name": request.node.name,
+        "test_file": request.node.fspath.basename,
+        "markers": markers,
+        "phase": next((m for m in markers if m.startswith("phase")), None),
+        "timestamp": datetime.now().isoformat(),
+    }
+
 
 # ============================================================================
 # Hypothesis Configuration (Property-Based Testing)

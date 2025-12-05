@@ -20,15 +20,30 @@
   // Python Testing Configuration
   "python.testing.pytestEnabled": true,
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestArgs": ["support/tests", "-v", "--tb=short"],
+  "python.testing.pytestArgs": [
+    "support/tests",
+    "-v",
+    "--tb=short",
+    "-m",
+    "not trace" // Exclude trace-generating tests by default
+  ],
   "python.testing.cwd": "${workspaceFolder}",
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "python.envFile": "${workspaceFolder}/config/env/.env",
   "python.analysis.extraPaths": [
     "${workspaceFolder}/shared",
-    "${workspaceFolder}/agent_orchestrator"
+    "${workspaceFolder}/agent_orchestrator",
+    "${workspaceFolder}/support/tests"
   ],
   "testExplorer.useNativeTesting": true,
+
+  // LangSmith Tracing Configuration
+  // Set LANGCHAIN_PROJECT in terminal environment for trace generation:
+  // - code-chef: Production traces (30-day retention)
+  // - code-chef-testing: Evaluation traces (7-day retention)
+  // - code-chef-dev: Local development traces (3-day retention)
+  // To run trace-generating tests:
+  // pytest support/tests/e2e -m trace --langsmith-project=code-chef-testing
   "[yaml]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.tabSize": 2
