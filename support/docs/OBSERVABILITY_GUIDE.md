@@ -1,20 +1,28 @@
 # LLM Observability Guide
 
-**Last Updated**: November 24, 2025  
+**Last Updated**: December 5, 2025  
 **Audience**: DevOps Engineers, SREs, Platform Team
 
 ---
 
 ## Overview
 
-This guide covers observability for LLM token usage, cost attribution, and performance monitoring across all agents in the Dev-Tools platform.
+This guide covers observability for LLM token usage, cost attribution, RAG performance, and agent monitoring across the Dev-Tools platform.
 
 **Key Capabilities**:
 
 - Real-time token/cost tracking via `/metrics/tokens` endpoint
+- RAG collection health and query latency metrics
 - Prometheus metrics for historical analysis
-- Grafana dashboards for visualization
+- Grafana dashboards for visualization (Grafana Cloud: `appsmithery.grafana.net`)
+- LangSmith tracing for LLM call inspection
 - Automated alerts for cost anomalies and performance degradation
+
+**Related Documentation**:
+
+- Model configuration: `config/agents/models.yaml` (single source of truth)
+- Tracing setup: See "LangSmith Tracing" section
+- RAG collections: `config/rag/indexing.yaml`
 
 ---
 
@@ -43,27 +51,51 @@ Grafana queries Prometheus for visualization
 
 **Cost Metadata** (Single Source of Truth):
 
+All agent models and cost metadata are defined in `config/agents/models.yaml`. This enables:
+
+- Model-agnostic agent definitions (swap models without code changes)
+- Environment-specific overrides (dev uses cheaper models)
+- Automatic cost calculation based on `cost_per_1m_tokens`
+
 ```yaml
-# config/agents/models.yaml
+# config/agents/models.yaml (excerpt)
 agents:
   orchestrator:
-    model: llama3.3-70b-instruct
+    model: <model-name> # Model-agnostic
     cost_per_1m_tokens: 0.60 # Used for automatic cost calculation
     context_window: 128000
-    # ...
+    langsmith_project: code-chef-orchestrator
+    # ... see full config for all agents
 ```
 
 **Cost Calculation**:
 
 ```python
-# In gradient_client.py
+# In gradient_client.py (automatic)
 total_tokens = prompt_tokens + completion_tokens
 cost = (total_tokens / 1_000_000) * agent_config.cost_per_1m_tokens
+```
+
+**Validate Configuration**:
+
+```bash
+python shared/lib/validate_config.py config/agents/models.yaml
 ```
 
 ---
 
 ## Metrics Endpoints
+
+### Service Health
+
+| Service      | Port | Endpoint  | Description                         |
+| ------------ | ---- | --------- | ----------------------------------- |
+| orchestrator | 8001 | `/health` | Agent orchestrator status           |
+| rag          | 8007 | `/health` | RAG service + Qdrant connection     |
+| state        | 8008 | `/health` | State persistence service           |
+| langgraph    | 8010 | `/health` | LangGraph + PostgreSQL checkpointer |
+
+**Note**: MCP Gateway (port 8000) is deprecated. MCP tools are now accessed via Docker MCP Toolkit in VS Code.
 
 ### `/metrics/tokens` (JSON API)
 
@@ -82,7 +114,7 @@ cost = (total_tokens / 1_000_000) * agent_config.cost_per_1m_tokens
       "total_tokens": 3500,
       "total_cost": 0.0021,
       "call_count": 10,
-      "model": "llama3.3-70b-instruct",
+      "model": "<model-name>",
       "avg_tokens_per_call": 350.0,
       "avg_cost_per_call": 0.00021,
       "avg_latency_seconds": 0.85,
@@ -95,9 +127,9 @@ cost = (total_tokens / 1_000_000) * agent_config.cost_per_1m_tokens
     "total_calls": 25,
     "total_latency": 20.3
   },
-  "tracking_since": "2025-11-24T19:00:00.000Z",
+  "tracking_since": "2025-12-05T19:00:00.000Z",
   "uptime_seconds": 3600,
-  "timestamp": "2025-11-24T20:00:00.000Z",
+  "timestamp": "2025-12-05T20:00:00.000Z",
   "note": "Cost calculated from config/agents/models.yaml"
 }
 ```
@@ -120,6 +152,44 @@ curl http://localhost:8001/metrics/tokens | jq '.per_agent.orchestrator.total_co
 # List agents by cost (descending)
 curl http://localhost:8001/metrics/tokens | jq '.per_agent | to_entries | sort_by(.value.total_cost) | reverse | .[].key'
 ```
+
+---
+
+### RAG Service Endpoints
+
+**Health Check**: `GET http://localhost:8007/health`
+
+```json
+{
+  "status": "healthy",
+  "qdrant_status": "connected",
+  "collections": 6,
+  "total_vectors": 814
+}
+```
+
+**Collections List**: `GET http://localhost:8007/collections`
+
+```json
+[
+  { "name": "code_patterns", "count": 505 },
+  { "name": "issue_tracker", "count": 155 },
+  { "name": "library_registry", "count": 56 },
+  { "name": "vendor-docs", "count": 94 },
+  { "name": "feature_specs", "count": 4 },
+  { "name": "task_context", "count": 0 }
+]
+```
+
+**Semantic Search**: `POST http://localhost:8007/query`
+
+```bash
+curl -X POST http://localhost:8007/query \
+  -H "Content-Type: application/json" \
+  -d '{"query": "workflow patterns", "collection": "code_patterns", "limit": 5}'
+```
+
+**Configuration**: `config/rag/indexing.yaml`
 
 ---
 
@@ -162,12 +232,14 @@ topk(5, sum by (agent) (llm_cost_usd_total))
 
 ---
 
-## Grafana Dashboards
+## Grafana Cloud Dashboards
+
+**Dashboard URL**: https://appsmithery.grafana.net
+**Prometheus Datasource**: `grafanacloud-appsmithery-prom`
 
 ### LLM Token Metrics Dashboard
 
-**Location**: `config/grafana/dashboards/llm-token-metrics.json`  
-**URL**: http://grafana:3000/d/llm-token-metrics
+**Location**: `config/grafana/dashboards/llm-token-metrics.json`
 
 **Panels**:
 
@@ -351,13 +423,16 @@ llm:tokens_per_call:rate1h
 
 **Resolution**:
 
-- Switch to cheaper model in `config/agents/models.yaml`:
+- Switch to cheaper model in `config/agents/models.yaml` (model-agnostic):
   ```yaml
-  orchestrator:
-    model: llama3-8b-instruct # Down from llama3.3-70b-instruct
+  # Use development environment override for cheaper testing
+  environments:
+    development:
+      orchestrator:
+        model: <cheaper-model>
   ```
 - Restart service: `docker compose restart orchestrator` (30s)
-- Monitor cost drop in Grafana
+- Monitor cost drop in Grafana Cloud: `appsmithery.grafana.net`
 
 ---
 
@@ -462,13 +537,37 @@ llm:tokens_per_call:rate1h
 
 ---
 
+## Validation Scripts
+
+Run these scripts to validate observability setup:
+
+```powershell
+# Full stack validation (bash, run on droplet)
+./support/scripts/validation/validate-tracing.sh
+
+# PowerShell health checks (Windows, remote)
+./support/scripts/validation/test-tracing.ps1
+
+# Token tracking validation
+python support/scripts/validation/test-token-tracking.py
+
+# RAG/Qdrant connectivity
+python support/scripts/validation/test_qdrant_cloud.py
+
+# LLM provider connectivity
+python support/scripts/validation/test_llm_provider.py
+```
+
+---
+
 ## See Also
 
-- [LLM Configuration Refactoring Plan](guides/implementation/LLM_CONFIG_REFACTORING_PLAN.md)
-- [Deployment Guide](DEPLOYMENT_GUIDE.md)
-- [Prometheus Documentation](https://prometheus.io/docs/)
-- [Grafana Dashboard Best Practices](https://grafana.com/docs/grafana/latest/best-practices/)
-- [LangSmith Tracing](https://smith.langchain.com/)
+- [Model Configuration](../../config/agents/models.yaml) - LLM settings (single source of truth)
+- [RAG Configuration](../../config/rag/indexing.yaml) - Collection definitions
+- [Testing Guide](../../support/tests/TESTING_GUIDE.md) - Test suite documentation
+- [Deployment Guide](DEPLOYMENT.md) - Deploy procedures
+- [LangSmith Dashboard](https://smith.langchain.com/) - LLM tracing
+- [Grafana Cloud](https://appsmithery.grafana.net) - Metrics dashboards
 
 ---
 

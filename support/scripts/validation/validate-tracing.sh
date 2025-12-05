@@ -59,51 +59,18 @@ echo -e "${BLUE}Phase 1: Service Health Checks${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
-# Core services (current architecture - no individual agent ports 8002-8006)
-test_health "MCP Gateway" 8000
+# Core services (current architecture - orchestrator runs all agent nodes)
+# Note: MCP Gateway (8000) deprecated - tools accessed via Docker MCP Toolkit in VS Code
 test_health "Orchestrator" 8001
 test_health "RAG Context" 8007
 test_health "State Persistence" 8008
 test_health "LangGraph" 8010
 
 # ============================================================================
-# PHASE 2: MCP Gateway Tool Discovery
+# PHASE 2: RAG Service Validation
 # ============================================================================
 echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Phase 2: MCP Gateway Tool Discovery${NC}"
-echo -e "${BLUE}========================================${NC}"
-echo ""
-
-echo -e "${YELLOW}Testing: MCP Gateway Tool List${NC}"
-response=$(curl -s -w "\n%{http_code}" http://localhost:8000/api/tools)
-http_code=$(echo "$response" | tail -n1)
-body=$(echo "$response" | sed '$d')
-
-if [ "$http_code" = "200" ]; then
-    echo -e "  ${GREEN}✓ HTTP 200 OK${NC}"
-    tool_count=$(echo "$body" | jq -r '.tools | length' 2>/dev/null || echo "0")
-    if [ "$tool_count" -gt 0 ]; then
-        echo -e "  ${GREEN}✓ Found $tool_count MCP tools${NC}"
-        PASSED=$((PASSED + 1))
-        
-        # List first 5 tools
-        echo -e "  ${BLUE}Sample tools:${NC}"
-        echo "$body" | jq -r '.tools[:5][] | "    - \(.name)"' 2>/dev/null || echo "    (jq not available)"
-    else
-        echo -e "  ${RED}✗ No tools found${NC}"
-        FAILED=$((FAILED + 1))
-    fi
-else
-    echo -e "  ${RED}✗ HTTP $http_code${NC}"
-    FAILED=$((FAILED + 1))
-fi
-echo ""
-
-# ============================================================================
-# PHASE 3: RAG Service Validation
-# ============================================================================
-echo -e "${BLUE}========================================${NC}"
-echo -e "${BLUE}Phase 3: RAG Service Validation${NC}"
+echo -e "${BLUE}Phase 2: RAG Service Validation${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -133,6 +100,34 @@ fi
 echo ""
 
 # ============================================================================
+# PHASE 3: LangSmith Tracing Validation
+# ============================================================================
+echo -e "${BLUE}========================================${NC}"
+echo -e "${BLUE}Phase 3: LangSmith Tracing Check${NC}"
+echo -e "${BLUE}========================================${NC}"
+echo ""
+
+echo -e "${YELLOW}Testing: LangSmith Configuration${NC}"
+
+# Check if LANGSMITH_TRACING is enabled in orchestrator
+if docker exec deploy-orchestrator-1 printenv | grep -q "LANGSMITH_TRACING=true"; then
+    echo -e "  ${GREEN}✓ LANGSMITH_TRACING=true${NC}"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "  ${RED}✗ LANGSMITH_TRACING not enabled${NC}"
+    FAILED=$((FAILED + 1))
+fi
+
+if docker exec deploy-orchestrator-1 printenv | grep -q "LANGCHAIN_TRACING_V2=true"; then
+    echo -e "  ${GREEN}✓ LANGCHAIN_TRACING_V2=true${NC}"
+    PASSED=$((PASSED + 1))
+else
+    echo -e "  ${RED}✗ LANGCHAIN_TRACING_V2 not enabled${NC}"
+    FAILED=$((FAILED + 1))
+fi
+echo ""
+
+# ============================================================================
 # PHASE 4: Summary
 # ============================================================================
 echo "========================================"
@@ -148,14 +143,15 @@ if [ $FAILED -eq 0 ]; then
     echo ""
     echo "Next Steps:"
     echo "1. Check LangSmith Dashboard:"
-    echo "   https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046"
+    echo "   https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects"
     echo ""
-    echo "2. Verify Trace Contents:"
-    echo "   - Look for recent traces with LLM calls"
-    echo "   - Verify token counts and costs"
-    echo "   - Check latency metrics"
+    echo "2. Check Grafana Cloud Metrics:"
+    echo "   https://appsmithery.grafana.net"
     echo ""
-    echo "3. Check Docker Logs:"
+    echo "3. Verify RAG Collections (should have 6 active):"
+    echo "   curl http://localhost:8007/collections | jq"
+    echo ""
+    echo "4. Check Docker Logs:"
     echo "   docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
     echo ""
     exit 0
