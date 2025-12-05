@@ -94,14 +94,25 @@ function activate(context) {
         chatParticipant = new chatParticipant_1.CodeChefChatParticipant(context);
         // Register chat participant (may fail if Copilot Chat not available)
         try {
+            console.log('code/chef: Attempting to register chat participant vscode-codechef.chef...');
             const participant = vscode.chat.createChatParticipant('vscode-codechef.chef', chatParticipant.handleChatRequest.bind(chatParticipant));
             // Set icon for the chat participant
             participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'icon.png');
             context.subscriptions.push(participant);
-            console.log('code/chef: Chat participant registered as @codechef');
+            console.log('code/chef: Chat participant registered successfully as @chef');
+            // Show success notification on first install
+            const hasShownWelcome = context.globalState.get('hasShownChatWelcome', false);
+            if (!hasShownWelcome) {
+                vscode.window.showInformationMessage('code/chef: Chat participant @chef is ready! Open Copilot Chat and type @chef to get started.', 'Open Chat').then(selection => {
+                    if (selection === 'Open Chat') {
+                        vscode.commands.executeCommand('workbench.action.chat.open');
+                    }
+                });
+                context.globalState.update('hasShownChatWelcome', true);
+            }
         }
         catch (chatError) {
-            console.warn('code/chef: Could not register chat participant (Copilot Chat may not be available):', chatError);
+            console.error('code/chef: Failed to register chat participant:', chatError);
             vscode.window.showWarningMessage('code/chef: Chat participant requires GitHub Copilot. Use Command Palette commands instead.', 'Open Commands').then(selection => {
                 if (selection === 'Open Commands') {
                     vscode.commands.executeCommand('workbench.action.showCommands');
