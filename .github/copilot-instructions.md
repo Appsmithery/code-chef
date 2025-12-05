@@ -24,6 +24,16 @@
 - Treat Docker resources as disposable; leave stacks fully running or fully stopped
 - High-risk ops trigger HITL approval via DEV-68 sub-issues
 
+## Linear Issue Standards
+
+When creating or updating Linear issues:
+
+- **Use GitHub permalinks** for all file references (not relative paths)
+- Format: `https://github.com/Appsmithery/Dev-Tools/blob/<commit-sha>/<path>`
+- Get commit SHA via: `git log -1 --format="%H" -- "<file-path>"`
+- For stable references, use `main` branch: `https://github.com/Appsmithery/Dev-Tools/blob/main/<path>`
+- Always link plan documents, specs, and implementation files in issue descriptions
+
 ## Agent Node Reference
 
 Route tasks by **function**, not technology. Models configured in `config/agents/models.yaml`:
