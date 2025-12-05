@@ -24,7 +24,6 @@ export class ContextExtractor {
         const gitRemote = await this.getGitRemote(workspacePath);
         const githubRepoUrl = this.parseGitHubUrl(gitRemote);
         const commitSha = await this.getCommitSha(workspacePath, gitBranch);
-        const linearProjectId = this.getLinearProjectId();
 
         return {
             workspace_name: workspace.name,
@@ -36,8 +35,8 @@ export class ContextExtractor {
             github_repo_url: githubRepoUrl,
             github_commit_sha: commitSha,
             
-            // Linear context (may be null for new projects)
-            linear_project_id: linearProjectId,
+            // Linear context - team-level binding (CHEF team)
+            linear_team_id: this.getLinearTeamId(),
             
             // Existing fields
             open_files: this.getOpenFiles(),
@@ -186,19 +185,11 @@ export class ContextExtractor {
     }
 
     /**
-     * Get Linear project ID from workspace settings (if exists)
+     * Get Linear team ID from global settings
+     * Team-level binding allows @chef to create projects and access all team issues
      */
-    private getLinearProjectId(): string | null {
-        const config = vscode.workspace.getConfiguration('codechef.linear');
-        return config.get('projectId') || null;
-    }
-
-    /**
-     * Save Linear project ID to workspace settings
-     * Called after orchestrator creates new project
-     */
-    async saveLinearProjectId(projectId: string): Promise<void> {
-        const config = vscode.workspace.getConfiguration('codechef.linear');
-        await config.update('projectId', projectId, vscode.ConfigurationTarget.Workspace);
+    private getLinearTeamId(): string | null {
+        const config = vscode.workspace.getConfiguration('codechef');
+        return config.get('linearTeamId') || null;
     }
 }
