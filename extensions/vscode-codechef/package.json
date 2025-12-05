@@ -2,7 +2,7 @@
   "name": "vscode-codechef",
   "displayName": "code/chef - AI DevOps Team",
   "description": "Your personal AI DevOps Team, orchestrated by the Head Chef.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "icon.png",
@@ -71,6 +71,7 @@
   ],
   "activationEvents": [
     "onStartupFinished",
+    "onChatParticipant:codechef",
     "onCommand:codechef.orchestrate",
     "onCommand:codechef.checkStatus",
     "onCommand:codechef.configure",
@@ -83,6 +84,7 @@
       {
         "id": "codechef",
         "name": "codechef",
+        "fullName": "code/chef Orchestrator",
         "description": "LangGraph orchestrator with LangChain function calling. Access 150+ tools routed through internal agent nodes (feature-dev, code-review, infrastructure, cicd, documentation). 80-90% token cost reduction via progressive disclosure.",
         "isSticky": true,
         "commands": [
