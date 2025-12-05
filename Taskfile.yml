@@ -571,3 +571,65 @@ tasks:
           tokens=$((words * 4 / 3))  # Rough estimate: 1.33 tokens per word
           echo "$(basename $prompt): ~$tokens tokens"
         done
+
+  #============================================================================
+  # TESTING & EVALUATION
+  #============================================================================
+
+  test:all:
+    desc: Run all tests
+    cmds:
+      - pytest support/tests -v --tb=short
+
+  test:unit:
+    desc: Run unit tests only
+    cmds:
+      - pytest support/tests -v -m unit
+
+  test:e2e:
+    desc: Run end-to-end tests
+    cmds:
+      - pytest support/tests/e2e -v -s
+
+  test:phase1:
+    desc: Run IB-Agent Phase 1 (Data Layer) tests
+    cmds:
+      - pytest support/tests/e2e -v -m phase1
+
+  test:phase2:
+    desc: Run IB-Agent Phase 2 (Core Agents) tests
+    cmds:
+      - pytest support/tests/e2e -v -m phase2
+
+  test:coverage:
+    desc: Run tests with coverage report
+    cmds:
+      - pytest support/tests -v --cov=agent_orchestrator --cov=shared --cov-report=html --cov-report=term-missing
+
+  eval:run:
+    desc: Run LangSmith evaluations against traces
+    summary: |
+      Run evaluation on traced LangGraph workflows using custom evaluators.
+      Outputs results to reports/eval-results.json.
+
+      Usage:
+        task eval:run                             # Default dataset
+        task eval:run DATASET=ib-agent-phase1    # Specific dataset
+    vars:
+      DATASET: '{{.DATASET | default "ib-agent-scenarios-v1"}}'
+      PROJECT: '{{.PROJECT | default "code-chef-testing"}}'
+    cmds:
+      - python support/tests/evaluation/run_evaluation.py --dataset {{.DATASET}} --project {{.PROJECT}} --output reports/eval-results.json
+
+  eval:datasets:
+    desc: List available LangSmith datasets
+    cmds:
+      - python support/tests/evaluation/run_evaluation.py --list-datasets
+
+  eval:seed:
+    desc: Seed evaluation datasets from test scenarios
+    summary: |
+      Create LangSmith datasets from IB-Agent scenario definitions.
+      Used to bootstrap evaluation before running tests.
+    cmds:
+      - python -c "from support.tests.e2e.langsmith_datasets import create_evaluation_dataset; create_evaluation_dataset()"
