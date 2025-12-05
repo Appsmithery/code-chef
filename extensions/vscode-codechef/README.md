@@ -1,63 +1,90 @@
 # code/chef - AI Agent Orchestrator
 
-[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue)](https://marketplace.visualstudio.com/)
-[![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/Dev-Tools)
+[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue)](https://github.com/Appsmithery/code-chef/releases)
+[![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/code-chef)
 [![LangGraph](https://img.shields.io/badge/LangGraph-enabled-purple)](https://www.langchain.com/)
 
 VS Code extension that integrates the code/chef orchestrator into Copilot Chat, enabling AI-powered task automation with 150+ MCP tools.
 
 ## Features
 
-- **@codechef Chat Participant** - Submit tasks directly from Copilot Chat
+- **@chef Chat Participant** - Submit tasks directly from Copilot Chat
 - **LangGraph Workflow Engine** - Single orchestrator with agent nodes and PostgreSQL checkpointing
 - **150+ MCP Tools** - LangChain function calling with progressive disclosure (80-90% token savings)
 - **Agent Routing** - Routes to specialized agents (feature-dev, code-review, infrastructure, cicd, documentation)
 - **Workspace Context** - Automatically extracts git branch, open files, project type
 - **HITL Approvals** - Linear integration for human-in-the-loop workflow
-- **Observability** - LangSmith tracing + Prometheus metrics
+- **Observability** - LangSmith tracing + Grafana metrics
 
-## Quick Start
+## Installation
 
-### 1. Install Extension
+### Option 1: GitHub Releases (Recommended)
 
-From VS Code Marketplace or build locally:
+1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
+2. Download the latest `vscode-codechef-*.vsix` file
+3. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
+4. Select the downloaded file and reload
+
+### Option 2: GitHub Packages (npm)
+
+```bash
+# Configure npm for GitHub Packages (one-time)
+echo "@appsmithery:registry=https://npm.pkg.github.com" >> ~/.npmrc
+
+# Install
+npm install @appsmithery/vscode-codechef
+```
+
+### Option 3: Build from Source
 
 ```bash
 cd extensions/vscode-codechef
 npm install && npm run compile
 npx vsce package
-code --install-extension vscode-codechef-0.5.0.vsix
+code --install-extension vscode-codechef-*.vsix
 ```
 
-### 2. Configure
+### Option 4: Install Script (Development)
 
-Press `F1` → "code/chef: Configure"
+```powershell
+# From code-chef repo root
+.\support\scripts\install-extension.ps1
+
+# With version bump
+.\support\scripts\install-extension.ps1 -Release -BumpType patch
+```
+
+## Quick Start
+
+### 1. Configure
+
+Press `Ctrl+Shift+P` → "code/chef: Configure"
 
 **Required Settings:**
 
 - `codechef.orchestratorUrl` - Orchestrator endpoint (default: `https://codechef.appsmithery.co/api`)
 - `codechef.apiKey` - API key for authentication (get from administrator)
 
-### 3. Use in Copilot Chat
+### 2. Use in Copilot Chat
 
-Open Copilot Chat (`Ctrl+I`) and type:
+Open Copilot Chat and type:
 
 ```
-@codechef Add JWT authentication to my Express API
+@chef Add JWT authentication to my Express API
 ```
 
 ## Commands
 
 ### Chat Commands
 
-| Command                                | Description              | Example                         |
-| -------------------------------------- | ------------------------ | ------------------------------- |
-| `@codechef <task>`                     | Submit development task  | `@codechef Add authentication`  |
-| `@codechef /status <id>`               | Check task status        | `@codechef /status abc123`      |
-| `@codechef /approve <task> <approval>` | Approve pending task     | `@codechef /approve abc123 xyz` |
-| `@codechef /tools`                     | List available MCP tools | `@codechef /tools`              |
+| Command                             | Description              | Example                      |
+| ----------------------------------- | ------------------------ | ---------------------------- |
+| `@chef <task>`                      | Submit development task  | `@chef Add authentication`   |
+| `@chef /status <id>`                | Check task status        | `@chef /status abc123`       |
+| `@chef /approve <task> <approval>`  | Approve pending task     | `@chef /approve abc123 xyz`  |
+| `@chef /tools`                      | List available MCP tools | `@chef /tools`               |
 
-### Command Palette (`F1`)
+### Command Palette (`Ctrl+Shift+P`)
 
 - **code/chef: Submit Task** - Submit via input box
 - **code/chef: Check Status** - Check task status
