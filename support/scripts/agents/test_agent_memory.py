@@ -65,7 +65,7 @@ def test_vector_memory():
         },
         {
             "input": "What is Qdrant used for?",
-            "output": "Qdrant Cloud stores vector embeddings for 6 collections: the-shop (docs), agent_memory (conversations), task_context, code_patterns, feature_specs, and issue_tracker."
+            "output": "Qdrant Cloud stores vector embeddings for 6 collections: code_patterns (default), issue_tracker, library_registry, vendor-docs, feature_specs, agent_memory, and task_context."
         }
     ]
     

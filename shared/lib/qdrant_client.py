@@ -18,7 +18,7 @@ class QdrantCloudClient:
     def __init__(self):
         self.url = os.getenv("QDRANT_URL")
         self.api_key = os.getenv("QDRANT_API_KEY")
-        self.collection = os.getenv("QDRANT_COLLECTION", "the-shop")
+        self.collection = os.getenv("QDRANT_COLLECTION", "code_patterns")
         self.client = None
         
         if self.url and self.api_key:

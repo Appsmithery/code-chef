@@ -1,6 +1,6 @@
 # RAG & Qdrant Configuration Alignment
 
-**Date**: November 26, 2025  
+**Date**: January 2025 (Updated)  
 **Status**: ✅ Aligned  
 **Services**: RAG Context Manager (port 8007), Qdrant Cloud
 
@@ -8,15 +8,17 @@
 
 ### Qdrant Cloud Collections
 
-| Collection      | Points | Status    | Purpose                          |
-| --------------- | ------ | --------- | -------------------------------- |
-| `the-shop`      | 460    | ✅ Active | Main knowledge base (DO KB sync) |
-| `vendor-docs`   | 94     | ✅ Active | Vendor API documentation         |
-| `agent_memory`  | 0      | ⚠️ Empty  | Agent conversation memory        |
-| `task_context`  | 0      | ⚠️ Empty  | Task-specific context            |
-| `code_patterns` | 0      | ⚠️ Empty  | Code examples and patterns       |
-| `feature_specs` | 0      | ⚠️ Empty  | Feature specifications           |
-| `issue_tracker` | 0      | ⚠️ Empty  | Issue tracking context           |
+| Collection          | Points | Status     | Purpose                                              |
+| ------------------- | ------ | ---------- | ---------------------------------------------------- |
+| `code_patterns`     | 505    | ✅ Active  | Python code patterns (AST extraction)                |
+| `issue_tracker`     | 155    | ✅ Active  | Linear issues semantic search                        |
+| `feature_specs`     | 4      | ✅ Active  | Linear project specifications                        |
+| `vendor-docs`       | 94     | ✅ Active  | Vendor API documentation                             |
+| `library_registry`  | 56     | ✅ Active  | Context7 library ID cache (DEV-194)                  |
+| `agent_memory`      | 0      | ⏳ Planned | Agent conversation memory                            |
+| `task_context`      | 0      | ⏳ Planned | Task-specific context                                |
+
+> **Note**: `the-shop` collection was deleted (Jan 2025) - contained stale DigitalOcean KB data with mock embeddings.
 
 ### Configuration Stack
 
@@ -40,7 +42,7 @@
 
 - **Status**: ✅ Connected to Qdrant Cloud
 - **MCP Gateway**: ✅ Connected (http://gateway-mcp:8000)
-- **Default Collection**: `the-shop`
+- **Default Collection**: `code_patterns`
 - **Health**: https://codechef.appsmithery.co/rag/health
 
 ## Changes Made (November 26, 2025)
@@ -238,13 +240,13 @@ docker compose logs rag-context --tail=100 | grep -i error
 ### Backup & Recovery
 
 **Qdrant Cloud**: Automatic backups enabled  
-**Recovery**: Collections can be re-indexed from source URLs
+**Recovery**: Collections can be re-indexed from source scripts
 
 **Manual Backup** (via Qdrant API):
 
 ```bash
 # Export collection snapshot
-curl -X POST "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io/collections/the-shop/snapshots" \
+curl -X POST "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io/collections/code_patterns/snapshots" \
   -H "api-key: <QDRANT_API_KEY>"
 ```
 
@@ -291,8 +293,9 @@ curl https://codechef.appsmithery.co/rag/collections
 
 **Solution**:
 
-- For `the-shop`: Should sync from DigitalOcean Knowledge Base (460 points)
-- For `vendor-docs`: Run `index_vendor_docs.py` script
+- For `code_patterns`: Run `support/scripts/rag/index_code_patterns.py`
+- For `vendor-docs`: Run `support/scripts/rag/index_vendor_docs.py`
+- For `library_registry`: Run `support/scripts/rag/index_library_registry.py`
 - For other collections: Will populate as agents use them
 
 ## Next Steps
@@ -317,43 +320,40 @@ curl https://codechef.appsmithery.co/rag/collections
 
 ### Active Collections (Production)
 
-| Collection    | Points | Status    | Purpose                                                |
-| ------------- | ------ | --------- | ------------------------------------------------------ |
-| `the-shop`    | 460    | ✅ Active | Primary knowledge base (DigitalOcean KB sync)          |
-| `vendor-docs` | 94     | ✅ Active | Vendor API documentation (Gradient, Linear, LangSmith) |
+| Collection         | Points | Status    | Purpose                                                 |
+| ------------------ | ------ | --------- | ------------------------------------------------------- |
+| `code_patterns`    | 505    | ✅ Active | Python code patterns from workspace (AST extraction)   |
+| `issue_tracker`    | 155    | ✅ Active | Linear issues semantic search                           |
+| `feature_specs`    | 4      | ✅ Active | Linear project specifications                           |
+| `vendor-docs`      | 94     | ✅ Active | Vendor API documentation (Gradient, Linear, LangSmith) |
+| `library_registry` | 56     | ✅ Active | Context7 MCP library ID cache (DEV-194)                |
 
 ### Planned Collections (Future Implementation)
 
-| Collection      | Status     | Implementation Timeline      | Purpose                                                     |
-| --------------- | ---------- | ---------------------------- | ----------------------------------------------------------- |
-| `agent_memory`  | ⏳ Planned | Q2 2026 (Zen Priority 3)     | Agent episodic memory and conversation history              |
-| `task_context`  | ⏳ Planned | Q1 2026 (RAG Phase 2)        | Workflow context persistence and task execution history     |
-| `code_patterns` | ⏳ Planned | Q1 2026 (RAG Phase 1)        | Code generation knowledge base with architectural patterns  |
-| `feature_specs` | ⏳ Planned | Q1 2026 (RAG Phase 1)        | Feature specifications and requirements documentation       |
-| `issue_tracker` | ⏳ Planned | Q2 2026 (Linear integration) | Linear issue semantic search and project management context |
+| Collection     | Status     | Implementation Timeline  | Purpose                                        |
+| -------------- | ---------- | ------------------------ | ---------------------------------------------- |
+| `agent_memory` | ⏳ Planned | Q2 2026 (Zen Priority 3) | Agent episodic memory and conversation history |
+| `task_context` | ⏳ Planned | Q1 2026 (RAG Phase 2)    | Workflow context persistence                   |
 
 **Implementation Dependencies:**
 
 - **`agent_memory`**: Requires DEV-167 (Agent Memory Implementation), Zen conversation memory port
 - **`task_context`**: Requires workflow state persistence enhancements
-- **`code_patterns`**: Requires code indexing script, pattern extraction from `agent_orchestrator/`
-- **`feature_specs`**: Requires Linear project/issue description indexing
-- **`issue_tracker`**: Requires Linear GraphQL integration for issue sync
 
 **Current Configuration Status:**
 
-- ✅ All 7 collections defined in `config/rag/vectordb.config.yaml`
+- ✅ All collections defined in `config/rag/vectordb.config.yaml`
 - ✅ Collections auto-created on first use via `ensure_collection()` in RAG service
-- ✅ Infrastructure ready (scripts, test suites, placeholder implementations exist)
-- ⏳ Awaiting feature development to populate planned collections
+- ✅ Context7 Library Cache implemented (DEV-194)
+- ✅ Code patterns indexed (505 vectors)
+- ✅ Issue tracker indexed (155 vectors)
+- ⏳ Awaiting feature development for agent_memory and task_context
 
 **Reference Issues:**
 
 - **DEV-167**: Agent Memory Implementation (Backlog)
-- **DEV-172**: Workflow composition with parent chains (In Progress)
 - **DEV-175**: Zen pattern integration (Done)
-- **RAG Phase 1**: Code patterns + feature specs indexing (Q1 2026)
-- **RAG Phase 2**: Task context persistence (Q1 2026)
+- **DEV-194**: Context7 Library ID RAG Cache (Done)
 
 ---
 

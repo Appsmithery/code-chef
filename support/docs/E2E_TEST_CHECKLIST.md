@@ -47,15 +47,15 @@ Expected: 13 containers running
 
 ### 1.2 Collection Verification
 
-- [ ] **All 7 collections exist with correct counts**
+- [ ] **All 6 active collections exist with correct counts**
   ```bash
   curl https://codechef.appsmithery.co/rag/collections | jq .
   # Expected counts:
-  # - code_patterns: 505
+  # - code_patterns: 505 [DEFAULT]
   # - issue_tracker: 155
-  # - feature_specs: 4
-  # - the-shop: 460
+  # - library_registry: 56
   # - vendor-docs: 94
+  # - feature_specs: 4
   # - task_context: 0
   # - agent_memory: 0
   ```

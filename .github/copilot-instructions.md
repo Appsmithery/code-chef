@@ -69,7 +69,8 @@ Use **progressive disclosure** to minimize token usage (80-90% savings):
 - Observability: LangSmith tracing, Grafana/Prometheus metrics
 - HITL: Risk-based approvals via Linear (DEV-68 hub), LangGraph checkpointing
 - Service ports: orchestrator:8001, rag:8007, state:8008, langgraph:8010
-- **RAG Semantic Search (DEV-184, completed Nov 2025)**: Qdrant Cloud with 1,218 vectors across 7 collections (code_patterns, issue_tracker, feature_specs, vendor-docs, the-shop)
+- **RAG Semantic Search (DEV-184, completed Nov 2025)**: Qdrant Cloud with 814 vectors across 6 active collections (code_patterns, issue_tracker, feature_specs, vendor-docs, library_registry)
+- **Context7 Library Cache (DEV-194, completed Jan 2025)**: 56 library IDs cached for MCP tool resolution
 - **Zen Pattern Integration (DEV-175, completed Nov 2025)**: Parent workflow chains, resource deduplication (80-90% token savings), workflow TTL management
 - **Memory Optimization (Nov 2025)**: 2GB droplet with optimized container limits (256MB-512MB per service), 2GB swap enabled
 
@@ -729,15 +730,17 @@ curl http://45.55.173.72:8010/health
 
 **Indexed Collections:**
 
-| Collection      | Vectors | Source                | Update Frequency |
-| --------------- | ------- | --------------------- | ---------------- |
-| `code_patterns` | 505     | Python AST extraction | On deployment    |
-| `issue_tracker` | 155     | Linear GraphQL API    | On demand        |
-| `feature_specs` | 4       | Linear Projects       | On demand        |
-| `the-shop`      | 460     | DO Knowledge Base     | Sync scheduled   |
-| `vendor-docs`   | 94      | API documentation     | Manual           |
-| `task_context`  | 0       | Workflow events       | When populated   |
-| `agent_memory`  | 0       | Agent conversations   | Future           |
+| Collection         | Vectors | Source                | Update Frequency |
+| ------------------ | ------- | --------------------- | ---------------- |
+| `code_patterns`    | 505     | Python AST extraction | On deployment    |
+| `issue_tracker`    | 155     | Linear GraphQL API    | On demand        |
+| `library_registry` | 56      | Context7 library IDs  | On demand        |
+| `vendor-docs`      | 94      | API documentation     | Manual           |
+| `feature_specs`    | 4       | Linear Projects       | On demand        |
+| `task_context`     | 0       | Workflow events       | When populated   |
+| `agent_memory`     | 0       | Agent conversations   | Future           |
+
+> **Note**: `the-shop` collection was deleted (Jan 2025) - contained stale DigitalOcean KB data.
 
 **Indexing Scripts:**
 
@@ -747,6 +750,9 @@ python support/scripts/rag/index_code_patterns.py
 
 # Index Linear issues
 python support/scripts/rag/index_issue_tracker.py
+
+# Index Context7 library registry (DEV-194)
+python support/scripts/rag/index_library_registry.py
 
 # Index Linear projects
 python support/scripts/rag/index_feature_specs.py
