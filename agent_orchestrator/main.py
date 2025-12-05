@@ -1698,13 +1698,13 @@ async def get_task_status(task_id: str):
         raise HTTPException(status_code=404, detail="Task not found")
 
     task = task_registry[task_id]
-    
+
     # Calculate completion status from subtasks
-    subtasks_list = task.subtasks if hasattr(task, 'subtasks') else []
+    subtasks_list = task.subtasks if hasattr(task, "subtasks") else []
     completed = sum(1 for s in subtasks_list if s.status == TaskStatus.COMPLETED)
     in_progress = sum(1 for s in subtasks_list if s.status == TaskStatus.IN_PROGRESS)
     total = len(subtasks_list)
-    
+
     # Determine overall status
     if completed == total and total > 0:
         overall_status = "completed"
@@ -1712,24 +1712,32 @@ async def get_task_status(task_id: str):
         overall_status = "in_progress"
     else:
         overall_status = "pending"
-    
+
     # Return extension-compatible format
     return {
         "task_id": task_id,
         "status": overall_status,
         "subtasks": [
             {
-                "agent_type": s.agent_type.value if hasattr(s.agent_type, 'value') else str(s.agent_type),
+                "agent_type": (
+                    s.agent_type.value
+                    if hasattr(s.agent_type, "value")
+                    else str(s.agent_type)
+                ),
                 "description": s.description,
-                "status": s.status.value if hasattr(s.status, 'value') else str(s.status),
-                "priority": getattr(s, 'priority', 'medium'),
+                "status": (
+                    s.status.value if hasattr(s.status, "value") else str(s.status)
+                ),
+                "priority": getattr(s, "priority", "medium"),
             }
             for s in subtasks_list
         ],
         "total_subtasks": total,
         "completed_subtasks": completed,
-        "routing_plan": task.routing_plan if hasattr(task, 'routing_plan') else {},
-        "linear_project": task.linear_project if hasattr(task, 'linear_project') else None,
+        "routing_plan": task.routing_plan if hasattr(task, "routing_plan") else {},
+        "linear_project": (
+            task.linear_project if hasattr(task, "linear_project") else None
+        ),
     }
 
 
