@@ -53,6 +53,7 @@ export interface ChatMessage {
     message: string;
     session_id: string;
     context?: Record<string, any>;
+    workspace_config?: Record<string, any>;
 }
 
 export interface ChatResponse {
@@ -60,6 +61,12 @@ export interface ChatResponse {
     session_id: string;
     task_id?: string;
     requires_approval?: boolean;
+    token_usage?: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+        cost_usd?: number;
+    };
 }
 
 export interface OrchestratorClientConfig {

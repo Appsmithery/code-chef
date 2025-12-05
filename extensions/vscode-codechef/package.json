@@ -2,7 +2,7 @@
   "name": "vscode-codechef",
   "displayName": "code/chef - AI DevOps Team",
   "description": "Your personal AI DevOps Team, orchestrated by the Head Chef.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "icon.png",
@@ -178,23 +178,144 @@
           "type": "string",
           "default": "https://codechef.appsmithery.co/api",
           "description": "code/chef orchestrator endpoint",
-          "format": "uri"
+          "format": "uri",
+          "order": 1
         },
         "codechef.apiKey": {
           "type": "string",
           "default": "",
-          "description": "API key for authenticating with the code/chef orchestrator. Get this from your administrator.",
-          "markdownDescription": "API key for authenticating with the code/chef orchestrator. Required for production use. Get this from your administrator or generate one with `python -c \"import secrets; print(secrets.token_urlsafe(32))\"`"
+          "description": "API key for authenticating with the code/chef orchestrator.",
+          "markdownDescription": "API key for authenticating with the code/chef orchestrator. Required for production use. Get this from your administrator or generate one with `python -c \"import secrets; print(secrets.token_urlsafe(32))\"`",
+          "order": 2
         },
-        "codechef.linearHubIssue": {
+        "codechef.environment": {
           "type": "string",
-          "default": "DEV-68",
-          "description": "Linear issue ID for approval notifications"
+          "enum": [
+            "production",
+            "development"
+          ],
+          "enumDescriptions": [
+            "Full-power models (llama3.3-70b, codellama-13b) - Best quality",
+            "Cheaper models for testing (llama3-8b) - 40-60% cost savings"
+          ],
+          "default": "production",
+          "description": "Environment profile for model selection.",
+          "markdownDescription": "**Environment Profile**\n\n| Profile | Models | Cost |\n|---------|--------|------|\n| production | llama3.3-70b, codellama-13b | $0.20-0.60/1M tokens |\n| development | llama3-8b (all agents) | $0.20/1M tokens |\n\n*Switch to development for testing and experimentation*",
+          "order": 3
         },
-        "codechef.linearWorkspaceSlug": {
+        "codechef.toolLoadingStrategy": {
           "type": "string",
-          "default": "dev-ops",
-          "description": "Linear workspace slug used when opening approval links (e.g., 'dev-ops' for /dev-ops/ URLs)"
+          "enum": [
+            "minimal",
+            "progressive",
+            "agent_profile",
+            "full"
+          ],
+          "enumDescriptions": [
+            "Only tools mentioned in task (5-10 tools, 80-95% savings) - Fastest",
+            "Start minimal, expand as needed (10-30 tools, 70-85% savings) - Recommended",
+            "Load from agent profile (20-40 tools, 60-80% savings)",
+            "All 150+ tools (no savings) - Debugging only"
+          ],
+          "default": "progressive",
+          "description": "How many MCP tools to expose to the LLM.",
+          "markdownDescription": "**Tool Loading Strategy** 🔧\n\nControls token usage by limiting exposed tools:\n\n| Strategy | Tools | Token Savings | Use Case |\n|----------|-------|---------------|----------|\n| `minimal` | 5-10 | 80-95% | Simple tasks |\n| `progressive` | 10-30 | 70-85% | **Recommended** |\n| `agent_profile` | 20-40 | 60-80% | Complex tasks |\n| `full` | 150+ | 0% | Debugging |",
+          "order": 10
+        },
+        "codechef.maxToolsPerRequest": {
+          "type": "number",
+          "default": 30,
+          "minimum": 5,
+          "maximum": 150,
+          "description": "Maximum tools per request. Lower = fewer tokens.",
+          "markdownDescription": "**Maximum Tools Per Request**\n\nCaps the number of tools exposed to the LLM regardless of strategy.\n\n- Default: 30 (balanced)\n- Minimum: 5 (most restrictive)\n- Maximum: 150 (all tools)\n\n*Lower values reduce token costs but may limit capabilities*",
+          "order": 11
+        },
+        "codechef.enableContext7Cache": {
+          "type": "boolean",
+          "default": true,
+          "description": "Cache library IDs locally (90% savings on library lookups)",
+          "markdownDescription": "**Context7 Library Cache** 📚\n\nWhen enabled, library ID lookups use the local Qdrant cache instead of calling Context7 API.\n\n- Cache: `library_registry` collection (56 libraries)\n- Savings: ~1,000 tokens per library lookup\n- Libraries: LangChain, FastAPI, Pydantic, OpenAI, etc.",
+          "order": 12
+        },
+        "codechef.maxContextTokens": {
+          "type": "number",
+          "default": 8000,
+          "minimum": 2000,
+          "maximum": 32000,
+          "description": "Token budget for agent context (code + tools + RAG)",
+          "markdownDescription": "**Context Token Budget** 📊\n\nTotal tokens available for each agent's context:\n\n| Component | Default Allocation |\n|-----------|-------------------|\n| Code snippets | 3,000 tokens |\n| Tool descriptions | 2,000 tokens |\n| RAG results | 2,000 tokens |\n| Response | 1,000 tokens |\n\n*Lower values reduce costs but may affect response quality*",
+          "order": 20
+        },
+        "codechef.maxResponseTokens": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 500,
+          "maximum": 8000,
+          "description": "Maximum tokens for agent responses",
+          "markdownDescription": "**Maximum Response Tokens**\n\nLimits the length of agent responses.\n\n- Default: 2,000 (balanced)\n- Minimum: 500 (brief responses)\n- Maximum: 8,000 (detailed responses)\n\n*Shorter responses = faster + cheaper*",
+          "order": 21
+        },
+        "codechef.ragEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include RAG context in agent prompts",
+          "markdownDescription": "**RAG Context**\n\nWhen enabled, agents receive relevant context from vector database:\n\n- Code patterns (505 vectors)\n- Issue tracker (155 vectors)\n- Vendor docs (94 vectors)\n- Library registry (56 vectors)\n\n*Disable to reduce context size for simple tasks*",
+          "order": 22
+        },
+        "codechef.ragMaxResults": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Maximum RAG results per query",
+          "markdownDescription": "**RAG Results Limit**\n\nHow many semantic search results to include in agent context.\n\n- Default: 5 (balanced)\n- Minimum: 1 (most focused)\n- Maximum: 20 (comprehensive)\n\n*Each result adds ~200-500 tokens*",
+          "order": 23
+        },
+        "codechef.ragCollection": {
+          "type": "string",
+          "enum": [
+            "code_patterns",
+            "issue_tracker",
+            "vendor-docs",
+            "library_registry",
+            "feature_specs"
+          ],
+          "enumDescriptions": [
+            "Python code patterns and AST analysis (505 vectors)",
+            "Linear issues and project context (155 vectors)",
+            "API documentation for vendors (94 vectors)",
+            "Context7 library ID cache (56 vectors)",
+            "Feature specifications and PRDs (4 vectors)"
+          ],
+          "default": "code_patterns",
+          "description": "Primary RAG collection for context retrieval",
+          "order": 24
+        },
+        "codechef.dailyTokenBudget": {
+          "type": "number",
+          "default": 0,
+          "minimum": 0,
+          "maximum": 10000000,
+          "description": "Daily token limit (0 = unlimited)",
+          "markdownDescription": "**Daily Token Budget** 💰\n\nSet a daily limit to prevent unexpected costs.\n\n- `0` = Unlimited (default)\n- Suggested: `100000` for light use\n- Suggested: `500000` for heavy use\n\n*Requests will be blocked when budget is exhausted*",
+          "order": 30
+        },
+        "codechef.showTokenUsage": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show token usage after each request",
+          "markdownDescription": "**Token Usage Display**\n\nWhen enabled, shows token count in responses:\n\n```\n✓ Task completed (1,234 tokens | $0.0007)\n```\n\n*Helps track costs and optimize usage*",
+          "order": 31
+        },
+        "codechef.costAlertThreshold": {
+          "type": "number",
+          "default": 0.1,
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Show warning when single request exceeds this cost ($)",
+          "markdownDescription": "**Cost Alert Threshold**\n\nShow a warning notification when a single request costs more than this amount.\n\n- Default: $0.10\n- Set to 0 to disable\n\n*Helps catch unexpectedly expensive operations*",
+          "order": 32
         },
         "codechef.autoApproveThreshold": {
           "type": "string",
@@ -205,19 +326,48 @@
             "critical",
             "never"
           ],
+          "enumDescriptions": [
+            "Auto-approve low-risk tasks (documentation, minor fixes)",
+            "Auto-approve medium-risk tasks (code changes, tests)",
+            "Auto-approve high-risk tasks (infrastructure, deployments)",
+            "Auto-approve all tasks including critical (not recommended)",
+            "Never auto-approve - require manual approval for all tasks"
+          ],
           "default": "low",
-          "description": "Auto-approve tasks at or below this risk level"
+          "description": "Auto-approve tasks at or below this risk level",
+          "order": 40
         },
         "codechef.enableNotifications": {
           "type": "boolean",
           "default": true,
-          "description": "Show toast notifications for approval requests"
+          "description": "Show toast notifications for approval requests",
+          "order": 41
+        },
+        "codechef.linearHubIssue": {
+          "type": "string",
+          "default": "DEV-68",
+          "description": "Linear issue ID for approval notifications",
+          "order": 42
+        },
+        "codechef.linearWorkspaceSlug": {
+          "type": "string",
+          "default": "dev-ops",
+          "description": "Linear workspace slug for approval links",
+          "order": 43
         },
         "codechef.langsmithUrl": {
           "type": "string",
           "default": "https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046",
           "description": "LangSmith project URL for viewing traces",
-          "format": "uri"
+          "format": "uri",
+          "order": 50
+        },
+        "codechef.grafanaUrl": {
+          "type": "string",
+          "default": "https://appsmithery.grafana.net",
+          "description": "Grafana dashboard URL for metrics",
+          "format": "uri",
+          "order": 51
         }
       }
     }

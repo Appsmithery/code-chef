@@ -38,6 +38,7 @@ const vscode = __importStar(require("vscode"));
 const contextExtractor_1 = require("./contextExtractor");
 const orchestratorClient_1 = require("./orchestratorClient");
 const sessionManager_1 = require("./sessionManager");
+const settings_1 = require("./settings");
 class CodeChefChatParticipant {
     constructor(context) {
         this.context = context;
@@ -69,11 +70,12 @@ class CodeChefChatParticipant {
             // Get or create session
             const sessionId = this.sessionManager.getOrCreateSession(context);
             stream.progress('Submitting to code/chef orchestrator...');
-            // Submit to orchestrator
+            // Submit to orchestrator with token optimization settings
             const response = await this.client.orchestrate({
                 description: userMessage,
                 priority: 'medium',
                 project_context: workspaceContext,
+                workspace_config: (0, settings_1.buildWorkspaceConfig)(),
                 session_id: sessionId
             });
             this.lastTaskId = response.task_id;
