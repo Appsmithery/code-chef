@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ContextExtractor } from './contextExtractor';
 import { OrchestratorClient, TaskResponse } from './orchestratorClient';
 import { SessionManager } from './sessionManager';
+import { buildWorkspaceConfig } from './settings';
 
 export class CodeChefChatParticipant {
     private client: OrchestratorClient;
@@ -51,11 +52,12 @@ export class CodeChefChatParticipant {
             
             stream.progress('Submitting to code/chef orchestrator...');
             
-            // Submit to orchestrator
+            // Submit to orchestrator with token optimization settings
             const response = await this.client.orchestrate({
                 description: userMessage,
                 priority: 'medium',
                 project_context: workspaceContext,
+                workspace_config: buildWorkspaceConfig(),
                 session_id: sessionId
             });
 

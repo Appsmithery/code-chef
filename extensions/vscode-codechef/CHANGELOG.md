@@ -5,6 +5,51 @@ All notable changes to the "code/chef - AI Agent Orchestrator" extension will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-12-05
+
+### Added - Token Optimization Settings
+
+New VS Code settings for controlling LLM token costs:
+
+#### Model Selection
+
+- **Environment Profile** (`codechef.environment`): Switch between `production` (full-power models) and `development` (cheaper 8b models for testing)
+
+#### Tool Loading
+
+- **Tool Loading Strategy** (`codechef.toolLoadingStrategy`): Choose from `minimal`, `progressive`, `agent_profile`, or `full` - up to 95% token savings with minimal strategy
+- **Max Tools Per Request** (`codechef.maxToolsPerRequest`): Cap the number of tools exposed to LLM (default: 30)
+- **Context7 Cache** (`codechef.enableContext7Cache`): Use cached library IDs for 90% savings on library lookups
+
+#### Context Budget
+
+- **Max Context Tokens** (`codechef.maxContextTokens`): Control total context budget per agent (default: 8000)
+- **Max Response Tokens** (`codechef.maxResponseTokens`): Limit response length (default: 2000)
+
+#### RAG Settings
+
+- **RAG Enabled** (`codechef.ragEnabled`): Toggle RAG context in prompts
+- **RAG Max Results** (`codechef.ragMaxResults`): Limit semantic search results (default: 5)
+- **RAG Collection** (`codechef.ragCollection`): Choose primary collection (code_patterns, issue_tracker, etc.)
+
+#### Cost Controls
+
+- **Daily Token Budget** (`codechef.dailyTokenBudget`): Set daily spending limit (0 = unlimited)
+- **Show Token Usage** (`codechef.showTokenUsage`): Display token count after requests
+- **Cost Alert Threshold** (`codechef.costAlertThreshold`): Warning when request exceeds threshold
+
+#### New Files
+
+- **`src/settings.ts`**: Settings helper module with `getSettings()`, `buildWorkspaceConfig()`, `formatTokenUsage()`, and cost alert utilities
+
+### Changed
+
+- Settings now organized with `order` property for logical grouping in UI
+- Added rich markdown descriptions with tables and formatting
+- Added Grafana URL setting (`codechef.grafanaUrl`)
+- Updated `ChatResponse` interface to include `token_usage` field
+- Updated `ChatMessage` interface to include `workspace_config` field
+
 ## [0.6.1] - 2025-12-05
 
 ### Added
