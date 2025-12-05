@@ -88,6 +88,23 @@ Expected: 13 containers running
   # Expected: Project specifications returned
   ```
 
+### 1.4 Context7 Library Cache (DEV-194)
+
+- [ ] **Query library_registry**
+
+  ```bash
+  curl -X POST https://codechef.appsmithery.co/rag/query \
+    -H "Content-Type: application/json" \
+    -d '{"query": "langchain", "collection": "library_registry", "limit": 1}'
+  # Expected: library_id containing "/langchain-ai/langchain"
+  ```
+
+- [ ] **Library cache stats endpoint**
+  ```bash
+  curl https://codechef.appsmithery.co/rag/library-cache/stats
+  # Expected: {"total_libraries": 56, "categories": 6, ...}
+  ```
+
 ---
 
 ## 2. Memory Optimization
@@ -262,23 +279,25 @@ Expected: 13 containers running
 
 ### Test Run: [DATE]
 
-| Category      | Test                | Result | Notes |
-| ------------- | ------------------- | ------ | ----- |
-| RAG           | Health check        | ⬜     |       |
-| RAG           | Collections exist   | ⬜     |       |
-| RAG           | Query code_patterns | ⬜     |       |
-| RAG           | Query issue_tracker | ⬜     |       |
-| Memory        | Swap enabled        | ⬜     |       |
-| Memory        | Container limits    | ⬜     |       |
-| Orchestrator  | Health              | ⬜     |       |
-| Orchestrator  | Token metrics       | ⬜     |       |
-| Gateway       | Health              | ⬜     |       |
-| Gateway       | Tools available     | ⬜     |       |
-| Linear        | API connection      | ⬜     |       |
-| Observability | LangSmith           | ⬜     |       |
-| Observability | Grafana             | ⬜     |       |
-| State         | PostgreSQL          | ⬜     |       |
-| State         | Redis               | ⬜     |       |
+| Category      | Test                   | Result | Notes |
+| ------------- | ---------------------- | ------ | ----- |
+| RAG           | Health check           | ⬜     |       |
+| RAG           | Collections exist      | ⬜     |       |
+| RAG           | Query code_patterns    | ⬜     |       |
+| RAG           | Query issue_tracker    | ⬜     |       |
+| RAG           | Query library_registry | ⬜     |       |
+| RAG           | Library cache stats    | ⬜     |       |
+| Memory        | Swap enabled           | ⬜     |       |
+| Memory        | Container limits       | ⬜     |       |
+| Orchestrator  | Health                 | ⬜     |       |
+| Orchestrator  | Token metrics          | ⬜     |       |
+| Gateway       | Health                 | ⬜     |       |
+| Gateway       | Tools available        | ⬜     |       |
+| Linear        | API connection         | ⬜     |       |
+| Observability | LangSmith              | ⬜     |       |
+| Observability | Grafana                | ⬜     |       |
+| State         | PostgreSQL             | ⬜     |       |
+| State         | Redis                  | ⬜     |       |
 
 **Legend:** ✅ Pass | ❌ Fail | ⬜ Not tested
 
