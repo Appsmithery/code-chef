@@ -22,8 +22,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize LangSmith client
-client = Client()
+# Load .env if available
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv("config/env/.env")
+except ImportError:
+    pass
+
+# Initialize LangSmith client with workspace ID for org-scoped API keys
+# Workspace ID from: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207
+LANGSMITH_WORKSPACE_ID = os.getenv(
+    "LANGSMITH_WORKSPACE_ID", "5029c640-3f73-480c-82f3-58e402ed4207"
+)
+
+# Set headers for org-scoped API keys
+os.environ.setdefault("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+
+client = Client(
+    api_key=os.getenv("LANGCHAIN_API_KEY"),
+    # Workspace ID header required for org-scoped API keys
+)
 
 # =============================================================================
 # IB-AGENT PLATFORM SCENARIOS
