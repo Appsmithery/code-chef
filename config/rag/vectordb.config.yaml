@@ -7,7 +7,7 @@ vectordb:
   api_key_env: "QDRANT_API_KEY"
   fallback_host: "qdrant" # still allow local docker for dev
   fallback_port: 6333
-  default_collection: "the-shop"
+  default_collection: "code_patterns"
   vector_size: 1536
   distance: "cosine"
 
@@ -17,21 +17,26 @@ embeddings:
   dimension: 1536
 
 collections:
-  - name: "the-shop"
-    description: "Primary production knowledge base (DigitalOcean KB sync)"
-  - name: "vendor-docs"
-    description: "Vendor API documentation (Gradient AI, Linear, LangSmith, LangGraph)"
-  - name: "documentation"
-    description: "Project documentation and guides"
-  - name: "agent_memory"
-    description: "Agent conversation history and episodic memory (planned DEV-167)"
-  - name: "task_context"
-    description: "Task-specific context, requirements, and execution history (RAG Phase 2)"
+  # Active collections (with vectors)
   - name: "code_patterns"
     description: "Code snippets, architectural patterns, and best practices (RAG Phase 1)"
-  - name: "feature_specs"
-    description: "Feature specifications, PRDs, and requirements documents (RAG Phase 1)"
+  - name: "vendor-docs"
+    description: "Vendor API documentation (Gradient AI, Linear, LangSmith, LangGraph)"
   - name: "issue_tracker"
     description: "Linear issues, bugs, and project management context (Linear integration)"
   - name: "library_registry"
     description: "Context7 library ID cache with semantic aliases for token-efficient lookups (DEV-194)"
+  - name: "feature_specs"
+    description: "Feature specifications, PRDs, and requirements documents (RAG Phase 1)"
+  
+  # Planned collections (empty, to be populated by agents)
+  - name: "agent_memory"
+    description: "Agent conversation history and episodic memory (planned DEV-167)"
+  - name: "task_context"
+    description: "Task-specific context, requirements, and execution history (RAG Phase 2)"
+  
+  # Deprecated - deleted 2025-12-05
+  # - name: "the-shop"
+  #   description: "DELETED - was stale DigitalOcean KB sync with mock embeddings"
+  # - name: "documentation"
+  #   description: "UNUSED - never populated, use vendor-docs instead"
