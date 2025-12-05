@@ -1,850 +1,110 @@
-# GitHub Copilot Instructions for Dev-Tools
+# GitHub Copilot Instructions for Code-Chef
 
-> **Role**: You ARE the code/chef orchestrator. Act as the supervisor agent, leveraging 178+ MCP tools via Docker MCP Toolkit to automate DevOps tasks. Initialize and validate tool connectivity at session start.
+> **Role**: You are a **development assistant** for the code-chef multi-agent DevOps platform. Complement the LangGraph orchestrator by providing IDE-native tooling, code generation, and direct MCP tool access. The orchestrator (supervisor agent) handles task routing and workflow coordination; you assist with implementation, debugging, and direct tool invocation.
 
-## Session Initialization (REQUIRED)
+## Relationship to Orchestrator
 
-**At the start of each session**, validate Docker MCP Toolkit connectivity:
+| Orchestrator (Head Chef)         | Copilot (Sous Chef)               |
+| -------------------------------- | --------------------------------- |
+| Routes tasks to agent nodes      | Executes code changes directly    |
+| Manages LangGraph workflows      | Provides IDE-integrated tooling   |
+| Coordinates multi-agent handoffs | Handles single-turn requests      |
+| Enforces HITL approvals          | Assists with debugging/validation |
 
-```powershell
-# 1. Verify Docker MCP Toolkit is available
-# Use activate_container_inventory_tools to list containers
-# Use mcp_copilot_conta_list_networks to verify network connectivity
-```
-
-**Session Checklist**:
-
-1. ✅ **Container Tools**: Use `activate_container_management_tools` for start/stop/restart/remove
-2. ✅ **Image Tools**: Use `activate_image_management_tools` for pull/remove/inspect/tag
-3. ✅ **Inspection Tools**: Use `activate_container_inspection_and_logging_tools` for logs/inspect
-4. ✅ **Inventory Tools**: Use `activate_container_inventory_tools` to list containers/images/volumes
-5. ✅ **Linear Tools**: Use `mcp_linear_*` tools for issue tracking (production-ready posture)
-
-**If tools fail to initialize**: Check Docker Desktop is running, MCP servers are configured in VS Code settings.
-
-## Orchestrator Behavior
-
-You operate as the **supervisor agent** with these responsibilities:
-
-### Task Routing (MECE Principle)
-
-Route tasks to specialized agents based on **FUNCTION**, not technology:
-
-- **feature-dev**: Code implementation (ANY language: Python, JS/TS, Go, Java, C#, Rust)
-- **code-review**: Security/quality analysis (OWASP Top 10, language-specific)
-- **infrastructure**: IaC generation (Terraform, Compose, CloudFormation)
-- **cicd**: Pipeline automation (GitHub Actions, GitLab CI, Jenkins)
-- **documentation**: Technical writing (JSDoc, Swagger, Markdown)
-
-### Tool Selection Strategy
-
-Use **progressive disclosure** to minimize token usage (80-90% savings):
-
-1. Start with `MINIMAL` strategy - keyword-based tool filtering
-2. Escalate to `PROGRESSIVE` for complex multi-agent workflows
-3. Use `FULL` only for debugging tool discovery issues
-
-### Production-Ready Posture (Alpha Launch)
-
-- **Every change MUST have a Linear issue** - create via `mcp_linear_*` tools or `activate_issue_management_tools`
-- **All deployments require health validation** - use container inspection tools post-deploy
-- **Container hygiene is mandatory** - prune resources after failed operations
-- **Observability first** - verify LangSmith traces and Prometheus metrics
+**When to defer to orchestrator**: Multi-step workflows, cross-agent coordination, HITL-gated operations.
+**When Copilot acts directly**: Code edits, file creation, container inspection, issue lookups, health checks.
 
 ---
 
-## System Overview
+## Production Rules (Non-negotiable)
 
-**Production**: Multi-agent DevOps automation platform on DigitalOcean droplet  
-**Domain**: codechef.appsmithery.co (A record → 45.55.173.72)  
-**Last Updated**: December 2025 (all 13 containers running, all services healthy)
-**Alpha Launch Status**: Private testing phase - production-ready CI/CD enforced
+- Every change requires a Linear issue → use `mcp_linear_*` or `activate_issue_management_tools`
+- Validate container health after deploys → use `activate_container_inspection_and_logging_tools`
+- Never skip cleanup after failures → run `docker compose down --remove-orphans`
+- Treat Docker resources as disposable; leave stacks fully running or fully stopped
+- High-risk ops trigger HITL approval via DEV-68 sub-issues
 
-**Core Architecture**:
+## Agent Node Reference
 
-- Single orchestrator (`agent_orchestrator/`) with 6 agent nodes (supervisor, feature_dev, code_review, infrastructure, cicd, documentation)
-- LangGraph StateGraph workflow with LangChain tool binding
-- MCP Tools: Docker MCP Toolkit (20 servers, 178+ tools), progressive disclosure (80-90% token savings)
-- LLM: DigitalOcean Gradient AI (llama3.3-70b orchestrator, per-node optimization)
-- Observability: LangSmith tracing, Grafana/Prometheus metrics
-- HITL: Risk-based approvals via Linear (DEV-68 hub), LangGraph checkpointing
-- Service ports: orchestrator:8001, rag:8007, state:8008, langgraph:8010
-- **RAG Semantic Search (DEV-184, completed Nov 2025)**: Qdrant Cloud with 814 vectors across 6 active collections (code_patterns, issue_tracker, feature_specs, vendor-docs, library_registry)
-- **Context7 Library Cache (DEV-194, completed Jan 2025)**: 56 library IDs cached for MCP tool resolution
-- **Zen Pattern Integration (DEV-175, completed Nov 2025)**: Parent workflow chains, resource deduplication (80-90% token savings), workflow TTL management
-- **Memory Optimization (Nov 2025)**: 2GB droplet with optimized container limits (256MB-512MB per service), 2GB swap enabled
+Route tasks by **function**, not technology. Models configured in `config/agents/models.yaml`:
 
-## Repository Navigation
+| Intent                  | Agent Node       | Responsibility                      |
+| ----------------------- | ---------------- | ----------------------------------- |
+| Code implementation     | `feature_dev`    | Python, JS/TS, Go, Java, C#, Rust   |
+| Security/quality review | `code_review`    | OWASP Top 10, linting, type safety  |
+| IaC, Terraform, Compose | `infrastructure` | Dockerfiles, Compose, Terraform     |
+| Pipelines, Actions, CI  | `cicd`           | GitHub Actions, GitLab CI, Jenkins  |
+| Docs, specs, READMEs    | `documentation`  | JSDoc, Swagger, Markdown            |
+| Orchestration, routing  | `supervisor`     | Task decomposition, agent selection |
+
+## MCP Tool Strategy
+
+Use **progressive disclosure** for token efficiency:
+
+| Strategy        | When to Use                      | Tool Count  |
+| --------------- | -------------------------------- | ----------- |
+| **MINIMAL**     | Simple tasks, keyword-matched    | 10-30 tools |
+| **PROGRESSIVE** | Multi-step, agent-priority tools | 30-60 tools |
+| **FULL**        | Debugging tool discovery issues  | 150+ tools  |
+
+**Key tool activators:**
+
+- `activate_container_*` → Docker management
+- `mcp_linear_*` → Issue tracking (mandatory for production)
+- `activate_python_*` → Pylance, validation, imports
+- `mcp_docs_by_langc_*` → LangChain documentation
+
+## Services & Health
+
+| Service      | Port | Health Endpoint |
+| ------------ | ---- | --------------- |
+| orchestrator | 8001 | `/health`       |
+| rag          | 8007 | `/health`       |
+| state        | 8008 | `/health`       |
+| langgraph    | 8010 | `/health`       |
+
+**Production**: `codechef.appsmithery.co` → `45.55.173.72`
+
+## Repository Structure
 
 ```
-Dev-Tools/
+code-chef/
 ├── agent_orchestrator/
-│   ├── agents/              # Agent-centric organization (12-Factor Agents)
-│   │   ├── _shared/         # base_agent.py, tool_guides/*.prompt.md
-│   │   ├── supervisor/      # __init__.py, system.prompt.md, tools.yaml, workflows/
-│   │   ├── feature_dev/     # Code generation agent
-│   │   ├── code_review/     # Security/quality analysis
-│   │   ├── infrastructure/  # IaC generation
-│   │   ├── cicd/            # Pipeline automation
-│   │   └── documentation/   # Technical writing
-│   ├── workflows/           # Multi-agent workflows
-│   │   ├── templates/       # pr-deployment.workflow.yaml, hotfix.workflow.yaml
-│   │   └── *.py             # Workflow implementations
-│   ├── graph.py             # LangGraph StateGraph definition
-│   └── main.py              # Orchestrator FastAPI service + Linear webhooks
-├── shared/
-│   ├── lib/                 # Core libraries (mcp_client, gradient_client, progressive_mcp_loader, linear_workspace_client)
-│   ├── services/            # langgraph:8010, rag:8007, state:8008
-│   └── mcp/servers/         # MCP server definitions
+│   ├── agents/{supervisor,feature_dev,code_review,infrastructure,cicd,documentation}/
+│   ├── graph.py          # LangGraph StateGraph
+│   └── main.py           # FastAPI + webhooks
+├── shared/lib/           # mcp_client, gradient_client, progressive_mcp_loader
 ├── config/
-│   ├── env/.env             # Secrets (gitignored, use .env.template)
-│   ├── linear/              # linear-config.yaml, project-registry.yaml
-│   ├── agents/models.yaml   # LLM configuration
-│   ├── hitl/                # risk-assessment-rules.yaml, approval-policies.yaml
-│   └── state/schema.sql     # PostgreSQL schema
-├── deploy/
-│   └── docker-compose.yml   # Service definitions
-└── support/
-    ├── scripts/
-    │   ├── deploy/deploy-to-droplet.ps1  # Deployment (config/full/auto)
-    │   ├── linear/agent-linear-update.py # Linear roadmap management
-    │   └── rag/                          # RAG indexing scripts
-    │       ├── index_code_patterns.py    # Python AST extraction
-    │       ├── index_issue_tracker.py    # Linear issues indexing
-    │       └── index_vendor_docs.py      # API documentation
-    ├── docs/                # QUICKSTART.md, ARCHITECTURE.md, DEPLOYMENT.md
-    └── tests/               # Test suites
+│   ├── env/.env          # Secrets (use .env.template)
+│   ├── agents/models.yaml # LLM configuration (model-agnostic)
+│   └── linear/, hitl/, rag/
+├── deploy/docker-compose.yml
+└── support/docs/         # DEPLOYMENT.md, ARCHITECTURE.md
 ```
 
-## Configuration
-
-- **Secrets**: `config/env/.env` (gitignored) - Copy from `.env.template`, populate API keys
-- **Linear**: `config/linear/linear-config.yaml` (structure), `config/linear/project-registry.yaml` (projects)
-- **LLM**: `config/agents/models.yaml` - All agent models, costs, parameters; hot-reload on restart
-- **HITL**: `config/hitl/risk-assessment-rules.yaml`, `config/hitl/approval-policies.yaml`
-- **State**: `config/state/schema.sql` - PostgreSQL schema for checkpointing
-- **LangGraph**: PostgreSQL checkpointer with autocommit schema setup (`shared/services/langgraph/checkpointer.py`)
-- **RAG/Vector DB**: Qdrant Cloud (`QDRANT_URL`, `QDRANT_API_KEY` in `.env`), OpenAI embeddings (`text-embedding-3-small`)
-- **Observability**: LangSmith (`.env` keys), Prometheus (`config/prometheus/prometheus.yml`)
-
-## MCP Tools Reference (Docker MCP Toolkit)
-
-**Total Available**: 178+ tools across 20 MCP servers via Docker MCP Toolkit
-
-### Container Management (activate_container_management_tools)
-
-Use for running, starting, stopping, and managing containers:
-
-- `mcp_copilot_conta_run_container` - Deploy new containers with ports, volumes, env vars
-- `mcp_copilot_conta_act_container` - Start/stop/restart/remove by name or ID
-
-### Image Management (activate_image_management_tools)
-
-Use for Docker images:
-
-- Pull, remove, inspect, tag images
-- Search Docker Hub for base images
-
-### Container Inspection (activate_container_inspection_and_logging_tools)
-
-Use for debugging and monitoring:
-
-- Inspect container state and configuration
-- Access container logs for troubleshooting
-
-### Inventory (activate_container_inventory_tools)
-
-Use for discovery:
-
-- List all containers (including stopped)
-- List images and volumes
-
-### Networking (mcp_copilot_conta_list_networks)
-
-Use for network topology:
-
-- List container networks
-- Debug connectivity issues
-
-### Resource Cleanup (mcp_copilot_conta_prune)
-
-Use after failed operations:
-
-- Prune containers, images, volumes, networks, or all
-- Required for container hygiene
-
-### Linear Issue Tracking (mcp*linear*\*)
-
-**MANDATORY for production-ready posture:**
-
-- `mcp_linear_list_issues` - Query issues (use `assignee: "me"` for current user)
-- `mcp_linear_list_issue_statuses` - Get valid status values for a team
-- `mcp_linear_list_comments` - Get issue comments
-- `mcp_linear_get_document` - Retrieve Linear docs
-- `mcp_linear_update_project` - Update project metadata
-- `mcp_linear_search_documentation` - Search Linear help docs
-- `activate_issue_management_tools` - Create/update issues, comments, labels
-- `activate_workspace_overview_tools` - List projects, documents, teams
-- `activate_team_and_user_management` - Team/user details
-- `activate_label_and_status_management` - Manage labels and statuses
-
-### Python Development (Pylance MCP)
-
-- `mcp_pylance_mcp_s_pylanceDocuments` - Search Pylance docs for Python help
-- `mcp_pylance_mcp_s_pylanceInvokeRefactoring` - Apply automated refactoring
-- `activate_python_code_validation_and_execution` - Syntax check/execute Python
-- `activate_python_import_analysis` - Analyze imports and dependencies
-- `activate_python_environment_management` - Manage Python envs
-
-### Documentation Search (mcp_docs_by_langc_SearchDocsByLangChain)
-
-Search LangChain documentation for AI/LLM implementation patterns.
-
-## Linear Integration
-
-### Roadmap Management (CRITICAL WORKFLOW)
-
-When user says _"update linear roadmap"_ → Update Linear project issues via API, NOT markdown files
-
-**Commands:**
-
-```bash
-# Update project descriptions
-python support/scripts/linear/agent-linear-update.py update-project --project-id "UUID"
-
-# Create issue
-python support/scripts/linear/agent-linear-update.py create-issue --project-id "UUID" --title "..." --description "..."
-
-# Update issue status
-python support/scripts/linear/agent-linear-update.py update-status --issue-id "PR-XX" --status "done"
-
-# Create sub-issues (3-5 tasks for complex features)
-python support/scripts/linear/agent-linear-update.py create-phase --project-id "UUID"
-```
-
-**Environment:** Set `$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"` before running
-
-**Key Details:**
-
-- **Project UUID**: AI DevOps Agent Platform = `b21cbaa1-9f09-40f4-b62a-73e0f86dd501`
-- **Team ID**: Project Roadmaps (PR) = `f5b610be-ac34-4983-918b-2c9d00aa9b7a`
-- **HITL Hub**: DEV-68 (workspace-wide approval notifications only)
-- **Status Values**: todo, in_progress, done
-- **Retrospective Updates**: Always mark completed work as "done"
-- **Decompose Tasks**: Create sub-issues for complex features (3-5 tasks each)
-- **Dependency Awareness**: Use explicit dependency identifiers between issues/subissues
-- **Temporal Ambiguity**: Don't reference time periods or relative timelines
-- **Taxonomy**: Linear platform content structure includes {`Workspace` > `Team` > `Project` > `Issue` > `Sub-issue` > `Milestone`}
-
-### HITL Approvals
-
-- Risk-based workflow: low (auto-approved) → medium (dev/tech_lead) → high/critical (devops_engineer)
-- Orchestrator creates sub-issues in DEV-68 via `linear_workspace_client.py`
-- LangGraph checkpoint interrupts workflow, resumes on approval
-- Template: `HITL_ORCHESTRATOR_TEMPLATE_UUID=aa632a46-ea22-4dd0-9403-90b0d1f05aa0`
-
-## Deployment workflows
-
-### Quick Reference
-
-**Automated Deployment (Recommended):**
-
-```powershell
-# Auto-detect changes and deploy
-.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType auto
-
-# Config-only (30s - for .env changes)
-.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
-
-# Full rebuild (10min - for code changes)
-.\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType full
-
-# Rollback to previous commit
-.\support\scripts\deploy\deploy-to-droplet.ps1 -Rollback
-```
-
-**Health Checks:**
-
-```bash
-# Via Caddy (HTTPS) - Production
-curl https://codechef.appsmithery.co/api/health      # Orchestrator
-curl https://codechef.appsmithery.co/rag/health      # RAG
-curl https://codechef.appsmithery.co/state/health    # State
-curl https://codechef.appsmithery.co/langgraph/health # LangGraph
-
-# Direct (from droplet via SSH alias)
-ssh do-codechef-droplet "curl http://localhost:8001/health"  # Orchestrator
-ssh do-codechef-droplet "curl http://localhost:8007/health"  # RAG
-```
-
-### ⚠️ Configuration Changes (CRITICAL)
-
-**The droplet is connected to the main repo branch.** Configuration changes in `config/env/.env` require a specific workflow:
-
-1. **Update Local `.env`**: Edit `config/env/.env` with new configuration
-2. **Update Template** (if applicable): Sync changes to `config/env/.env.template` if adding new variables
-3. **Commit Template**: `git add config/env/.env.template && git commit && git push` (`.env` is gitignored)
-4. **Deploy to Droplet**:
-
-   ```powershell
-   .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType config
-   ```
-
-5. **Verify**: Check health endpoints and verify environment variables loaded correctly
-
-**Why This Matters**: Docker Compose reads `.env` at startup. Simple `docker compose restart` does NOT reload environment variables from disk. You must use `down && up` to pick up `.env` changes.
-
-### Environment Variable Troubleshooting (Updated Dec 2025)
-
-**Common Issues:**
-
-1. **Duplicate Variables**: Docker uses the FIRST occurrence. Check for duplicates:
-
-   ```bash
-   grep -n 'VAR_NAME' /opt/Dev-Tools/config/env/.env
-   ```
-
-2. **Docker-Compose Interpolation**: Variables in `environment:` section need to be in `deploy/.env` for `${VAR}` substitution:
-
-   ```yaml
-   # docker-compose.yml
-   environment:
-     - DB_PASSWORD=${DB_PASSWORD} # Requires DB_PASSWORD in deploy/.env
-   ```
-
-3. **Container Not Picking Up Changes**: Must recreate, not restart:
-
-   ```bash
-   docker compose up -d --force-recreate <service>
-   ```
-
-4. **Verify Container Environment**:
-   ```bash
-   docker exec <container> printenv | grep VAR_NAME
-   ```
-
-**Critical Variables to Check:**
-
-- `DB_PASSWORD`: Must be in both `config/env/.env` AND `deploy/.env`
-- `QDRANT_API_KEY`: Full JWT token (starts with `eyJ...`), no comments on same line
-- `OAUTH2_PROXY_COOKIE_SECRET`: Required in `deploy/.env` for docker-compose interpolation
-
-### Deployment Strategies
-
-| Change Type             | Strategy | Duration | Command                                        |
-| ----------------------- | -------- | -------- | ---------------------------------------------- |
-| `.env` or config YAML   | `config` | 30s      | `...\deploy-to-droplet.ps1 -DeployType config` |
-| Python code, Dockerfile | `full`   | 10min    | `...\deploy-to-droplet.ps1 -DeployType full`   |
-| Documentation, README   | `quick`  | 15s      | `...\deploy-to-droplet.ps1 -DeployType quick`  |
-| Not sure                | `auto`   | varies   | `...\deploy-to-droplet.ps1 -DeployType auto`   |
-
-**GitHub Actions:**
-
-- **Deployment**: `.github/workflows/deploy-intelligent.yml`
-  - Automatic on push to `main` branch
-  - Detects file changes and selects optimal strategy (config/full/quick)
-  - Manual trigger with strategy override via workflow_dispatch
-  - Health validation and automatic cleanup on failure
-  - Triggers cleanup workflow after successful deploys
-- **Cleanup**: `.github/workflows/cleanup-docker-resources.yml`
-  - Runs after successful deployments (standard cleanup)
-  - Weekly schedule: Sundays at 3 AM UTC (aggressive cleanup)
-  - Manual trigger with 3 modes: standard/aggressive/full
-  - Includes pre/post metrics and health validation
-
-**Complete Documentation:** See `support/docs/DEPLOYMENT.md` for detailed procedures, troubleshooting, and HITL workflow
-
-### Local Development
-
-- Use `make up|down|rebuild|logs` (wraps `support/scripts/dev/*.sh`) or direct `docker-compose` commands; scripts assume bash and run from repo root.
-- `./support/scripts/dev/up.sh` brings stack online, waits 10s, prints health; `make logs-agent AGENT=<service>` for troubleshooting.
-- Rebuild when Python deps change: `support/scripts/dev/rebuild.sh` or `docker-compose build <service>`.
-- Backups: `support/scripts/docker/backup_volumes.sh` creates tarballs of `orchestrator-data`, `mcp-config`, `qdrant-data`, `postgres-data` under `./backups/<timestamp>`.
-- Local overrides: `deploy/docker-compose.override.yml` (gitignored sample sets DEBUG/LOG_LEVEL).
-
-### Remote Deployment (DigitalOcean)
-
-- Target droplet: `45.55.173.72` (alex@appsmithery.co)
-- Deploy path: `/opt/Dev-Tools`
-- Method 1: `./support/scripts/deploy.ps1 -Target remote` (copies .env, builds, deploys)
-- Method 2: SSH + git pull + docker-compose commands (see `support/docs/DEPLOY.md`)
-- Verify: Check health endpoints, LangSmith traces, Prometheus metrics
-- API key from `GRADIENT_API_KEY` env var (uses DigitalOcean PAT); base URL `https://api.digitalocean.com/v2/ai`.
-- Orchestrator model: llama3.3-70b-instruct. Agent node models configured in respective agent files (supervisor/code-review: 70b, feature-dev: codellama-13b, infrastructure/cicd: 8b, documentation: mistral-7b).
-- Cost: $0.20-0.60/1M tokens (150x cheaper than GPT-4); <50ms latency within DO network.
-
-### SSH Access from VS Code
-
-**VS Code Remote SSH Extension:**
-
-1. Install "Remote - SSH" extension (`ms-vscode-remote.remote-ssh`)
-2. Press `F1` → "Remote-SSH: Connect to Host"
-3. Enter: `root@45.55.173.72` or use alias `do-codechef-droplet`
-4. Opens new VS Code window connected to droplet
-5. Access terminal, files, and run commands directly on remote
-6. Edit files in place, debug services, and monitor logs in real-time
-
-**SSH Config Setup** (`C:\Users\<USER>\.ssh\config` on Windows, `~/.ssh/config` on Linux/Mac):
-
-```
-Host do-codechef-droplet
-    HostName 45.55.173.72
-    User root
-    IdentityFile ~/.ssh/github-actions-deploy
-    StrictHostKeyChecking no
-    ServerAliveInterval 60
-```
-
-**Quick Remote Commands:**
-
-```powershell
-# SSH directly from terminal (using alias)
-ssh do-codechef-droplet
-
-# Execute single command
-ssh do-codechef-droplet "cd /opt/Dev-Tools && git pull && docker compose ps"
-
-# SCP files to droplet
-scp local-file.txt do-codechef-droplet:/opt/Dev-Tools/
-
-# Tail logs remotely
-ssh do-codechef-droplet "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
-
-# Check service health
-ssh do-codechef-droplet "curl -s http://localhost:8001/health | jq ."
-
-# Restart specific service
-ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose restart orchestrator"
-```
-
-**Firewall Configuration (UFW):**
-
-```bash
-ssh do-codechef-droplet
-ufw allow 22/tcp              # SSH (CRITICAL)
-ufw allow 8001:8010/tcp       # Agent services
-ufw allow 80/tcp              # HTTP (Caddy)
-ufw allow 443/tcp             # HTTPS (Caddy with Let's Encrypt)
-ufw status                    # Verify rules
-```
-
-### Container Hygiene & Cleanup (Automated)
-
-**Automated Cleanup System** (DEV-169, completed):
-
-- **Post-deployment**: Automatic cleanup after every deploy via `deploy-to-droplet.ps1` (dangling images, build cache, 1h old containers)
-- **Weekly maintenance**: Cron job runs Sundays at 3 AM UTC via `weekly-cleanup.sh` (7-day retention policy)
-- **GitHub Actions**: `cleanup-docker-resources.yml` workflow with 3 modes (standard/aggressive/full)
-- **Expected savings**: 500MB-1GB per deploy, 1-2GB weekly, prevents 100% memory saturation
-- **Monitoring**: Logs at `/var/log/docker-cleanup.log` on droplet
-
-**Manual Cleanup** (when needed):
-
-- **Never leave failed containers running.** After experiments or interrupted builds, run `docker compose down --remove-orphans` before handing control back to the user.
-- **Quick cleanup**: `ssh do-codechef-droplet "docker image prune -f && docker builder prune -f"`
-- **Emergency cleanup**: Use GitHub Actions workflow with "full" mode (stops services, cleans all, restarts)
-- **Verify health after cleanup.** Re-run `support/scripts/validation/validate-tracing.sh` or curl `/health` endpoints to confirm the stack is stable before moving on.
-- **Document what you removed.** Mention the cleanup commands you executed in your summary so the operator understands the current state.
-
-**Documentation**: `support/docs/operations/CLEANUP_QUICK_REFERENCE.md`, `support/docs/operations/droplet-memory-optimization.md`
-
-### LangSmith (LLM Tracing)
-
-- **Automatic tracing** via LangChain's native integration in `gradient_client`; no explicit tracing code needed in agents.
-- **Dashboard**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
-- **Configuration** (in `config/env/.env`):
-  ```bash
-  LANGSMITH_TRACING=true                                              # Enable LangSmith SDK tracing
-  LANGCHAIN_TRACING_V2=true                                           # Enable LangChain tracing
-  LANGCHAIN_ENDPOINT=https://api.smith.langchain.com                  # LangSmith API endpoint
-  LANGCHAIN_PROJECT=code-chef                                         # Project name (auto-created if missing)
-  LANGCHAIN_API_KEY=lsv2_sk_***                                       # Service key (full org access)
-  LANGSMITH_API_KEY=lsv2_sk_***                                       # Same key (both vars supported)
-  LANGSMITH_WORKSPACE_ID=5029c640-3f73-480c-82f3-58e402ed4207        # Workspace/Org ID from URL
-  ```
-- **Key Requirements**:
-  - Use **service key** (`lsv2_sk_*`) not personal token (`lsv2_pt_*`) for production
-  - **Workspace ID** is REQUIRED for org-scoped service keys (extract from URL: `/o/{workspace-id}/`)
-  - Both `LANGCHAIN_API_KEY` and `LANGSMITH_API_KEY` must be set (SDK compatibility)
-- **Deployment**: After changing tracing config, must run `docker compose down && docker compose up -d` (restart alone won't reload `.env`)
-- **Deprecation Note**: Langfuse has been completely removed. All tracing now uses LangSmith only. No `LANGFUSE_*` environment variables should be present.
-
-### Grafana Cloud (Prometheus Metrics)
-
-- **Metrics Collection**: Grafana Alloy v1.11.3 installed on droplet (45.55.173.72), scrapes services every 15s
-- **Dashboard**: https://appsmithery.grafana.net (Stack 1376474-hm, Org ID 1534681, User ID 2677183)
-- **Remote Write**: https://prometheus-prod-56-prod-us-east-2.grafana.net/api/prom/push
-- **Configuration** (on droplet at `/etc/alloy/config.alloy`):
-  - **Instrumented Services**: orchestrator:8001, state-persistence:8008, langgraph:8010, prometheus:9090
-  - **Scrape Interval**: 15s
-  - **Metrics Exposed**: `/metrics` endpoints on all services
-  - **State/Orchestrator/LangGraph (Python)**: prometheus-fastapi-instrumentator with HTTP request metrics
-- **Alloy Service Management**:
-
-  ```bash
-  # Check status
-  ssh do-codechef-droplet "sudo systemctl status alloy"
-
-  # Restart after config changes
-  ssh do-codechef-droplet "sudo systemctl restart alloy"
-
-  # View logs
-  ssh do-codechef-droplet "sudo journalctl -u alloy -f"
-  ```
-
-- **Dashboard Access**: Navigate to https://appsmithery.grafana.net/explore, select datasource "grafanacloud-appsmithery-prom", query `up{cluster="dev-tools"}` to verify all services reporting
-
-## Extension points
-
-### Adding a New Agent Node (Agent-Centric Structure)
-
-**Directory Structure** (12-Factor Agents):
-
-```
-agent_orchestrator/agents/<agent_name>/
-├── __init__.py              # Agent implementation (inherits from BaseAgent)
-├── system.prompt.md         # System prompt with token budget
-├── tools.yaml               # Tool access configuration
-└── workflows/               # Agent-specific workflows
-```
-
-**Steps:**
-
-1. **Create agent directory**: `agent_orchestrator/agents/<agent_name>/`
-2. **Create `__init__.py`**: Define agent class inheriting from `_shared.base_agent.BaseAgent`
-
-   ```python
-   from pathlib import Path
-   from .._shared.base_agent import BaseAgent
-
-   class NewAgent(BaseAgent):
-       def __init__(self, config_path: str = None):
-           if config_path is None:
-               config_path = str(Path(__file__).parent / "tools.yaml")
-           super().__init__(str(config_path), agent_name="<agent_name>")
-   ```
-
-3. **Create `system.prompt.md`**: Define role, context window budget (8K max), output format, compression rules
-4. **Create `tools.yaml`**: Specify model, temperature, max_tokens, allowed MCP servers
-5. **Add node to LangGraph StateGraph** in `agent_orchestrator/graph.py`
-6. **Update conditional edges** for supervisor routing
-7. **Update `config/mcp-agent-tool-mapping.yaml`** with tool access
-8. **Add LangSmith tracing** with project: `code-chef-<agent>`
-9. **(Optional) Create agent-specific workflows** in `workflows/` subdirectory
-
-**Key Principles**:
-
-- **Locality of Behavior**: Everything for an agent in one directory
-- **Version-Controlled Prompts**: `system.prompt.md` tracked in git
-- **Tool Configuration**: `tools.yaml` specifies MCP server access
-- **Shared Base**: All agents inherit from `_shared.base_agent.BaseAgent`
-- **Cross-Cutting Tools**: Tool usage guides in `_shared/tool_guides/`
-
-Note: Agent nodes are workflow steps, not separate containers. All nodes run within orchestrator service.
-
-### MCP Servers
-
-- Add new servers in `shared/mcp/servers/<server-name>/`; gateway auto-discovers tools via stdio communication.
-- Update gateway routing if custom logic needed; maintain tool manifest in `shared/lib/agents-manifest.json`.
-
-### Templates
-
-- Pipeline generators: `support/templates/pipelines/`
-- Documentation generators: `support/templates/docs/`
-- Keep generated artifacts out of version control unless curated.
-
-### Tool Binding Pattern (LangChain Integration)
-
-To enable LLM function calling with MCP tools:
-
-```python
-# Step 1: Discover relevant tools (progressive disclosure)
-from lib.progressive_mcp_loader import ToolLoadingStrategy
-relevant_toolsets = progressive_loader.get_tools_for_task(
-    task_description=user_request,
-    strategy=ToolLoadingStrategy.MINIMAL
-)
-
-# Step 2: Convert MCP tools to LangChain BaseTool instances
-langchain_tools = mcp_client.to_langchain_tools(relevant_toolsets)
-
-# Step 3: Bind tools to LLM for function calling
-llm_with_tools = gradient_client.get_llm_with_tools(
-    tools=langchain_tools,
-    temperature=0.7,
-    max_tokens=2000
-)
-
-# Step 4: LLM can now INVOKE tools
-from langchain_core.messages import HumanMessage, SystemMessage
-messages = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
-response = await llm_with_tools.ainvoke(messages)
-
-# Check for tool calls
-if hasattr(response, 'tool_calls') and response.tool_calls:
-    # LLM requested tool invocations
-    for tool_call in response.tool_calls:
-        # Tool execution happens automatically in full agent loop
-        pass
-```
-
-This pattern provides:
-
-- 80-90% token reduction via progressive disclosure
-- Actual tool execution via LangChain function calling
-- Seamless MCP gateway integration
-- Production-ready error handling
-
-### Progressive MCP Tool Disclosure with LangChain Integration
-
-- **Architecture**: LangChain-native tool binding inspired by `LLMToolSelectorMiddleware` pattern
-- **Implementation**: 3-layer approach:
-  1. **Discovery** (`shared/lib/progressive_mcp_loader.py`): Filter 150+ tools → 10-30 relevant tools
-  2. **Conversion** (`shared/lib/mcp_client.py:to_langchain_tools()`): MCP schemas → LangChain `BaseTool` instances
-  3. **Binding** (`shared/lib/gradient_client.py:get_llm_with_tools()`): Tools bound to LLM via `bind_tools()`
-- **Key Innovation**: LLM can now **INVOKE** tools via function calling, not just see documentation
-- **Orchestrator Integration**: Automatic in `decompose_with_llm()` during task decomposition
-- **Token Savings**: 80-90% reduction (150+ tools → 10-30 tools per task)
-- **Strategies**:
-  - `MINIMAL`: Keyword-based (80-95% savings, recommended for simple tasks)
-  - `AGENT_PROFILE`: Agent manifest-based (60-80% savings)
-  - `PROGRESSIVE`: Minimal + high-priority agent tools (70-85% savings, default)
-  - `FULL`: All 150+ tools (0% savings, debugging only)
-- **Keyword Mappings**: 60+ keywords mapped to MCP servers in `keyword_to_servers` dict
-- **Benefits**:
-  - Reduced token costs (80-90% savings on tool context)
-  - Actual tool execution via LangChain function calling
-  - Seamless MCP gateway integration
-  - Production-ready LangChain patterns
-
-### Zen Pattern Integration (DEV-175, Completed November 2025)
-
-**Overview:** Ported battle-tested patterns from Zen MCP Server (1000+ production conversations) to enhance event sourcing and workflow management.
-
-**Completed Implementations:**
-
-1. **Parent Workflow Chains** (`shared/lib/workflow_reducer.py` + `config/state/workflow_events.sql`):
-
-   - Added `parent_workflow_id` field to `WorkflowEvent` dataclass
-   - Implemented `get_workflow_chain(workflow_id, event_loader)` with circular detection
-   - Recursive CTE view: `workflow_chains` for SQL-based traversal
-   - Use case: PR deployment → hotfix workflow composition with complete audit trail
-   - Migration: `SELECT migrate_parent_workflow_id();` (idempotent)
-
-2. **Resource Deduplication** (`agent_orchestrator/workflows/workflow_engine.py`):
-
-   - Newest-first priority: `_deduplicate_workflow_resources()` walks events backwards
-   - **80-90% token savings** when files modified multiple times (Zen production proven)
-   - Example: `docker-compose.yml` modified 5x → 1 file in context (5000 → 1000 tokens)
-   - Metrics logged: "Deduplication saved X tokens (Y% reduction)"
-
-3. **Workflow TTL Management** (`agent_orchestrator/workflows/workflow_engine.py` + `config/state/workflow_events.sql`):
-   - Configuration: `WORKFLOW_TTL_HOURS=24` in `.env` (dev: 3h, staging: 12h, prod: 24h)
-   - TTL refresh on every event: `_refresh_workflow_ttl()` called in `_persist_event()`
-   - PostgreSQL table: `workflow_ttl` with `expires_at`, `refreshed_at`, `refresh_count`
-   - Cleanup function: `SELECT * FROM cleanup_expired_workflows();` (cron hourly)
-   - View: `active_workflows_with_ttl` shows TTL status for monitoring
-
-**Implementation Stats:**
-
-- Code: 300+ lines production code, 160+ lines SQL (migrations, views, functions)
-- Tests: 55 unit tests across 3 test files (24 + 18 + 13)
-- Linear Issues: DEV-175 (parent), DEV-176 (parent chains), DEV-177 (resource dedup), DEV-178 (TTL management)
-
-**Key Files:**
-
-- `shared/lib/workflow_reducer.py`: Parent chain traversal logic
-- `agent_orchestrator/workflows/workflow_engine.py`: Deduplication + TTL management
-- `config/state/workflow_events.sql`: Schema migrations and database functions
-- `config/env/.env.template`: `WORKFLOW_TTL_HOURS` configuration
-- `support/tests/unit/test_workflow_chains.py`: 24 test cases
-- `support/tests/unit/test_resource_deduplication.py`: 18 test cases
-- `support/tests/unit/test_workflow_ttl.py`: 13 test cases
-
-**Deployment:**
-
-1. Update `.env`: Set `WORKFLOW_TTL_HOURS` (24 for production)
-2. Run SQL migrations: `psql $DATABASE_URL -f config/state/workflow_events.sql`
-3. Deploy: `./support/scripts/deploy/deploy-to-droplet.ps1 -DeployType full`
-4. Setup cron: `0 * * * * psql $DATABASE_URL -c "SELECT * FROM cleanup_expired_workflows();"`
-5. Monitor: LangSmith traces show token savings, Grafana metrics track workflow lifecycle
-
-**Future Enhancements (See Linear Backlog):**
-
-- Dual prioritization strategy (DEV-167 dependency)
-- Model context management improvements
-- Provider registry for multi-LLM workflows
-- Workflow conversation memory (planned Q2 2026)
-- Continuation API for resumed workflows
-
-### LangGraph PostgreSQL Checkpointer (DEV-186, Fixed December 2025)
-
-**Overview:** Durable state persistence for LangGraph workflows using PostgreSQL.
-
-**Architecture:**
-
-- Uses `langgraph-checkpoint-postgres` with `psycopg` driver
-- Autocommit connection for schema setup (required for `CREATE INDEX CONCURRENTLY`)
-- Separate connection for runtime operations
-
-**Configuration:**
-
-```bash
-# Required in config/env/.env AND deploy/.env
-DB_HOST=postgres
-DB_PORT=5432
-DB_NAME=devtools
-DB_USER=devtools
-DB_PASSWORD=<your-secure-password>  # NOT "changeme"
-```
-
-**Health Check:**
-
-```bash
-curl http://45.55.173.72:8010/health
-# Returns: {"status":"healthy","postgres_checkpointer":"connected"}
-```
-
-**Key Files:**
-
-- `shared/services/langgraph/checkpointer.py`: Checkpointer initialization with autocommit fix
-- `shared/services/langgraph/workflow.py`: Workflow compilation with checkpointer
-- `deploy/docker-compose.yml`: LangGraph service with `DB_PASSWORD` env var
-
-**Troubleshooting:**
-
-- If `postgres_checkpointer: disconnected`, check `DB_PASSWORD` is not "changeme"
-- If schema errors, run with fresh database or check migration status
-- Logs: `docker logs deploy-langgraph-1 | grep checkpointer`
-
-### RAG Semantic Search (DEV-184, Completed November 2025)
-
-**Overview:** Production-ready semantic search across codebase, Linear issues, and documentation using Qdrant Cloud.
-
-**Qdrant Cloud Configuration:**
-
-- **Cluster**: `83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.qdrant.io`
-- **Embeddings**: OpenAI `text-embedding-3-small` (1536 dimensions)
-- **API Key**: JWT format (starts with `eyJ...`, ends with `cp7SYu90`), non-expiring
-- **CRITICAL**: API key must be the full JWT token, no comments on same line, no truncation
-
-**Indexed Collections:**
-
-| Collection         | Vectors | Source                | Update Frequency |
-| ------------------ | ------- | --------------------- | ---------------- |
-| `code_patterns`    | 505     | Python AST extraction | On deployment    |
-| `issue_tracker`    | 155     | Linear GraphQL API    | On demand        |
-| `library_registry` | 56      | Context7 library IDs  | On demand        |
-| `vendor-docs`      | 94      | API documentation     | Manual           |
-| `feature_specs`    | 4       | Linear Projects       | On demand        |
-| `task_context`     | 0       | Workflow events       | When populated   |
-| `agent_memory`     | 0       | Agent conversations   | Future           |
-
-> **Note**: `the-shop` collection was deleted (Jan 2025) - contained stale DigitalOcean KB data.
-
-**Indexing Scripts:**
-
-```bash
-# Index codebase patterns (AST extraction)
-python support/scripts/rag/index_code_patterns.py
-
-# Index Linear issues
-python support/scripts/rag/index_issue_tracker.py
-
-# Index Context7 library registry (DEV-194)
-python support/scripts/rag/index_library_registry.py
-
-# Index Linear projects
-python support/scripts/rag/index_feature_specs.py
-
-# Index vendor documentation
-python support/scripts/rag/index_vendor_docs.py
-```
-
-**Query API:**
-
-```bash
-# Semantic search
-curl -X POST http://45.55.173.72:8007/query \
-  -H "Content-Type: application/json" \
-  -d '{"query": "workflow execution patterns", "collection": "code_patterns", "limit": 5}'
-
-# List collections
-curl http://45.55.173.72:8007/collections
-
-# Health check
-curl http://45.55.173.72:8007/health
-```
-
-**Key Files:**
-
-- `shared/services/rag/main.py`: RAG FastAPI service
-- `config/rag/indexing.yaml`: Indexing configuration
-- `config/rag/vectordb.config.yaml`: Collection schemas
-- `support/scripts/rag/`: Indexing scripts
-
-### Context7 Library Cache (DEV-194, Completed January 2025)
-
-**Overview:** Cache-first library ID resolution for 80-90% token savings when using Context7 MCP tools.
-
-**Architecture:**
-
-1. **Qdrant RAG first**: Check `library_registry` collection (56 pre-indexed libraries)
-2. **In-memory cache**: 1-hour TTL for repeat lookups within session
-3. **MCP fallback**: Only calls Context7 MCP if cache misses
-
-**Key Files:**
-
-- `shared/lib/context7_cache.py`: Cache middleware (328 lines)
-- `config/rag/library-seed.yaml`: 56 libraries across 6 categories
-- `support/scripts/rag/index_library_registry.py`: Indexing script with UUID5
-- `agent_orchestrator/agents/_shared/tool_guides/context7-tools.prompt.md`: Usage patterns
-
-**Progressive MCP Integration:**
-
-The `shared/lib/progressive_mcp_loader.py` maps library-related keywords to context7 server:
-
-- Keywords: `library`, `langchain`, `fastapi`, `pydantic`, `openai`, `anthropic`, `pytorch`, `react`, `nextjs`, etc.
-- Pattern: Task mentioning "how to use LangChain" → auto-loads context7 tools
-
-**Library Categories (56 libraries):**
-
-- **AI/ML**: langchain, openai, anthropic, huggingface, pytorch, tensorflow, scikit-learn
-- **Web Frameworks**: fastapi, flask, django, nextjs, react, vue, express, nestjs
-- **DevOps**: docker, kubernetes, terraform, ansible, prometheus, grafana
-- **Data**: pandas, numpy, postgresql, mongodb, redis, elasticsearch, qdrant
-- **Testing**: pytest, playwright, jest, cypress
-- **Utilities**: pydantic, httpx, aiohttp, requests, typer, click, rich
-
-**Usage:**
-
-```python
-from shared.lib.context7_cache import Context7CacheClient
-
-cache = Context7CacheClient()
-library_id = await cache.resolve_library_id("langchain")
-# Returns: /langchain/python/langchain-ai (from cache or MCP fallback)
-```
-
-## Quality bar
-
-- **Typing**: Use Pydantic models, FastAPI dependency injection, type hints on all functions.
-- **Health Endpoints**: Every agent must expose `GET /health` returning `{"status": "healthy", "mcp_gateway": "connected"/"disconnected"}`.
-- **Observability**: All agents must initialize MCP client, Gradient client (if using LLM), LangSmith tracing (via LangChain), Prometheus metrics.
-- **Error Handling**: Graceful fallback when API keys missing (use `gradient_client.is_enabled()` check before LLM calls).
-- **Tool Integration**: Use LangChain tool binding (`bind_tools()`) for function calling, not text-only documentation. Convert MCP tools via `mcp_client.to_langchain_tools()`.
-- **Shell Scripts**: POSIX-compliant bash, executable permissions, consistent logging format (echo + status lines).
-- **Container Hygiene**: Treat Docker resources as disposable—tear down stray containers, prune layers after failures, and leave compose stacks either fully running or fully stopped.
-- **Documentation Hygiene**:
-  - **DO NOT create summary/completion markdown files** unless explicitly requested by user
-  - Update existing docs in `support/docs/` when architecture changes
-  - Use inline responses for status updates, not new files
-  - Archive temporary/working files to `_archive/docs-temp/` after completion
-  - Keep `support/docs/_temp/` clean - only active work-in-progress files
-- **Linear Integration**:
-  - When user says "update linear roadmap", update the **Linear project** via GraphQL API, NOT the markdown file
-  - Use scripts: `update-linear-graphql.py` (update descriptions), `create-hitl-subtasks.py` (create issues), `mark-hitl-complete.py` (mark complete)
-  - Set `$env:LINEAR_API_KEY="lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571"` before running
-  - Update `LINEAR_PROGRESS_ASSESSMENT.md` only for internal tracking, Linear project for external visibility
-- Pipeline or documentation generators should draw from `templates/pipelines` or `templates/docs`; keep generated artifacts out of version control unless curated.
-- Update MCP behavior alongside any new model integrations by wiring config files into `mcp/gateway` and the `compose` service volume mounts.
+## Adding a New Agent Node
+
+1. Create `agent_orchestrator/agents/<name>/` with `__init__.py`, `system.prompt.md`, `tools.yaml`
+2. Inherit from `_shared.base_agent.BaseAgent`
+3. Wire into `graph.py` StateGraph + conditional edges
+4. Update `config/mcp-agent-tool-mapping.yaml`
+
+## Key References
+
+| Topic                 | Location                                                             |
+| --------------------- | -------------------------------------------------------------------- |
+| Deployment procedures | `support/docs/DEPLOYMENT.md`                                         |
+| Architecture overview | `support/docs/ARCHITECTURE.md`                                       |
+| Linear API scripts    | `support/scripts/linear/agent-linear-update.py`                      |
+| RAG indexing          | `support/scripts/rag/index_*.py`                                     |
+| Observability         | LangSmith: `smith.langchain.com`, Grafana: `appsmithery.grafana.net` |
+| HITL template         | UUID `aa632a46-ea22-4dd0-9403-90b0d1f05aa0`                          |
+
+## Quality Bar
+
+- Use Pydantic models and type hints on all functions
+- Health endpoints must return `{"status": "healthy", ...}`
+- Graceful fallback when API keys missing
+- **DO NOT create summary markdown files** unless explicitly requested
+- Update existing docs in `support/docs/` when architecture changes
+- When user says "update linear roadmap" → update Linear via API, not markdown files
