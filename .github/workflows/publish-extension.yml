@@ -1,0 +1,155 @@
+name: Publish VS Code Extension
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'extensions/vscode-codechef/**'
+      - '.github/workflows/publish-extension.yml'
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - none
+
+env:
+  EXTENSION_DIR: extensions/vscode-codechef
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@appsmithery'
+
+      - name: Install dependencies
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: npm ci
+
+      - name: Compile TypeScript
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: npm run compile
+
+      - name: Run linter
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: npm run lint || true
+
+      - name: Bump version (if requested)
+        if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Get current version
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Package VSIX
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          npx vsce package --no-update-package-json
+          echo "VSIX_PATH=$(ls *.vsix)" >> $GITHUB_ENV
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-codechef-${{ env.VERSION }}
+          path: ${{ env.EXTENSION_DIR }}/*.vsix
+          retention-days: 90
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: extension-v${{ env.VERSION }}
+          name: VS Code Extension v${{ env.VERSION }}
+          body: |
+            ## Installation
+            
+            ### Option 1: Download and Install Manually
+            1. Download the `.vsix` file from this release
+            2. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
+            3. Select the downloaded file
+            4. Reload VS Code
+            
+            ### Option 2: Install via Command Line
+            ```bash
+            code --install-extension vscode-codechef-${{ env.VERSION }}.vsix
+            ```
+            
+            ### Option 3: Install from GitHub Packages (npm)
+            ```bash
+            npm install @appsmithery/vscode-codechef@${{ env.VERSION }}
+            ```
+            
+            ## Changes
+            See [CHANGELOG.md](https://github.com/Appsmithery/code-chef/blob/main/extensions/vscode-codechef/CHANGELOG.md)
+          files: ${{ env.EXTENSION_DIR }}/*.vsix
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to GitHub Packages (npm)
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          # Update package.json for GitHub Packages
+          node -e "
+            const pkg = require('./package.json');
+            pkg.name = '@appsmithery/vscode-codechef';
+            pkg.publishConfig = {
+              registry: 'https://npm.pkg.github.com'
+            };
+            require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
+          "
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit version bump
+        if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          # Restore original package.json name
+          git checkout package.json
+          # Update version only
+          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore(extension): bump version to ${{ env.VERSION }}"
+          git push
+
+  notify:
+    needs: build-and-publish
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify on success
+        if: needs.build-and-publish.result == 'success'
+        run: |
+          echo "✅ Extension v${{ needs.build-and-publish.outputs.version }} published successfully!"
+          echo "Download: https://github.com/Appsmithery/code-chef/releases/tag/extension-v${{ needs.build-and-publish.outputs.version }}"
