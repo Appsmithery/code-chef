@@ -453,5 +453,8 @@
     "eslint": "^8.50.0",
     "typescript": "^5.3.0",
     "@vscode/vsce": "^2.22.0"
+  },
+  "vsce": {
+    "baseImagesUrl": "https://raw.githubusercontent.com/Appsmithery/code-chef/main/extensions/vscode-codechef"
   }
 }

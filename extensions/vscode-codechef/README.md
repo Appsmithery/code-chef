@@ -5,11 +5,11 @@
 [![MCP Tools](https://img.shields.io/badge/MCP_Tools-150+-green)](https://github.com/Appsmithery/code-chef)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-Your personal AI DevOps Team, orchestrated by the Head Chef. A VS Code extension that brings LangGraph-powered multi-agent workflows directly into Copilot Chat with 150+ MCP tools and intelligent workflow routing.
+The code/chef VS Code extension brings LangGraph-powered, multi-agent workflows directly into Copilot Chat with 150+ MCP tools and intelligent workflow routing.
 
 ## Architecture
 
-![Architecture](https://raw.githubusercontent.com/Appsmithery/code-chef/main/extensions/vscode-codechef/architecture.png)
+![Architecture](architecture.png)
 
 **Flow:** User → `@chef` → Orchestrator → Specialized Agents → MCP Tools → Results
 
