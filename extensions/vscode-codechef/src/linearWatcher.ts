@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { buildLinearIssueUrl } from './constants';
 
 export class LinearWatcher {
     private statusBarItem: vscode.StatusBarItem;
@@ -120,8 +121,8 @@ export class LinearWatcher {
         ).then(selection => {
             if (selection === 'View in Linear') {
                 const config = vscode.workspace.getConfiguration('codechef');
-                const linearHub = config.get('linearHubIssue', 'PR-68');
-                const url = `https://linear.app/${this.workspaceSlug}/issue/${linearHub}`;
+                const linearHub = config.get('linearHubIssue', 'DEV-68');
+                const url = buildLinearIssueUrl(linearHub, this.workspaceSlug);
                 vscode.env.openExternal(vscode.Uri.parse(url));
             } else if (selection === 'Approve') {
                 // Open Copilot chat with pre-filled approval command

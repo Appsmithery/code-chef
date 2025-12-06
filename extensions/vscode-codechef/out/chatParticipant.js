@@ -39,6 +39,10 @@ const contextExtractor_1 = require("./contextExtractor");
 const orchestratorClient_1 = require("./orchestratorClient");
 const sessionManager_1 = require("./sessionManager");
 const settings_1 = require("./settings");
+const constants_1 = require("./constants");
+const statusHandler_1 = require("./handlers/statusHandler");
+const workflowHandler_1 = require("./handlers/workflowHandler");
+const responseRenderer_1 = require("./renderers/responseRenderer");
 class CodeChefChatParticipant {
     constructor(context) {
         this.context = context;
@@ -49,6 +53,9 @@ class CodeChefChatParticipant {
         });
         this.contextExtractor = new contextExtractor_1.ContextExtractor();
         this.sessionManager = new sessionManager_1.SessionManager(context);
+        // Initialize handlers
+        this.statusHandler = new statusHandler_1.StatusHandler(this.client, () => this.lastTaskId);
+        this.workflowHandler = new workflowHandler_1.WorkflowHandler(this.client, this.contextExtractor);
         // Listen for configuration changes to update API key
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('codechef.apiKey')) {
@@ -79,13 +86,10 @@ class CodeChefChatParticipant {
                 session_id: sessionId
             });
             this.lastTaskId = response.task_id;
-            // Log Linear project creation (team-level, no workspace save needed)
+            // Log Linear project creation
             if (response.linear_project?.id) {
                 console.log(`code/chef: Created Linear project ${response.linear_project.id} under team`);
-                stream.markdown(`\n✨ Created Linear project: **${response.linear_project.name}**\n`);
-                if (response.linear_project.url) {
-                    stream.markdown(`📋 [View in Linear](${response.linear_project.url})\n\n`);
-                }
+                (0, responseRenderer_1.renderLinearProjectCreated)(response.linear_project, stream);
             }
             // Check if approval is required
             if (response.status === 'approval_pending' || response.approval_request_id) {
@@ -96,7 +100,7 @@ class CodeChefChatParticipant {
                 if (response.approval_request_id) {
                     stream.markdown(`Approval ID: ${response.approval_request_id}\n\n`);
                     stream.markdown('This task requires approval before execution. Approve in Linear or use:\n');
-                    stream.markdown(`\`@codechef /approve ${response.task_id} ${response.approval_request_id}\`\n`);
+                    stream.markdown(`\`@chef /approve ${response.task_id} ${response.approval_request_id}\`\n`);
                 }
                 return { metadata: { taskId: response.task_id, requiresApproval: true } };
             }
@@ -105,7 +109,7 @@ class CodeChefChatParticipant {
             try {
                 await this.client.execute(response.task_id);
                 stream.markdown('\n✅ **Workflow execution started!**\n\n');
-                stream.markdown(`Monitor progress: \`@codechef /status ${response.task_id}\`\n\n`);
+                stream.markdown(`Monitor progress: \`@chef /status ${response.task_id}\`\n\n`);
             }
             catch (executeError) {
                 stream.markdown('\n⚠️ **Task planned but execution failed to start**\n\n');
@@ -113,169 +117,30 @@ class CodeChefChatParticipant {
                 stream.markdown(`You can manually execute with: POST /execute/${response.task_id}\n\n`);
             }
             // Stream response
-            return await this.renderTaskResponse(response, stream);
+            return (0, responseRenderer_1.renderTaskSubmitted)(response, stream);
         }
         catch (error) {
-            stream.markdown(`\n\n❌ **Error**: ${error.message}\n\n`);
-            if (error.message.includes('ECONNREFUSED') || error.message.includes('timeout')) {
-                stream.markdown('**Troubleshooting:**\n');
-                stream.markdown('1. Check orchestrator URL in settings: `code/chef: Configure`\n');
-                stream.markdown('2. Verify service is running: `curl https://codechef.appsmithery.co/api/health`\n');
-                stream.markdown('3. Check firewall allows outbound connections\n\n');
-            }
+            (0, responseRenderer_1.renderError)(error, stream);
             return { errorDetails: { message: error.message } };
         }
     }
     async handleCommand(command, args, stream, token) {
         switch (command) {
-            case 'status':
-                return await this.handleStatusCommand(args, stream);
-            case 'approve':
-                return await this.handleApproveCommand(args, stream);
-            case 'tools':
-                return await this.handleToolsCommand(stream);
+            case constants_1.CHAT_COMMANDS.STATUS:
+                return await this.statusHandler.handleStatus(args, stream);
+            case constants_1.CHAT_COMMANDS.APPROVE:
+                return await this.statusHandler.handleApprove(args, stream);
+            case constants_1.CHAT_COMMANDS.TOOLS:
+                return await this.workflowHandler.handleTools(stream);
+            case constants_1.CHAT_COMMANDS.WORKFLOW:
+                return await this.workflowHandler.handleWorkflow(args, stream);
+            case constants_1.CHAT_COMMANDS.WORKFLOWS:
+                return await this.workflowHandler.handleWorkflowsList(stream);
             default:
                 stream.markdown(`Unknown command: ${command}\n\n`);
-                stream.markdown('Available commands: status, approve, tools\n');
+                stream.markdown('Available commands: status, approve, tools, workflow, workflows\n');
                 return {};
         }
-    }
-    async handleStatusCommand(taskId, stream) {
-        const id = taskId.trim() || this.lastTaskId;
-        if (!id) {
-            stream.markdown('❌ No task ID provided. Use: `@codechef /status <task-id>`\n');
-            return {};
-        }
-        stream.progress('Checking task status...');
-        try {
-            const status = await this.client.checkStatus(id);
-            stream.markdown(`## Task Status: ${id}\n\n`);
-            stream.markdown(`**Status**: ${status.status}\n`);
-            stream.markdown(`**Progress**: ${status.completed_subtasks}/${status.total_subtasks} subtasks\n\n`);
-            if (status.subtasks && status.subtasks.length > 0) {
-                stream.markdown('**Subtasks:**\n\n');
-                for (const subtask of status.subtasks) {
-                    const icon = subtask.status === 'completed' ? '✅' :
-                        subtask.status === 'in_progress' ? '🔄' : '⏳';
-                    stream.markdown(`${icon} **${subtask.agent_type}**: ${subtask.description}\n`);
-                }
-            }
-            return { metadata: { taskId: id } };
-        }
-        catch (error) {
-            stream.markdown(`❌ Failed to get status: ${error.message}\n`);
-            return { errorDetails: { message: error.message } };
-        }
-    }
-    async handleApproveCommand(args, stream) {
-        const [taskId, approvalId] = args.trim().split(/\s+/);
-        if (!taskId || !approvalId) {
-            stream.markdown('❌ Usage: `@codechef /approve <task-id> <approval-id>`\n');
-            return {};
-        }
-        stream.progress('Submitting approval...');
-        try {
-            await this.client.approve(taskId, approvalId);
-            stream.markdown(`✅ Task ${taskId} approved! Agents will proceed with execution.\n`);
-            return { metadata: { taskId, approvalId } };
-        }
-        catch (error) {
-            stream.markdown(`❌ Failed to approve: ${error.message}\n`);
-            return { errorDetails: { message: error.message } };
-        }
-    }
-    async handleToolsCommand(stream) {
-        stream.progress('Fetching available tools...');
-        try {
-            const config = vscode.workspace.getConfiguration('codechef');
-            const gatewayUrl = config.get('mcpGatewayUrl', 'https://codechef.appsmithery.co/api');
-            const response = await fetch(`${gatewayUrl}/tools`);
-            const data = await response.json();
-            stream.markdown(`## Available MCP Tools (${data.tools.length})\n\n`);
-            // Group by server
-            const byServer = {};
-            for (const tool of data.tools) {
-                if (!byServer[tool.server]) {
-                    byServer[tool.server] = [];
-                }
-                byServer[tool.server].push(tool);
-            }
-            for (const [server, tools] of Object.entries(byServer)) {
-                stream.markdown(`### ${server} (${tools.length} tools)\n\n`);
-                for (const tool of tools.slice(0, 5)) {
-                    stream.markdown(`- **${tool.name}**: ${tool.description}\n`);
-                }
-                if (tools.length > 5) {
-                    stream.markdown(`- ... and ${tools.length - 5} more\n`);
-                }
-                stream.markdown('\n');
-            }
-            return { metadata: { toolCount: data.tools.length } };
-        }
-        catch (error) {
-            stream.markdown(`❌ Failed to fetch tools: ${error.message}\n`);
-            return { errorDetails: { message: error.message } };
-        }
-    }
-    async renderTaskResponse(response, stream) {
-        stream.markdown(`## ✅ Task Submitted\n\n`);
-        stream.markdown(`**Task ID**: \`${response.task_id}\`\n\n`);
-        // Subtasks
-        stream.markdown(`**Subtasks** (${response.subtasks.length}):\n\n`);
-        for (const subtask of response.subtasks) {
-            const agentEmoji = this.getAgentEmoji(subtask.agent_type);
-            stream.markdown(`${agentEmoji} **${subtask.agent_type}**: ${subtask.description}\n`);
-        }
-        // Routing plan
-        if (response.routing_plan) {
-            stream.markdown(`\n**Estimated Duration**: ${response.routing_plan.estimated_duration_minutes} minutes\n\n`);
-        }
-        // Approval notification
-        if (response.approval_request_id) {
-            stream.markdown(`\n⚠️ **Approval Required**\n\n`);
-            stream.markdown(`This task requires human approval before execution.\n\n`);
-            const linearHub = vscode.workspace.getConfiguration('codechef').get('linearHubIssue', 'PR-68');
-            const linearUrl = this.getLinearIssueUrl(linearHub);
-            stream.markdown(`Check Linear issue [${linearHub}](${linearUrl}) for approval request.\n\n`);
-            stream.button({
-                command: 'codechef.showApprovals',
-                title: '📋 View Approvals',
-                arguments: []
-            });
-        }
-        // Observability links
-        stream.markdown(`\n---\n\n`);
-        stream.markdown(`**Observability:**\n\n`);
-        const langsmithUrl = vscode.workspace.getConfiguration('codechef').get('langsmithUrl');
-        if (langsmithUrl) {
-            stream.markdown(`- [LangSmith Traces](${langsmithUrl})\n`);
-        }
-        const grafanaUrl = vscode.workspace.getConfiguration('codechef').get('grafanaUrl', 'https://appsmithery.grafana.net');
-        stream.markdown(`- [Grafana Metrics](${grafanaUrl})\n`);
-        stream.markdown(`- Check status: \`@codechef /status ${response.task_id}\`\n`);
-        return {
-            metadata: {
-                taskId: response.task_id,
-                subtaskCount: response.subtasks.length,
-                requiresApproval: !!response.approval_request_id
-            }
-        };
-    }
-    getLinearIssueUrl(issueId) {
-        const config = vscode.workspace.getConfiguration('codechef');
-        const workspaceSlug = config.get('linearWorkspaceSlug', 'project-roadmaps');
-        return `https://linear.app/${workspaceSlug}/issue/${issueId}`;
-    }
-    getAgentEmoji(agentType) {
-        const emojiMap = {
-            'feature-dev': '💻',
-            'code-review': '🔍',
-            'infrastructure': '🏗️',
-            'cicd': '🚀',
-            'documentation': '📚',
-            'orchestrator': '🎯'
-        };
-        return emojiMap[agentType] || '🤖';
     }
     async submitTask(description) {
         try {

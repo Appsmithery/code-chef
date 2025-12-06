@@ -1,57 +1,63 @@
-# code/chef - AI Agent Orchestrator
+# code/chef - AI DevOps Team
 
-[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue)](https://github.com/Appsmithery/code-chef/releases)
-[![MCP Tools](https://img.shields.io/badge/tools-150%2B-green)](https://github.com/Appsmithery/code-chef)
-[![LangGraph](https://img.shields.io/badge/LangGraph-enabled-purple)](https://www.langchain.com/)
+[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Orchestrator-purple?logo=langchain)](https://www.langchain.com/langgraph)
+[![MCP Tools](https://img.shields.io/badge/MCP_Tools-150+-green)](https://github.com/Appsmithery/code-chef)
+[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-VS Code extension that integrates the code/chef orchestrator into Copilot Chat, enabling AI-powered task automation with 150+ MCP tools.
+Your personal AI DevOps Team, orchestrated by the Head Chef. A VS Code extension that brings LangGraph-powered multi-agent workflows directly into Copilot Chat with 150+ MCP tools and intelligent workflow routing.
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        VS Code Extension (@chef)                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Copilot Chat ←→ Extension ←→ Orchestrator API ←→ LangGraph Engine     │
+│                                      │                                   │
+│                        ┌─────────────┴─────────────┐                    │
+│                        ▼                           ▼                    │
+│              ┌─────────────────┐         ┌─────────────────┐           │
+│              │   Supervisor    │────────▶│   Workflow      │           │
+│              │   (Head Chef)   │         │   Router        │           │
+│              └────────┬────────┘         └─────────────────┘           │
+│         ┌─────────────┼─────────────┬─────────────┬─────────────┐      │
+│         ▼             ▼             ▼             ▼             ▼      │
+│    ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐    │
+│    │feature  │  │code     │  │infra    │  │cicd     │  │docs     │    │
+│    │-dev 💻  │  │-review🔍│  │ 🏗️      │  │ 🚀      │  │ 📚      │    │
+│    └─────────┘  └─────────┘  └─────────┘  └─────────┘  └─────────┘    │
+│                              Agent Nodes                                │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
 ## Features
 
-- **@chef Chat Participant** - Submit tasks directly from Copilot Chat
-- **LangGraph Workflow Engine** - Single orchestrator with agent nodes and PostgreSQL checkpointing
+- **`@chef` Chat Participant** - Natural language task submission via Copilot Chat
+- **Workflow Slash Commands** - `/workflow` and `/workflows` for intelligent task routing
+- **Smart Router** - Heuristic + LLM-based workflow selection with confidence scoring
+- **LangGraph Engine** - StateGraph orchestration with PostgreSQL checkpointing
 - **150+ MCP Tools** - LangChain function calling with progressive disclosure (80-90% token savings)
-- **Agent Routing** - Routes to specialized agents (feature-dev, code-review, infrastructure, cicd, documentation)
-- **Workspace Context** - Automatically extracts git branch, open files, project type
-- **HITL Approvals** - Linear integration for human-in-the-loop workflow
+- **6 Agent Nodes** - feature-dev, code-review, infrastructure, cicd, documentation + supervisor
+- **HITL Approvals** - Linear integration for human-in-the-loop high-risk operations
 - **Observability** - LangSmith tracing + Grafana metrics
 
 ## Installation
 
-### Option 1: GitHub Releases (Recommended)
+### Option 1: VSIX from GitHub Releases (Recommended)
 
 1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
 2. Download the latest `vscode-codechef-*.vsix` file
 3. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
 4. Select the downloaded file and reload
 
-### Option 2: GitHub Packages (npm)
-
-```bash
-# Configure npm for GitHub Packages (one-time)
-echo "@appsmithery:registry=https://npm.pkg.github.com" >> ~/.npmrc
-
-# Install
-npm install @appsmithery/vscode-codechef
-```
-
-### Option 3: Build from Source
+### Option 2: Build from Source
 
 ```bash
 cd extensions/vscode-codechef
 npm install && npm run compile
 npx vsce package
 code --install-extension vscode-codechef-*.vsix
-```
-
-### Option 4: Install Script (Development)
-
-```powershell
-# From code-chef repo root
-.\support\scripts\install-extension.ps1
-
-# With version bump
-.\support\scripts\install-extension.ps1 -Release -BumpType patch
 ```
 
 ## Quick Start
@@ -62,10 +68,12 @@ Press `Ctrl+Shift+P` → "code/chef: Configure"
 
 **Required Settings:**
 
-- `codechef.orchestratorUrl` - Orchestrator endpoint (default: `https://codechef.appsmithery.co/api`)
-- `codechef.apiKey` - API key for authentication (get from administrator)
+| Setting                    | Description                                                            |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `codechef.orchestratorUrl` | Orchestrator endpoint (default: `https://codechef.appsmithery.co/api`) |
+| `codechef.apiKey`          | API key for authentication (get from administrator)                    |
 
-### 2. Use in Copilot Chat
+### 2. Start Using
 
 Open Copilot Chat and type:
 
@@ -73,97 +81,114 @@ Open Copilot Chat and type:
 @chef Add JWT authentication to my Express API
 ```
 
-## Commands
+Or use a workflow command:
 
-### Chat Commands
+```
+@chef /workflow Deploy PR #123 to production
+```
 
-| Command                            | Description              | Example                     |
-| ---------------------------------- | ------------------------ | --------------------------- |
-| `@chef <task>`                     | Submit development task  | `@chef Add authentication`  |
-| `@chef /status <id>`               | Check task status        | `@chef /status abc123`      |
-| `@chef /approve <task> <approval>` | Approve pending task     | `@chef /approve abc123 xyz` |
-| `@chef /tools`                     | List available MCP tools | `@chef /tools`              |
+## Slash Commands
 
-### Command Palette (`Ctrl+Shift+P`)
+| Command                            | Description              | Example                          |
+| ---------------------------------- | ------------------------ | -------------------------------- |
+| `@chef <task>`                     | Submit development task  | `@chef Add authentication`       |
+| `@chef /status [id]`               | Check task status        | `@chef /status abc123`           |
+| `@chef /approve <task> <approval>` | Approve pending task     | `@chef /approve abc123 xyz`      |
+| `@chef /workflow [name] <task>`    | Execute workflow         | `@chef /workflow Deploy PR #123` |
+| `@chef /workflows`                 | List available workflows | `@chef /workflows`               |
+| `@chef /tools`                     | List available MCP tools | `@chef /tools`                   |
 
-- **code/chef: Submit Task** - Submit via input box
-- **code/chef: Check Status** - Check task status
-- **code/chef: Configure** - Update settings
-- **code/chef: Show Approvals** - Open Linear approval hub
-- **code/chef: Clear Cache** - Clear session cache
+## Command Palette
+
+Press `Ctrl+Shift+P` and search for:
+
+| Command                             | Description                  |
+| ----------------------------------- | ---------------------------- |
+| `code/chef: Submit Task`            | Submit via input box         |
+| `code/chef: Check Task Status`      | Check task status            |
+| `code/chef: Show Pending Approvals` | Open Linear approval hub     |
+| `code/chef: Health Check`           | Test orchestrator connection |
+| `code/chef: Open LangSmith Traces`  | View LLM traces              |
+| `code/chef: Open Grafana Metrics`   | View dashboards              |
+| `code/chef: Open Settings`          | Configure extension          |
+| `code/chef: Clear Cache`            | Clear session cache          |
 
 ## Configuration
 
-| Setting                         | Description                | Default                               |
-| ------------------------------- | -------------------------- | ------------------------------------- |
-| `codechef.orchestratorUrl`      | Orchestrator endpoint      | `https://codechef.appsmithery.co/api` |
-| `codechef.apiKey`               | API key for authentication | (required)                            |
-| `codechef.linearHubIssue`       | Linear approval hub        | `DEV-68`                              |
-| `codechef.linearWorkspaceSlug`  | Linear workspace slug      | `dev-ops`                             |
-| `codechef.autoApproveThreshold` | Auto-approve risk level    | `low`                                 |
-| `codechef.enableNotifications`  | Toast notifications        | `true`                                |
-| `codechef.langsmithUrl`         | LangSmith project URL      | (set)                                 |
+### Connection & Authentication
 
-### Workspace Settings
+| Setting                    | Default                               | Description                |
+| -------------------------- | ------------------------------------- | -------------------------- |
+| `codechef.orchestratorUrl` | `https://codechef.appsmithery.co/api` | Orchestrator endpoint      |
+| `codechef.apiKey`          | `""`                                  | API key for authentication |
 
-Create `.vscode/settings.json`:
+### Workflow Settings
 
-```json
-{
-  "codechef.orchestratorUrl": "https://codechef.appsmithery.co/api",
-  "codechef.apiKey": "your-api-key-here",
-  "codechef.autoApproveThreshold": "low"
-}
-```
+| Setting                             | Default | Description                                                                     |
+| ----------------------------------- | ------- | ------------------------------------------------------------------------------- |
+| `codechef.defaultWorkflow`          | `auto`  | Default workflow (auto/feature/pr-deployment/hotfix/infrastructure/docs-update) |
+| `codechef.workflowAutoExecute`      | `true`  | Auto-execute without confirmation                                               |
+| `codechef.workflowConfirmThreshold` | `0.7`   | Confidence threshold for confirmation (0.0-1.0)                                 |
+| `codechef.showWorkflowPreview`      | `true`  | Show preview before execution                                                   |
 
-## Example Workflow
+### Token Optimization
 
-```
-@codechef Add user authentication with JWT tokens
-```
+| Setting                        | Default       | Description                                                    |
+| ------------------------------ | ------------- | -------------------------------------------------------------- |
+| `codechef.environment`         | `production`  | Model selection (production/development)                       |
+| `codechef.toolLoadingStrategy` | `progressive` | Tool loading strategy (minimal/progressive/agent_profile/full) |
+| `codechef.maxToolsPerRequest`  | `30`          | Max tools exposed per request                                  |
+| `codechef.enableContext7Cache` | `true`        | Cache library IDs (90% savings)                                |
 
-Response:
+### Context & RAG
 
-```
-✅ Task Submitted (abc123)
+| Setting                     | Default         | Description                    |
+| --------------------------- | --------------- | ------------------------------ |
+| `codechef.maxContextTokens` | `8000`          | Token budget for agent context |
+| `codechef.ragEnabled`       | `true`          | Include RAG context in prompts |
+| `codechef.ragMaxResults`    | `5`             | Max semantic search results    |
+| `codechef.ragCollection`    | `code_patterns` | Primary RAG collection         |
 
-Subtasks (4):
-💻 feature-dev: Implement JWT middleware
-💻 feature-dev: Add login/logout endpoints
-🔍 code-review: Security audit
-📚 documentation: Generate API docs
+### Cost Controls
 
-Estimated Duration: 30 minutes
-```
+| Setting                       | Default | Description                       |
+| ----------------------------- | ------- | --------------------------------- |
+| `codechef.dailyTokenBudget`   | `0`     | Daily limit (0 = unlimited)       |
+| `codechef.showTokenUsage`     | `true`  | Show token count after requests   |
+| `codechef.costAlertThreshold` | `0.10`  | Warning threshold per request ($) |
 
-## Approval Workflow
+### Linear Integration
 
-High-risk tasks require human approval via Linear:
+| Setting                         | Default        | Description                         |
+| ------------------------------- | -------------- | ----------------------------------- |
+| `codechef.linearHubIssue`       | `DEV-68`       | Approval hub issue ID               |
+| `codechef.linearWorkspaceSlug`  | `dev-ops`      | Linear workspace slug               |
+| `codechef.linearTeamId`         | `f5b610be-...` | Linear team ID for project creation |
+| `codechef.autoApproveThreshold` | `low`          | Auto-approve risk level             |
 
-1. Task submitted → Risk assessment
-2. Sub-issue created under DEV-68
-3. User notified via toast/Linear
-4. Approve by marking "Done" in Linear
-5. Workflow continues
+### Observability
+
+| Setting                 | Default                           | Description          |
+| ----------------------- | --------------------------------- | -------------------- |
+| `codechef.langsmithUrl` | LangSmith project URL             | LangSmith traces URL |
+| `codechef.grafanaUrl`   | `https://appsmithery.grafana.net` | Grafana metrics URL  |
 
 ## Troubleshooting
 
 ### Cannot connect to orchestrator
 
-1. Check URL: `F1` → "code/chef: Configure"
+1. Check URL: `Ctrl+Shift+P` → "code/chef: Configure"
 2. Verify API key is set in settings
 3. Test health: `curl https://codechef.appsmithery.co/api/health`
 
 ### 401 Unauthorized
-
-API key is missing or invalid:
 
 1. Get API key from administrator
 2. Set in VS Code settings: `codechef.apiKey`
 
 ### No tools appearing
 
-1. Clear cache: `F1` → "code/chef: Clear Cache"
+1. Clear cache: `Ctrl+Shift+P` → "code/chef: Clear Cache"
 2. Restart VS Code
 
 ## Development
@@ -172,11 +197,14 @@ API key is missing or invalid:
 # Build
 npm run compile
 
-# Package
+# Watch mode
+npm run watch
+
+# Package VSIX
 npx vsce package
 
-# Publish to npm
-npm publish --ignore-scripts
+# Lint
+npm run lint
 ```
 
 ## License
@@ -186,5 +214,6 @@ MIT License - see [LICENSE](LICENSE)
 ## Links
 
 - [GitHub Repository](https://github.com/Appsmithery/Dev-Tools)
-- [Linear Project](https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b)
+- [Linear Project](https://linear.app/dev-ops/project/ai-devops-agent-platform-78b3b839d36b)
 - [LangSmith Traces](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
+- [Grafana Metrics](https://appsmithery.grafana.net)
