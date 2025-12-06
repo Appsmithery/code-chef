@@ -15,12 +15,14 @@ flowchart TB
         chat["🗨️ Copilot Chat<br/>@chef participant"]
     end
 
-    subgraph orchestrator["Orchestrator API"] LR
+    subgraph orchestrator["Orchestrator API"]
+        direction LR
         supervisor["🎯 Supervisor<br/>(Head Chef)"]
         router["🔀 Workflow Router<br/>Heuristic + LLM"]
     end
 
-    subgraph agents["Agent Nodes"] LR
+    subgraph agents["Agent Nodes"]
+        direction LR
         feature["💻 feature-dev"]
         review["🔍 code-review"]
         infra["🏗️ infrastructure"]
@@ -28,7 +30,7 @@ flowchart TB
         docs["📚 documentation"]
     end
 
-    subgraph tools["MCP Tools"] LR
+    subgraph tools["MCP Tools"]
         mcp["150+ Tools<br/>Linear, GitHub, Docker, etc."]
     end
 
