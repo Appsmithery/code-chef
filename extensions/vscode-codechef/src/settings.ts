@@ -19,9 +19,19 @@ export interface TokenOptimizationSettings {
 }
 
 /**
+ * Workflow settings from VS Code configuration
+ */
+export interface WorkflowSettings {
+    defaultWorkflow: 'auto' | 'feature' | 'pr-deployment' | 'hotfix' | 'infrastructure' | 'docs-update';
+    workflowAutoExecute: boolean;
+    workflowConfirmThreshold: number;
+    showWorkflowPreview: boolean;
+}
+
+/**
  * All code/chef extension settings
  */
-export interface CodeChefSettings extends TokenOptimizationSettings {
+export interface CodeChefSettings extends TokenOptimizationSettings, WorkflowSettings {
     orchestratorUrl: string;
     apiKey: string;
     autoApproveThreshold: 'low' | 'medium' | 'high' | 'critical' | 'never';
@@ -71,9 +81,28 @@ export function getSettings(): CodeChefSettings {
         linearHubIssue: config.get('linearHubIssue', 'DEV-68'),
         linearWorkspaceSlug: config.get('linearWorkspaceSlug', 'dev-ops'),
         
+        // Workflow Settings
+        defaultWorkflow: config.get('defaultWorkflow', 'auto') as any,
+        workflowAutoExecute: config.get('workflowAutoExecute', true),
+        workflowConfirmThreshold: config.get('workflowConfirmThreshold', 0.7),
+        showWorkflowPreview: config.get('showWorkflowPreview', true),
+        
         // Observability
         langsmithUrl: config.get('langsmithUrl', 'https://smith.langchain.com'),
         grafanaUrl: config.get('grafanaUrl', 'https://appsmithery.grafana.net')
+    };
+}
+
+/**
+ * Get workflow settings for workflow selection
+ */
+export function getWorkflowSettings(): WorkflowSettings {
+    const config = vscode.workspace.getConfiguration('codechef');
+    return {
+        defaultWorkflow: config.get('defaultWorkflow', 'auto') as any,
+        workflowAutoExecute: config.get('workflowAutoExecute', true),
+        workflowConfirmThreshold: config.get('workflowConfirmThreshold', 0.7),
+        showWorkflowPreview: config.get('showWorkflowPreview', true)
     };
 }
 
@@ -103,6 +132,7 @@ export function getTokenOptimizationSettings(): TokenOptimizationSettings {
  */
 export function buildWorkspaceConfig(): Record<string, any> {
     const settings = getTokenOptimizationSettings();
+    const workflowSettings = getWorkflowSettings();
     
     return {
         environment: settings.environment,
@@ -124,6 +154,12 @@ export function buildWorkspaceConfig(): Record<string, any> {
             daily_budget: settings.dailyTokenBudget,
             show_usage: settings.showTokenUsage,
             alert_threshold: settings.costAlertThreshold
+        },
+        workflow: {
+            default_workflow: workflowSettings.defaultWorkflow,
+            auto_execute: workflowSettings.workflowAutoExecute,
+            confirm_threshold: workflowSettings.workflowConfirmThreshold,
+            show_preview: workflowSettings.showWorkflowPreview
         }
     };
 }

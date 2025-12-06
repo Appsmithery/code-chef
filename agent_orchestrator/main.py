@@ -3088,6 +3088,156 @@ class WorkflowResumeRequest(BaseModel):
     approval_decision: str = Field(..., description="'approved' or 'rejected'")
 
 
+class SmartWorkflowRequest(BaseModel):
+    """Request for intelligent workflow selection and execution."""
+
+    task_description: str = Field(
+        ...,
+        description="Natural language description of the task",
+    )
+    explicit_workflow: Optional[str] = Field(
+        default=None,
+        description="Optional explicit workflow name to bypass smart selection",
+    )
+    context: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Project context (files, branch, environment, etc.)",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="If true, return selection without executing the workflow",
+    )
+    confirm_threshold: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Confidence threshold for requiring user confirmation (default: 0.7)",
+    )
+
+
+class SmartWorkflowResponse(BaseModel):
+    """Response from smart workflow selection and execution."""
+
+    workflow_name: str = Field(..., description="Name of the selected workflow")
+    confidence: float = Field(..., description="Confidence score (0.0-1.0)")
+    method: str = Field(
+        ..., description="How the workflow was selected (heuristic, llm, explicit)"
+    )
+    reasoning: str = Field(default="", description="Explanation for the selection")
+    requires_confirmation: bool = Field(
+        default=False, description="Whether user confirmation is needed"
+    )
+    alternatives: List[Dict[str, Any]] = Field(
+        default_factory=list, description="Alternative workflows"
+    )
+    context_variables: Dict[str, Any] = Field(
+        default_factory=dict, description="Extracted context"
+    )
+    workflow_id: Optional[str] = Field(
+        default=None, description="Workflow ID if execution started"
+    )
+    execution_status: Optional[str] = Field(
+        default=None, description="Execution status if not dry_run"
+    )
+
+
+@app.post("/workflow/smart-execute", response_model=SmartWorkflowResponse)
+@traceable(name="workflow_smart_execute", tags=["workflow", "routing", "smart"])
+async def smart_execute_workflow(request: SmartWorkflowRequest):
+    """
+    Intelligently select and execute a workflow based on task description.
+
+    This endpoint uses a two-phase selection process:
+    1. Heuristic matching (keywords, file patterns, branch patterns) - fast, zero LLM tokens
+    2. LLM fallback for semantic understanding when heuristics don't match
+
+    Features:
+    - Automatic workflow selection based on task description
+    - Confidence scoring for selection quality
+    - Dry-run mode for previewing selection without execution
+    - User confirmation when confidence is below threshold
+    - Context variable extraction for workflow templates
+
+    Example:
+        POST /workflow/smart-execute
+        {
+            "task_description": "Deploy PR #123 to production",
+            "context": {
+                "git_branch": "feature/new-api",
+                "project_type": "python"
+            },
+            "dry_run": true
+        }
+
+    Returns:
+        SmartWorkflowResponse with selection details and optional workflow_id
+    """
+    from workflows.workflow_router import get_workflow_router, WorkflowSelection
+    from workflows.workflow_engine import WorkflowEngine
+
+    # Get or create the workflow router
+    router = get_workflow_router(
+        gradient_client=gradient_client,
+        confirm_threshold=request.confirm_threshold or 0.7,
+    )
+
+    # Select the appropriate workflow
+    context = request.context or {}
+    selection: WorkflowSelection = await router.select_workflow(
+        task_description=request.task_description,
+        context=context,
+        explicit_workflow=request.explicit_workflow,
+        dry_run=request.dry_run,
+    )
+
+    # Build response
+    response = SmartWorkflowResponse(
+        workflow_name=selection.workflow_name,
+        confidence=selection.confidence,
+        method=selection.method.value,
+        reasoning=selection.reasoning,
+        requires_confirmation=selection.requires_confirmation,
+        alternatives=selection.alternatives,
+        context_variables=selection.context_variables,
+    )
+
+    # If dry run or requires confirmation, return without executing
+    if request.dry_run or selection.requires_confirmation:
+        response.execution_status = (
+            "preview" if request.dry_run else "awaiting_confirmation"
+        )
+        return response
+
+    # Execute the workflow
+    try:
+        engine = WorkflowEngine(gradient_client=gradient_client)
+        template_name = f"{selection.workflow_name}.workflow.yaml"
+
+        # Merge extracted context with provided context
+        workflow_context = {**context, **selection.context_variables}
+
+        # Execute workflow
+        state = await engine.execute_workflow(
+            template_name=template_name,
+            context=workflow_context,
+        )
+
+        response.workflow_id = state.workflow_id
+        response.execution_status = state.status.value
+
+    except FileNotFoundError:
+        response.execution_status = "error"
+        response.reasoning += (
+            f" | Error: Template '{selection.workflow_name}.workflow.yaml' not found"
+        )
+    except Exception as e:
+        logger.error(f"Workflow execution failed: {e}")
+        response.execution_status = "error"
+        response.reasoning += f" | Error: {str(e)}"
+
+    return response
+
+
 @app.post("/workflow/execute", response_model=Dict[str, Any])
 @traceable(name="workflow_execute", tags=["workflow", "declarative", "yaml"])
 async def execute_workflow(request: WorkflowExecuteRequest):
@@ -3796,13 +3946,18 @@ async def retry_workflow_from_step(
 @app.get("/workflow/templates")
 async def list_workflow_templates():
     """
-    List available workflow templates.
+    List available workflow templates with detailed metadata.
 
     Returns:
     - template_name: Filename of workflow template
     - name: Human-readable workflow name
     - description: What the workflow does
     - version: Template version
+    - required_context: Context variables required for this workflow
+    - steps_count: Number of steps in the workflow
+    - agents_involved: List of agents used in the workflow
+    - estimated_duration_minutes: Estimated execution time
+    - risk_level: Risk level (low, medium, high)
 
     Example:
         GET /workflow/templates
@@ -3812,34 +3967,41 @@ async def list_workflow_templates():
                     "template_name": "pr-deployment.workflow.yaml",
                     "name": "PR Deployment Workflow",
                     "description": "Automated PR review, test, and deployment pipeline",
-                    "version": "1.0"
+                    "version": "1.0",
+                    "required_context": ["pr_number", "branch", "environment"],
+                    "steps_count": 8,
+                    "agents_involved": ["code-review", "cicd", "infrastructure"],
+                    "estimated_duration_minutes": 15,
+                    "risk_level": "high"
                 },
                 ...
             ]
         }
     """
-    from workflows.workflow_engine import WorkflowEngine
-    from pathlib import Path
+    from workflows.workflow_router import get_workflow_router
 
-    engine = WorkflowEngine()
-    templates_dir = Path(engine.templates_dir)
+    # Get templates from the workflow router (includes metadata)
+    router = get_workflow_router()
+    templates_meta = router.get_available_templates()
 
     templates = []
-    for template_file in templates_dir.glob("*.workflow.yaml"):
-        try:
-            definition = engine.load_workflow(template_file.name)
-            templates.append(
-                {
-                    "template_name": template_file.name,
-                    "name": definition.name,
-                    "description": definition.description,
-                    "version": definition.version,
-                }
-            )
-        except Exception as e:
-            logger.warning(f"Failed to load template {template_file.name}: {e}")
+    for name, meta in templates_meta.items():
+        templates.append(
+            {
+                "template_name": f"{name}.workflow.yaml",
+                "name": meta.name,
+                "description": meta.description,
+                "version": meta.version,
+                "required_context": meta.required_context,
+                "optional_context": meta.optional_context,
+                "steps_count": meta.steps_count,
+                "agents_involved": meta.agents_involved,
+                "estimated_duration_minutes": meta.estimated_duration_minutes,
+                "risk_level": meta.risk_level,
+            }
+        )
 
-    return {"templates": templates}
+    return {"templates": templates, "count": len(templates)}
 
 
 if __name__ == "__main__":

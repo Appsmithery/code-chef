@@ -13,6 +13,8 @@ export class ContextExtractor {
                 github_repo_url: null,
                 github_commit_sha: null,
                 linear_project_id: null,
+                pr_number: null,
+                issue_id: null,
                 open_files: [],
                 project_type: 'unknown',
                 active_editor: null
@@ -24,6 +26,9 @@ export class ContextExtractor {
         const gitRemote = await this.getGitRemote(workspacePath);
         const githubRepoUrl = this.parseGitHubUrl(gitRemote);
         const commitSha = await this.getCommitSha(workspacePath, gitBranch);
+        
+        // Extract PR/issue IDs from branch name
+        const branchIds = this.extractIdsFromBranch(gitBranch);
 
         return {
             workspace_name: workspace.name,
@@ -38,12 +43,79 @@ export class ContextExtractor {
             // Linear context - team-level binding (CHEF team)
             linear_team_id: this.getLinearTeamId(),
             
+            // PR/Issue context (extracted from branch name)
+            pr_number: branchIds.prNumber,
+            issue_id: branchIds.issueId,
+            branch_type: branchIds.branchType,
+            
             // Existing fields
             open_files: this.getOpenFiles(),
             project_type: await this.detectProjectType(workspacePath),
             active_editor: this.getActiveEditorContext(),
             languages: this.getWorkspaceLanguages()
         };
+    }
+
+    /**
+     * Extract PR number, issue ID, and branch type from branch name
+     * Supports common branch naming conventions:
+     * - feature/123-description
+     * - feature/DEV-123-description
+     * - fix/ABC-456-bug-title
+     * - hotfix/123
+     * - release/v1.2.3
+     * - pr-123
+     */
+    private extractIdsFromBranch(branch: string | null): {
+        prNumber: string | null;
+        issueId: string | null;
+        branchType: string | null;
+    } {
+        if (!branch) {
+            return { prNumber: null, issueId: null, branchType: null };
+        }
+
+        let prNumber: string | null = null;
+        let issueId: string | null = null;
+        let branchType: string | null = null;
+
+        // Detect branch type from prefix
+        const typeMatch = branch.match(/^(feature|feat|fix|bugfix|hotfix|release|deploy|docs|chore|refactor|test)\//i);
+        if (typeMatch) {
+            branchType = typeMatch[1].toLowerCase();
+        }
+
+        // Extract Linear-style issue ID (e.g., DEV-123, PROJ-456)
+        const issueMatch = branch.match(/([A-Z]+-\d+)/i);
+        if (issueMatch) {
+            issueId = issueMatch[1].toUpperCase();
+        }
+
+        // Extract PR number patterns
+        // Pattern: pr-123, pr/123
+        const prMatch = branch.match(/pr[-\/](\d+)/i);
+        if (prMatch) {
+            prNumber = prMatch[1];
+        }
+        
+        // Pattern: standalone number after prefix (feature/123-description)
+        // Only if we haven't found an issue ID already
+        if (!prNumber && !issueId) {
+            const numMatch = branch.match(/\/(\d+)[-_]?/);
+            if (numMatch) {
+                prNumber = numMatch[1];
+            }
+        }
+        
+        // Pattern: number at the end (hotfix/critical-fix-123)
+        if (!prNumber) {
+            const endNumMatch = branch.match(/-(\d+)$/);
+            if (endNumMatch) {
+                prNumber = endNumMatch[1];
+            }
+        }
+
+        return { prNumber, issueId, branchType };
     }
 
     private async getGitBranch(workspacePath: string): Promise<string | null> {

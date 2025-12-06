@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { ContextExtractor } from './contextExtractor';
-import { OrchestratorClient, TaskResponse } from './orchestratorClient';
+import { OrchestratorClient, SmartWorkflowResponse, TaskResponse } from './orchestratorClient';
 import { SessionManager } from './sessionManager';
-import { buildWorkspaceConfig } from './settings';
+import { buildWorkspaceConfig, getWorkflowSettings } from './settings';
 
 export class CodeChefChatParticipant {
     private client: OrchestratorClient;
@@ -131,9 +131,15 @@ export class CodeChefChatParticipant {
             case 'tools':
                 return await this.handleToolsCommand(stream);
             
+            case 'workflow':
+                return await this.handleWorkflowCommand(args, stream);
+            
+            case 'workflows':
+                return await this.handleWorkflowsListCommand(stream);
+            
             default:
                 stream.markdown(`Unknown command: ${command}\n\n`);
-                stream.markdown('Available commands: status, approve, tools\n');
+                stream.markdown('Available commands: status, approve, tools, workflow, workflows\n');
                 return {};
         }
     }
@@ -236,6 +242,233 @@ export class CodeChefChatParticipant {
             stream.markdown(`❌ Failed to fetch tools: ${error.message}\n`);
             return { errorDetails: { message: error.message } };
         }
+    }
+
+    private async handleWorkflowCommand(
+        args: string,
+        stream: vscode.ChatResponseStream
+    ): Promise<vscode.ChatResult> {
+        const trimmedArgs = args.trim();
+        
+        if (!trimmedArgs) {
+            stream.markdown('❌ Usage: `@codechef /workflow [workflow-name] <task description>`\n\n');
+            stream.markdown('Examples:\n');
+            stream.markdown('- `@codechef /workflow Deploy PR #123 to production` (auto-select)\n');
+            stream.markdown('- `@codechef /workflow feature Implement user authentication` (explicit)\n');
+            stream.markdown('- `@codechef /workflow hotfix Fix critical login bug` (explicit)\n\n');
+            stream.markdown('Use `@codechef /workflows` to see available workflows.\n');
+            return {};
+        }
+
+        stream.progress('Analyzing task and selecting workflow...');
+
+        try {
+            // Extract workspace context
+            const workspaceContext = await this.contextExtractor.extract();
+            const workflowSettings = getWorkflowSettings();
+            
+            // Parse arguments: first word might be workflow name
+            const parts = trimmedArgs.split(/\s+/);
+            let explicitWorkflow: string | undefined;
+            let taskDescription = trimmedArgs;
+            
+            // Check if first word matches a known workflow
+            const knownWorkflows = ['feature', 'pr-deployment', 'hotfix', 'infrastructure', 'docs-update'];
+            if (parts.length > 1 && knownWorkflows.includes(parts[0])) {
+                explicitWorkflow = parts[0];
+                taskDescription = parts.slice(1).join(' ');
+            } else if (workflowSettings.defaultWorkflow !== 'auto') {
+                explicitWorkflow = workflowSettings.defaultWorkflow;
+            }
+
+            // Use dry_run if showWorkflowPreview is enabled and autoExecute is false
+            const dryRun = workflowSettings.showWorkflowPreview && !workflowSettings.workflowAutoExecute;
+
+            const response = await this.client.smartExecuteWorkflow({
+                task_description: taskDescription,
+                explicit_workflow: explicitWorkflow,
+                context: workspaceContext,
+                dry_run: dryRun,
+                confirm_threshold: workflowSettings.workflowConfirmThreshold
+            });
+
+            // Render selection result
+            await this.renderWorkflowSelection(response, stream, dryRun);
+
+            // If requires confirmation, show Quick Pick
+            if (response.requires_confirmation && !dryRun) {
+                const confirmed = await this.showWorkflowConfirmation(response);
+                if (!confirmed) {
+                    stream.markdown('\n⚠️ **Workflow execution cancelled by user.**\n');
+                    return { metadata: { cancelled: true } };
+                }
+                
+                // Execute after confirmation
+                stream.progress('Executing workflow...');
+                const executeResponse = await this.client.smartExecuteWorkflow({
+                    task_description: taskDescription,
+                    explicit_workflow: response.workflow_name,
+                    context: workspaceContext,
+                    dry_run: false
+                });
+                
+                stream.markdown(`\n✅ **Workflow started!**\n`);
+                if (executeResponse.workflow_id) {
+                    stream.markdown(`Workflow ID: \`${executeResponse.workflow_id}\`\n`);
+                }
+            }
+
+            return { 
+                metadata: { 
+                    workflow: response.workflow_name,
+                    confidence: response.confidence,
+                    method: response.method,
+                    workflow_id: response.workflow_id
+                } 
+            };
+        } catch (error: any) {
+            stream.markdown(`\n❌ **Error**: ${error.message}\n`);
+            return { errorDetails: { message: error.message } };
+        }
+    }
+
+    private async handleWorkflowsListCommand(
+        stream: vscode.ChatResponseStream
+    ): Promise<vscode.ChatResult> {
+        stream.progress('Fetching available workflows...');
+
+        try {
+            const response = await this.client.getWorkflowTemplates();
+            
+            stream.markdown(`## 📋 Available Workflows (${response.count})\n\n`);
+            
+            for (const template of response.templates) {
+                const riskEmoji = template.risk_level === 'high' ? '🔴' : 
+                                  template.risk_level === 'medium' ? '🟡' : '🟢';
+                const agentEmojis = template.agents_involved.map(a => this.getAgentEmoji(a)).join(' ');
+                
+                stream.markdown(`### ${template.name}\n`);
+                stream.markdown(`${template.description}\n\n`);
+                stream.markdown(`| Property | Value |\n`);
+                stream.markdown(`|----------|-------|\n`);
+                stream.markdown(`| Template | \`${template.template_name}\` |\n`);
+                stream.markdown(`| Version | ${template.version} |\n`);
+                stream.markdown(`| Risk Level | ${riskEmoji} ${template.risk_level} |\n`);
+                stream.markdown(`| Steps | ${template.steps_count} |\n`);
+                stream.markdown(`| Duration | ~${template.estimated_duration_minutes} min |\n`);
+                stream.markdown(`| Agents | ${agentEmojis} ${template.agents_involved.join(', ')} |\n`);
+                
+                if (template.required_context.length > 0) {
+                    stream.markdown(`| Required Context | \`${template.required_context.join('`, `')}\` |\n`);
+                }
+                
+                stream.markdown('\n');
+            }
+            
+            stream.markdown('---\n\n');
+            stream.markdown('**Usage:** `@codechef /workflow [name] <task description>`\n\n');
+            stream.markdown('**Example:** `@codechef /workflow pr-deployment Deploy PR #123 to production`\n');
+
+            return { metadata: { templateCount: response.count } };
+        } catch (error: any) {
+            stream.markdown(`❌ Failed to fetch workflows: ${error.message}\n`);
+            return { errorDetails: { message: error.message } };
+        }
+    }
+
+    private async renderWorkflowSelection(
+        response: SmartWorkflowResponse,
+        stream: vscode.ChatResponseStream,
+        dryRun: boolean
+    ): Promise<void> {
+        const confidencePercent = Math.round(response.confidence * 100);
+        const confidenceEmoji = response.confidence >= 0.8 ? '🟢' : 
+                                response.confidence >= 0.6 ? '🟡' : '🔴';
+        
+        stream.markdown(`## 🎯 Workflow Selection\n\n`);
+        stream.markdown(`**Selected:** ${response.workflow_name}\n`);
+        stream.markdown(`**Confidence:** ${confidenceEmoji} ${confidencePercent}%\n`);
+        stream.markdown(`**Method:** ${response.method}\n`);
+        
+        if (response.reasoning) {
+            stream.markdown(`**Reasoning:** ${response.reasoning}\n`);
+        }
+        
+        stream.markdown('\n');
+        
+        // Show extracted context
+        if (Object.keys(response.context_variables).length > 0) {
+            stream.markdown('### Extracted Context\n\n');
+            for (const [key, value] of Object.entries(response.context_variables)) {
+                if (value !== null && value !== undefined) {
+                    stream.markdown(`- **${key}:** ${value}\n`);
+                }
+            }
+            stream.markdown('\n');
+        }
+        
+        // Show alternatives if available
+        if (response.alternatives.length > 0) {
+            stream.markdown('### Alternative Workflows\n\n');
+            for (const alt of response.alternatives) {
+                const altConfidence = Math.round((alt.confidence || 0) * 100);
+                stream.markdown(`- ${alt.workflow} (${altConfidence}%)\n`);
+            }
+            stream.markdown('\n');
+        }
+        
+        // Show status
+        if (dryRun) {
+            stream.markdown('---\n');
+            stream.markdown('📝 **Preview Mode** - Workflow not executed.\n');
+            stream.markdown('Set `codechef.showWorkflowPreview` to `false` or use `codechef.workflowAutoExecute` to auto-execute.\n');
+        } else if (response.requires_confirmation) {
+            stream.markdown('---\n');
+            stream.markdown('⚠️ **Confirmation Required** - Confidence below threshold.\n');
+        } else if (response.workflow_id) {
+            stream.markdown('---\n');
+            stream.markdown(`✅ **Workflow Started!** ID: \`${response.workflow_id}\`\n`);
+            stream.markdown(`Status: ${response.execution_status}\n`);
+        } else if (response.execution_status === 'error') {
+            stream.markdown('---\n');
+            stream.markdown('❌ **Workflow Failed to Start**\n');
+        }
+    }
+
+    private async showWorkflowConfirmation(response: SmartWorkflowResponse): Promise<boolean> {
+        // Build quick pick items
+        const items: vscode.QuickPickItem[] = [
+            {
+                label: `$(check) Execute ${response.workflow_name}`,
+                description: `${Math.round(response.confidence * 100)}% confidence`,
+                detail: response.reasoning,
+                picked: true
+            }
+        ];
+        
+        // Add alternatives
+        for (const alt of response.alternatives) {
+            items.push({
+                label: `$(arrow-right) Use ${alt.workflow} instead`,
+                description: `${Math.round((alt.confidence || 0) * 100)}% confidence`
+            });
+        }
+        
+        items.push({
+            label: '$(x) Cancel',
+            description: 'Do not execute any workflow'
+        });
+        
+        const selected = await vscode.window.showQuickPick(items, {
+            title: 'Confirm Workflow Selection',
+            placeHolder: `Select workflow to execute (${response.method} selection)`
+        });
+        
+        if (!selected || selected.label.includes('Cancel')) {
+            return false;
+        }
+        
+        return true;
     }
 
     private async renderTaskResponse(

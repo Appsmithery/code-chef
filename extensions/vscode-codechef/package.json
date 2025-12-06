@@ -103,6 +103,14 @@
           {
             "name": "tools",
             "description": "List available MCP tools"
+          },
+          {
+            "name": "workflow",
+            "description": "Execute a workflow: /workflow [name] <task description>"
+          },
+          {
+            "name": "workflows",
+            "description": "List available workflow templates"
           }
         ]
       }
@@ -362,6 +370,52 @@
           "default": "f5b610be-ac34-4983-918b-2c9d00aa9b7a",
           "description": "Linear team ID - @chef can create projects and access all issues under this team (code-chef/CHEF)",
           "order": 44
+        },
+        "codechef.defaultWorkflow": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "feature",
+            "pr-deployment",
+            "hotfix",
+            "infrastructure",
+            "docs-update"
+          ],
+          "enumDescriptions": [
+            "Automatically select workflow based on task description (recommended)",
+            "Feature development with code review and testing",
+            "PR deployment with staging and production rollout",
+            "Emergency hotfix with fast-track approval",
+            "Infrastructure changes with Terraform/Docker",
+            "Documentation updates only"
+          ],
+          "default": "auto",
+          "description": "Default workflow to use for tasks",
+          "markdownDescription": "**Default Workflow**\n\nSelect the default workflow for orchestrated tasks:\n\n| Workflow | Use Case |\n|----------|----------|\n| `auto` | Smart selection based on task |\n| `feature` | Standard feature development |\n| `pr-deployment` | PR review + deployment |\n| `hotfix` | Emergency fixes |\n| `infrastructure` | IaC changes |\n| `docs-update` | Documentation only |",
+          "order": 45
+        },
+        "codechef.workflowAutoExecute": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically execute selected workflow without confirmation",
+          "markdownDescription": "**Auto-Execute Workflows**\n\nWhen enabled, workflows start immediately after selection.\n\nWhen disabled, you'll be prompted to confirm before execution.",
+          "order": 46
+        },
+        "codechef.workflowConfirmThreshold": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Confidence threshold for requiring workflow confirmation (0.0-1.0)",
+          "markdownDescription": "**Confirmation Threshold**\n\nIf the smart router's confidence is below this threshold, you'll be prompted to confirm the workflow selection.\n\n- `0.0` = Always auto-select (no confirmation)\n- `0.7` = Default (confirm low-confidence selections)\n- `1.0` = Always confirm",
+          "order": 47
+        },
+        "codechef.showWorkflowPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show workflow preview before execution (dry run mode)",
+          "markdownDescription": "**Workflow Preview**\n\nWhen enabled, shows a preview of the selected workflow including:\n- Steps to be executed\n- Agents involved\n- Estimated duration\n- Risk level\n\nUseful for reviewing complex workflows before execution.",
+          "order": 48
         },
         "codechef.langsmithUrl": {
           "type": "string",
