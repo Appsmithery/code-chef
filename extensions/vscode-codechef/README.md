@@ -34,17 +34,8 @@ flowchart TB
 
     chat -->|"task"| supervisor
     supervisor <-->|"routing"| router
-    supervisor -->|"delegate"| feature
-    supervisor -->|"delegate"| review
-    supervisor -->|"delegate"| infra
-    supervisor -->|"delegate"| cicd
-    supervisor -->|"delegate"| docs
-
-    feature --> mcp
-    review --> mcp
-    infra --> mcp
-    cicd --> mcp
-    docs --> mcp
+    supervisor -->|"delegate"| agents
+    agents --> mcp
 
     style vscode fill:#1e1e1e,stroke:#007acc,color:#fff
     style orchestrator fill:#2d1b4e,stroke:#9333ea,color:#fff
