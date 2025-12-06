@@ -9,39 +9,16 @@ Your personal AI DevOps Team, orchestrated by the Head Chef. A VS Code extension
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    subgraph vscode["VS Code Extension"]
-        chat["🗨️ Copilot Chat<br/>@chef participant"]
-    end
+![Architecture](docs/architecture.svg)
 
-    subgraph orchestrator["Orchestrator API"]
-        supervisor["🎯 Supervisor<br/>(Head Chef)"]
-        router["🔀 Workflow Router"]
-        supervisor <-.->|routing| router
-    end
+**Flow:** User → `@chef` → Orchestrator → Specialized Agents → MCP Tools → Results
 
-    subgraph agents["Agent Nodes"]
-        feature["💻 feature-dev"]
-        review["🔍 code-review"]
-        infra["🏗️ infrastructure"]
-        cicd["🚀 cicd"]
-        docs["📚 documentation"]
-    end
-
-    subgraph tools["MCP Tools"]
-        mcp["150+ Tools<br/>Linear, GitHub, Docker..."]
-    end
-
-    chat -->|task| supervisor
-    supervisor -->|delegate| agents
-    agents -->|invoke| mcp
-
-    style vscode fill:#1e1e1e,stroke:#007acc,color:#fff
-    style orchestrator fill:#2d1b4e,stroke:#9333ea,color:#fff
-    style agents fill:#1a2e1a,stroke:#22c55e,color:#fff
-    style tools fill:#1a1a2e,stroke:#3b82f6,color:#fff
-```
+| Component             | Description                                                   |
+| --------------------- | ------------------------------------------------------------- |
+| **VS Code Extension** | `@chef` chat participant in Copilot Chat                      |
+| **Orchestrator API**  | Supervisor (Head Chef) + Workflow Router                      |
+| **Agent Nodes**       | feature-dev, code-review, infrastructure, cicd, documentation |
+| **MCP Tools**         | 150+ tools (Linear, GitHub, Docker, Pylance...)               |
 
 ## Features
 
