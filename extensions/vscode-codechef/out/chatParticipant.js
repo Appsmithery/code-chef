@@ -35,14 +35,14 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CodeChefChatParticipant = void 0;
 const vscode = __importStar(require("vscode"));
-const contextExtractor_1 = require("./contextExtractor");
-const orchestratorClient_1 = require("./orchestratorClient");
-const sessionManager_1 = require("./sessionManager");
-const settings_1 = require("./settings");
 const constants_1 = require("./constants");
+const contextExtractor_1 = require("./contextExtractor");
 const statusHandler_1 = require("./handlers/statusHandler");
 const workflowHandler_1 = require("./handlers/workflowHandler");
+const orchestratorClient_1 = require("./orchestratorClient");
 const responseRenderer_1 = require("./renderers/responseRenderer");
+const sessionManager_1 = require("./sessionManager");
+const settings_1 = require("./settings");
 class CodeChefChatParticipant {
     constructor(context) {
         this.context = context;
