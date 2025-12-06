@@ -12,12 +12,14 @@ Architecture:
 
 import sys
 import uuid
+import hashlib
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import TypedDict, List, Literal, Annotated
+from typing import TypedDict, List, Literal, Annotated, Dict, Any
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.types import interrupt
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
 from langsmith import traceable
 
@@ -26,10 +28,8 @@ logger = logging.getLogger(__name__)
 # Add shared modules to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 
-# Note: Agent implementations are in shared/services/langgraph/nodes/
-# These are workflow nodes, not separate agent services
-# Importing node functions directly would create circular dependencies,
-# so we'll use dynamic imports or stub implementations
+# Import real agent classes from agents module
+from agents import get_agent as get_real_agent
 
 
 # Define workflow state
@@ -43,6 +43,9 @@ class WorkflowState(TypedDict):
         task_result: Result from current agent's execution
         approvals: List of approval IDs for HITL operations
         requires_approval: Whether current operation requires HITL approval
+        workflow_id: Unique workflow identifier for checkpointing
+        thread_id: LangGraph thread ID for state persistence
+        pending_operation: Description of operation requiring approval
     """
 
     messages: Annotated[List[BaseMessage], "append"]  # Append-only message history
@@ -51,41 +54,37 @@ class WorkflowState(TypedDict):
     task_result: dict
     approvals: List[str]
     requires_approval: bool
+    workflow_id: str
+    thread_id: str
+    pending_operation: str
 
 
-# Initialize all agents (lazy loaded on first use)
-_agents = {}
+# Agent cache with bound LLM instances
+_agent_cache: Dict[str, Any] = {}
 
 
 def get_agent(agent_name: str):
-    """Get or create agent instance.
+    """Get or create agent instance using real BaseAgent implementations.
 
-    Note: This is a stub implementation. Actual agent logic should be
-    implemented in shared/services/langgraph/nodes/{agent_name}.py
+    Uses the agent registry from agents/__init__.py which provides:
+    - SupervisorAgent, FeatureDevAgent, CodeReviewAgent, etc.
+    - Each agent has LLM, MCP tools, and system prompts configured
 
     Args:
         agent_name: Name of agent (supervisor, feature-dev, code-review, etc.)
 
     Returns:
-        Stub agent dict with invoke method
+        BaseAgent instance with invoke() method
     """
-    if agent_name not in _agents:
-        # Create stub agent with minimal invoke method
-        class StubAgent:
-            def __init__(self, name):
-                self.name = name
+    if agent_name not in _agent_cache:
+        try:
+            _agent_cache[agent_name] = get_real_agent(agent_name)
+            logger.info(f"[LangGraph] Initialized agent: {agent_name}")
+        except Exception as e:
+            logger.error(f"[LangGraph] Failed to initialize agent {agent_name}: {e}")
+            raise
 
-            async def invoke(self, messages):
-                # Return stub response
-                from langchain_core.messages import AIMessage
-
-                return AIMessage(
-                    content=f"Stub response from {self.name} agent. Implement actual logic in shared/services/langgraph/nodes/{self.name.replace('-', '_')}.py"
-                )
-
-        _agents[agent_name] = StubAgent(agent_name)
-
-    return _agents[agent_name]
+    return _agent_cache[agent_name]
 
 
 # Define agent nodes
@@ -93,166 +92,379 @@ def get_agent(agent_name: str):
 async def supervisor_node(state: WorkflowState) -> WorkflowState:
     """Supervisor agent node - routes tasks to specialized agents.
 
-    Analyzes the task and decides which agent should handle it next.
-    Also determines if HITL approval is required.
+    Uses the real SupervisorAgent with LLM to analyze the task and decide:
+    1. Which specialized agent should handle it
+    2. Whether it requires HITL approval (high-risk operations)
     """
     supervisor = get_agent("supervisor")
 
     # Add routing instruction to messages
     routing_prompt = """Analyze this task and determine:
 1. Which specialized agent should handle it (feature-dev, code-review, infrastructure, cicd, documentation)
-2. Whether it requires HITL approval (high-risk operations like production deployments, infrastructure changes)
+2. Whether it requires HITL approval (high-risk operations like production deployments, infrastructure changes, database migrations)
 
 Respond in this format:
 NEXT_AGENT: <agent-name>
 REQUIRES_APPROVAL: <true|false>
 REASONING: <your analysis>
+
+If the task is complete or no further action is needed, respond with:
+NEXT_AGENT: end
+REQUIRES_APPROVAL: false
+REASONING: Task completed
 """
 
     messages = state["messages"] + [HumanMessage(content=routing_prompt)]
-    response = await supervisor.invoke(messages)
+
+    try:
+        response = await supervisor.invoke(messages)
+        response_text = (
+            response.content if hasattr(response, "content") else str(response)
+        )
+    except Exception as e:
+        logger.error(f"[LangGraph] Supervisor invoke failed: {e}")
+        # Fallback to end state on error
+        return {
+            "messages": [AIMessage(content=f"Supervisor error: {e}")],
+            "current_agent": "supervisor",
+            "next_agent": "end",
+            "requires_approval": False,
+            "task_result": {"error": str(e)},
+        }
 
     # Parse supervisor's routing decision
-    response_text = response.content if hasattr(response, "content") else str(response)
-
-    # Extract next agent
     next_agent = "end"  # Default to end
     requires_approval = False
+    pending_operation = ""
 
     for line in response_text.split("\n"):
         if line.startswith("NEXT_AGENT:"):
             next_agent = line.split(":", 1)[1].strip().lower()
         elif line.startswith("REQUIRES_APPROVAL:"):
             requires_approval = "true" in line.lower()
+        elif line.startswith("REASONING:"):
+            pending_operation = line.split(":", 1)[1].strip()
+
+    logger.info(
+        f"[LangGraph] Supervisor routed to: {next_agent}, approval_required: {requires_approval}"
+    )
 
     return {
         "messages": [response],
         "current_agent": "supervisor",
         "next_agent": next_agent,
         "requires_approval": requires_approval,
+        "pending_operation": pending_operation,
     }
 
 
 @traceable(name="feature_dev_node", tags=["langgraph", "node", "feature-dev"])
 async def feature_dev_node(state: WorkflowState) -> WorkflowState:
-    """Feature development agent node - implements code."""
-    agent = get_agent("feature-dev")
-    response = await agent.invoke(state["messages"])
+    """Feature development agent node - implements code.
 
-    return {
-        "messages": [response],
-        "current_agent": "feature-dev",
-        "next_agent": "supervisor",  # Always return to supervisor
-        "task_result": {"agent": "feature-dev", "completed": True},
-    }
+    Uses FeatureDevAgent with codellama model for:
+    - Code implementation
+    - Refactoring
+    - Bug fixes
+    """
+    agent = get_agent("feature-dev")
+
+    try:
+        response = await agent.invoke(state["messages"])
+        result_content = (
+            response.content if hasattr(response, "content") else str(response)
+        )
+        logger.info(
+            f"[LangGraph] feature-dev completed. Response length: {len(result_content)}"
+        )
+
+        return {
+            "messages": [response],
+            "current_agent": "feature-dev",
+            "next_agent": "supervisor",  # Always return to supervisor
+            "task_result": {
+                "agent": "feature-dev",
+                "completed": True,
+                "output_length": len(result_content),
+            },
+        }
+    except Exception as e:
+        logger.error(f"[LangGraph] feature-dev failed: {e}")
+        return {
+            "messages": [AIMessage(content=f"Feature development error: {e}")],
+            "current_agent": "feature-dev",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "feature-dev",
+                "completed": False,
+                "error": str(e),
+            },
+        }
 
 
 @traceable(name="code_review_node", tags=["langgraph", "node", "code-review"])
 async def code_review_node(state: WorkflowState) -> WorkflowState:
-    """Code review agent node - analyzes code quality."""
-    agent = get_agent("code-review")
-    response = await agent.invoke(state["messages"])
+    """Code review agent node - analyzes code quality.
 
-    return {
-        "messages": [response],
-        "current_agent": "code-review",
-        "next_agent": "supervisor",
-        "task_result": {"agent": "code-review", "completed": True},
-    }
+    Uses CodeReviewAgent with llama3.3-70b model for:
+    - OWASP Top 10 security analysis
+    - Code quality checks
+    - Best practices validation
+    """
+    agent = get_agent("code-review")
+
+    try:
+        response = await agent.invoke(state["messages"])
+        result_content = (
+            response.content if hasattr(response, "content") else str(response)
+        )
+        logger.info(
+            f"[LangGraph] code-review completed. Response length: {len(result_content)}"
+        )
+
+        return {
+            "messages": [response],
+            "current_agent": "code-review",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "code-review",
+                "completed": True,
+                "output_length": len(result_content),
+            },
+        }
+    except Exception as e:
+        logger.error(f"[LangGraph] code-review failed: {e}")
+        return {
+            "messages": [AIMessage(content=f"Code review error: {e}")],
+            "current_agent": "code-review",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "code-review",
+                "completed": False,
+                "error": str(e),
+            },
+        }
 
 
 @traceable(name="infrastructure_node", tags=["langgraph", "node", "infrastructure"])
 async def infrastructure_node(state: WorkflowState) -> WorkflowState:
-    """Infrastructure agent node - manages cloud resources."""
-    agent = get_agent("infrastructure")
-    response = await agent.invoke(state["messages"])
+    """Infrastructure agent node - manages cloud resources.
 
-    return {
-        "messages": [response],
-        "current_agent": "infrastructure",
-        "next_agent": "supervisor",
-        "task_result": {"agent": "infrastructure", "completed": True},
-    }
+    Uses InfrastructureAgent with llama3-8b model for:
+    - Terraform/IaC changes
+    - Docker/Compose configurations
+    - Cloud resource management
+    """
+    agent = get_agent("infrastructure")
+
+    try:
+        response = await agent.invoke(state["messages"])
+        result_content = (
+            response.content if hasattr(response, "content") else str(response)
+        )
+        logger.info(
+            f"[LangGraph] infrastructure completed. Response length: {len(result_content)}"
+        )
+
+        return {
+            "messages": [response],
+            "current_agent": "infrastructure",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "infrastructure",
+                "completed": True,
+                "output_length": len(result_content),
+            },
+        }
+    except Exception as e:
+        logger.error(f"[LangGraph] infrastructure failed: {e}")
+        return {
+            "messages": [AIMessage(content=f"Infrastructure error: {e}")],
+            "current_agent": "infrastructure",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "infrastructure",
+                "completed": False,
+                "error": str(e),
+            },
+        }
 
 
 @traceable(name="cicd_node", tags=["langgraph", "node", "cicd"])
 async def cicd_node(state: WorkflowState) -> WorkflowState:
-    """CI/CD agent node - handles deployments."""
-    agent = get_agent("cicd")
-    response = await agent.invoke(state["messages"])
+    """CI/CD agent node - handles deployments.
 
-    return {
-        "messages": [response],
-        "current_agent": "cicd",
-        "next_agent": "supervisor",
-        "task_result": {"agent": "cicd", "completed": True},
-    }
+    Uses CICDAgent with llama3-8b model for:
+    - GitHub Actions workflows
+    - Deployment pipelines
+    - CI configuration
+    """
+    agent = get_agent("cicd")
+
+    try:
+        response = await agent.invoke(state["messages"])
+        result_content = (
+            response.content if hasattr(response, "content") else str(response)
+        )
+        logger.info(
+            f"[LangGraph] cicd completed. Response length: {len(result_content)}"
+        )
+
+        return {
+            "messages": [response],
+            "current_agent": "cicd",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "cicd",
+                "completed": True,
+                "output_length": len(result_content),
+            },
+        }
+    except Exception as e:
+        logger.error(f"[LangGraph] cicd failed: {e}")
+        return {
+            "messages": [AIMessage(content=f"CI/CD error: {e}")],
+            "current_agent": "cicd",
+            "next_agent": "supervisor",
+            "task_result": {"agent": "cicd", "completed": False, "error": str(e)},
+        }
 
 
 @traceable(name="documentation_node", tags=["langgraph", "node", "documentation"])
 async def documentation_node(state: WorkflowState) -> WorkflowState:
-    """Documentation agent node - writes technical docs."""
-    agent = get_agent("documentation")
-    response = await agent.invoke(state["messages"])
+    """Documentation agent node - writes technical docs.
 
-    return {
-        "messages": [response],
-        "current_agent": "documentation",
-        "next_agent": "supervisor",
-        "task_result": {"agent": "documentation", "completed": True},
-    }
-
-
-async def approval_node(state: WorkflowState) -> WorkflowState:
-    """HITL approval node - creates Linear issue and waits for approval.
-
-    This node interrupts the graph execution and requires external approval
-    before the workflow can continue.
+    Uses DocumentationAgent with mistral-nemo model for:
+    - API documentation
+    - README generation
+    - JSDoc/docstrings
     """
-    # Import LinearWorkspaceClient only when needed (avoid import-time dependencies)
-    try:
-        from lib.linear_workspace_client import LinearWorkspaceClient
+    agent = get_agent("documentation")
 
-        linear_client = LinearWorkspaceClient()
-    except ImportError:
-        # Fallback if Linear client unavailable
-        linear_client = None
+    try:
+        response = await agent.invoke(state["messages"])
+        result_content = (
+            response.content if hasattr(response, "content") else str(response)
+        )
+        logger.info(
+            f"[LangGraph] documentation completed. Response length: {len(result_content)}"
+        )
+
+        return {
+            "messages": [response],
+            "current_agent": "documentation",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "documentation",
+                "completed": True,
+                "output_length": len(result_content),
+            },
+        }
+    except Exception as e:
+        logger.error(f"[LangGraph] documentation failed: {e}")
+        return {
+            "messages": [AIMessage(content=f"Documentation error: {e}")],
+            "current_agent": "documentation",
+            "next_agent": "supervisor",
+            "task_result": {
+                "agent": "documentation",
+                "completed": False,
+                "error": str(e),
+            },
+        }
+
+
+@traceable(name="approval_node", tags=["langgraph", "node", "hitl", "approval"])
+async def approval_node(state: WorkflowState) -> WorkflowState:
+    """HITL approval node - interrupts workflow for human approval.
+
+    Uses LangGraph interrupt() to pause execution and save state.
+    Workflow resumes via:
+    1. Linear webhook (primary) - instant notification when approval emoji added
+    2. Polling fallback (secondary) - catches missed webhooks every 30s
+
+    The interrupt saves checkpoint state including:
+    - approval_request_id for tracking
+    - risk_level for audit trail
+    - pending_operation description
+    """
+    from lib.hitl_manager import get_hitl_manager
+    from lib.risk_assessor import get_risk_assessor
+
+    hitl_manager = get_hitl_manager()
+    risk_assessor = get_risk_assessor()
 
     # Extract task description from messages
-    task_description = "Unknown task"
-    for msg in reversed(state["messages"]):
-        if isinstance(msg, HumanMessage):
-            task_description = msg.content[:500]  # First 500 chars
-            break
+    task_description = state.get("pending_operation", "")
+    if not task_description:
+        for msg in reversed(state["messages"]):
+            if isinstance(msg, HumanMessage):
+                task_description = msg.content[:500]
+                break
 
-    # Create approval sub-issue in Linear
-    approval_id = f"approval-{uuid.uuid4()}"
-    if linear_client:
+    # Build risk context
+    risk_context = {
+        "operation": "workflow_execution",
+        "description": task_description,
+        "environment": "production",  # Conservative default
+        "resource_type": "workflow",
+        "agent_name": state.get("current_agent", "unknown"),
+    }
+
+    # Assess risk level
+    risk_level = risk_assessor.assess_task(risk_context)
+    requires_hitl = risk_assessor.requires_approval(risk_level)
+
+    if requires_hitl:
+        # Create approval request in database
         try:
-            approval_issue = await linear_client.create_approval_subissue(
-                approval_id=approval_id,
-                task_description=task_description,
-                risk_level="high",  # Determined by supervisor
-                project_name="Dev-Tools",
-                agent_name="orchestrator",
-                metadata={
-                    "timestamp": datetime.now().isoformat(),
-                    "workflow_id": state.get("workflow_id", "unknown"),
-                },
+            request_id = await hitl_manager.create_approval_request(
+                workflow_id=state.get("workflow_id", str(uuid.uuid4())),
+                thread_id=state.get("thread_id", ""),
+                checkpoint_id=f"checkpoint-{uuid.uuid4()}",
+                task=risk_context,
+                agent_name=state.get("current_agent", "orchestrator"),
             )
-            # Use Linear issue identifier for tracking
-            approval_id = (
-                approval_issue.get("identifier") if approval_issue else approval_id
-            )
-            logger.info(f"Created HITL approval sub-issue: {approval_id}")
-        except Exception as e:
-            logger.error(f"Failed to create approval sub-issue: {e}")
-            # Keep the UUID approval_id as fallback
 
+            if request_id:
+                logger.info(
+                    f"[HITL] Created approval request {request_id} "
+                    f"(risk={risk_level}, operation={task_description[:100]})"
+                )
+
+                # LangGraph interrupt - saves state and exits workflow
+                # Resume happens via webhook or polling in main.py
+                interrupt(
+                    {
+                        "approval_request_id": request_id,
+                        "risk_level": risk_level,
+                        "pending_operation": task_description,
+                        "message": f"Workflow paused for HITL approval. Request ID: {request_id}",
+                    }
+                )
+
+        except Exception as e:
+            logger.error(f"[HITL] Failed to create approval request: {e}")
+            # On failure, log and continue (fail-open for non-critical)
+            return {
+                "messages": [
+                    AIMessage(
+                        content=f"HITL approval creation failed: {e}. Proceeding with caution."
+                    )
+                ],
+                "current_agent": "approval",
+                "next_agent": state.get("next_agent", "supervisor"),
+                "approvals": [],
+                "requires_approval": False,
+            }
+
+    # If we reach here, either no approval needed or interrupt didn't block
     return {
-        "messages": [AIMessage(content=f"Approval requested: {approval_id}")],
-        "approvals": [approval_id] if approval_id else [],
-        "requires_approval": False,  # Approval created, can proceed
+        "messages": [AIMessage(content=f"Approval granted (risk_level={risk_level})")],
+        "current_agent": "approval",
+        "next_agent": state.get("next_agent", "supervisor"),
+        "approvals": [],
+        "requires_approval": False,
     }
 
 

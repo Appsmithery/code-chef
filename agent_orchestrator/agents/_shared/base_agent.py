@@ -2,6 +2,7 @@
 
 import sys
 import yaml
+import hashlib
 import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
@@ -27,8 +28,13 @@ class BaseAgent:
     1. Loads configuration from YAML file (model, tools, prompts)
     2. Initializes MCP client for tool access
     3. Initializes LLM with model-specific settings
-    4. Binds tools to LLM for function calling
+    4. Binds tools dynamically at invoke-time (not init-time) for token efficiency
     5. Provides invoke() method for graph execution
+
+    Tool Binding Strategy (per architecture decision):
+    - Tools are bound at invoke-time based on task context
+    - Progressive tool loading reduces tokens from 150+ to 10-30 per request
+    - Bound LLM instances are cached by tool configuration hash
     """
 
     def __init__(self, config_path: str, agent_name: str):
@@ -54,11 +60,14 @@ class BaseAgent:
             logger.warning(f"Progressive tool loader unavailable: {e}")
             self.tool_loader = None
 
-        # Initialize LLM with agent-specific model
+        # Initialize LLM with agent-specific model (without tools - bound at invoke time)
         self.llm = self._initialize_llm()
 
-        # Bind tools to LLM
-        self.agent_executor = self._bind_tools()
+        # Cache for bound LLM instances (key: tool config hash)
+        self._bound_llm_cache: Dict[str, BaseChatModel] = {}
+
+        # Legacy: agent_executor points to base LLM (tools bound dynamically)
+        self.agent_executor = self.llm
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load agent configuration from YAML file.
@@ -129,23 +138,106 @@ class BaseAgent:
         return gradient_client
 
     def _bind_tools(self) -> BaseChatModel | Any:
-        """Bind MCP tools to LLM for function calling.
+        """Legacy method - returns base LLM without tools.
 
-        Uses progressive tool disclosure to reduce token usage.
+        Tools are now bound dynamically at invoke-time via _bind_tools_for_task().
+        This method exists for backward compatibility.
         """
-        tools_config = self.config.get("tools", {})
+        return self.llm
 
-        # Get allowed MCP servers for this agent
-        allowed_servers = tools_config.get("allowed_servers", [])
+    def _get_cache_key(self, tools: List[Any]) -> str:
+        """Create stable cache key from tool list.
 
-        # Skip tool binding if no MCP client or no servers configured
-        if not allowed_servers or not self.mcp_client:
+        Args:
+            tools: List of tool objects with .name attribute
+
+        Returns:
+            MD5 hash (first 16 chars) of sorted tool names
+        """
+        tool_names = sorted([getattr(t, "name", str(t)) for t in tools])
+        tool_str = ",".join(tool_names)
+        return hashlib.md5(tool_str.encode()).hexdigest()[:16]
+
+    async def _bind_tools_for_task(self, task_description: str) -> BaseChatModel | Any:
+        """Bind tools dynamically based on task context.
+
+        Uses progressive tool disclosure to select only relevant tools,
+        reducing token usage from 150+ to 10-30 tools per request.
+
+        Args:
+            task_description: Natural language description of the task
+
+        Returns:
+            LLM with appropriate tools bound for the task
+        """
+        if not self.tool_loader:
+            logger.debug(f"[{self.agent_name}] No tool loader, using base LLM")
             return self.llm
 
-        # For now, return LLM without tools (tools will be bound at runtime with task context)
-        # This avoids import-time dependencies on MCP gateway
-        # TODO: Implement runtime tool binding with progressive disclosure
-        return self.llm
+        tools_config = self.config.get("tools", {})
+
+        try:
+            # Get progressive strategy from config
+            strategy_name = tools_config.get("progressive_strategy", "MINIMAL")
+            strategy = ToolLoadingStrategy[strategy_name]
+
+            # Get allowed servers for this agent
+            allowed_servers = tools_config.get("allowed_servers", [])
+
+            # Load relevant tools via progressive disclosure
+            tools = await self.tool_loader.load_tools_for_task(
+                task_description=task_description,
+                strategy=strategy,
+                allowed_servers=allowed_servers if allowed_servers else None,
+            )
+
+            if not tools:
+                logger.debug(f"[{self.agent_name}] No tools matched, using base LLM")
+                return self.llm
+
+            # Check cache for this tool configuration
+            cache_key = self._get_cache_key(tools)
+            if cache_key in self._bound_llm_cache:
+                logger.debug(
+                    f"[{self.agent_name}] Using cached LLM for tools: {cache_key}"
+                )
+                return self._bound_llm_cache[cache_key]
+
+            # Bind tools and cache result
+            agent_config = self.config.get("agent", {})
+            bound_llm = self._gradient_client.get_llm_with_tools(
+                tools=tools,
+                temperature=agent_config.get("temperature", 0.7),
+                max_tokens=agent_config.get("max_tokens", 2000),
+            )
+
+            self._bound_llm_cache[cache_key] = bound_llm
+            logger.info(
+                f"[{self.agent_name}] Bound {len(tools)} tools for task. "
+                f"Cache key: {cache_key}"
+            )
+
+            return bound_llm
+
+        except Exception as e:
+            logger.warning(
+                f"[{self.agent_name}] Tool binding failed: {e}, using base LLM"
+            )
+            return self.llm
+
+    def _extract_task_description(self, messages: List[BaseMessage]) -> str:
+        """Extract task description from most recent HumanMessage.
+
+        Args:
+            messages: List of conversation messages
+
+        Returns:
+            Task description (max 500 chars) for tool matching
+        """
+        for msg in reversed(messages):
+            if isinstance(msg, HumanMessage):
+                return msg.content[:500]  # Limit for tool matching efficiency
+        return ""
 
     def get_system_prompt(self) -> str:
         """Get agent-specific system prompt from system.prompt.md file or YAML config.
@@ -175,7 +267,7 @@ class BaseAgent:
     async def invoke(
         self, messages: List[BaseMessage], config: Optional[RunnableConfig] = None
     ) -> BaseMessage:
-        """Execute agent with given messages.
+        """Execute agent with given messages and dynamically bound tools.
 
         Args:
             messages: List of messages (conversation history + current task)
@@ -184,15 +276,27 @@ class BaseAgent:
         Returns:
             Agent's response message
 
+        Tool Binding (per architecture decision):
+        - Extracts task description from messages
+        - Binds only relevant tools via progressive disclosure
+        - Caches bound LLM by tool configuration hash
+
         Note: Decorated with @traceable to capture in LangSmith as nested runs.
         The agent_name is added as metadata for filtering in traces.
         """
+        # Extract task description for tool selection
+        task_description = self._extract_task_description(messages)
+
+        # Bind tools dynamically based on task context
+        executor = await self._bind_tools_for_task(task_description)
+
         # Prepend system prompt if not already present
         if not messages or not isinstance(messages[0], SystemMessage):
             messages = [SystemMessage(content=self.get_system_prompt())] + messages
 
-        # Execute LLM with bound tools
-        response = await self.agent_executor.ainvoke(messages, config=config)
+        # Execute LLM with dynamically bound tools
+        logger.debug(f"[{self.agent_name}] Invoking with {len(messages)} messages")
+        response = await executor.ainvoke(messages, config=config)
 
         return response
 
