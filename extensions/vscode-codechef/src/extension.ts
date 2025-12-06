@@ -2,28 +2,14 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CodeChefChatParticipant } from './chatParticipant';
 import { registerCopyPermalinkCommand } from './commands/copyPermalink';
+import { AGENT_ICONS, buildLinearIssueUrl, getAgentColor as getAgentColorFn } from './constants';
 import { LinearWatcher } from './linearWatcher';
 import { OrchestratorClient } from './orchestratorClient';
-
-// Agent icon mapping for UI display (agents are LangGraph nodes, not separate services)
-const AGENT_ICONS: { [key: string]: string } = {
-    'orchestrator': 'orchestrator.png',      // Purple - Coordination
-    'feature-dev': 'feature-dev.png',        // Blue - Development
-    'code-review': 'code-review.png',        // Green - Quality
-    'infrastructure': 'infrastructure.png',  // Navy - Infrastructure
-    'cicd': 'cicd.png',                      // Orange - Deployment
-    'documentation': 'documentation.png'     // Teal - Knowledge
-};
 
 let chatParticipant: CodeChefChatParticipant;
 let linearWatcher: LinearWatcher;
 let statusBarItem: vscode.StatusBarItem;
 let extensionContext: vscode.ExtensionContext;
-
-function buildLinearIssueUrl(issueId: string, workspaceSlug?: string): string {
-    const slug = workspaceSlug ?? vscode.workspace.getConfiguration('codechef').get('linearWorkspaceSlug', 'project-roadmaps');
-    return `https://linear.app/${slug}/issue/${issueId}`;
-}
 
 function getAgentIconPath(agentName: string): string {
     const iconFile = AGENT_ICONS[agentName] || AGENT_ICONS['orchestrator'];
@@ -34,17 +20,8 @@ export function getAgentIcon(agentName: string): vscode.Uri {
     return vscode.Uri.file(getAgentIconPath(agentName));
 }
 
-export function getAgentColor(agentName: string): string {
-    const colors: { [key: string]: string } = {
-        'orchestrator': '#9333EA',      // Purple
-        'feature-dev': '#3B82F6',       // Blue
-        'code-review': '#22C55E',       // Green
-        'infrastructure': '#1E3A8A',    // Navy
-        'cicd': '#F97316',              // Orange
-        'documentation': '#14B8A6'      // Teal
-    };
-    return colors[agentName] || colors['orchestrator'];
-}
+// Re-export getAgentColor from constants for backward compatibility
+export const getAgentColor = getAgentColorFn;
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('code/chef extension activating...');

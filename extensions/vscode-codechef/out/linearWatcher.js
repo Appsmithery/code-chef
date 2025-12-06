@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LinearWatcher = void 0;
 const vscode = __importStar(require("vscode"));
+const constants_1 = require("./constants");
 class LinearWatcher {
     constructor(context) {
         this.context = context;
@@ -129,8 +130,8 @@ class LinearWatcher {
         vscode.window.showInformationMessage(message, 'View in Linear', 'Approve', 'Dismiss').then(selection => {
             if (selection === 'View in Linear') {
                 const config = vscode.workspace.getConfiguration('codechef');
-                const linearHub = config.get('linearHubIssue', 'PR-68');
-                const url = `https://linear.app/${this.workspaceSlug}/issue/${linearHub}`;
+                const linearHub = config.get('linearHubIssue', 'DEV-68');
+                const url = (0, constants_1.buildLinearIssueUrl)(linearHub, this.workspaceSlug);
                 vscode.env.openExternal(vscode.Uri.parse(url));
             }
             else if (selection === 'Approve') {

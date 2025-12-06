@@ -5,6 +5,55 @@ All notable changes to the "code/chef - AI Agent Orchestrator" extension will be
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2025-12-06
+
+### Added - Workflow Slash Commands & Smart Router
+
+New workflow orchestration features for intelligent task routing:
+
+#### Slash Commands
+
+- **`/workflow`**: Execute a workflow with smart selection: `@chef /workflow Deploy PR #123 to production`
+- **`/workflows`**: List available workflow templates with metadata (agents, steps, risk level, duration)
+
+#### Smart Workflow Router
+
+- **Heuristic Matching**: Zero-token keyword/pattern matching for common task types (70-90% confidence)
+- **LLM Fallback**: Semantic understanding when heuristics are inconclusive
+- **Context Extraction**: Automatic PR/issue ID detection from branch names and task descriptions
+- **Confidence-Based Confirmation**: Quick Pick UI for low-confidence selections
+
+#### Workflow Settings
+
+- **Default Workflow** (`codechef.defaultWorkflow`): Auto-select or specify explicit workflow (feature, pr-deployment, hotfix, infrastructure, docs-update)
+- **Auto-Execute** (`codechef.workflowAutoExecute`): Start workflows immediately or prompt for confirmation
+- **Confirmation Threshold** (`codechef.workflowConfirmThreshold`): Confidence level for requiring confirmation (0.0-1.0)
+- **Preview Mode** (`codechef.showWorkflowPreview`): Dry run mode to preview workflow selection
+
+#### Context Extraction Enhancements
+
+- **Branch Type Detection**: Identifies feature/fix/hotfix/release from branch prefixes
+- **Issue ID Extraction**: Parses Linear-style IDs (DEV-123, PROJ-456) from branch names
+- **PR Number Detection**: Extracts PR numbers from branch patterns (pr-123, feature/123-description)
+
+### Changed
+
+- **Code Organization**: Refactored `chatParticipant.ts` (590→200 lines) into focused modules:
+  - `src/handlers/statusHandler.ts`: `/status` and `/approve` logic
+  - `src/handlers/workflowHandler.ts`: `/workflow` and `/workflows` logic
+  - `src/renderers/responseRenderer.ts`: Markdown rendering utilities
+- **Constants Centralized**: New `src/constants.ts` with agent types, emojis, API paths, Linear URL builders
+- **Linear URL Utility**: Shared `buildLinearIssueUrl()` used across all modules
+- **Activation Events**: Removed redundant `onCommand` events (VS Code auto-generates from `commands` contributions)
+- **Chat Participant**: Corrected documentation from `@codechef` to `@chef`
+
+### Technical Details
+
+- Backend: New `/workflow/smart-execute` endpoint with 4-phase selection logic
+- Backend: New `/workflow/templates` endpoint with full metadata
+- Rules: `workflow-router.rules.yaml` for heuristic configuration
+- Integration: `OrchestratorClient` extended with `smartExecuteWorkflow()` and `getWorkflowTemplates()`
+
 ## [0.7.0] - 2025-12-05
 
 ### Added - Token Optimization Settings

@@ -33,51 +33,30 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAgentColor = void 0;
 exports.getAgentIcon = getAgentIcon;
-exports.getAgentColor = getAgentColor;
 exports.activate = activate;
 exports.deactivate = deactivate;
 const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const chatParticipant_1 = require("./chatParticipant");
 const copyPermalink_1 = require("./commands/copyPermalink");
+const constants_1 = require("./constants");
 const linearWatcher_1 = require("./linearWatcher");
 const orchestratorClient_1 = require("./orchestratorClient");
-// Agent icon mapping for UI display (agents are LangGraph nodes, not separate services)
-const AGENT_ICONS = {
-    'orchestrator': 'orchestrator.png', // Purple - Coordination
-    'feature-dev': 'feature-dev.png', // Blue - Development
-    'code-review': 'code-review.png', // Green - Quality
-    'infrastructure': 'infrastructure.png', // Navy - Infrastructure
-    'cicd': 'cicd.png', // Orange - Deployment
-    'documentation': 'documentation.png' // Teal - Knowledge
-};
 let chatParticipant;
 let linearWatcher;
 let statusBarItem;
 let extensionContext;
-function buildLinearIssueUrl(issueId, workspaceSlug) {
-    const slug = workspaceSlug ?? vscode.workspace.getConfiguration('codechef').get('linearWorkspaceSlug', 'project-roadmaps');
-    return `https://linear.app/${slug}/issue/${issueId}`;
-}
 function getAgentIconPath(agentName) {
-    const iconFile = AGENT_ICONS[agentName] || AGENT_ICONS['orchestrator'];
+    const iconFile = constants_1.AGENT_ICONS[agentName] || constants_1.AGENT_ICONS['orchestrator'];
     return extensionContext.asAbsolutePath(path.join('src', 'icons', iconFile));
 }
 function getAgentIcon(agentName) {
     return vscode.Uri.file(getAgentIconPath(agentName));
 }
-function getAgentColor(agentName) {
-    const colors = {
-        'orchestrator': '#9333EA', // Purple
-        'feature-dev': '#3B82F6', // Blue
-        'code-review': '#22C55E', // Green
-        'infrastructure': '#1E3A8A', // Navy
-        'cicd': '#F97316', // Orange
-        'documentation': '#14B8A6' // Teal
-    };
-    return colors[agentName] || colors['orchestrator'];
-}
+// Re-export getAgentColor from constants for backward compatibility
+exports.getAgentColor = constants_1.getAgentColor;
 function activate(context) {
     console.log('code/chef extension activating...');
     extensionContext = context;
@@ -169,7 +148,7 @@ function activate(context) {
         }));
         context.subscriptions.push(vscode.commands.registerCommand('codechef.showApprovals', async () => {
             const linearHubIssue = config.get('linearHubIssue', 'PR-68');
-            const linearUrl = buildLinearIssueUrl(linearHubIssue, workspaceSlug);
+            const linearUrl = (0, constants_1.buildLinearIssueUrl)(linearHubIssue, workspaceSlug);
             vscode.env.openExternal(vscode.Uri.parse(linearUrl));
         }));
         context.subscriptions.push(vscode.commands.registerCommand('codechef.clearCache', () => {

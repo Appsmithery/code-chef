@@ -2,7 +2,7 @@
   "name": "vscode-codechef",
   "displayName": "code/chef - AI DevOps Team",
   "description": "Your personal AI DevOps Team, orchestrated by the Head Chef.",
-  "version": "0.7.5",
+  "version": "0.8.0",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "icon.png",
@@ -71,12 +71,7 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onChatParticipant:vscode-codechef.chef",
-    "onCommand:codechef.orchestrate",
-    "onCommand:codechef.checkStatus",
-    "onCommand:codechef.configure",
-    "onCommand:codechef.showApprovals",
-    "onCommand:codechef.clearCache"
+    "onChatParticipant:vscode-codechef.chef"
   ],
   "main": "./out/extension.js",
   "contributes": {

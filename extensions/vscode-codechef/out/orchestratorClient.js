@@ -83,6 +83,38 @@ class OrchestratorClient {
         });
         return response.data;
     }
+    /**
+     * Smart workflow selection and execution
+     * Uses heuristic matching and LLM fallback for intelligent workflow routing
+     */
+    async smartExecuteWorkflow(request) {
+        const response = await this.client.post('/workflow/smart-execute', request);
+        return response.data;
+    }
+    /**
+     * Get available workflow templates with metadata
+     */
+    async getWorkflowTemplates() {
+        const response = await this.client.get('/workflow/templates');
+        return response.data;
+    }
+    /**
+     * Execute a specific workflow by template name
+     */
+    async executeWorkflow(templateName, context) {
+        const response = await this.client.post('/workflow/execute', {
+            template_name: templateName,
+            context
+        });
+        return response.data;
+    }
+    /**
+     * Get workflow execution status
+     */
+    async getWorkflowStatus(workflowId) {
+        const response = await this.client.get(`/workflow/status/${workflowId}`);
+        return response.data;
+    }
 }
 exports.OrchestratorClient = OrchestratorClient;
 //# sourceMappingURL=orchestratorClient.js.map
