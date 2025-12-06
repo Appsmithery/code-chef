@@ -9,7 +9,7 @@ Your personal AI DevOps Team, orchestrated by the Head Chef. A VS Code extension
 
 ## Architecture
 
-![Architecture](architecture.png)
+![Architecture](https://raw.githubusercontent.com/Appsmithery/Dev-Tools/main/extensions/vscode-codechef/architecture.png)
 
 **Flow:** User → `@chef` → Orchestrator → Specialized Agents → MCP Tools → Results
 
