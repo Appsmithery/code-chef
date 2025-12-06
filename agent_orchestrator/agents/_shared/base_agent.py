@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, TYPE_CHECKING
 from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.language_models import BaseChatModel
+from langsmith import traceable
 
 # Add shared modules to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
@@ -170,6 +171,7 @@ class BaseAgent:
             "system_prompt", "You are a helpful AI assistant."
         )
 
+    @traceable(name="agent_invoke", tags=["agent", "subagent"])
     async def invoke(
         self, messages: List[BaseMessage], config: Optional[RunnableConfig] = None
     ) -> BaseMessage:
@@ -181,6 +183,9 @@ class BaseAgent:
 
         Returns:
             Agent's response message
+        
+        Note: Decorated with @traceable to capture in LangSmith as nested runs.
+        The agent_name is added as metadata for filtering in traces.
         """
         # Prepend system prompt if not already present
         if not messages or not isinstance(messages[0], SystemMessage):
