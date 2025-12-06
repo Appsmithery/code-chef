@@ -1,0 +1,212 @@
+# Workflow Router Heuristic Rules
+#
+# Rules are evaluated in priority order (highest first).
+# Each rule can match on keywords, file patterns, or branch patterns.
+# Confidence is calculated based on how many criteria match.
+#
+# Score calculation:
+# - keywords: +0.3 * (matches / total)
+# - branch_patterns: +0.25 (first match)
+# - file_patterns: +0.2 (first match)
+# - context_requirements: +0.15 (if all met)
+# - confidence_boost: adjustment (-0.5 to +0.5)
+
+version: "1.0"
+description: "Heuristic rules for fast workflow selection"
+
+# Default confidence threshold (can be overridden in settings)
+default_confirm_threshold: 0.7
+
+rules:
+  # ============================================================================
+  # PR Deployment Workflow
+  # ============================================================================
+  - id: "pr-deploy-explicit"
+    workflow: "pr-deployment"
+    priority: 100
+    keywords:
+      - "deploy pr"
+      - "deploy pull request"
+      - "pr deployment"
+      - "ship pr"
+      - "release pr"
+    confidence_boost: 0.2
+
+  - id: "pr-deploy-branch"
+    workflow: "pr-deployment"
+    priority: 90
+    branch_patterns:
+      - "^release/.*"
+      - "^deploy/.*"
+      - "^hotfix/.*"
+    keywords:
+      - "deploy"
+      - "release"
+      - "ship"
+    confidence_boost: 0.1
+
+  - id: "pr-deploy-context"
+    workflow: "pr-deployment"
+    priority: 85
+    keywords:
+      - "merge"
+      - "production"
+      - "staging"
+    context_requirements:
+      - "pr_number"
+
+  # ============================================================================
+  # Feature Development Workflow
+  # ============================================================================
+  - id: "feature-explicit"
+    workflow: "feature"
+    priority: 95
+    keywords:
+      - "implement feature"
+      - "build feature"
+      - "create feature"
+      - "new feature"
+      - "add feature"
+    confidence_boost: 0.2
+
+  - id: "feature-branch"
+    workflow: "feature"
+    priority: 80
+    branch_patterns:
+      - "^feature/.*"
+      - "^feat/.*"
+      - "^dev/.*"
+    keywords:
+      - "implement"
+      - "build"
+      - "create"
+      - "add"
+    confidence_boost: 0.1
+
+  - id: "feature-files"
+    workflow: "feature"
+    priority: 75
+    keywords:
+      - "code"
+      - "function"
+      - "class"
+      - "component"
+    file_patterns:
+      - ".*\\.(py|ts|js|tsx|jsx)$"
+
+  # ============================================================================
+  # Hotfix Workflow
+  # ============================================================================
+  - id: "hotfix-explicit"
+    workflow: "hotfix"
+    priority: 100
+    keywords:
+      - "hotfix"
+      - "emergency fix"
+      - "critical fix"
+      - "urgent bug"
+      - "production bug"
+    confidence_boost: 0.25
+
+  - id: "hotfix-branch"
+    workflow: "hotfix"
+    priority: 95
+    branch_patterns:
+      - "^hotfix/.*"
+      - "^fix/.*"
+    keywords:
+      - "fix"
+      - "bug"
+      - "broken"
+      - "urgent"
+    confidence_boost: 0.15
+
+  # ============================================================================
+  # Infrastructure Workflow
+  # ============================================================================
+  - id: "infra-explicit"
+    workflow: "infrastructure"
+    priority: 95
+    keywords:
+      - "infrastructure"
+      - "terraform"
+      - "kubernetes"
+      - "docker"
+      - "k8s"
+    confidence_boost: 0.2
+
+  - id: "infra-files"
+    workflow: "infrastructure"
+    priority: 85
+    file_patterns:
+      - ".*\\.tf$"
+      - ".*Dockerfile.*"
+      - ".*docker-compose.*"
+      - ".*\\.yaml$"
+    keywords:
+      - "deploy"
+      - "provision"
+      - "infrastructure"
+      - "cluster"
+
+  - id: "infra-context"
+    workflow: "infrastructure"
+    priority: 80
+    keywords:
+      - "digitalocean"
+      - "aws"
+      - "azure"
+      - "gcp"
+      - "cloud"
+      - "server"
+
+  # ============================================================================
+  # Documentation Workflow
+  # ============================================================================
+  - id: "docs-explicit"
+    workflow: "docs-update"
+    priority: 95
+    keywords:
+      - "documentation"
+      - "docs"
+      - "readme"
+      - "api docs"
+      - "write docs"
+    confidence_boost: 0.2
+
+  - id: "docs-files"
+    workflow: "docs-update"
+    priority: 85
+    file_patterns:
+      - ".*\\.md$"
+      - ".*README.*"
+      - ".*CHANGELOG.*"
+      - "docs/.*"
+    keywords:
+      - "update"
+      - "document"
+      - "explain"
+
+  - id: "docs-keywords"
+    workflow: "docs-update"
+    priority: 75
+    keywords:
+      - "jsdoc"
+      - "docstring"
+      - "swagger"
+      - "openapi"
+      - "api reference"
+
+# Workflow aliases for common variations
+aliases:
+  pr: "pr-deployment"
+  deploy: "pr-deployment"
+  feat: "feature"
+  feature-dev: "feature"
+  fix: "hotfix"
+  bugfix: "hotfix"
+  infra: "infrastructure"
+  iac: "infrastructure"
+  doc: "docs-update"
+  docs: "docs-update"
+  readme: "docs-update"

@@ -69,6 +69,48 @@ export interface ChatResponse {
     };
 }
 
+export interface SmartWorkflowRequest {
+    task_description: string;
+    explicit_workflow?: string;
+    context?: Record<string, any>;
+    dry_run?: boolean;
+    confirm_threshold?: number;
+}
+
+export interface SmartWorkflowResponse {
+    workflow_name: string;
+    confidence: number;
+    method: 'heuristic' | 'llm' | 'explicit' | 'default';
+    reasoning: string;
+    requires_confirmation: boolean;
+    alternatives: Array<{
+        workflow: string;
+        confidence: number;
+        source?: string;
+    }>;
+    context_variables: Record<string, any>;
+    workflow_id?: string;
+    execution_status?: string;
+}
+
+export interface WorkflowTemplate {
+    template_name: string;
+    name: string;
+    description: string;
+    version: string;
+    required_context: string[];
+    optional_context: string[];
+    steps_count: number;
+    agents_involved: string[];
+    estimated_duration_minutes: number;
+    risk_level: 'low' | 'medium' | 'high';
+}
+
+export interface WorkflowTemplatesResponse {
+    templates: WorkflowTemplate[];
+    count: number;
+}
+
 export interface OrchestratorClientConfig {
     baseUrl: string;
     timeout?: number;
@@ -167,6 +209,42 @@ export class OrchestratorClient {
         const response = await this.client.get('/metrics', {
             headers: { 'Accept': 'text/plain' }
         });
+        return response.data;
+    }
+
+    /**
+     * Smart workflow selection and execution
+     * Uses heuristic matching and LLM fallback for intelligent workflow routing
+     */
+    async smartExecuteWorkflow(request: SmartWorkflowRequest): Promise<SmartWorkflowResponse> {
+        const response = await this.client.post('/workflow/smart-execute', request);
+        return response.data;
+    }
+
+    /**
+     * Get available workflow templates with metadata
+     */
+    async getWorkflowTemplates(): Promise<WorkflowTemplatesResponse> {
+        const response = await this.client.get('/workflow/templates');
+        return response.data;
+    }
+
+    /**
+     * Execute a specific workflow by template name
+     */
+    async executeWorkflow(templateName: string, context: Record<string, any>): Promise<any> {
+        const response = await this.client.post('/workflow/execute', {
+            template_name: templateName,
+            context
+        });
+        return response.data;
+    }
+
+    /**
+     * Get workflow execution status
+     */
+    async getWorkflowStatus(workflowId: string): Promise<any> {
+        const response = await this.client.get(`/workflow/status/${workflowId}`);
         return response.data;
     }
 }
