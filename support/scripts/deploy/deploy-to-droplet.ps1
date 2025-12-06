@@ -47,6 +47,94 @@ function Write-Info { param($Message) Write-Host "  -> $Message" -ForegroundColo
 function Write-Success { param($Message) Write-Host "  [OK] $Message" -ForegroundColor Green }
 function Write-Failure { param($Message) Write-Host "  [ERROR] $Message" -ForegroundColor Red }
 
+# ============================================================================
+# SMART ENV MERGE (DEV-210: Prevent API key truncation during deployments)
+# ============================================================================
+# Problem: Deploying local .env overwrites production secrets
+# Solution: Merge local→remote, preserving non-empty remote values
+# ============================================================================
+function Merge-EnvToRemote {
+    Write-Step "Smart-merging .env (preserving production secrets)"
+    
+    # Download remote .env
+    $remoteTemp = [System.IO.Path]::GetTempFileName()
+    $mergedTemp = [System.IO.Path]::GetTempFileName()
+    scp -q "${DROPLET}:${DEPLOY_PATH}/config/env/.env" $remoteTemp 2>$null
+    
+    $remoteExists = Test-Path $remoteTemp
+    if (-not $remoteExists -or (Get-Item $remoteTemp).Length -eq 0) {
+        Write-Info "No remote .env found - uploading local .env as-is"
+        scp -q $LOCAL_ENV_PATH "${DROPLET}:${DEPLOY_PATH}/config/env/.env"
+        return
+    }
+    
+    # Parse both files
+    $localEnv = @{}
+    $remoteEnv = @{}
+    $localLines = @()  # Preserve full file structure
+    
+    # Read local .env preserving structure
+    foreach ($line in Get-Content $LOCAL_ENV_PATH) {
+        $localLines += $line
+        if ($line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+            $localEnv[$Matches[1]] = $Matches[2]
+        }
+    }
+    
+    # Parse remote .env (values only)
+    foreach ($line in Get-Content $remoteTemp) {
+        if ($line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+            $remoteEnv[$Matches[1]] = $Matches[2]
+        }
+    }
+    
+    Remove-Item $remoteTemp -Force -ErrorAction SilentlyContinue
+    
+    # Merge: remote non-empty values take precedence
+    $protectedKeys = @()
+    $merged = @()
+    
+    foreach ($line in $localLines) {
+        if ($line -match '^([A-Za-z_][A-Za-z0-9_]*)=(.*)$') {
+            $key = $Matches[1]
+            $localValue = $Matches[2]
+            $remoteValue = $remoteEnv[$key]
+            
+            if ($remoteValue -and $remoteValue -ne $localValue) {
+                # Remote has non-empty value different from local → keep remote
+                $merged += "${key}=${remoteValue}"
+                $protectedKeys += $key
+            }
+            else {
+                $merged += $line
+            }
+        }
+        else {
+            $merged += $line
+        }
+    }
+    
+    # Write merged file and upload
+    $merged | Set-Content $mergedTemp -Encoding UTF8
+    scp -q $mergedTemp "${DROPLET}:${DEPLOY_PATH}/config/env/.env"
+    Remove-Item $mergedTemp -Force -ErrorAction SilentlyContinue
+    
+    # Report protected keys
+    if ($protectedKeys.Count -gt 0) {
+        Write-Info "Protected $($protectedKeys.Count) production secrets:"
+        foreach ($key in $protectedKeys) {
+            $displayValue = $remoteEnv[$key]
+            if ($displayValue.Length -gt 25) {
+                $displayValue = $displayValue.Substring(0, 12) + "..." + $displayValue.Substring($displayValue.Length - 8)
+            }
+            Write-Host "    [PROTECTED] $key = $displayValue" -ForegroundColor DarkYellow
+        }
+    }
+    else {
+        Write-Info "No secrets needed protection (values matched or remote was empty)"
+    }
+}
+
 function Get-ChangedFiles {
     Write-Info "Detecting local changes..."
     
@@ -102,14 +190,14 @@ function Deploy-ConfigOnly {
         return $false
     }
     
-    # Copy .env to droplet
-    Write-Info "Uploading config/env/.env..."
-    scp -q "$LOCAL_ENV_PATH" "${DROPLET}:${DEPLOY_PATH}/config/env/.env"
+    # Smart-merge .env (preserves production secrets)
+    Write-Info "Smart-merging config/env/.env (preserving production secrets)..."
+    Merge-EnvToRemote
     if ($LASTEXITCODE -ne 0) {
-        Write-Failure "Failed to upload .env file"
+        Write-Failure "Failed to merge .env file"
         return $false
     }
-    Write-Success ".env uploaded"
+    Write-Success ".env merged and uploaded"
     
     # Pull latest code (for template updates)
     Write-Info "Pulling latest code on droplet..."
@@ -152,10 +240,10 @@ function Deploy-FullRebuild {
     }
     Write-Success "Code pushed"
     
-    # Copy .env (not in git)
+    # Smart-merge .env (preserves production secrets)
     if (Test-Path $LOCAL_ENV_PATH) {
-        Write-Info "Uploading .env..."
-        scp -q "$LOCAL_ENV_PATH" "${DROPLET}:${DEPLOY_PATH}/config/env/.env"
+        Write-Info "Smart-merging .env (preserving production secrets)..."
+        Merge-EnvToRemote
     }
     
     # Pull and rebuild on droplet
