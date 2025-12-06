@@ -19,6 +19,7 @@ from typing import TypedDict, List, Literal, Annotated
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
+from langsmith import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -88,6 +89,7 @@ def get_agent(agent_name: str):
 
 
 # Define agent nodes
+@traceable(name="supervisor_node", tags=["langgraph", "node", "supervisor"])
 async def supervisor_node(state: WorkflowState) -> WorkflowState:
     """Supervisor agent node - routes tasks to specialized agents.
 
@@ -131,6 +133,7 @@ REASONING: <your analysis>
     }
 
 
+@traceable(name="feature_dev_node", tags=["langgraph", "node", "feature-dev"])
 async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     """Feature development agent node - implements code."""
     agent = get_agent("feature-dev")
@@ -144,6 +147,7 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     }
 
 
+@traceable(name="code_review_node", tags=["langgraph", "node", "code-review"])
 async def code_review_node(state: WorkflowState) -> WorkflowState:
     """Code review agent node - analyzes code quality."""
     agent = get_agent("code-review")
@@ -157,6 +161,7 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
     }
 
 
+@traceable(name="infrastructure_node", tags=["langgraph", "node", "infrastructure"])
 async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     """Infrastructure agent node - manages cloud resources."""
     agent = get_agent("infrastructure")
@@ -170,6 +175,7 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     }
 
 
+@traceable(name="cicd_node", tags=["langgraph", "node", "cicd"])
 async def cicd_node(state: WorkflowState) -> WorkflowState:
     """CI/CD agent node - handles deployments."""
     agent = get_agent("cicd")
@@ -183,6 +189,7 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
     }
 
 
+@traceable(name="documentation_node", tags=["langgraph", "node", "documentation"])
 async def documentation_node(state: WorkflowState) -> WorkflowState:
     """Documentation agent node - writes technical docs."""
     agent = get_agent("documentation")

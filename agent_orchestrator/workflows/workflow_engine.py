@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional, Union
 import yaml
 from jinja2 import Template
 from pydantic import BaseModel, Field
+from langsmith import traceable
 
 from shared.lib.gradient_client import GradientClient
 
@@ -304,6 +305,7 @@ class WorkflowEngine:
 
             raise
 
+    @traceable(name="workflow_execute_step", tags=["workflow", "step"])
     async def _execute_step(
         self,
         step: WorkflowStep,
@@ -336,6 +338,7 @@ class WorkflowEngine:
             if step.resource_lock:
                 await self._release_lock(step.resource_lock, state)
 
+    @traceable(name="workflow_agent_call", tags=["workflow", "agent", "llm"])
     async def _execute_agent_call(
         self,
         step: WorkflowStep,
