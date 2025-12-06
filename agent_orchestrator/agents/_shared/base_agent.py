@@ -183,7 +183,7 @@ class BaseAgent:
 
         Returns:
             Agent's response message
-        
+
         Note: Decorated with @traceable to capture in LangSmith as nested runs.
         The agent_name is added as metadata for filtering in traces.
         """
