@@ -39,7 +39,7 @@ jobs:
 
             - name: Install dependencies
               working-directory: ${{ env.EXTENSION_DIR }}
-              run: npm ci
+              run: npm install
 
             - name: Compile TypeScript
               working-directory: ${{ env.EXTENSION_DIR }}
