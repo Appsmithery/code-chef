@@ -356,6 +356,9 @@ class WorkflowRouter:
             requires_confirmation=True,
         )
 
+    @traceable(
+        name="workflow_heuristic_match", tags=["workflow", "routing", "heuristic"]
+    )
     def _heuristic_match(
         self,
         task_description: str,

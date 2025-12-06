@@ -158,6 +158,7 @@ class BaseAgent:
         tool_str = ",".join(tool_names)
         return hashlib.md5(tool_str.encode()).hexdigest()[:16]
 
+    @traceable(name="agent_bind_tools", tags=["agent", "tools", "mcp"])
     async def _bind_tools_for_task(self, task_description: str) -> BaseChatModel | Any:
         """Bind tools dynamically based on task context.
 
