@@ -10,19 +10,18 @@ Your personal AI DevOps Team, orchestrated by the Head Chef. A VS Code extension
 ## Architecture
 
 ```mermaid
-flowchart TB
+flowchart LR
     subgraph vscode["VS Code Extension"]
         chat["🗨️ Copilot Chat<br/>@chef participant"]
     end
 
     subgraph orchestrator["Orchestrator API"]
-        direction LR
         supervisor["🎯 Supervisor<br/>(Head Chef)"]
-        router["🔀 Workflow Router<br/>Heuristic + LLM"]
+        router["🔀 Workflow Router"]
+        supervisor <-.->|routing| router
     end
 
     subgraph agents["Agent Nodes"]
-        direction LR
         feature["💻 feature-dev"]
         review["🔍 code-review"]
         infra["🏗️ infrastructure"]
@@ -31,13 +30,12 @@ flowchart TB
     end
 
     subgraph tools["MCP Tools"]
-        mcp["150+ Tools<br/>Linear, GitHub, Docker, etc."]
+        mcp["150+ Tools<br/>Linear, GitHub, Docker..."]
     end
 
-    chat -->|"task"| supervisor
-    supervisor <-->|"routing"| router
-    supervisor -->|"delegate"| agents
-    agents --> mcp
+    chat -->|task| supervisor
+    supervisor -->|delegate| agents
+    agents -->|invoke| mcp
 
     style vscode fill:#1e1e1e,stroke:#007acc,color:#fff
     style orchestrator fill:#2d1b4e,stroke:#9333ea,color:#fff
