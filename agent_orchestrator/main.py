@@ -3274,6 +3274,7 @@ async def resume_langgraph_workflow(
         )
 
 
+@traceable(name="resume_workflow_from_approval", tags=["hitl", "resume", "workflow"])
 async def resume_workflow_from_approval(
     approval_request_id: str, action: str = "approved"
 ) -> Dict[str, Any]:

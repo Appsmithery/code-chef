@@ -393,6 +393,7 @@ class WorkflowEngine:
                 "payload": rendered_payload,
             }
 
+    @traceable(name="workflow_hitl_approval", tags=["workflow", "hitl", "approval"])
     async def _execute_hitl_approval(
         self,
         step: WorkflowStep,
@@ -517,6 +518,7 @@ class WorkflowEngine:
         # Default: follow on_success
         return step.on_success
 
+    @traceable(name="workflow_decision_gate", tags=["workflow", "decision", "routing"])
     async def _evaluate_decision_gate(
         self,
         step: WorkflowStep,
@@ -561,6 +563,7 @@ class WorkflowEngine:
 
         return step.on_success
 
+    @traceable(name="workflow_risk_assessment", tags=["workflow", "risk", "hitl"])
     async def _evaluate_risk_assessment(
         self,
         step: WorkflowStep,
@@ -845,6 +848,7 @@ class WorkflowEngine:
                 return step
         raise ValueError(f"Step not found: {step_id}")
 
+    @traceable(name="workflow_resume", tags=["workflow", "hitl", "resume"])
     async def resume_workflow(
         self,
         workflow_id: str,
