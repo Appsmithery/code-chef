@@ -9,7 +9,7 @@ The code/chef VS Code extension brings LangGraph-powered, multi-agent workflows 
 
 ## Architecture
 
-**Flow:** User → `@chef` → Orchestrator → Specialized Agents → MCP Tools → Results
+**Flow:** User → `@chef` → Orchestrator → Specialized Agents → RAG / Context / MCP Tools → Artifacts → User
 
 | Component             | Description                                                   |
 | --------------------- | ------------------------------------------------------------- |
