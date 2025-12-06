@@ -9,26 +9,47 @@ Your personal AI DevOps Team, orchestrated by the Head Chef. A VS Code extension
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        VS Code Extension (@chef)                        │
-├─────────────────────────────────────────────────────────────────────────┤
-│  Copilot Chat ←→ Extension ←→ Orchestrator API ←→ LangGraph Engine      │
-│                                      │                                  │
-│                        ┌─────────────┴─────────────┐                    │
-│                        ▼                           ▼                    │
-│              ┌─────────────────┐         ┌─────────────────┐            │
-│              │   Supervisor    │────────▶│   Workflow     │            │
-│              │   (Head Chef)   │         │   Router        │            │
-│              └────────┬────────┘         └─────────────────┘            │
-│         ┌─────────────┼─────────────┬─────────────┬─────────────┐       │
-│         ▼             ▼             ▼             ▼             ▼       │
-│    ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐   ┌─────────┐  │
-│    │feature  │   │code     │   │infra    │   │cicd     │   │docs     │  │
-│    │-dev     │   │-review  │   │         │   │         │   │         │  │
-│    └─────────┘   └─────────┘   └─────────┘   └─────────┘   └─────────┘  │
-│                              Agent Nodes                                │
-└─────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph vscode["VS Code Extension"]
+        chat["🗨️ Copilot Chat<br/>@chef participant"]
+    end
+
+    subgraph orchestrator["Orchestrator API"]
+        supervisor["🎯 Supervisor<br/>(Head Chef)"]
+        router["🔀 Workflow Router<br/>Heuristic + LLM"]
+    end
+
+    subgraph agents["Agent Nodes"]
+        feature["💻 feature-dev"]
+        review["🔍 code-review"]
+        infra["🏗️ infrastructure"]
+        cicd["🚀 cicd"]
+        docs["📚 documentation"]
+    end
+
+    subgraph tools["MCP Tools"]
+        mcp["150+ Tools<br/>Linear, GitHub, Docker, etc."]
+    end
+
+    chat -->|"task"| supervisor
+    supervisor <-->|"routing"| router
+    supervisor -->|"delegate"| feature
+    supervisor -->|"delegate"| review
+    supervisor -->|"delegate"| infra
+    supervisor -->|"delegate"| cicd
+    supervisor -->|"delegate"| docs
+    
+    feature --> mcp
+    review --> mcp
+    infra --> mcp
+    cicd --> mcp
+    docs --> mcp
+
+    style vscode fill:#1e1e1e,stroke:#007acc,color:#fff
+    style orchestrator fill:#2d1b4e,stroke:#9333ea,color:#fff
+    style agents fill:#1a2e1a,stroke:#22c55e,color:#fff
+    style tools fill:#1a1a2e,stroke:#3b82f6,color:#fff
 ```
 
 ## Features
