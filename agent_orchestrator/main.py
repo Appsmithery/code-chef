@@ -1218,6 +1218,9 @@ async def orchestrate_task(request: TaskRequest):
     )
 
 
+@traceable(
+    name="execute_orchestration_flow", tags=["orchestrator", "decomposition", "flow"]
+)
 async def execute_orchestration_flow(
     task_id: str,
     request: TaskRequest,
@@ -2012,6 +2015,7 @@ async def update_phase_completion(request: Dict[str, Any]):
 
 
 @app.post("/execute/{task_id}")
+@traceable(name="execute_task_workflow", tags=["orchestrator", "execution", "agents"])
 async def execute_workflow(task_id: str):
     """Execute workflow by calling agents in sequence based on routing plan"""
     if task_id not in task_registry:
@@ -2338,6 +2342,7 @@ async def get_tool_loading_stats():
     }
 
 
+@traceable(name="decompose_with_llm", tags=["orchestrator", "llm", "decomposition"])
 async def decompose_with_llm(
     request: TaskRequest, task_id: str, available_tools: Optional[str] = None
 ) -> List[SubTask]:
