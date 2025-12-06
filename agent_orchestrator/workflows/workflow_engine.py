@@ -203,6 +203,7 @@ class WorkflowEngine:
             notifications=yaml_data.get("notifications", []),
         )
 
+    @traceable(name="workflow_execute", tags=["workflow", "engine", "orchestration"])
     async def execute_workflow(
         self,
         template_name: str,
