@@ -39,7 +39,7 @@ flowchart TB
     supervisor -->|"delegate"| infra
     supervisor -->|"delegate"| cicd
     supervisor -->|"delegate"| docs
-    
+
     feature --> mcp
     review --> mcp
     infra --> mcp
