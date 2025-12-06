@@ -91,7 +91,8 @@
     "python.analysis.typeCheckingMode": "standard",
     "codechef.autoApproveThreshold": "medium",
     "codechef.apiKey": "gt5Ae88fz-inOpFmRf1kVAkOJSV3enR7qr8ri1V2so0",
-    "codechef.maxContextTokens": 8000
+    "codechef.maxContextTokens": 8000,
+    "github-actions.workflows.pinned.refresh.enabled": true
   },
   "extensions": {
     "recommendations": [
