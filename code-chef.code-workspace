@@ -93,7 +93,12 @@
     "codechef.autoApproveThreshold": "medium",
     "codechef.apiKey": "gt5Ae88fz-inOpFmRf1kVAkOJSV3enR7qr8ri1V2so0",
     "codechef.maxContextTokens": 8000,
-    "github-actions.workflows.pinned.refresh.enabled": true
+    "github-actions.workflows.pinned.refresh.enabled": true,
+    "chat.agent.maxRequests": 250,
+    "chat.agent.thinkingStyle": "collapsedPreview",
+    "chat.editor.wordWrap": "on",
+    "chat.emptyState.history.enabled": true,
+    "chat.mcp.assisted.nuget.enabled": true
   },
   "extensions": {
     "recommendations": [
