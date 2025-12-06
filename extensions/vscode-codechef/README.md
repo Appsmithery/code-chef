@@ -77,12 +77,12 @@ Open Copilot Chat and type:
 
 ### Chat Commands
 
-| Command                             | Description              | Example                      |
-| ----------------------------------- | ------------------------ | ---------------------------- |
-| `@chef <task>`                      | Submit development task  | `@chef Add authentication`   |
-| `@chef /status <id>`                | Check task status        | `@chef /status abc123`       |
-| `@chef /approve <task> <approval>`  | Approve pending task     | `@chef /approve abc123 xyz`  |
-| `@chef /tools`                      | List available MCP tools | `@chef /tools`               |
+| Command                            | Description              | Example                     |
+| ---------------------------------- | ------------------------ | --------------------------- |
+| `@chef <task>`                     | Submit development task  | `@chef Add authentication`  |
+| `@chef /status <id>`               | Check task status        | `@chef /status abc123`      |
+| `@chef /approve <task> <approval>` | Approve pending task     | `@chef /approve abc123 xyz` |
+| `@chef /tools`                     | List available MCP tools | `@chef /tools`              |
 
 ### Command Palette (`Ctrl+Shift+P`)
 
