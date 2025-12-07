@@ -52,4 +52,4 @@ memory:
   enabled: true
   max_context_insights: 5
   min_confidence: 0.5
-  extract_insights: false  # Supervisor routes, doesn't produce domain insights
+  extract_insights: false # Supervisor routes, doesn't produce domain insights
