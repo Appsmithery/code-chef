@@ -7,12 +7,44 @@
 | Orchestrator (Head Chef)         | Copilot (Sous Chef)               |
 | -------------------------------- | --------------------------------- |
 | Routes tasks to agent nodes      | Executes code changes directly    |
-| Manages LangGraph workflows      | Provides IDE-integrated tooling   |
+| Manages LangGraph StateGraph     | Provides IDE-integrated tooling   |
 | Coordinates multi-agent handoffs | Handles single-turn requests      |
-| Enforces HITL approvals          | Assists with debugging/validation |
+| Enforces HITL via interrupt()    | Assists with debugging/validation |
 
 **When to defer to orchestrator**: Multi-step workflows, cross-agent coordination, HITL-gated operations.
 **When Copilot acts directly**: Code edits, file creation, container inspection, issue lookups, health checks.
+
+---
+
+## Core Architecture Patterns
+
+### LangGraph StateGraph
+
+- **State**: `WorkflowState` TypedDict with `messages`, `current_agent`, `next_agent`, `task_result`, `approvals`, `requires_approval`, `workflow_id`, `thread_id`, `pending_operation`
+- **Checkpointing**: PostgresSaver with async pool for interrupt/resume
+- **Agent Caching**: `get_agent()` with `_agent_cache` dict prevents redundant instantiation
+- **HITL Pattern**: `interrupt({"pending_operation": {...}})` → webhook/poll resume → `graph.invoke(None, config)`
+
+### Workflow Routing (workflow_router.py)
+
+- **Heuristic First** (<10ms): Pattern matching via `task-router.rules.yaml`
+- **LLM Fallback**: Semantic routing when heuristics uncertain (confidence < 0.7)
+- **Selection Model**: `WorkflowSelection(workflow_id, confidence, method, reasoning, matched_rules, alternatives)`
+- **Methods**: `HEURISTIC`, `LLM`, `EXPLICIT`, `DEFAULT`
+
+### Progressive Tool Loading (base_agent.py)
+
+- **Invoke-Time Binding**: Tools bound per request, not at init
+- **Strategy Enum**: `MINIMAL` (10-30), `PROGRESSIVE` (30-60), `FULL` (150+)
+- **Cache**: `_bound_llm_cache` keyed by tool config hash
+- **Loader**: `ProgressiveMCPLoader` with keyword→server mapping
+
+### Observability
+
+- **@traceable Decorators**: 33+ across graph.py, workflow_engine.py, base_agent.py
+- **LangSmith Projects**: Per-agent (`code-chef-feature-dev`, `code-chef-code-review`, etc.)
+- **Prometheus**: `/metrics` endpoint via `Instrumentator`
+- **Grafana**: `appsmithery.grafana.net`
 
 ---
 
@@ -22,7 +54,7 @@
 - Validate container health after deploys → use `activate_container_inspection_and_logging_tools`
 - Never skip cleanup after failures → run `docker compose down --remove-orphans`
 - Treat Docker resources as disposable; leave stacks fully running or fully stopped
-- High-risk ops trigger HITL approval via DEV-68 sub-issues
+- High-risk ops trigger HITL approval via interrupt() + Linear webhook
 
 ## Linear Issue Standards
 
@@ -36,16 +68,16 @@ When creating or updating Linear issues:
 
 ## Agent Node Reference
 
-Route tasks by **function**, not technology. Models configured in `config/agents/models.yaml`:
+Route tasks by **function**, not technology. Models in `config/agents/models.yaml`:
 
-| Intent                  | Agent Node       | Responsibility                      |
-| ----------------------- | ---------------- | ----------------------------------- |
-| Code implementation     | `feature_dev`    | Python, JS/TS, Go, Java, C#, Rust   |
-| Security/quality review | `code_review`    | OWASP Top 10, linting, type safety  |
-| IaC, Terraform, Compose | `infrastructure` | Dockerfiles, Compose, Terraform     |
-| Pipelines, Actions, CI  | `cicd`           | GitHub Actions, GitLab CI, Jenkins  |
-| Docs, specs, READMEs    | `documentation`  | JSDoc, Swagger, Markdown            |
-| Orchestration, routing  | `supervisor`     | Task decomposition, agent selection |
+| Intent                  | Agent Node       | Model         | Provider |
+| ----------------------- | ---------------- | ------------- | -------- |
+| Code implementation     | `feature_dev`    | codellama-13b | gradient |
+| Security/quality review | `code_review`    | llama3.3-70b  | gradient |
+| IaC, Terraform, Compose | `infrastructure` | llama3-8b     | gradient |
+| Pipelines, Actions, CI  | `cicd`           | llama3.3-70b  | gradient |
+| Docs, specs, READMEs    | `documentation`  | llama3.3-70b  | gradient |
+| Orchestration, routing  | `supervisor`     | llama3.3-70b  | gradient |
 
 ## MCP Tool Strategy
 
@@ -66,12 +98,13 @@ Use **progressive disclosure** for token efficiency:
 
 ## Services & Health
 
-| Service      | Port | Health Endpoint |
-| ------------ | ---- | --------------- |
-| orchestrator | 8001 | `/health`       |
-| rag          | 8007 | `/health`       |
-| state        | 8008 | `/health`       |
-| langgraph    | 8010 | `/health`       |
+| Service        | Port | Health Endpoint |
+| -------------- | ---- | --------------- |
+| orchestrator   | 8001 | `/health`       |
+| rag-context    | 8007 | `/health`       |
+| state-persist  | 8008 | `/health`       |
+| agent-registry | 8009 | `/health`       |
+| langgraph      | 8010 | `/health`       |
 
 **Production**: `codechef.appsmithery.co` → `45.55.173.72`
 
@@ -81,23 +114,44 @@ Use **progressive disclosure** for token efficiency:
 code-chef/
 ├── agent_orchestrator/
 │   ├── agents/{supervisor,feature_dev,code_review,infrastructure,cicd,documentation}/
-│   ├── graph.py          # LangGraph StateGraph
-│   └── main.py           # FastAPI + webhooks
-├── shared/lib/           # mcp_client, gradient_client, progressive_mcp_loader
+│   │   └── _shared/base_agent.py  # BaseAgent with invoke-time tool binding
+│   ├── workflows/
+│   │   ├── workflow_engine.py     # Event-sourced workflow execution
+│   │   ├── workflow_router.py     # Heuristic + LLM routing
+│   │   └── templates/*.yaml       # Declarative workflow definitions
+│   ├── graph.py                   # LangGraph StateGraph + PostgresSaver
+│   └── main.py                    # FastAPI + webhooks + /resume endpoint
+├── shared/lib/
+│   ├── hitl_manager.py            # HITLManager with Linear webhooks
+│   ├── progressive_mcp_loader.py  # Token-efficient tool loading
+│   ├── mcp_client.py, gradient_client.py
+│   └── workflow_reducer.py        # Event sourcing reducer
 ├── config/
-│   ├── env/.env          # Secrets (use .env.template)
-│   ├── agents/models.yaml # LLM configuration (model-agnostic)
-│   └── linear/, hitl/, rag/
+│   ├── agents/models.yaml         # Model configs (single source of truth)
+│   ├── routing/task-router.rules.yaml
+│   └── hitl/, linear/, rag/
 ├── deploy/docker-compose.yml
-└── support/docs/         # DEPLOYMENT.md, ARCHITECTURE.md
+└── support/docs/                  # DEPLOYMENT.md, ARCHITECTURE.md
 ```
 
 ## Adding a New Agent Node
 
 1. Create `agent_orchestrator/agents/<name>/` with `__init__.py`, `system.prompt.md`, `tools.yaml`
-2. Inherit from `_shared.base_agent.BaseAgent`
-3. Wire into `graph.py` StateGraph + conditional edges
+2. Inherit from `_shared.base_agent.BaseAgent` (invoke-time tool binding inherited)
+3. Wire into `graph.py` StateGraph + conditional edges + add to `get_agent()` cache
 4. Update `config/mcp-agent-tool-mapping.yaml`
+5. Add `@traceable` decorators for LangSmith visibility
+
+## HITL Approval Flow
+
+```
+Task → RiskAssessor → HIGH/CRITICAL?
+  ├─ NO  → Execute directly
+  └─ YES → interrupt({"pending_operation": {...}})
+           → Create Linear issue with approval request
+           → Webhook callback OR 30s polling fallback
+           → graph.invoke(None, config) to resume
+```
 
 ## Key References
 
@@ -105,14 +159,15 @@ code-chef/
 | --------------------- | -------------------------------------------------------------------- |
 | Deployment procedures | `support/docs/DEPLOYMENT.md`                                         |
 | Architecture overview | `support/docs/ARCHITECTURE.md`                                       |
+| Workflow templates    | `agent_orchestrator/workflows/templates/*.yaml`                      |
 | Linear API scripts    | `support/scripts/linear/agent-linear-update.py`                      |
 | RAG indexing          | `support/scripts/rag/index_*.py`                                     |
 | Observability         | LangSmith: `smith.langchain.com`, Grafana: `appsmithery.grafana.net` |
-| HITL template         | UUID `aa632a46-ea22-4dd0-9403-90b0d1f05aa0`                          |
 
 ## Quality Bar
 
 - Use Pydantic models and type hints on all functions
+- Add `@traceable` decorator for any new LangGraph node or workflow step
 - Health endpoints must return `{"status": "healthy", ...}`
 - Graceful fallback when API keys missing
 - **DO NOT create summary markdown files** unless explicitly requested
