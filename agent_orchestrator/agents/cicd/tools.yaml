@@ -58,4 +58,15 @@ tools:
 
 langsmith:
   project: code-chef-cicd
+  tags: [cicd, github-actions, pipelines, deployment]
+
+# Cross-agent knowledge sharing configuration
+memory:
+  enabled: true
+  max_context_insights: 3
+  min_confidence: 0.6
+  extract_insights: true
+  insight_types:
+    - error_pattern
+    - task_resolution
   tags: [cicd, deployment, automation, multi-platform]

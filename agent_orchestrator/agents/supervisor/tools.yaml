@@ -45,3 +45,11 @@ tools:
 langsmith:
   project: code-chef-supervisor
   tags: [orchestration, routing, multi-agent, polyglot]
+
+# Cross-agent knowledge sharing configuration
+# Supervisor uses memory for knowledge-aware routing decisions
+memory:
+  enabled: true
+  max_context_insights: 5
+  min_confidence: 0.5
+  extract_insights: false  # Supervisor routes, doesn't produce domain insights

@@ -61,4 +61,12 @@ tools:
 
 langsmith:
   project: code-chef-documentation
-  tags: [documentation, technical-writing, polyglot]
+  tags: [documentation, technical-writing, api-docs]
+
+# Cross-agent knowledge sharing configuration
+# Documentation agent consumes insights but does not produce them
+memory:
+  enabled: true
+  max_context_insights: 5
+  min_confidence: 0.5
+  extract_insights: false  # Docs agent consumes, doesn't produce insights

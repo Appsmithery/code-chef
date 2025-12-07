@@ -53,3 +53,14 @@ tools:
 langsmith:
   project: code-chef-infrastructure
   tags: [infrastructure, terraform, kubernetes, multi-cloud]
+
+# Cross-agent knowledge sharing configuration
+memory:
+  enabled: true
+  max_context_insights: 3
+  min_confidence: 0.6
+  extract_insights: true
+  insight_types:
+    - architectural_decision
+    - error_pattern
+    - task_resolution
