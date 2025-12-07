@@ -1,8 +1,8 @@
 # Dev-Tools Architecture
 
-**Version:** v0.4  
+**Version:** v0.5  
 **Status:** Production  
-**Last Updated:** December 3, 2025  
+**Last Updated:** December 7, 2025  
 **Product:** code/chef (https://theshop.appsmithery.co)
 
 See [QUICKSTART.md](QUICKSTART.md) for setup | [DEPLOYMENT.md](DEPLOYMENT.md) for deployment
@@ -169,12 +169,37 @@ compiled = workflow.compile(checkpointer=PostgresSaver(conn))
 
 ```python
 class WorkflowState(TypedDict):
-    task: str
-    context: dict
-    agent_outputs: dict[str, Any]
-    approval_request_id: str | None
+    messages: Annotated[Sequence[BaseMessage], add_messages]
     current_agent: str
-    next_action: str
+    next_agent: str
+    task_result: Dict[str, Any]
+    approvals: List[str]
+    requires_approval: bool
+    workflow_id: Optional[str]
+    thread_id: Optional[str]
+    pending_operation: Optional[Dict[str, Any]]
+    captured_insights: List[Dict[str, Any]]  # Cross-agent memory (CHEF-206)
+    memory_context: Optional[str]  # Retrieved context on resume (CHEF-207)
+```
+
+### Cross-Agent Memory Integration
+
+Agents share knowledge via `AgentMemoryManager` → RAG service → Qdrant Cloud:
+
+```python
+# Insights captured during agent execution
+from shared.lib.agent_memory import AgentMemoryManager
+
+memory = AgentMemoryManager(rag_base_url="http://rag-context:8007")
+await memory.store_insight(
+    agent_id="feature-dev",
+    insight_type=InsightType.CODE_PATTERN,
+    content="Use async context managers for DB connections",
+    confidence=0.9
+)
+
+# Retrieved on workflow resume via /resume endpoint
+# Last 10 insights injected as memory_context
 ```
 
 ### HITL Approval Flow

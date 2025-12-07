@@ -250,10 +250,37 @@ class WorkflowAction(str, Enum):
     START_CHILD_WORKFLOW = "start_child_workflow"
     CHILD_WORKFLOW_COMPLETE = "child_workflow_complete"
 
+    # Cross-Agent Memory (CHEF-207)
+    CAPTURE_INSIGHT = "capture_insight"
+
     # Performance & Compliance
     CREATE_SNAPSHOT = "create_snapshot"
     ANNOTATE = "annotate"  # Operator comments
 ```
+
+### CAPTURE_INSIGHT Event
+
+New in v0.5: Captures cross-agent insights during workflow execution for knowledge sharing.
+
+```python
+{
+    "action": "CAPTURE_INSIGHT",
+    "step_id": "code_review",
+    "data": {
+        "agent_id": "code-review",
+        "insight_type": "security_finding",
+        "content": "SQL injection vulnerability in user input handler",
+        "confidence": 0.95,
+        "source_step": "code_review"
+    }
+}
+```
+
+Insights are:
+
+1. Emitted by `workflow_engine.py` after agent execution
+2. Stored in `WorkflowState.captured_insights` for checkpoint persistence
+3. Injected into context on workflow resume via `/resume` endpoint
 
 ### Event Payload Examples
 

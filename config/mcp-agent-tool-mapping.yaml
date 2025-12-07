@@ -690,6 +690,120 @@ unmapped_tools:
     recommendation: "Monitor orchestrator usage; may benefit complex planning in other agents"
 
 # ============================================================================
+# CROSS-AGENT MEMORY TOOLS (CHEF-203)
+# Token-efficient knowledge sharing via progressive disclosure
+# ============================================================================
+
+memory_tools:
+  description: "Cross-agent knowledge sharing - query and store insights via RAG service"
+  server: rag-context
+  endpoint: "http://rag-context:8007/memory/*"
+
+  tools:
+    - name: query_insights
+      description: "Search for relevant insights from prior agent work"
+      http_method: POST
+      path: "/memory/query"
+      parameters:
+        query:
+          type: string
+          required: true
+          description: "Semantic search query for relevant insights"
+        insight_types:
+          type: array
+          required: false
+          description: "Filter by type (architectural_decision, error_pattern, code_pattern, task_resolution, security_finding)"
+        limit:
+          type: integer
+          required: false
+          default: 5
+          description: "Max results (default 5)"
+        agent_id:
+          type: string
+          required: false
+          description: "Filter to specific agent's insights (omit for cross-agent search)"
+      use_cases:
+        - "Retrieve past solutions for similar errors"
+        - "Find architectural patterns from infrastructure agent"
+        - "Get security findings before deployment"
+
+    - name: store_insight
+      description: "Store an insight for future agents to use"
+      http_method: POST
+      path: "/memory/store"
+      parameters:
+        insight_type:
+          type: string
+          required: true
+          description: "One of: architectural_decision, error_pattern, code_pattern, task_resolution, security_finding"
+        content:
+          type: string
+          required: true
+          description: "The insight content (max 2000 chars)"
+        source_workflow_id:
+          type: string
+          required: false
+          description: "Workflow that generated this insight"
+        source_task:
+          type: string
+          required: false
+          description: "Task description for context"
+        metadata:
+          type: object
+          required: false
+          description: "Additional metadata (file_path, commit_sha, etc.)"
+      use_cases:
+        - "Record architectural decisions for future reference"
+        - "Store error resolution patterns"
+        - "Capture security findings from code review"
+
+    - name: get_agent_history
+      description: "Get recent insights from a specific agent"
+      http_method: GET
+      path: "/memory/agent/{agent_id}"
+      parameters:
+        agent_id:
+          type: string
+          required: true
+          description: "Agent ID to query (feature-dev, code-review, etc.)"
+        limit:
+          type: integer
+          required: false
+          default: 20
+          description: "Max results"
+      use_cases:
+        - "Review agent's recent contributions"
+        - "Check for duplicate insight before storing"
+
+  # Which agents have access to memory tools (progressive disclosure)
+  agents:
+    - supervisor # Knowledge-aware routing decisions
+    - feature_dev # Consume code patterns, error resolutions
+    - code_review # Consume/produce security findings
+    - infrastructure # Consume architectural decisions
+    - cicd # Consume error patterns, task resolutions
+    - documentation # Consume patterns for documentation context
+
+  # Keywords that trigger memory tool loading (progressive disclosure)
+  keywords:
+    - "insight"
+    - "pattern"
+    - "previous"
+    - "similar"
+    - "learned"
+    - "memory"
+    - "history"
+    - "resolution"
+    - "security finding"
+    - "architectural decision"
+    - "error pattern"
+
+  token_efficiency:
+    estimated_savings: "500-1000 tokens per request vs always-on context injection"
+    strategy: "Tools loaded only when task keywords match (progressive disclosure)"
+    note: "Query results injected as compact context instead of full insight history"
+
+# ============================================================================
 # INTEGRATION NOTES
 # ============================================================================
 

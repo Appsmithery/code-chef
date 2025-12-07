@@ -376,12 +376,31 @@ class WorkflowEngine:
             messages = final_state.get("messages", [])
             response = messages[-1].content if messages else "No response"
 
+            # CHEF-207: Emit CAPTURE_INSIGHT events for any insights captured by the agent
+            captured_insights = final_state.get("captured_insights", [])
+            for insight in captured_insights:
+                await self._emit_event(
+                    workflow_id=state.workflow_id,
+                    action=WorkflowAction.CAPTURE_INSIGHT,
+                    step_id=step.id,
+                    data={
+                        "agent_id": insight.get("agent_id", step.agent),
+                        "insight_type": insight.get("insight_type", "general"),
+                        "content": insight.get("content", "")[
+                            :500
+                        ],  # Truncate for event storage
+                        "confidence": insight.get("confidence", 0.8),
+                        "source_step": step.id,
+                    },
+                )
+
             return {
                 "agent": step.agent,
                 "status": "success",
                 "response": response,
                 "task_result": final_state.get("task_result", {}),
                 "payload": rendered_payload,
+                "insights_captured": len(captured_insights),
             }
 
         except Exception as e:

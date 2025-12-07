@@ -1,9 +1,11 @@
 from typing import TypedDict, Dict, Any, List, Optional
 from langgraph.graph import StateGraph, END, START
+from langsmith import traceable
 from lib.event_bus import get_event_bus
 from lib.agent_events import AgentRequestEvent, AgentRequestType, AgentRequestPriority
 
 event_bus = get_event_bus()
+
 
 class DocsState(TypedDict):
     repo_url: str
@@ -13,6 +15,8 @@ class DocsState(TypedDict):
     merged_docs: Optional[Dict]
     errors: List[str]
 
+
+@traceable(name="parallel_docs_api", tags=["workflow", "documentation", "parallel"])
 async def generate_api_docs(state: DocsState) -> DocsState:
     """Generate API documentation."""
     try:
@@ -20,22 +24,25 @@ async def generate_api_docs(state: DocsState) -> DocsState:
             source_agent="orchestrator",
             target_agent="documentation",
             request_type=AgentRequestType.GENERATE_DOCS,
-            payload={
-                "repo_url": state["repo_url"],
-                "doc_type": "api_reference"
-            }
+            payload={"repo_url": state["repo_url"], "doc_type": "api_reference"},
         )
         response = await event_bus.request_agent(request, timeout=300.0)
         if response.status == "success":
             state["api_docs"] = response.result
         else:
-            if "errors" not in state: state["errors"] = []
+            if "errors" not in state:
+                state["errors"] = []
             state["errors"].append(f"API docs failed: {response.error}")
     except Exception as e:
-        if "errors" not in state: state["errors"] = []
+        if "errors" not in state:
+            state["errors"] = []
         state["errors"].append(f"API docs exception: {str(e)}")
     return state
 
+
+@traceable(
+    name="parallel_docs_user_guide", tags=["workflow", "documentation", "parallel"]
+)
 async def generate_user_guide(state: DocsState) -> DocsState:
     """Generate user guide."""
     try:
@@ -43,22 +50,26 @@ async def generate_user_guide(state: DocsState) -> DocsState:
             source_agent="orchestrator",
             target_agent="documentation",
             request_type=AgentRequestType.GENERATE_DOCS,
-            payload={
-                "repo_url": state["repo_url"],
-                "doc_type": "user_guide"
-            }
+            payload={"repo_url": state["repo_url"], "doc_type": "user_guide"},
         )
         response = await event_bus.request_agent(request, timeout=300.0)
         if response.status == "success":
             state["user_guide"] = response.result
         else:
-            if "errors" not in state: state["errors"] = []
+            if "errors" not in state:
+                state["errors"] = []
             state["errors"].append(f"User guide failed: {response.error}")
     except Exception as e:
-        if "errors" not in state: state["errors"] = []
+        if "errors" not in state:
+            state["errors"] = []
         state["errors"].append(f"User guide exception: {str(e)}")
     return state
 
+
+@traceable(
+    name="parallel_docs_deployment_guide",
+    tags=["workflow", "documentation", "parallel"],
+)
 async def generate_deployment_guide(state: DocsState) -> DocsState:
     """Generate deployment guide."""
     try:
@@ -66,31 +77,33 @@ async def generate_deployment_guide(state: DocsState) -> DocsState:
             source_agent="orchestrator",
             target_agent="documentation",
             request_type=AgentRequestType.GENERATE_DOCS,
-            payload={
-                "repo_url": state["repo_url"],
-                "doc_type": "deployment_guide"
-            }
+            payload={"repo_url": state["repo_url"], "doc_type": "deployment_guide"},
         )
         response = await event_bus.request_agent(request, timeout=300.0)
         if response.status == "success":
             state["deployment_guide"] = response.result
         else:
-            if "errors" not in state: state["errors"] = []
+            if "errors" not in state:
+                state["errors"] = []
             state["errors"].append(f"Deployment guide failed: {response.error}")
     except Exception as e:
-        if "errors" not in state: state["errors"] = []
+        if "errors" not in state:
+            state["errors"] = []
         state["errors"].append(f"Deployment guide exception: {str(e)}")
     return state
 
+
+@traceable(name="parallel_docs_merge", tags=["workflow", "documentation", "parallel"])
 async def merge_documentation(state: DocsState) -> DocsState:
     """Merge all documentation."""
     # In a real scenario, this might call another agent or do local processing
     state["merged_docs"] = {
         "api": state.get("api_docs"),
         "user": state.get("user_guide"),
-        "deploy": state.get("deployment_guide")
+        "deploy": state.get("deployment_guide"),
     }
     return state
+
 
 # Parallel execution
 workflow = StateGraph(DocsState)
@@ -115,5 +128,6 @@ parallel_docs_app = workflow.compile()
 
 def node1(state):
     pass
+
 
 workflow.add_node("node_1", node1)  # Add node for node1

@@ -199,6 +199,15 @@ Content-Type: application/json
 }
 ```
 
+**Cross-Agent Memory Injection (CHEF-207)**:
+On resume, the endpoint automatically:
+
+1. Loads `captured_insights` from the PostgreSQL checkpoint
+2. Formats the last 10 insights as context
+3. Injects them into the resume message for the next agent
+
+This ensures agents have continuity of knowledge across HITL pauses.
+
 ---
 
 ### List Templates

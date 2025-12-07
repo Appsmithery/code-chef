@@ -1,47 +1,37 @@
 """
 Agent Memory Manager for Cross-Agent Knowledge Sharing.
 
-Provides persistent agent memory using Qdrant semantic search.
-Replaces deprecated LangChain memory with lightweight implementation.
+Provides persistent agent memory using RAG service HTTP endpoints.
+Replaces deprecated LangChain memory with lightweight HTTP-based implementation.
+
+Architecture Decision (CHEF-199):
+- Uses HTTP calls to RAG service endpoints instead of direct Qdrant access
+- Centralized monitoring via RAG service logs
+- Consistent embedding generation (single OpenAI client in RAG service)
+- Easier rate limiting, caching, and metrics
 
 Features:
 - Store insights extracted from agent executions
 - Retrieve semantically similar insights across agents
 - Per-agent history and cross-agent knowledge sharing
 - Automatic pruning based on usage and TTL
+
+Issues: CHEF-198 (shared types), CHEF-199 (RAG refactor), CHEF-200 (@traceable)
 """
 
+import os
 import logging
-import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
-from enum import Enum
 
-from pydantic import BaseModel, Field
-from qdrant_client import QdrantClient
-from qdrant_client.models import (
-    Distance,
-    VectorParams,
-    PointStruct,
-    Filter,
-    FieldCondition,
-    MatchValue,
-    Range,
-    UpdateStatus,
-)
+import httpx
+from langsmith import traceable
+
+# Import canonical types from shared location
+from .types import InsightType, CapturedInsight
 
 logger = logging.getLogger(__name__)
-
-
-class InsightType(str, Enum):
-    """Types of insights that agents can capture."""
-
-    ARCHITECTURAL_DECISION = "architectural_decision"
-    ERROR_PATTERN = "error_pattern"
-    CODE_PATTERN = "code_pattern"
-    TASK_RESOLUTION = "task_resolution"
-    SECURITY_FINDING = "security_finding"
 
 
 @dataclass
@@ -60,7 +50,7 @@ class Insight:
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_payload(self) -> Dict[str, Any]:
-        """Convert to Qdrant payload format."""
+        """Convert to JSON payload format for API calls."""
         return {
             "id": self.id,
             "agent_id": self.agent_id,
@@ -72,7 +62,11 @@ class Insight:
             "content": self.content,
             "source_workflow_id": self.source_workflow_id,
             "source_task": self.source_task,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": (
+                self.timestamp.isoformat()
+                if isinstance(self.timestamp, datetime)
+                else self.timestamp
+            ),
             "usage_count": self.usage_count,
             "relevance_score": self.relevance_score,
             "metadata": self.metadata,
@@ -80,124 +74,97 @@ class Insight:
 
     @classmethod
     def from_payload(cls, payload: Dict[str, Any], score: float = 0.0) -> "Insight":
-        """Create Insight from Qdrant payload."""
+        """Create Insight from API response payload."""
+        timestamp = payload.get("timestamp")
+        if isinstance(timestamp, str):
+            timestamp = datetime.fromisoformat(timestamp)
+        elif timestamp is None:
+            timestamp = datetime.utcnow()
+
+        insight_type = payload.get("insight_type", "task_resolution")
+        if isinstance(insight_type, str):
+            try:
+                insight_type = InsightType(insight_type)
+            except ValueError:
+                insight_type = InsightType.TASK_RESOLUTION
+
         return cls(
             id=payload.get("id", ""),
             agent_id=payload.get("agent_id", ""),
-            insight_type=payload.get("insight_type", ""),
+            insight_type=insight_type,
             content=payload.get("content", ""),
             source_workflow_id=payload.get("source_workflow_id"),
             source_task=payload.get("source_task"),
-            timestamp=(
-                datetime.fromisoformat(payload["timestamp"])
-                if payload.get("timestamp")
-                else datetime.utcnow()
-            ),
+            timestamp=timestamp,
             usage_count=payload.get("usage_count", 0),
-            relevance_score=score,
+            relevance_score=score if score > 0 else payload.get("relevance_score", 0.0),
             metadata=payload.get("metadata", {}),
         )
 
 
-class StoreInsightRequest(BaseModel):
-    """Request model for storing an insight."""
-
-    agent_id: str = Field(..., description="ID of the agent storing the insight")
-    insight_type: str = Field(..., description="Type of insight")
-    content: str = Field(..., description="The insight content")
-    source_workflow_id: Optional[str] = Field(
-        None, description="Workflow that generated this insight"
-    )
-    source_task: Optional[str] = Field(
-        None, description="Task description that led to this insight"
-    )
-    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
-
-
-class QueryInsightsRequest(BaseModel):
-    """Request model for querying insights."""
-
-    query: str = Field(..., description="Semantic query for relevant insights")
-    agent_id: Optional[str] = Field(
-        None, description="Filter by agent ID (None = cross-agent)"
-    )
-    insight_types: Optional[List[str]] = Field(
-        None, description="Filter by insight types"
-    )
-    limit: int = Field(5, ge=1, le=20, description="Max results to return")
-
-
 class AgentMemoryManager:
     """
-    Persistent agent memory using Qdrant semantic search.
+    Persistent agent memory using RAG service HTTP endpoints.
 
     Provides cross-agent knowledge sharing by storing and retrieving
-    insights extracted from agent executions.
-    """
+    insights extracted from agent executions via centralized RAG service.
 
-    COLLECTION_NAME = "agent_memory"
-    VECTOR_SIZE = 1536  # text-embedding-3-small
+    Architecture: HTTP client → RAG service (:8007) → Qdrant Cloud
+    """
 
     def __init__(
         self,
-        qdrant_client: QdrantClient,
-        embedding_model: Any,  # LangChain embedding model
-        max_insights_per_agent: int = 1000,
-        ttl_days: int = 30,
+        agent_id: str,
+        rag_service_url: Optional[str] = None,
+        timeout: float = 30.0,
     ):
         """
-        Initialize AgentMemoryManager.
+        Initialize AgentMemoryManager with RAG service connection.
 
         Args:
-            qdrant_client: Initialized Qdrant client
-            embedding_model: LangChain embedding model for vectorization
-            max_insights_per_agent: Maximum insights to keep per agent
-            ttl_days: Days before unused insights are pruned
+            agent_id: ID of the agent using this memory manager
+            rag_service_url: URL of RAG service (default from env)
+            timeout: HTTP request timeout in seconds
         """
-        self.client = qdrant_client
-        self.embedding_model = embedding_model
-        self.max_insights_per_agent = max_insights_per_agent
-        self.ttl_days = ttl_days
+        self.agent_id = agent_id
+        self.rag_url = rag_service_url or os.getenv(
+            "RAG_SERVICE_URL", "http://rag-context:8007"
+        )
+        self._timeout = timeout
+        self._client: Optional[httpx.AsyncClient] = None
 
-        # Ensure collection exists
-        self._ensure_collection()
+        # Track last extracted insights for graph.py node collection
+        self.last_extracted_insights: List[Dict[str, Any]] = []
 
-    def _ensure_collection(self) -> None:
-        """Create agent_memory collection if it doesn't exist."""
-        try:
-            collections = self.client.get_collections().collections
-            collection_names = [c.name for c in collections]
+        logger.info(
+            f"[AgentMemory] Initialized for agent={agent_id}, rag_url={self.rag_url}"
+        )
 
-            if self.COLLECTION_NAME not in collection_names:
-                logger.info(f"Creating collection: {self.COLLECTION_NAME}")
-                self.client.create_collection(
-                    collection_name=self.COLLECTION_NAME,
-                    vectors_config=VectorParams(
-                        size=self.VECTOR_SIZE,
-                        distance=Distance.COSINE,
-                    ),
-                )
-                logger.info(f"Collection {self.COLLECTION_NAME} created successfully")
-            else:
-                logger.debug(f"Collection {self.COLLECTION_NAME} already exists")
-        except Exception as e:
-            logger.error(f"Failed to ensure collection: {e}")
-            raise
+    async def _get_client(self) -> httpx.AsyncClient:
+        """Get or create async HTTP client."""
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(timeout=self._timeout)
+        return self._client
 
+    async def close(self) -> None:
+        """Close HTTP client connection."""
+        if self._client and not self._client.is_closed:
+            await self._client.aclose()
+            self._client = None
+
+    @traceable(name="memory_store_insight", tags=["memory", "rag"])
     async def store_insight(
         self,
-        agent_id: str,
-        insight_type: str,
+        insight_type: InsightType,
         content: str,
         source_workflow_id: Optional[str] = None,
         source_task: Optional[str] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
-        Store an insight extracted from agent execution.
+        Store an insight extracted from agent execution via RAG service.
 
         Args:
-            agent_id: ID of the agent storing the insight
             insight_type: Type of insight (architectural_decision, error_pattern, etc.)
             content: The insight content
             source_workflow_id: Workflow that generated this insight
@@ -207,374 +174,276 @@ class AgentMemoryManager:
         Returns:
             ID of the stored insight
         """
-        insight_id = str(uuid.uuid4())
+        client = await self._get_client()
 
-        # Create insight object
-        insight = Insight(
-            id=insight_id,
-            agent_id=agent_id,
-            insight_type=insight_type,
-            content=content,
-            source_workflow_id=source_workflow_id,
-            source_task=source_task,
-            timestamp=datetime.utcnow(),
-            usage_count=0,
-            relevance_score=0.0,
-            metadata=metadata or {},
-        )
+        payload = {
+            "agent_id": self.agent_id,
+            "insight_type": (
+                insight_type.value
+                if isinstance(insight_type, InsightType)
+                else insight_type
+            ),
+            "content": content,
+            "source_workflow_id": source_workflow_id,
+            "source_task": source_task,
+            "metadata": metadata or {},
+        }
 
         try:
-            # Generate embedding for the content
-            embedding = await self._get_embedding(content)
-
-            # Store in Qdrant
-            self.client.upsert(
-                collection_name=self.COLLECTION_NAME,
-                points=[
-                    PointStruct(
-                        id=insight_id,
-                        vector=embedding,
-                        payload=insight.to_payload(),
-                    )
-                ],
+            response = await client.post(
+                f"{self.rag_url}/memory/store",
+                json=payload,
             )
+            response.raise_for_status()
+            result = response.json()
 
+            insight_id = result.get("insight_id", result.get("id", ""))
             logger.info(
-                f"Stored insight {insight_id} from agent {agent_id} "
+                f"[AgentMemory] Stored insight {insight_id} from agent {self.agent_id} "
                 f"(type: {insight_type}, workflow: {source_workflow_id})"
             )
 
-            # Check if pruning is needed
-            await self._maybe_prune_agent_insights(agent_id)
+            # Track for graph.py collection
+            self.last_extracted_insights.append(
+                {
+                    "id": insight_id,
+                    "type": (
+                        insight_type.value
+                        if isinstance(insight_type, InsightType)
+                        else insight_type
+                    ),
+                    "content": content[:500],  # Truncate for state
+                    "confidence": 0.8,
+                }
+            )
 
             return insight_id
 
-        except Exception as e:
-            logger.error(f"Failed to store insight: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"[AgentMemory] RAG service error storing insight: {e.response.status_code}"
+            )
+            raise
+        except httpx.RequestError as e:
+            logger.error(f"[AgentMemory] Failed to connect to RAG service: {e}")
             raise
 
+    @traceable(name="memory_retrieve_relevant", tags=["memory", "rag"])
     async def retrieve_relevant(
         self,
         query: str,
         agent_id: Optional[str] = None,
         insight_types: Optional[List[str]] = None,
         limit: int = 5,
+        min_confidence: float = 0.0,
     ) -> List[Insight]:
         """
-        Retrieve semantically similar insights.
+        Retrieve semantically similar insights via RAG service.
 
         Args:
             query: Semantic query for relevant insights
             agent_id: Filter by agent ID (None = cross-agent search)
             insight_types: Filter by insight types
             limit: Maximum results to return
+            min_confidence: Minimum similarity score threshold
 
         Returns:
             List of relevant insights sorted by similarity
         """
+        client = await self._get_client()
+
+        payload = {
+            "query": query,
+            "agent_id": agent_id,
+            "insight_types": insight_types,
+            "limit": limit,
+            "min_confidence": min_confidence,
+        }
+
         try:
-            # Generate query embedding
-            query_embedding = await self._get_embedding(query)
-
-            # Build filter conditions
-            filter_conditions = []
-
-            if agent_id:
-                filter_conditions.append(
-                    FieldCondition(
-                        key="agent_id",
-                        match=MatchValue(value=agent_id),
-                    )
-                )
-
-            if insight_types:
-                # Match any of the specified types
-                for insight_type in insight_types:
-                    filter_conditions.append(
-                        FieldCondition(
-                            key="insight_type",
-                            match=MatchValue(value=insight_type),
-                        )
-                    )
-
-            # Build filter
-            search_filter = None
-            if filter_conditions:
-                search_filter = Filter(must=filter_conditions)
-
-            # Search for similar insights
-            results = self.client.search(
-                collection_name=self.COLLECTION_NAME,
-                query_vector=query_embedding,
-                query_filter=search_filter,
-                limit=limit,
+            response = await client.post(
+                f"{self.rag_url}/memory/query",
+                json=payload,
             )
+            response.raise_for_status()
+            result = response.json()
 
-            # Convert to Insight objects and increment usage
             insights = []
-            for result in results:
-                insight = Insight.from_payload(result.payload, score=result.score)
-                insights.append(insight)
-
-                # Increment usage count asynchronously
-                await self._increment_usage_count(result.id)
+            for item in result.get("insights", []):
+                insight = Insight.from_payload(item, score=item.get("score", 0.0))
+                if insight.relevance_score >= min_confidence:
+                    insights.append(insight)
 
             logger.debug(
-                f"Retrieved {len(insights)} insights for query "
+                f"[AgentMemory] Retrieved {len(insights)} insights for query "
                 f"(agent: {agent_id}, types: {insight_types})"
             )
 
             return insights
 
-        except Exception as e:
-            logger.error(f"Failed to retrieve insights: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"[AgentMemory] RAG service error querying insights: {e.response.status_code}"
+            )
+            return []
+        except httpx.RequestError as e:
+            logger.error(f"[AgentMemory] Failed to connect to RAG service: {e}")
             return []
 
+    @traceable(name="memory_get_agent_history", tags=["memory", "rag"])
     async def get_agent_history(
         self,
-        agent_id: str,
+        agent_id: Optional[str] = None,
         limit: int = 20,
     ) -> List[Insight]:
         """
-        Get recent insights from a specific agent.
+        Get recent insights from a specific agent via RAG service.
 
         Args:
-            agent_id: ID of the agent
+            agent_id: ID of the agent (defaults to self.agent_id)
             limit: Maximum results to return
 
         Returns:
             List of recent insights from the agent
         """
+        client = await self._get_client()
+        target_agent = agent_id or self.agent_id
+
         try:
-            # Scroll through agent's insights (no vector search needed)
-            results, _ = self.client.scroll(
-                collection_name=self.COLLECTION_NAME,
-                scroll_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="agent_id",
-                            match=MatchValue(value=agent_id),
-                        )
-                    ]
-                ),
-                limit=limit,
-                with_payload=True,
-                with_vectors=False,
+            response = await client.get(
+                f"{self.rag_url}/memory/agent/{target_agent}",
+                params={"limit": limit},
             )
+            response.raise_for_status()
+            result = response.json()
 
-            # Convert to Insight objects and sort by timestamp
-            insights = [Insight.from_payload(r.payload) for r in results]
-            insights.sort(key=lambda x: x.timestamp, reverse=True)
+            insights = [
+                Insight.from_payload(item) for item in result.get("insights", [])
+            ]
 
-            return insights[:limit]
+            return insights
 
-        except Exception as e:
-            logger.error(f"Failed to get agent history: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"[AgentMemory] RAG service error getting history: {e.response.status_code}"
+            )
+            return []
+        except httpx.RequestError as e:
+            logger.error(f"[AgentMemory] Failed to connect to RAG service: {e}")
             return []
 
+    @traceable(name="memory_get_stats", tags=["memory", "rag"])
     async def get_stats(self) -> Dict[str, Any]:
-        """Get memory collection statistics."""
+        """Get memory collection statistics from RAG service."""
+        client = await self._get_client()
+
         try:
-            collection_info = self.client.get_collection(self.COLLECTION_NAME)
+            response = await client.get(f"{self.rag_url}/memory/stats")
+            response.raise_for_status()
+            return response.json()
 
-            # Get per-agent counts by scrolling
-            all_points, _ = self.client.scroll(
-                collection_name=self.COLLECTION_NAME,
-                limit=10000,
-                with_payload=True,
-                with_vectors=False,
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"[AgentMemory] RAG service error getting stats: {e.response.status_code}"
             )
-
-            # Aggregate stats
-            agent_counts: Dict[str, int] = {}
-            type_counts: Dict[str, int] = {}
-
-            for point in all_points:
-                agent_id = point.payload.get("agent_id", "unknown")
-                insight_type = point.payload.get("insight_type", "unknown")
-
-                agent_counts[agent_id] = agent_counts.get(agent_id, 0) + 1
-                type_counts[insight_type] = type_counts.get(insight_type, 0) + 1
-
-            return {
-                "collection": self.COLLECTION_NAME,
-                "total_insights": collection_info.points_count,
-                "per_agent": agent_counts,
-                "per_type": type_counts,
-                "vector_size": self.VECTOR_SIZE,
-                "max_per_agent": self.max_insights_per_agent,
-                "ttl_days": self.ttl_days,
-            }
-
-        except Exception as e:
-            logger.error(f"Failed to get stats: {e}")
+            return {"error": str(e)}
+        except httpx.RequestError as e:
+            logger.error(f"[AgentMemory] Failed to connect to RAG service: {e}")
             return {"error": str(e)}
 
-    async def _get_embedding(self, text: str) -> List[float]:
-        """Generate embedding for text."""
-        try:
-            # LangChain embeddings support both sync and async
-            if hasattr(self.embedding_model, "aembed_query"):
-                embedding = await self.embedding_model.aembed_query(text)
-            else:
-                embedding = self.embedding_model.embed_query(text)
-            return embedding
-        except Exception as e:
-            logger.error(f"Failed to generate embedding: {e}")
-            raise
-
-    async def _increment_usage_count(self, point_id: str) -> None:
-        """Increment usage count for an insight."""
-        try:
-            # Get current payload
-            points = self.client.retrieve(
-                collection_name=self.COLLECTION_NAME,
-                ids=[point_id],
-                with_payload=True,
-            )
-
-            if points:
-                payload = points[0].payload
-                payload["usage_count"] = payload.get("usage_count", 0) + 1
-
-                # Update payload
-                self.client.set_payload(
-                    collection_name=self.COLLECTION_NAME,
-                    payload={"usage_count": payload["usage_count"]},
-                    points=[point_id],
-                )
-        except Exception as e:
-            logger.debug(f"Failed to increment usage count: {e}")
-
-    async def _maybe_prune_agent_insights(self, agent_id: str) -> None:
-        """Prune oldest insights if agent exceeds max limit."""
-        try:
-            # Get count for this agent
-            results, _ = self.client.scroll(
-                collection_name=self.COLLECTION_NAME,
-                scroll_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="agent_id",
-                            match=MatchValue(value=agent_id),
-                        )
-                    ]
-                ),
-                limit=self.max_insights_per_agent + 100,  # Get extras to check
-                with_payload=True,
-                with_vectors=False,
-            )
-
-            if len(results) > self.max_insights_per_agent:
-                # Sort by usage count (ascending) then timestamp (oldest first)
-                results.sort(
-                    key=lambda x: (
-                        x.payload.get("usage_count", 0),
-                        x.payload.get("timestamp", ""),
-                    )
-                )
-
-                # Delete excess insights
-                excess_count = len(results) - self.max_insights_per_agent
-                to_delete = [r.id for r in results[:excess_count]]
-
-                self.client.delete(
-                    collection_name=self.COLLECTION_NAME,
-                    points_selector=to_delete,
-                )
-
-                logger.info(
-                    f"Pruned {excess_count} insights from agent {agent_id} "
-                    f"(exceeded max {self.max_insights_per_agent})"
-                )
-
-        except Exception as e:
-            logger.warning(f"Failed to prune agent insights: {e}")
-
-    async def prune_expired_insights(self) -> int:
+    @traceable(name="memory_prune_old", tags=["memory", "rag"])
+    async def prune_old_insights(self, ttl_days: int = 30) -> int:
         """
         Prune insights that haven't been used within TTL period.
-        Should be called periodically (e.g., daily cron job).
+
+        Args:
+            ttl_days: Days before unused insights are pruned
 
         Returns:
             Number of insights pruned
         """
-        try:
-            cutoff_date = datetime.utcnow() - timedelta(days=self.ttl_days)
-            cutoff_iso = cutoff_date.isoformat()
+        client = await self._get_client()
 
-            # Find expired insights with low usage
-            results, _ = self.client.scroll(
-                collection_name=self.COLLECTION_NAME,
-                scroll_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="usage_count",
-                            range=Range(lte=1),  # Rarely used
-                        )
-                    ]
-                ),
-                limit=10000,
-                with_payload=True,
-                with_vectors=False,
+        try:
+            response = await client.delete(
+                f"{self.rag_url}/memory/prune",
+                params={"ttl_days": ttl_days, "agent_id": self.agent_id},
+            )
+            response.raise_for_status()
+            result = response.json()
+
+            pruned_count = result.get("pruned_count", 0)
+            logger.info(
+                f"[AgentMemory] Pruned {pruned_count} insights (TTL: {ttl_days} days)"
             )
 
-            # Filter by timestamp
-            to_delete = []
-            for r in results:
-                timestamp_str = r.payload.get("timestamp", "")
-                if timestamp_str and timestamp_str < cutoff_iso:
-                    to_delete.append(r.id)
+            return pruned_count
 
-            if to_delete:
-                self.client.delete(
-                    collection_name=self.COLLECTION_NAME,
-                    points_selector=to_delete,
-                )
-                logger.info(
-                    f"Pruned {len(to_delete)} expired insights (TTL: {self.ttl_days} days)"
-                )
-
-            return len(to_delete)
-
-        except Exception as e:
-            logger.error(f"Failed to prune expired insights: {e}")
+        except httpx.HTTPStatusError as e:
+            logger.error(
+                f"[AgentMemory] RAG service error pruning: {e.response.status_code}"
+            )
+            return 0
+        except httpx.RequestError as e:
+            logger.error(f"[AgentMemory] Failed to connect to RAG service: {e}")
             return 0
 
+    def clear_last_insights(self) -> None:
+        """Clear the last extracted insights list (called by graph.py after collection)."""
+        self.last_extracted_insights = []
 
-# Singleton instance
-_memory_manager: Optional[AgentMemoryManager] = None
+
+# Singleton instances per agent
+_memory_managers: Dict[str, AgentMemoryManager] = {}
 
 
-def get_agent_memory_manager() -> Optional[AgentMemoryManager]:
-    """Get the singleton AgentMemoryManager instance."""
-    return _memory_manager
+def get_agent_memory_manager(agent_id: str) -> AgentMemoryManager:
+    """
+    Get or create AgentMemoryManager for a specific agent.
+
+    Args:
+        agent_id: ID of the agent
+
+    Returns:
+        AgentMemoryManager instance for the agent
+    """
+    if agent_id not in _memory_managers:
+        _memory_managers[agent_id] = AgentMemoryManager(agent_id=agent_id)
+        logger.info(f"[AgentMemory] Created memory manager for agent: {agent_id}")
+    return _memory_managers[agent_id]
 
 
 def init_agent_memory_manager(
-    qdrant_client: QdrantClient,
-    embedding_model: Any,
-    max_insights_per_agent: int = 1000,
-    ttl_days: int = 30,
+    agent_id: str,
+    rag_service_url: Optional[str] = None,
+    timeout: float = 30.0,
 ) -> AgentMemoryManager:
     """
-    Initialize the singleton AgentMemoryManager.
+    Initialize AgentMemoryManager for a specific agent.
 
     Args:
-        qdrant_client: Initialized Qdrant client
-        embedding_model: LangChain embedding model
-        max_insights_per_agent: Maximum insights per agent
-        ttl_days: TTL for unused insights
+        agent_id: ID of the agent
+        rag_service_url: Optional override for RAG service URL
+        timeout: HTTP timeout in seconds
 
     Returns:
         Initialized AgentMemoryManager
     """
-    global _memory_manager
-    _memory_manager = AgentMemoryManager(
-        qdrant_client=qdrant_client,
-        embedding_model=embedding_model,
-        max_insights_per_agent=max_insights_per_agent,
-        ttl_days=ttl_days,
+    manager = AgentMemoryManager(
+        agent_id=agent_id,
+        rag_service_url=rag_service_url,
+        timeout=timeout,
     )
-    logger.info("AgentMemoryManager initialized")
-    return _memory_manager
+    _memory_managers[agent_id] = manager
+    logger.info(f"[AgentMemory] Initialized memory manager for agent: {agent_id}")
+    return manager
+
+
+# Re-export for backward compatibility
+__all__ = [
+    "AgentMemoryManager",
+    "Insight",
+    "InsightType",
+    "get_agent_memory_manager",
+    "init_agent_memory_manager",
+]

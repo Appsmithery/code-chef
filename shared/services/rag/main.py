@@ -3,9 +3,16 @@ RAG Context Manager Service
 
 Provides context retrieval from vector database for AI agents.
 Manages embeddings, chunking, and semantic search.
+
+Issue: CHEF-198 - Updated to use shared InsightType from shared/lib/types.py
 """
 
 import asyncio
+import sys
+from pathlib import Path
+
+# Add shared/lib to path for importing shared types
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "lib"))
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -354,27 +361,39 @@ class CollectionInfo(BaseModel):
 
 # ============================================================================
 # Agent Memory Models (Cross-Agent Knowledge Sharing)
+# Issue: CHEF-198 - Using shared InsightType from shared/lib/types.py
 # ============================================================================
 
-from enum import Enum
+try:
+    from types import InsightType
+except ImportError:
+    # Fallback if running standalone
+    from enum import Enum
 
-
-class InsightType(str, Enum):
-    """Types of insights agents can capture and share"""
-
-    ARCHITECTURAL_DECISION = "architectural_decision"
-    ERROR_PATTERN = "error_pattern"
-    CODE_PATTERN = "code_pattern"
-    TASK_RESOLUTION = "task_resolution"
-    SECURITY_FINDING = "security_finding"
+    class InsightType(str, Enum):
+        ARCHITECTURAL_DECISION = "architectural_decision"
+        ERROR_PATTERN = "error_pattern"
+        CODE_PATTERN = "code_pattern"
+        TASK_RESOLUTION = "task_resolution"
+        SECURITY_FINDING = "security_finding"
 
 
 class StoreInsightRequest(BaseModel):
-    """Request to store an agent insight"""
+    """Request to store an agent insight.
+
+    Updated to match AgentMemoryManager HTTP contract (CHEF-199).
+    """
 
     agent_id: str = Field(..., description="ID of the agent storing the insight")
-    insight_type: InsightType = Field(..., description="Category of the insight")
+    insight_type: str = Field(..., description="Category of the insight")
     content: str = Field(..., description="The insight content (max 2000 chars)")
+    source_workflow_id: Optional[str] = Field(
+        None, description="Workflow that generated this insight"
+    )
+    source_task: Optional[str] = Field(
+        None, description="Task description that led to this insight"
+    )
+    # Legacy fields for backward compatibility
     context: Optional[str] = Field(
         None, description="Additional context about when/why this insight was captured"
     )
