@@ -35,6 +35,7 @@ class WorkflowAction(str, Enum):
     CHILD_WORKFLOW_COMPLETE = "child_workflow_complete"
     CREATE_SNAPSHOT = "create_snapshot"
     ANNOTATE = "annotate"
+    CAPTURE_INSIGHT = "capture_insight"  # Cross-agent knowledge sharing
 
 
 @dataclass(frozen=True)
@@ -310,6 +311,21 @@ def workflow_reducer(state: Dict[str, Any], event: WorkflowEvent) -> Dict[str, A
                 "operator": event.data.get("operator"),
                 "comment": event.data.get("comment"),
                 "event_id": event.step_id,
+                "timestamp": event.timestamp,
+            },
+        ]
+
+    elif event.action == WorkflowAction.CAPTURE_INSIGHT:
+        # Capture agent insight for cross-agent knowledge sharing
+        # Insights are persisted to agent_memory Qdrant collection
+        new_state["captured_insights"] = [
+            *new_state.get("captured_insights", []),
+            {
+                "insight_id": event.data.get("insight_id"),
+                "agent_id": event.data.get("agent_id"),
+                "insight_type": event.data.get("insight_type"),
+                "content": event.data.get("content"),
+                "step_id": event.step_id,
                 "timestamp": event.timestamp,
             },
         ]

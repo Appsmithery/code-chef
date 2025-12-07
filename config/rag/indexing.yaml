@@ -137,6 +137,28 @@ sources:
     tags: ["linear", "oauth", "authentication"]
     enabled: false
 
+  # Agent Memory Collection (Cross-Agent Knowledge Sharing)
+  # Stores insights extracted from agent executions for cross-workflow context
+  - name: "agent-memory"
+    type: "memory"
+    collection: "agent_memory"
+    enabled: true
+    vector_size: 1536  # text-embedding-3-small
+    distance: "cosine"
+    schema:
+      agent_id: keyword
+      insight_type: keyword  # architectural_decision, error_pattern, code_pattern, task_resolution, security_finding
+      content: text
+      source_workflow_id: keyword
+      source_task: text
+      timestamp: datetime
+      usage_count: integer
+      relevance_score: float
+    retention:
+      max_insights_per_agent: 1000
+      ttl_days: 30  # Prune unused insights after 30 days
+    tags: ["memory", "agent", "insights", "knowledge-sharing"]
+
 processing:
   chunk_size: 1000
   chunk_overlap: 200
