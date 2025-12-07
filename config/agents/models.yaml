@@ -9,11 +9,11 @@ provider: gradient # Default provider (gradient, claude, mistral, openai)
 memory:
   enabled: true
   collection: agent_memory
-  
+
   # Context retrieval settings
-  max_context_insights: 3    # Max insights to inject per request
-  min_confidence: 0.6        # Minimum relevance score threshold
-  
+  max_context_insights: 3 # Max insights to inject per request
+  min_confidence: 0.6 # Minimum relevance score threshold
+
   # Insight extraction settings
   extract_insights: true
   insight_types:
@@ -22,13 +22,13 @@ memory:
     - code_pattern
     - task_resolution
     - security_finding
-  
+
   # Retention policies
   retention:
-    max_age_days: 30         # TTL for insights
-    max_per_agent: 1000      # Cap per agent
-    prune_schedule: daily    # Pruning frequency
-  
+    max_age_days: 30 # TTL for insights
+    max_per_agent: 1000 # Cap per agent
+    prune_schedule: daily # Pruning frequency
+
   # Per-agent memory overrides
   agent_overrides:
     feature_dev:
@@ -44,7 +44,7 @@ memory:
       extract_insights: true
       insight_types: [error_pattern, task_resolution]
     documentation:
-      extract_insights: false  # Docs agent typically consumes, not produces insights
+      extract_insights: false # Docs agent typically consumes, not produces insights
 
 agents:
   orchestrator:

@@ -379,7 +379,8 @@ class StoreInsightRequest(BaseModel):
         None, description="Additional context about when/why this insight was captured"
     )
     resolution: Optional[str] = Field(
-        None, description="How the issue was resolved (for error_pattern/task_resolution)"
+        None,
+        description="How the issue was resolved (for error_pattern/task_resolution)",
     )
     confidence: float = Field(
         default=0.8, ge=0.0, le=1.0, description="Confidence score for the insight"
@@ -775,7 +776,9 @@ async def store_insight(request: StoreInsightRequest):
         raise
     except Exception as e:
         logger.error(f"Failed to store insight: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to store insight: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to store insight: {str(e)}"
+        )
 
 
 @app.post("/memory/query", response_model=QueryMemoryResponse)
@@ -813,9 +816,7 @@ async def query_memory(request: QueryMemoryRequest):
         if request.insight_types:
             # Should match any of the specified types
             should_type_conditions = [
-                FieldCondition(
-                    key="insight_type", match=MatchValue(value=it.value)
-                )
+                FieldCondition(key="insight_type", match=MatchValue(value=it.value))
                 for it in request.insight_types
             ]
             # Use a nested filter for OR logic on types
@@ -860,7 +861,9 @@ async def query_memory(request: QueryMemoryRequest):
                 MemoryInsight(
                     id=str(point.id),
                     agent_id=payload.get("agent_id", "unknown"),
-                    insight_type=InsightType(payload.get("insight_type", "code_pattern")),
+                    insight_type=InsightType(
+                        payload.get("insight_type", "code_pattern")
+                    ),
                     content=payload.get("content", ""),
                     context=payload.get("context"),
                     resolution=payload.get("resolution"),
@@ -957,7 +960,9 @@ async def get_agent_insights(
                 MemoryInsight(
                     id=str(point.id),
                     agent_id=payload.get("agent_id", agent_id),
-                    insight_type=InsightType(payload.get("insight_type", "code_pattern")),
+                    insight_type=InsightType(
+                        payload.get("insight_type", "code_pattern")
+                    ),
                     content=payload.get("content", ""),
                     context=payload.get("context"),
                     resolution=payload.get("resolution"),
