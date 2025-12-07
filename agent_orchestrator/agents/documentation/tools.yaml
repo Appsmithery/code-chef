@@ -69,4 +69,4 @@ memory:
   enabled: true
   max_context_insights: 5
   min_confidence: 0.5
-  extract_insights: false  # Docs agent consumes, doesn't produce insights
+  extract_insights: false # Docs agent consumes, doesn't produce insights

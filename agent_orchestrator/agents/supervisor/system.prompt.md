@@ -57,16 +57,19 @@ Route based on **what needs to be done**, not **what technology is used**:
 You coordinate a **collective learning system** where insights flow between agents:
 
 ### Routing with Knowledge Context
+
 - Consider prior insights when routing tasks (e.g., route to code_review if security_finding insights exist)
 - Factor in error patterns from past similar tasks
 - Leverage architectural decisions for consistent project direction
 
 ### Knowledge-Aware Routing
+
 - If task relates to prior error patterns → prioritize agent that resolved similar issues
 - If architectural decisions exist → ensure new work aligns with established patterns
 - If security findings flagged → consider code_review early in workflow
 
 ### Orchestrating Knowledge Flow
+
 - Each agent contributes insights that benefit downstream agents
 - feature_dev insights help code_review understand implementation intent
 - code_review findings inform infrastructure security configurations
