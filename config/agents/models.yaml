@@ -5,6 +5,47 @@
 version: "1.0"
 provider: gradient # Default provider (gradient, claude, mistral, openai)
 
+# Cross-Agent Knowledge Sharing Configuration
+memory:
+  enabled: true
+  collection: agent_memory
+  
+  # Context retrieval settings
+  max_context_insights: 3    # Max insights to inject per request
+  min_confidence: 0.6        # Minimum relevance score threshold
+  
+  # Insight extraction settings
+  extract_insights: true
+  insight_types:
+    - architectural_decision
+    - error_pattern
+    - code_pattern
+    - task_resolution
+    - security_finding
+  
+  # Retention policies
+  retention:
+    max_age_days: 30         # TTL for insights
+    max_per_agent: 1000      # Cap per agent
+    prune_schedule: daily    # Pruning frequency
+  
+  # Per-agent memory overrides
+  agent_overrides:
+    feature_dev:
+      extract_insights: true
+      insight_types: [code_pattern, error_pattern, architectural_decision]
+    code_review:
+      extract_insights: true
+      insight_types: [security_finding, code_pattern]
+    infrastructure:
+      extract_insights: true
+      insight_types: [architectural_decision, error_pattern]
+    cicd:
+      extract_insights: true
+      insight_types: [error_pattern, task_resolution]
+    documentation:
+      extract_insights: false  # Docs agent typically consumes, not produces insights
+
 agents:
   orchestrator:
     model: llama3.3-70b-instruct
