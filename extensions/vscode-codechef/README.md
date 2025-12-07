@@ -24,13 +24,10 @@ The code/chef VS Code extension brings LangGraph-powered, multi-agent workflows 
 ## Features
 
 - **`@chef` Chat Participant** - Natural language task submission via Copilot Chat
-- **Workflow Slash Commands** - `/workflow` and `/workflows` for intelligent task routing
-- **Smart Router** - Heuristic + LLM-based workflow selection with confidence scoring
-- **LangGraph Engine** - StateGraph orchestration with PostgreSQL checkpointing
-- **150+ MCP Tools** - LangChain function calling with progressive disclosure (80-90% token savings)
-- **6 Agent Nodes** - feature-dev, code-review, infrastructure, cicd, documentation + supervisor
-- **HITL Approvals** - Linear integration for human-in-the-loop high-risk operations
-- **Observability** - LangSmith tracing + Grafana metrics
+- **Smart Workflow Router** - Heuristic + LLM-based workflow selection with confidence scoring
+- **LangGraph StateGraph** - Multi-agent orchestration with PostgreSQL checkpointing
+- **150+ MCP Tools** - Progressive disclosure reduces tokens by 80-90%
+- **HITL Approvals** - Linear integration for high-risk operations
 
 ## Installation
 
