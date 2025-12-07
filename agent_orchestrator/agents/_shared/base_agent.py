@@ -22,6 +22,7 @@ from lib.progressive_mcp_loader import ProgressiveMCPLoader, ToolLoadingStrategy
 # Agent memory for cross-agent knowledge sharing
 try:
     from lib.agent_memory import AgentMemoryManager, InsightType, Insight
+
     MEMORY_ENABLED = True
 except ImportError:
     MEMORY_ENABLED = False
@@ -80,9 +81,13 @@ class BaseAgent:
                 if memory_config.get("enabled", True):
                     self.memory_manager = AgentMemoryManager(agent_id=agent_name)
                     self._memory_enabled = True
-                    logger.info(f"[{agent_name}] Agent memory enabled for cross-agent knowledge sharing")
+                    logger.info(
+                        f"[{agent_name}] Agent memory enabled for cross-agent knowledge sharing"
+                    )
             except Exception as e:
-                logger.warning(f"[{agent_name}] Agent memory initialization failed: {e}")
+                logger.warning(
+                    f"[{agent_name}] Agent memory initialization failed: {e}"
+                )
 
         # Initialize LLM with agent-specific model (without tools - bound at invoke time)
         self.llm = self._initialize_llm()
@@ -291,67 +296,69 @@ class BaseAgent:
     @traceable(name="agent_retrieve_memory", tags=["agent", "memory", "rag"])
     async def _retrieve_relevant_context(self, task_description: str) -> str:
         """Retrieve relevant insights from agent memory for context injection.
-        
+
         Queries cross-agent memory for insights relevant to the current task.
         Injects this context into the system prompt to benefit from collective learning.
-        
+
         Args:
             task_description: Natural language description of the task
-            
+
         Returns:
             Formatted context string to inject into system prompt (empty if none found)
         """
         if not self._memory_enabled or not self.memory_manager:
             return ""
-        
+
         try:
             memory_config = self.config.get("memory", {})
             max_insights = memory_config.get("max_context_insights", 3)
             min_confidence = memory_config.get("min_confidence", 0.6)
-            
+
             # Retrieve relevant insights from cross-agent memory
             insights = await self.memory_manager.retrieve_relevant(
                 query=task_description,
                 limit=max_insights,
                 min_confidence=min_confidence,
             )
-            
+
             if not insights:
                 return ""
-            
+
             # Format insights for prompt injection
             context_lines = ["\n## Relevant Insights from Prior Agent Work\n"]
             for insight in insights:
-                agent_label = insight.agent_id if insight.agent_id != self.agent_name else "self"
+                agent_label = (
+                    insight.agent_id if insight.agent_id != self.agent_name else "self"
+                )
                 context_lines.append(
                     f"- **{insight.insight_type}** (from {agent_label}, "
                     f"confidence: {insight.relevance_score:.2f}):\n  {insight.content[:300]}"
                 )
-            
+
             logger.info(
                 f"[{self.agent_name}] Injected {len(insights)} insights into context"
             )
             return "\n".join(context_lines)
-            
+
         except Exception as e:
             logger.warning(f"[{self.agent_name}] Memory retrieval failed: {e}")
             return ""
 
     @traceable(name="agent_extract_insight", tags=["agent", "memory", "extraction"])
     async def _extract_and_store_insights(
-        self, 
-        task_description: str, 
+        self,
+        task_description: str,
         response: BaseMessage,
-        workflow_id: Optional[str] = None
+        workflow_id: Optional[str] = None,
     ) -> None:
         """Extract actionable insights from agent response and store in memory.
-        
+
         Uses pattern detection to identify insights worth sharing:
         - Architectural decisions (design choices, patterns used)
         - Error patterns (how issues were diagnosed/resolved)
         - Code patterns (reusable implementations)
         - Security findings (vulnerabilities, mitigations)
-        
+
         Args:
             task_description: Original task description
             response: Agent's response message
@@ -359,18 +366,22 @@ class BaseAgent:
         """
         if not self._memory_enabled or not self.memory_manager:
             return
-        
+
         try:
             memory_config = self.config.get("memory", {})
             if not memory_config.get("extract_insights", True):
                 return
-            
-            response_content = response.content if hasattr(response, 'content') else str(response)
-            
+
+            response_content = (
+                response.content if hasattr(response, "content") else str(response)
+            )
+
             # Simple pattern-based insight detection
             # In production, this could use an LLM for more sophisticated extraction
-            insights_to_store = self._detect_insights(task_description, response_content)
-            
+            insights_to_store = self._detect_insights(
+                task_description, response_content
+            )
+
             for insight_type, content in insights_to_store:
                 await self.memory_manager.store_insight(
                     insight_type=insight_type,
@@ -380,80 +391,108 @@ class BaseAgent:
                     metadata={
                         "agent_name": self.agent_name,
                         "response_length": len(response_content),
-                    }
+                    },
                 )
-                
+
             if insights_to_store:
                 logger.info(
                     f"[{self.agent_name}] Stored {len(insights_to_store)} insights to memory"
                 )
-                
+
         except Exception as e:
             logger.warning(f"[{self.agent_name}] Insight extraction failed: {e}")
 
     def _detect_insights(
-        self, 
-        task_description: str, 
-        response_content: str
+        self, task_description: str, response_content: str
     ) -> List[tuple]:
         """Detect extractable insights from response using pattern matching.
-        
+
         This is a lightweight heuristic approach. For production, consider:
         - LLM-based extraction with structured output
         - Confidence scoring based on response quality
         - Deduplication against existing insights
-        
+
         Args:
             task_description: Original task description
             response_content: Agent's response text
-            
+
         Returns:
             List of (InsightType, content) tuples
         """
         insights = []
         response_lower = response_content.lower()
-        
+
         # Only extract insights from substantive responses
         if len(response_content) < 100:
             return insights
-        
+
         # Detect error patterns
-        error_keywords = ["fixed", "resolved", "bug", "error", "exception", "traceback", "debugging"]
+        error_keywords = [
+            "fixed",
+            "resolved",
+            "bug",
+            "error",
+            "exception",
+            "traceback",
+            "debugging",
+        ]
         if any(kw in response_lower for kw in error_keywords):
             # Extract the resolution paragraph
             for para in response_content.split("\n\n"):
-                if any(kw in para.lower() for kw in ["fix", "solution", "resolved", "the issue"]):
+                if any(
+                    kw in para.lower()
+                    for kw in ["fix", "solution", "resolved", "the issue"]
+                ):
                     insights.append((InsightType.ERROR_PATTERN, para[:500]))
                     break
-        
+
         # Detect architectural decisions
-        arch_keywords = ["architecture", "design pattern", "structure", "approach", "decision"]
+        arch_keywords = [
+            "architecture",
+            "design pattern",
+            "structure",
+            "approach",
+            "decision",
+        ]
         if any(kw in response_lower for kw in arch_keywords):
             for para in response_content.split("\n\n"):
-                if any(kw in para.lower() for kw in ["chose", "decided", "approach", "pattern", "structure"]):
+                if any(
+                    kw in para.lower()
+                    for kw in ["chose", "decided", "approach", "pattern", "structure"]
+                ):
                     insights.append((InsightType.ARCHITECTURAL_DECISION, para[:500]))
                     break
-        
+
         # Detect security findings
-        security_keywords = ["security", "vulnerability", "authentication", "authorization", "injection", "xss"]
+        security_keywords = [
+            "security",
+            "vulnerability",
+            "authentication",
+            "authorization",
+            "injection",
+            "xss",
+        ]
         if any(kw in response_lower for kw in security_keywords):
             for para in response_content.split("\n\n"):
                 if any(kw in para.lower() for kw in security_keywords):
                     insights.append((InsightType.SECURITY_FINDING, para[:500]))
                     break
-        
+
         # Detect code patterns (only for feature_dev and code_review agents)
         if self.agent_name in ["feature_dev", "code_review"]:
             code_keywords = ["implementation", "function", "class", "method", "pattern"]
-            if any(kw in response_lower for kw in code_keywords) and "```" in response_content:
+            if (
+                any(kw in response_lower for kw in code_keywords)
+                and "```" in response_content
+            ):
                 # Extract code block context
                 code_start = response_content.find("```")
                 code_end = response_content.find("```", code_start + 3)
                 if code_end > code_start:
-                    code_block = response_content[code_start:code_end + 3]
+                    code_block = response_content[code_start : code_end + 3]
                     if len(code_block) > 50:
                         insights.append((InsightType.CODE_PATTERN, code_block[:800]))
-        
+
         return insights
 
     @traceable(name="agent_invoke", tags=["agent", "subagent"])
@@ -514,7 +553,7 @@ class BaseAgent:
         workflow_id = None
         if config and config.get("configurable"):
             workflow_id = config["configurable"].get("thread_id")
-        
+
         await self._extract_and_store_insights(task_description, response, workflow_id)
 
         return response

@@ -143,11 +143,11 @@ sources:
     type: "memory"
     collection: "agent_memory"
     enabled: true
-    vector_size: 1536  # text-embedding-3-small
+    vector_size: 1536 # text-embedding-3-small
     distance: "cosine"
     schema:
       agent_id: keyword
-      insight_type: keyword  # architectural_decision, error_pattern, code_pattern, task_resolution, security_finding
+      insight_type: keyword # architectural_decision, error_pattern, code_pattern, task_resolution, security_finding
       content: text
       source_workflow_id: keyword
       source_task: text
@@ -156,7 +156,7 @@ sources:
       relevance_score: float
     retention:
       max_insights_per_agent: 1000
-      ttl_days: 30  # Prune unused insights after 30 days
+      ttl_days: 30 # Prune unused insights after 30 days
     tags: ["memory", "agent", "insights", "knowledge-sharing"]
 
 processing:
