@@ -1,17 +1,20 @@
 """
-Progressive MCP Tool Disclosure for Orchestrator Agent
+"""Progressive MCP Tool Disclosure for Orchestrator Agent
 
 Implements lazy loading of MCP tools based on task requirements to reduce
 LLM context size and token costs. Only exposes relevant tools per task.
 
 Based on Anthropic's progressive disclosure pattern:
 https://www.anthropic.com/engineering/code-execution-with-mcp
+
+Issue: CHEF-200 - Added @traceable decorators for LangSmith visibility.
 """
 
 import logging
 from typing import Dict, List, Any, Optional, Set
 from dataclasses import dataclass
 from enum import Enum
+from langsmith import traceable
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +130,7 @@ class ProgressiveMCPLoader:
             "time",  # Timestamps
         ]
 
+    @traceable(name="mcp_get_tools_for_task", tags=["mcp", "tools"])
     def get_tools_for_task(
         self,
         task_description: str,
@@ -161,6 +165,7 @@ class ProgressiveMCPLoader:
         else:
             raise ValueError(f"Unknown loading strategy: {strategy}")
 
+    @traceable(name="mcp_get_minimal_tools", tags=["mcp", "tools"])
     def _get_minimal_tools(self, task_description: str) -> List[ToolSet]:
         """
         Get minimal tool set based on task keywords.
@@ -207,6 +212,7 @@ class ProgressiveMCPLoader:
         )
         return toolsets
 
+    @traceable(name="mcp_get_agent_profile_tools", tags=["mcp", "tools"])
     def _get_agent_profile_tools(self, agent_name: Optional[str]) -> List[ToolSet]:
         """
         Get tools from agent's profile (recommended + shared).
@@ -258,6 +264,7 @@ class ProgressiveMCPLoader:
         )
         return toolsets
 
+    @traceable(name="mcp_get_progressive_tools", tags=["mcp", "tools"])
     def _get_progressive_tools(
         self, task_description: str, assigned_agent: Optional[str]
     ) -> List[ToolSet]:
@@ -285,6 +292,7 @@ class ProgressiveMCPLoader:
         )
         return toolsets
 
+    @traceable(name="mcp_get_all_tools", tags=["mcp", "tools"])
     def _get_all_tools(self) -> List[ToolSet]:
         """
         Get all 150+ MCP tools (legacy behavior).

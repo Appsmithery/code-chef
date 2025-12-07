@@ -470,6 +470,9 @@ async def resume_approved_workflow(task_id: str):
     """
     Resume workflow after approval.
     Called when operator approves a pending request.
+
+    CHEF-207: On resume, captured_insights from checkpoint are injected
+    as context for the next agent to ensure knowledge continuity.
     """
     # Get original task from registry
     original_task = task_registry.get(task_id)
@@ -484,10 +487,22 @@ async def resume_approved_workflow(task_id: str):
     status = await hitl_manager.check_approval_status(approval_request_id)
 
     if status["status"] == "approved":
-        # Resume normal orchestration
+        # Resume normal orchestration with insight injection
         logger.info(f"Resuming approved task {task_id}")
+
+        # CHEF-207: Load captured_insights from checkpoint for context injection
+        config = {"configurable": {"thread_id": task_id}}
+        checkpoint_state = await workflow_app.aget_state(config)
+        captured_insights = checkpoint_state.values.get("captured_insights", [])
+
+        # Format insights as memory_context
+        memory_context = ""
+        if captured_insights:
+            summaries = [f"[{i['agent_id']}] {i['content'][:100]}" for i in captured_insights[-10:]]
+            memory_context = "Prior Insights:\n" + "\n".join(summaries)
+
         # ... proceed with decomposition and routing ...
-        return {"status": "resumed", "task_id": task_id}
+        return {"status": "resumed", "task_id": task_id, "insights_injected": len(captured_insights)}
 
     elif status["status"] == "rejected":
         raise HTTPException(

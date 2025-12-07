@@ -1,7 +1,7 @@
 # MCP Integration Guide
 
-**Version:** 1.0.0
-**Last Updated:** 2025-11-13
+**Version:** 1.1.0
+**Last Updated:** 2025-12-07
 **Purpose:** Document MCP Gateway architecture, tool-to-agent mappings, and integration patterns
 
 ---
@@ -162,6 +162,49 @@ agent_tool_mappings:
 - `hugging-face/explain_code` - Generate docstrings
 - `notion/*` - Publish to wiki/knowledge base
 - `playwright/screenshot` - Capture UI states for docs
+
+---
+
+## 🧠 Memory MCP Tools (CHEF-203)
+
+Cross-agent knowledge sharing via RAG service integration.
+
+### Available Memory Tools
+
+| Tool                | Path                                 | Description                            |
+| ------------------- | ------------------------------------ | -------------------------------------- |
+| `query_insights`    | `POST /rag/insights/query`           | Retrieve relevant insights for context |
+| `store_insight`     | `POST /rag/insights/store`           | Store new insight from agent execution |
+| `get_agent_history` | `GET /rag/insights/agent/{agent_id}` | Get insight history for specific agent |
+
+### Tool Configuration
+
+```yaml
+memory_tools:
+  description: "Cross-agent knowledge sharing via RAG service"
+  rag_service_url: "http://rag-context:8007"
+  tools:
+    - name: query_insights
+      path: "/rag/insights/query"
+      method: POST
+      priority_agents: ["supervisor", "feature_dev", "code_review"]
+      keywords: ["insights", "knowledge", "context", "memory", "recall"]
+```
+
+### Insight Types
+
+```python
+class InsightType(str, Enum):
+    ARCHITECTURAL_DECISION = "architectural_decision"
+    ERROR_PATTERN = "error_pattern"
+    CODE_PATTERN = "code_pattern"
+    TASK_RESOLUTION = "task_resolution"
+    SECURITY_FINDING = "security_finding"
+```
+
+### Integration with Workflow State
+
+Insights are captured during agent execution and persisted in `WorkflowState.captured_insights` for checkpoint recovery. On workflow resume, the last 10 insights are injected as context.
 
 ---
 

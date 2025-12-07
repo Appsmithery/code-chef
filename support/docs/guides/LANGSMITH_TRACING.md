@@ -98,6 +98,38 @@ Trace: "Process feature request"
 └─ END
 ```
 
+## @traceable Decorator Coverage
+
+The following modules have explicit `@traceable` instrumentation for fine-grained observability:
+
+### Core Modules
+
+| Module                      | Decorators | Tags                         |
+| --------------------------- | ---------- | ---------------------------- |
+| `hitl_manager.py`           | 7          | `hitl`, `approval`, `linear` |
+| `progressive_mcp_loader.py` | 5          | `mcp`, `tools`, `loading`    |
+| `agent_memory.py`           | 5          | `memory`, `rag`, `insights`  |
+
+### Workflow Files
+
+| Module               | Decorators | Tags                                         |
+| -------------------- | ---------- | -------------------------------------------- |
+| `parallel_docs.py`   | 4          | `workflow`, `documentation`, `parallel`      |
+| `pr_deployment.py`   | 4          | `workflow`, `pr`, `code-review`, `hitl`      |
+| `self_healing.py`    | 4          | `workflow`, `self-healing`, `infrastructure` |
+| `workflow_engine.py` | 5+         | `workflow`, `hitl`, `approval`               |
+
+### Adding Custom Traces
+
+```python
+from langsmith import traceable
+
+@traceable(name="my_custom_operation", tags=["custom", "agent"])
+async def my_operation(input: str) -> str:
+    # Your code here
+    return result
+```
+
 ## Debugging
 
 ### Check if tracing is enabled

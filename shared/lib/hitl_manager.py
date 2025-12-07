@@ -1,6 +1,8 @@
 """
-Human-in-the-Loop (HITL) Manager for autonomous workflow approval.
+"""Human-in-the-Loop (HITL) Manager for autonomous workflow approval.
 Coordinates approval requests, policy enforcement, and state persistence.
+
+Issue: CHEF-200 - Added @traceable decorators for LangSmith visibility.
 """
 import asyncio
 from typing import Dict, Optional, List, Literal
@@ -11,6 +13,7 @@ import os
 import logging
 import json
 import psycopg
+from langsmith import traceable
 
 from .risk_assessor import get_risk_assessor, RiskLevel
 from .checkpoint_connection import get_async_connection
@@ -68,6 +71,7 @@ class HITLManager:
         """Get async database connection context manager"""
         return get_async_connection()
     
+    @traceable(name="hitl_create_approval_request", tags=["hitl", "approval"])
     async def create_approval_request(
         self,
         workflow_id: str,
@@ -148,6 +152,7 @@ class HITLManager:
         
         return request_id
     
+    @traceable(name="hitl_check_approval_status", tags=["hitl", "approval"])
     async def check_approval_status(self, request_id: str) -> Dict:
         """
         Check status of approval request.
@@ -198,6 +203,7 @@ class HITLManager:
             "expired": expired
         }
     
+    @traceable(name="hitl_approve_request", tags=["hitl", "approval"])
     async def approve_request(
         self,
         request_id: str,
@@ -270,6 +276,7 @@ class HITLManager:
         logger.info(f"[HITLManager] Request {request_id} approved by {approver_id}")
         return True
     
+    @traceable(name="hitl_reject_request", tags=["hitl", "approval"])
     async def reject_request(
         self,
         request_id: str,
@@ -309,6 +316,7 @@ class HITLManager:
         logger.info(f"[HITLManager] Request {request_id} rejected by {approver_id} ({approver_role}): {reason}")
         return True
     
+    @traceable(name="hitl_list_pending_requests", tags=["hitl", "approval"])
     async def list_pending_requests(
         self,
         approver_role: Optional[str] = None,
@@ -397,6 +405,7 @@ class HITLManager:
                 )
                 await conn.commit()
     
+    @traceable(name="hitl_send_notifications", tags=["hitl", "notification"])
     async def _send_notifications(self, request_id: str, risk_level: RiskLevel, task: Dict):
         """Send notifications about approval request (placeholder)"""
         channels = self.risk_assessor.get_notification_channels(risk_level)

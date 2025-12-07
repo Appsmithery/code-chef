@@ -16,7 +16,7 @@ import hashlib
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import TypedDict, List, Literal, Annotated, Dict, Any
+from typing import TypedDict, List, Literal, Annotated, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.types import interrupt
@@ -46,6 +46,10 @@ class WorkflowState(TypedDict):
         workflow_id: Unique workflow identifier for checkpointing
         thread_id: LangGraph thread ID for state persistence
         pending_operation: Description of operation requiring approval
+
+    Cross-Agent Memory Fields (CHEF-206):
+        captured_insights: Insights extracted during workflow, persisted in checkpoint
+        memory_context: Retrieved context at checkpoint time for injection on resume
     """
 
     messages: Annotated[List[BaseMessage], "append"]  # Append-only message history
@@ -57,6 +61,9 @@ class WorkflowState(TypedDict):
     workflow_id: str
     thread_id: str
     pending_operation: str
+    # Cross-agent memory fields (JSON-serializable for PostgresSaver)
+    captured_insights: List[Dict[str, Any]]  # Insights from agents during workflow
+    memory_context: Optional[str]  # Retrieved context on resume
 
 
 # Agent cache with bound LLM instances
@@ -85,6 +92,50 @@ def get_agent(agent_name: str):
             raise
 
     return _agent_cache[agent_name]
+
+
+def _collect_agent_insights(
+    agent, state: WorkflowState, agent_name: str
+) -> List[Dict[str, Any]]:
+    """Collect insights from agent's last execution and add to workflow state.
+
+    CHEF-208: Implements insight persistence to checkpoint state.
+
+    Args:
+        agent: BaseAgent instance with potential last_extracted_insights
+        state: Current workflow state
+        agent_name: Name of the agent for labeling
+
+    Returns:
+        Updated captured_insights list
+    """
+    new_insights = list(state.get("captured_insights") or [])
+
+    # Check if agent has memory manager with insights
+    if hasattr(agent, "memory_manager") and agent.memory_manager:
+        memory_mgr = agent.memory_manager
+        if (
+            hasattr(memory_mgr, "last_extracted_insights")
+            and memory_mgr.last_extracted_insights
+        ):
+            for insight in memory_mgr.last_extracted_insights:
+                new_insights.append(
+                    {
+                        "agent_id": agent_name,
+                        "insight_type": insight.get("type"),
+                        "content": insight.get("content", "")[:500],
+                        "confidence": insight.get("confidence", 0.8),
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "workflow_id": state.get("workflow_id"),
+                    }
+                )
+            # Clear after collection
+            memory_mgr.clear_last_insights()
+            logger.debug(
+                f"[LangGraph] Collected {len(memory_mgr.last_extracted_insights)} insights from {agent_name}"
+            )
+
+    return new_insights
 
 
 # Define agent nodes
@@ -166,6 +217,8 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     - Code implementation
     - Refactoring
     - Bug fixes
+
+    CHEF-208: Captures insights to state for checkpoint persistence.
     """
     agent = get_agent("feature-dev")
 
@@ -178,6 +231,9 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
             f"[LangGraph] feature-dev completed. Response length: {len(result_content)}"
         )
 
+        # Collect insights for checkpoint persistence (CHEF-208)
+        captured_insights = _collect_agent_insights(agent, state, "feature-dev")
+
         return {
             "messages": [response],
             "current_agent": "feature-dev",
@@ -187,6 +243,7 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
                 "completed": True,
                 "output_length": len(result_content),
             },
+            "captured_insights": captured_insights,
         }
     except Exception as e:
         logger.error(f"[LangGraph] feature-dev failed: {e}")
@@ -210,6 +267,8 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
     - OWASP Top 10 security analysis
     - Code quality checks
     - Best practices validation
+
+    CHEF-208: Captures insights to state for checkpoint persistence.
     """
     agent = get_agent("code-review")
 
@@ -222,6 +281,9 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
             f"[LangGraph] code-review completed. Response length: {len(result_content)}"
         )
 
+        # Collect insights for checkpoint persistence (CHEF-208)
+        captured_insights = _collect_agent_insights(agent, state, "code-review")
+
         return {
             "messages": [response],
             "current_agent": "code-review",
@@ -231,6 +293,7 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
                 "completed": True,
                 "output_length": len(result_content),
             },
+            "captured_insights": captured_insights,
         }
     except Exception as e:
         logger.error(f"[LangGraph] code-review failed: {e}")
@@ -254,6 +317,8 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     - Terraform/IaC changes
     - Docker/Compose configurations
     - Cloud resource management
+
+    CHEF-208: Captures insights to state for checkpoint persistence.
     """
     agent = get_agent("infrastructure")
 
@@ -266,6 +331,9 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
             f"[LangGraph] infrastructure completed. Response length: {len(result_content)}"
         )
 
+        # Collect insights for checkpoint persistence (CHEF-208)
+        captured_insights = _collect_agent_insights(agent, state, "infrastructure")
+
         return {
             "messages": [response],
             "current_agent": "infrastructure",
@@ -275,6 +343,7 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
                 "completed": True,
                 "output_length": len(result_content),
             },
+            "captured_insights": captured_insights,
         }
     except Exception as e:
         logger.error(f"[LangGraph] infrastructure failed: {e}")
@@ -298,6 +367,8 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
     - GitHub Actions workflows
     - Deployment pipelines
     - CI configuration
+
+    CHEF-208: Captures insights to state for checkpoint persistence.
     """
     agent = get_agent("cicd")
 
@@ -310,6 +381,9 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
             f"[LangGraph] cicd completed. Response length: {len(result_content)}"
         )
 
+        # Collect insights for checkpoint persistence (CHEF-208)
+        captured_insights = _collect_agent_insights(agent, state, "cicd")
+
         return {
             "messages": [response],
             "current_agent": "cicd",
@@ -319,6 +393,7 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
                 "completed": True,
                 "output_length": len(result_content),
             },
+            "captured_insights": captured_insights,
         }
     except Exception as e:
         logger.error(f"[LangGraph] cicd failed: {e}")
@@ -338,6 +413,8 @@ async def documentation_node(state: WorkflowState) -> WorkflowState:
     - API documentation
     - README generation
     - JSDoc/docstrings
+
+    CHEF-208: Captures insights to state for checkpoint persistence.
     """
     agent = get_agent("documentation")
 
@@ -350,6 +427,9 @@ async def documentation_node(state: WorkflowState) -> WorkflowState:
             f"[LangGraph] documentation completed. Response length: {len(result_content)}"
         )
 
+        # Collect insights for checkpoint persistence (CHEF-208)
+        captured_insights = _collect_agent_insights(agent, state, "documentation")
+
         return {
             "messages": [response],
             "current_agent": "documentation",
@@ -359,6 +439,7 @@ async def documentation_node(state: WorkflowState) -> WorkflowState:
                 "completed": True,
                 "output_length": len(result_content),
             },
+            "captured_insights": captured_insights,
         }
     except Exception as e:
         logger.error(f"[LangGraph] documentation failed: {e}")

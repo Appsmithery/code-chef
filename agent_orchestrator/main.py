@@ -3211,6 +3211,8 @@ async def resume_langgraph_workflow(
     Args:
         thread_id: LangGraph thread ID from checkpoint
         approval_decision: "approved" or "rejected"
+
+    CHEF-207: On resume, injects captured_insights from checkpoint state as context.
     """
     from graph import app as workflow_app, WorkflowState
     from lib.langgraph_base import get_postgres_checkpointer
@@ -3238,16 +3240,42 @@ async def resume_langgraph_workflow(
                 "message": "Workflow terminated due to rejected approval",
             }
 
+        # CHEF-207: Extract captured_insights from checkpoint for context injection
+        # Get current state to read insights persisted at pause time
+        checkpoint_state = await workflow_app.aget_state(config)
+        captured_insights = []
+        memory_context = ""
+
+        if checkpoint_state and checkpoint_state.values:
+            captured_insights = checkpoint_state.values.get("captured_insights", [])
+
+            # Format insights as context for the resuming agent
+            if captured_insights:
+                insight_summaries = []
+                for insight in captured_insights[-10:]:  # Last 10 insights
+                    agent = insight.get("agent_id", "unknown")
+                    itype = insight.get("insight_type", "general")
+                    content = insight.get("content", "")[:200]  # Truncate for context
+                    insight_summaries.append(f"- [{agent}] {itype}: {content}")
+
+                memory_context = "\n\n## Prior Insights from Workflow:\n" + "\n".join(
+                    insight_summaries
+                )
+                logger.info(
+                    f"[LangGraph Resume] Injecting {len(captured_insights)} insights from checkpoint"
+                )
+
         # Resume workflow execution from checkpoint
-        # Pass the approval result as a message to continue
+        # Pass the approval result as a message to continue, with insight context
         from langchain_core.messages import HumanMessage
 
-        resume_message = HumanMessage(
-            content=f"HITL approval granted. Continuing workflow execution."
+        resume_content = (
+            f"HITL approval granted. Continuing workflow execution.{memory_context}"
         )
+        resume_message = HumanMessage(content=resume_content)
 
         final_state = await workflow_app.ainvoke(
-            {"messages": [resume_message]},
+            {"messages": [resume_message], "memory_context": memory_context},
             config=config,
         )
 
@@ -3317,18 +3345,49 @@ async def resume_workflow_from_approval(
 
                 logger.info(f"[HITL] Approval {approval_request_id} -> {action}")
 
-                # Resume the workflow
+                # Resume the workflow with insight injection (CHEF-207)
                 if thread_id:
                     from graph import app as workflow_app
                     from langchain_core.messages import HumanMessage
 
                     config = {"configurable": {"thread_id": thread_id}}
-                    resume_message = HumanMessage(
-                        content=f"HITL approval {action}. Resuming workflow."
+
+                    # CHEF-207: Extract captured_insights from checkpoint for context injection
+                    memory_context = ""
+                    try:
+                        checkpoint_state = await workflow_app.aget_state(config)
+                        if checkpoint_state and checkpoint_state.values:
+                            captured_insights = checkpoint_state.values.get(
+                                "captured_insights", []
+                            )
+                            if captured_insights:
+                                insight_summaries = []
+                                for insight in captured_insights[-10:]:
+                                    agent = insight.get("agent_id", "unknown")
+                                    itype = insight.get("insight_type", "general")
+                                    content = insight.get("content", "")[:200]
+                                    insight_summaries.append(
+                                        f"- [{agent}] {itype}: {content}"
+                                    )
+                                memory_context = "\n\nPrior Insights:\n" + "\n".join(
+                                    insight_summaries
+                                )
+                                logger.info(
+                                    f"[HITL] Injecting {len(captured_insights)} insights on resume"
+                                )
+                    except Exception as insight_err:
+                        logger.warning(f"[HITL] Could not load insights: {insight_err}")
+
+                    resume_content = (
+                        f"HITL approval {action}. Resuming workflow.{memory_context}"
                     )
+                    resume_message = HumanMessage(content=resume_content)
 
                     final_state = await workflow_app.ainvoke(
-                        {"messages": [resume_message]},
+                        {
+                            "messages": [resume_message],
+                            "memory_context": memory_context,
+                        },
                         config=config,
                     )
 
