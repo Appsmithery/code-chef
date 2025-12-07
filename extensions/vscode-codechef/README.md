@@ -13,10 +13,13 @@ The code/chef VS Code extension brings LangGraph-powered, multi-agent workflows 
 
 | Component             | Description                                                   |
 | --------------------- | ------------------------------------------------------------- |
-| **VS Code Extension** | `@chef` chat participant in Copilot Chat                      |
+| **Chat Participant**  | `@chef` chat participant in Copilot Chat                      |
 | **Orchestrator API**  | Supervisor (Head Chef) + Workflow Router                      |
 | **Agent Nodes**       | feature-dev, code-review, infrastructure, cicd, documentation |
 | **MCP Tools**         | 150+ tools (Linear, GitHub, Docker, Pylance...)               |
+| **RAG Context**       | Semantic search via Qdrant for code patterns & library docs   |
+| **State Persistence** | PostgreSQL for workflow state, checkpoints, HITL approvals    |
+| **StateGraph**        | LangGraph orchestration with interrupt/resume for HITL        |
 
 ## Features
 
