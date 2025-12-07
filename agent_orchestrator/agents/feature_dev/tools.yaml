@@ -48,3 +48,14 @@ tools:
 langsmith:
   project: code-chef-feature-dev
   tags: [feature-development, code-generation, polyglot]
+
+# Cross-agent knowledge sharing configuration
+memory:
+  enabled: true
+  max_context_insights: 3
+  min_confidence: 0.6
+  extract_insights: true
+  insight_types:
+    - code_pattern
+    - error_pattern
+    - architectural_decision
