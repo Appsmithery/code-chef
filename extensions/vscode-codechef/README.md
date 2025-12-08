@@ -200,7 +200,7 @@ MIT License - see [LICENSE](LICENSE)
 
 ## Links
 
-- [GitHub Repository](https://github.com/Appsmithery/Dev-Tools)
-- [Linear Project](https://linear.app/dev-ops/project/ai-devops-agent-platform-78b3b839d36b)
+- [GitHub Repository](https://github.com/Appsmithery/code-chef)
+- [Linear Project](https://linear.app/dev-ops/project/codechef-78b3b839d36b)
 - [LangSmith Traces](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)
 - [Grafana Metrics](https://appsmithery.grafana.net)
