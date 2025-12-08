@@ -69,8 +69,10 @@ export class MCPBridgeClient {
     private config: Required<MCPBridgeClientConfig>;
 
     constructor(config: MCPBridgeClientConfig = {}) {
+        // CHEF-118: Use orchestrator endpoint for tool discovery (port 8001)
+        // The gateway (8000) handles Linear OAuth; orchestrator handles MCP tools
         this.config = {
-            gatewayUrl: config.gatewayUrl || 'http://45.55.173.72:8000',
+            gatewayUrl: config.gatewayUrl || 'http://45.55.173.72:8001',
             timeout: config.timeout || 30000,
             enableCaching: config.enableCaching ?? true,
             cacheTTL: config.cacheTTL || 300000, // 5 minutes

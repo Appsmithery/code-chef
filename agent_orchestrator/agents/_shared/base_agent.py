@@ -1,4 +1,24 @@
-"""Base agent class for LangGraph agent nodes."""
+"""Base agent class for LangGraph agent nodes.
+
+Provides:
+1. LLM initialization with agent-specific configuration
+2. Progressive tool loading for token-efficient tool binding
+3. Cross-agent memory for knowledge sharing
+4. **Inter-agent communication via EventBus** (Phase 6 - CHEF-110)
+
+Inter-Agent Communication:
+    Agents can request work from other agents using the EventBus pub/sub pattern:
+    
+    # Request help from code-review agent
+    response = await self.request_agent(
+        target_agent="code-review",
+        request_type=AgentRequestType.REVIEW_CODE,
+        payload={"file_path": "main.py"}
+    )
+    
+    # Broadcast status to all agents
+    await self.broadcast_status("task_completed", {"task_id": "123"})
+"""
 
 import os
 import sys
@@ -18,6 +38,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 from lib.mcp_client import MCPClient
 from lib.gradient_client import get_gradient_client
 from lib.progressive_mcp_loader import ProgressiveMCPLoader, ToolLoadingStrategy
+
+# Inter-agent communication (Phase 6 - CHEF-110)
+from lib.event_bus import EventBus, Event
+from lib.agent_events import (
+    AgentRequestEvent,
+    AgentResponseEvent,
+    AgentRequestType,
+    AgentResponseStatus,
+    AgentRequestPriority,
+    AgentBroadcastEvent,
+)
 
 # Agent memory for cross-agent knowledge sharing
 try:
@@ -97,6 +128,10 @@ class BaseAgent:
 
         # Legacy: agent_executor points to base LLM (tools bound dynamically)
         self.agent_executor = self.llm
+
+        # Inter-agent communication via EventBus (Phase 6 - CHEF-110)
+        self._event_bus: Optional[EventBus] = None
+        self._event_bus_connected = False
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load agent configuration from YAML file.
@@ -557,6 +592,238 @@ class BaseAgent:
         await self._extract_and_store_insights(task_description, response, workflow_id)
 
         return response
+
+    # =========================================================================
+    # INTER-AGENT COMMUNICATION (Phase 6 - CHEF-110)
+    # =========================================================================
+
+    async def _get_event_bus(self) -> EventBus:
+        """Get or initialize the EventBus singleton.
+
+        Lazily connects to EventBus on first use to avoid issues with
+        async initialization during class instantiation.
+
+        Returns:
+            Connected EventBus instance
+        """
+        if self._event_bus is None:
+            self._event_bus = EventBus.get_instance()
+
+        if not self._event_bus_connected:
+            try:
+                await self._event_bus.connect()
+                self._event_bus_connected = True
+                logger.debug(f"[{self.agent_name}] Connected to EventBus")
+            except Exception as e:
+                logger.warning(f"[{self.agent_name}] EventBus connection failed: {e}")
+
+        return self._event_bus
+
+    @traceable(name="agent_request_agent", tags=["agent", "inter-agent", "request"])
+    async def request_agent(
+        self,
+        target_agent: str,
+        request_type: AgentRequestType,
+        payload: Dict[str, Any],
+        priority: AgentRequestPriority = AgentRequestPriority.NORMAL,
+        timeout: float = 30.0,
+        correlation_id: Optional[str] = None,
+    ) -> AgentResponseEvent:
+        """Request work from another agent via EventBus.
+
+        Implements agent-to-agent communication for Phase 6 multi-agent workflows.
+        The request is routed through EventBus pub/sub, with optional Redis
+        for cross-process communication.
+
+        Args:
+            target_agent: Name of the agent to request (e.g., "code-review")
+            request_type: Type of request from AgentRequestType enum
+            payload: Request-specific data (file paths, code, context)
+            priority: Request priority level (affects queue ordering)
+            timeout: Maximum seconds to wait for response
+            correlation_id: Optional ID for grouping related requests
+
+        Returns:
+            AgentResponseEvent with result or error
+
+        Example:
+            # Request code review from code-review agent
+            response = await self.request_agent(
+                target_agent="code-review",
+                request_type=AgentRequestType.REVIEW_CODE,
+                payload={"file_path": "main.py", "changes": diff_content}
+            )
+
+            if response.status == AgentResponseStatus.SUCCESS:
+                review_comments = response.result["comments"]
+            else:
+                logger.error(f"Review failed: {response.error}")
+        """
+        event_bus = await self._get_event_bus()
+
+        # Create request event
+        request = AgentRequestEvent(
+            source_agent=self.agent_name,
+            target_agent=target_agent,
+            request_type=request_type,
+            payload=payload,
+            priority=priority,
+            timeout_seconds=timeout,
+            correlation_id=correlation_id,
+            metadata={
+                "source_model": self.config.get("agent", {}).get("model", "unknown"),
+            },
+        )
+
+        logger.info(
+            f"[{self.agent_name}] Requesting {request_type.value} from {target_agent} "
+            f"(request_id: {request.request_id})"
+        )
+
+        # Send request and await response
+        response = await event_bus.request_agent(request, timeout=timeout)
+
+        logger.info(
+            f"[{self.agent_name}] Received response from {response.source_agent} "
+            f"(status: {response.status.value}, time: {response.processing_time_ms}ms)"
+        )
+
+        return response
+
+    @traceable(name="agent_respond_to_request", tags=["agent", "inter-agent", "response"])
+    async def respond_to_request(
+        self,
+        request: AgentRequestEvent,
+        status: AgentResponseStatus,
+        result: Optional[Dict[str, Any]] = None,
+        error: Optional[str] = None,
+        processing_time_ms: Optional[float] = None,
+    ) -> None:
+        """Send response to an agent request via EventBus.
+
+        Called by agents when they complete processing of an AgentRequestEvent.
+        The response is correlated to the original request by request_id.
+
+        Args:
+            request: Original AgentRequestEvent being responded to
+            status: Response status (SUCCESS, ERROR, TIMEOUT, REJECTED)
+            result: Response data (for SUCCESS or PARTIAL status)
+            error: Error message (for ERROR or TIMEOUT status)
+            processing_time_ms: Time taken to process request
+        """
+        event_bus = await self._get_event_bus()
+
+        response = AgentResponseEvent(
+            request_id=request.request_id,
+            source_agent=self.agent_name,
+            target_agent=request.source_agent,
+            status=status,
+            result=result,
+            error=error,
+            processing_time_ms=processing_time_ms,
+            metadata={
+                "responder_model": self.config.get("agent", {}).get("model", "unknown"),
+            },
+        )
+
+        await event_bus.respond_to_request(response)
+
+        logger.info(
+            f"[{self.agent_name}] Sent response to {request.source_agent} "
+            f"(request_id: {request.request_id}, status: {status.value})"
+        )
+
+    @traceable(name="agent_broadcast_status", tags=["agent", "inter-agent", "broadcast"])
+    async def broadcast_status(
+        self,
+        event_type: str,
+        payload: Dict[str, Any],
+        target_agents: Optional[List[str]] = None,
+        priority: AgentRequestPriority = AgentRequestPriority.NORMAL,
+    ) -> None:
+        """Broadcast status update to other agents via EventBus.
+
+        Use for notifications, state changes, or announcements that
+        multiple agents should be aware of (e.g., task completion,
+        resource locking, workflow checkpoints).
+
+        Args:
+            event_type: Type of broadcast (e.g., "task_completed", "resource_locked")
+            payload: Event data
+            target_agents: List of agent names, or None for all agents
+            priority: Broadcast priority level
+
+        Example:
+            # Notify all agents that a task is complete
+            await self.broadcast_status(
+                event_type="task_completed",
+                payload={"task_id": "123", "result": "success"}
+            )
+
+            # Notify specific agents about resource lock
+            await self.broadcast_status(
+                event_type="resource_locked",
+                payload={"resource": "deployment:production"},
+                target_agents=["infrastructure", "cicd"]
+            )
+        """
+        event_bus = await self._get_event_bus()
+
+        broadcast = AgentBroadcastEvent(
+            source_agent=self.agent_name,
+            target_agents=target_agents or ["all"],
+            event_type=event_type,
+            payload=payload,
+            priority=priority,
+        )
+
+        await event_bus.emit(
+            event_type=event_type,
+            data=broadcast.to_dict(),
+            source=self.agent_name,
+            correlation_id=broadcast.broadcast_id,
+        )
+
+        target_str = ", ".join(broadcast.target_agents)
+        logger.info(
+            f"[{self.agent_name}] Broadcast {event_type} to {target_str} "
+            f"(broadcast_id: {broadcast.broadcast_id})"
+        )
+
+    @traceable(name="agent_subscribe_to_events", tags=["agent", "inter-agent", "subscribe"])
+    async def subscribe_to_events(
+        self,
+        event_types: List[str],
+        handler: Any,  # Callable[[Event], Any]
+    ) -> None:
+        """Subscribe to events from other agents.
+
+        Registers a callback handler for specified event types. The handler
+        is called asynchronously when matching events are emitted.
+
+        Args:
+            event_types: List of event types to subscribe to
+            handler: Async callback function with signature (Event) -> None
+
+        Example:
+            async def handle_task_completed(event: Event):
+                task_id = event.data["task_id"]
+                logger.info(f"Task {task_id} completed by {event.source}")
+
+            await self.subscribe_to_events(
+                event_types=["task_completed"],
+                handler=handle_task_completed
+            )
+        """
+        event_bus = await self._get_event_bus()
+
+        for event_type in event_types:
+            event_bus.subscribe(event_type, handler)
+            logger.debug(f"[{self.agent_name}] Subscribed to {event_type}")
+
+        logger.info(
+            f"[{self.agent_name}] Subscribed to {len(event_types)} event types"
+        )
 
     def __repr__(self) -> str:
         """String representation of agent."""
