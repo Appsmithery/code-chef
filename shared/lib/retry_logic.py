@@ -95,6 +95,10 @@ def classify_error(exception: Exception) -> ErrorType:
 
     if isinstance(exception, terminal_types):
         return ErrorType.TERMINAL
+    
+    # Dependency errors - require manual intervention (auto-remediation attempted separately)
+    if isinstance(exception, (ModuleNotFoundError, ImportError)):
+        return ErrorType.REQUIRES_MANUAL_INTERVENTION
 
     # Check for authorization/policy errors
     if isinstance(exception, Exception):
