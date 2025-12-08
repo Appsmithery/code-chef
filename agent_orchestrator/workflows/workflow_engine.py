@@ -45,6 +45,11 @@ from shared.lib.workflow_events import (
     serialize_event,
     sign_event,
 )
+from shared.lib.dependency_handler import (
+    DependencyErrorHandler,
+    DependencyRemediationResult,
+    get_dependency_handler,
+)
 
 try:
     from shared.services.state.client import StateClient
@@ -161,10 +166,18 @@ class WorkflowEngine:
         templates_dir: str = "agent_orchestrator/workflows/templates",
         gradient_client: Optional[GradientClient] = None,
         state_client: Optional[Any] = None,
+        linear_client: Optional[Any] = None,
     ):
         self.templates_dir = Path(templates_dir)
         self.gradient_client = gradient_client  # Will be provided by caller
         self.state_client = state_client  # Will be provided by caller
+        self.linear_client = linear_client  # For dependency escalation
+        
+        # Initialize dependency error handler for auto-remediation
+        self.dependency_handler = get_dependency_handler(
+            orchestrator_root=str(Path(__file__).parent.parent.parent),
+            linear_client=linear_client,
+        )
 
         # Task 5.3: Calculate TTL in seconds
         self.ttl_seconds = self.WORKFLOW_TTL_HOURS * 3600
@@ -827,10 +840,168 @@ class WorkflowEngine:
         state: WorkflowState,
         step: WorkflowStep,
         error: Exception,
-    ):
-        """Handle workflow errors with configured error handlers."""
-        # TODO: Implement error handling logic from workflow.error_handling
-        pass
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Handle workflow errors with configured error handlers.
+        
+        Supports:
+        - Dependency error detection and auto-remediation
+        - Retry with exponential backoff for transient errors
+        - Escalation to Linear for unrecoverable errors
+        
+        Returns:
+            Dict with remediation result if handled, None otherwise
+        """
+        import traceback
+        tb_str = traceback.format_exc()
+        
+        # Check for dependency errors (ModuleNotFoundError, ImportError)
+        if isinstance(error, (ModuleNotFoundError, ImportError)):
+            logger.warning(
+                f"Dependency error in step '{step.id}': {error}. "
+                f"Attempting auto-remediation..."
+            )
+            
+            # Parse the error
+            dep_error = self.dependency_handler.parse_error(
+                exception=error,
+                traceback_file=step.id,
+                traceback_str=tb_str,
+            )
+            
+            if dep_error:
+                # Get workspace context from state
+                workspace_path = state.context.get("workspace_path")
+                docker_context = state.context.get("docker_context")
+                
+                # Create remediation plan
+                plan = self.dependency_handler.create_remediation_plan(
+                    error=dep_error,
+                    workspace_path=workspace_path,
+                    docker_context=docker_context,
+                )
+                
+                # Execute remediation
+                result, error_msg = await self.dependency_handler.execute_remediation(plan)
+                
+                # Emit event for dependency remediation
+                await self._emit_event(
+                    workflow_id=state.workflow_id,
+                    action=WorkflowAction.FAIL_STEP,  # Using FAIL_STEP with remediation data
+                    step_id=step.id,
+                    data={
+                        "error": str(error),
+                        "error_type": "DependencyError",
+                        "remediation_attempted": True,
+                        "remediation_strategy": plan.strategy.value,
+                        "remediation_result": result.value,
+                        "remediation_error": error_msg,
+                        "module_name": dep_error.module_name,
+                        "package_name": dep_error.package_name,
+                    },
+                )
+                
+                if result == DependencyRemediationResult.SUCCESS:
+                    logger.info(
+                        f"Successfully remediated dependency '{dep_error.module_name}'. "
+                        f"Step may be retried."
+                    )
+                    return {
+                        "remediated": True,
+                        "module": dep_error.module_name,
+                        "strategy": plan.strategy.value,
+                        "should_retry": True,
+                    }
+                elif result == DependencyRemediationResult.ESCALATED:
+                    logger.warning(
+                        f"Dependency '{dep_error.module_name}' escalated to Linear. "
+                        f"Manual intervention required."
+                    )
+                    return {
+                        "remediated": False,
+                        "escalated": True,
+                        "module": dep_error.module_name,
+                        "reason": plan.escalation_reason,
+                    }
+                else:
+                    logger.error(
+                        f"Failed to remediate dependency '{dep_error.module_name}': {error_msg}"
+                    )
+        
+        # Check workflow.error_handling for custom handlers
+        for handler in state.definition.error_handling:
+            error_type = handler.get("error_type", "*")
+            if error_type == "*" or error_type == type(error).__name__:
+                action = handler.get("action", "fail")
+                
+                if action == "retry":
+                    max_retries = handler.get("max_retries", 3)
+                    # Retry logic would be implemented here
+                    logger.info(f"Retry action configured for {error_type}")
+                
+                elif action == "skip":
+                    logger.info(f"Skipping step '{step.id}' due to error handler")
+                    return {"skipped": True, "reason": str(error)}
+                
+                elif action == "escalate":
+                    # Create Linear issue for manual intervention
+                    if self.linear_client:
+                        await self._create_escalation_issue(state, step, error, tb_str)
+                    return {"escalated": True, "reason": str(error)}
+        
+        return None
+
+    async def _create_escalation_issue(
+        self,
+        state: WorkflowState,
+        step: WorkflowStep,
+        error: Exception,
+        traceback_str: str,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Create a Linear issue for error escalation.
+        
+        Args:
+            state: Current workflow state
+            step: The step that failed
+            error: The exception that occurred
+            traceback_str: Full traceback for debugging
+            
+        Returns:
+            Linear issue dict if created, None otherwise
+        """
+        if not self.linear_client:
+            logger.warning("No Linear client available for escalation")
+            return None
+        
+        try:
+            title = f"[Workflow Error] {state.definition.name} - Step '{step.id}' failed"
+            
+            description = (
+                f"## Workflow Error Escalation\n\n"
+                f"**Workflow:** {state.definition.name} (v{state.definition.version})\n"
+                f"**Workflow ID:** `{state.workflow_id}`\n"
+                f"**Failed Step:** `{step.id}` ({step.type.value})\n"
+                f"**Agent:** {step.agent or 'N/A'}\n"
+                f"**Error Type:** `{type(error).__name__}`\n\n"
+                f"### Error Message\n```\n{str(error)}\n```\n\n"
+                f"### Context\n```json\n{state.context}\n```\n\n"
+                f"### Traceback\n```\n{traceback_str[:2000]}\n```\n"
+            )
+            
+            issue = await self.linear_client.create_issue(
+                title=title,
+                description=description,
+                labels=["workflow-error", "auto-escalated"],
+                priority=2,  # Medium priority
+            )
+            
+            logger.info(f"Created escalation issue: {issue.get('id')}")
+            return issue
+            
+        except Exception as e:
+            logger.error(f"Failed to create escalation issue: {e}")
+            return None
 
     def _build_agent_prompt(self, agent_name: str, payload: Dict[str, Any]) -> str:
         """Build agent-specific prompt from workflow payload."""

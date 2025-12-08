@@ -59,6 +59,20 @@ from lib.registry_client import RegistryClient, AgentCapability
 from lib.linear_project_manager import get_project_manager
 from lib.github_permalink_generator import enrich_markdown_with_permalinks_stateless
 
+try:
+    from lib.dependency_handler import (
+        DependencyErrorHandler,
+        DependencyRemediationResult,
+        get_dependency_handler,
+    )
+except ImportError:
+    # Fallback for local development with shared.lib path
+    from shared.lib.dependency_handler import (
+        DependencyErrorHandler,
+        DependencyRemediationResult,
+        get_dependency_handler,
+    )
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
