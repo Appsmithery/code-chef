@@ -25,36 +25,49 @@ try:
     
     def _get_or_create_counter(name, description, labelnames):
         """Get existing counter or create a new one."""
+        # Check if already registered
+        existing = REGISTRY._names_to_collectors.get(name)
+        if existing is not None:
+            return existing
         try:
             return Counter(name, description, labelnames)
         except ValueError:
-            # Already registered, retrieve existing
-            return REGISTRY._names_to_collectors.get(name, Counter(name, description, labelnames))
+            # Race condition - another thread registered it
+            return REGISTRY._names_to_collectors.get(name)
     
     def _get_or_create_histogram(name, description, labelnames, buckets=None):
         """Get existing histogram or create a new one."""
+        existing = REGISTRY._names_to_collectors.get(name)
+        if existing is not None:
+            return existing
         try:
             if buckets:
                 return Histogram(name, description, labelnames, buckets=buckets)
             return Histogram(name, description, labelnames)
         except ValueError:
-            return REGISTRY._names_to_collectors.get(name, Histogram(name, description, labelnames))
+            return REGISTRY._names_to_collectors.get(name)
     
     def _get_or_create_gauge(name, description, labelnames=None):
         """Get existing gauge or create a new one."""
+        existing = REGISTRY._names_to_collectors.get(name)
+        if existing is not None:
+            return existing
         try:
             if labelnames:
                 return Gauge(name, description, labelnames)
             return Gauge(name, description)
         except ValueError:
-            return REGISTRY._names_to_collectors.get(name, Gauge(name, description))
+            return REGISTRY._names_to_collectors.get(name)
     
     def _get_or_create_info(name, description):
         """Get existing info or create a new one."""
+        existing = REGISTRY._names_to_collectors.get(name)
+        if existing is not None:
+            return existing
         try:
             return Info(name, description)
         except ValueError:
-            return REGISTRY._names_to_collectors.get(name, Info(name, description))
+            return REGISTRY._names_to_collectors.get(name)
             
 except ImportError:
     PROMETHEUS_AVAILABLE = False
