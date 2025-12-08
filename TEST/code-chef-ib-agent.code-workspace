@@ -43,7 +43,8 @@
     "codechef.maxResponseTokens": 8000,
     "codechef.ragMaxResults": 20,
     "codechef.ragCollection": "feature_specs",
-    "codechef.linearHubIssue": "CHEF-68"
+    "codechef.linearHubIssue": "CHEF-68",
+    "powershell.cwd": "code-chef"
   },
   "extensions": {
     "recommendations": [
