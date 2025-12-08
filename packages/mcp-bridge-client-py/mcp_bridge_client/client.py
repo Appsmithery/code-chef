@@ -2,10 +2,24 @@
 
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
+from enum import Enum
 import httpx
 
 from .tool_catalog import ToolCatalog
 from .progressive_loader import ProgressiveLoader
+
+
+class ToolDetailLevel(str, Enum):
+    """Level of detail for tool metadata in search results.
+    
+    Token efficiency estimates per tool:
+    - NAME_ONLY: ~10 tokens (just tool name)
+    - NAME_DESCRIPTION: ~50 tokens (name + short description)  
+    - FULL_SCHEMA: ~150 tokens (name + description + full JSON schema)
+    """
+    NAME_ONLY = "name_only"
+    NAME_DESCRIPTION = "name_description"
+    FULL_SCHEMA = "full_schema"
 
 
 class MCPTool(BaseModel):
@@ -14,6 +28,19 @@ class MCPTool(BaseModel):
     description: str
     server: str
     inputSchema: Optional[Dict[str, Any]] = None
+
+
+class MCPToolCompact(BaseModel):
+    """Compact MCP Tool definition (name only, minimal tokens)"""
+    name: str
+    server: str
+
+
+class MCPToolWithDescription(BaseModel):
+    """MCP Tool with description (moderate tokens)"""
+    name: str
+    description: str
+    server: str
 
 
 class ToolInvocationResponse(BaseModel):
@@ -125,25 +152,67 @@ class MCPBridgeClient:
         all_tools = await self.list_tools()
         return self.loader.filter_by_task(task_description, all_tools)
     
-    async def search_tools(self, query: str) -> List[MCPTool]:
+    async def search_tools(
+        self,
+        query: str,
+        detail_level: ToolDetailLevel = ToolDetailLevel.NAME_DESCRIPTION,
+        max_results: Optional[int] = None,
+    ) -> List[MCPTool | MCPToolCompact | MCPToolWithDescription]:
         """
-        Search tools by keyword, server, or description
+        Search tools by keyword, server, or description with configurable detail level.
+        
+        Token efficiency by detail_level:
+        - NAME_ONLY: ~10 tokens/tool (minimal context, fast discovery)
+        - NAME_DESCRIPTION: ~50 tokens/tool (balanced, default)
+        - FULL_SCHEMA: ~150 tokens/tool (complete schema for tool invocation)
         
         Args:
-            query: Search query
+            query: Search query (matches name, description, or server)
+            detail_level: Level of tool metadata to return (affects token usage)
+            max_results: Maximum number of tools to return (None = unlimited)
             
         Returns:
-            Matching tools
+            Matching tools with specified detail level
+            
+        Example:
+            # Quick discovery with minimal tokens
+            tools = await client.search_tools("git", detail_level=ToolDetailLevel.NAME_ONLY)
+            
+            # Get full schema for tool invocation
+            tools = await client.search_tools("git", detail_level=ToolDetailLevel.FULL_SCHEMA)
         """
         all_tools = await self.list_tools()
         lower_query = query.lower()
         
-        return [
+        # Filter matching tools
+        matches = [
             tool for tool in all_tools
             if lower_query in tool.name.lower()
             or lower_query in tool.description.lower()
             or lower_query in tool.server.lower()
         ]
+        
+        # Apply max_results limit
+        if max_results is not None:
+            matches = matches[:max_results]
+        
+        # Transform based on detail_level
+        if detail_level == ToolDetailLevel.NAME_ONLY:
+            return [
+                MCPToolCompact(name=tool.name, server=tool.server)
+                for tool in matches
+            ]
+        elif detail_level == ToolDetailLevel.NAME_DESCRIPTION:
+            return [
+                MCPToolWithDescription(
+                    name=tool.name,
+                    description=tool.description,
+                    server=tool.server,
+                )
+                for tool in matches
+            ]
+        else:  # FULL_SCHEMA
+            return matches
     
     async def get_tools_by_server(self, server_name: str) -> List[MCPTool]:
         """
