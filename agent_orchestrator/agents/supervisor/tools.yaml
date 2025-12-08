@@ -34,7 +34,7 @@ agent:
     Always provide clear reasoning for your routing decisions based on task function.
 
 tools:
-  progressive_strategy: PROGRESSIVE
+  progressive_strategy: SEMANTIC
   allowed_servers:
     - linear
     - github
