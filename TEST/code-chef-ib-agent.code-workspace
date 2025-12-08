@@ -1,39 +1,56 @@
 {
-	"folders": [
-		{
-			"name": "code-chef",
-			"path": ".."
-		},
-		{
-			"name": "IB-Agent",
-			"path": "../../IB Agent"
-		}
-	],
-	"settings": {
-		"files.exclude": {
-			"**/__pycache__": true,
-			"**/.pytest_cache": true,
-			"**/node_modules": false
-		},
-		"python.analysis.extraPaths": [
-			"${workspaceFolder:code-chef}",
-			"${workspaceFolder:code-chef}/shared",
-			"${workspaceFolder:code-chef}/agent_orchestrator"
-		],
-		"terminal.integrated.cwd": "${workspaceFolder:code-chef}"
-	},
-	"extensions": {
-		"recommendations": [
-			"appsmithery.vscode-codechef",
-			"ms-python.python",
-			"ms-python.vscode-pylance",
-			"github.copilot",
-			"github.copilot-chat"
-		]
-	},
-	"launch": {
-		"version": "0.2.0",
-		"configurations": [],
-		"compounds": []
-	}
+  "folders": [
+    {
+      "name": "code-chef",
+      "path": ".."
+    },
+    {
+      "name": "IB-Agent",
+      "path": "../../IB Agent"
+    }
+  ],
+  "settings": {
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/.pytest_cache": true,
+      "**/node_modules": false
+    },
+    "python.analysis.extraPaths": [
+      "${workspaceFolder:code-chef}",
+      "${workspaceFolder:code-chef}/shared",
+      "${workspaceFolder:code-chef}/agent_orchestrator"
+    ],
+    "terminal.integrated.cwd": "${workspaceFolder:code-chef}",
+    "chat.agent.maxRequests": 250,
+    "chat.agent.thinking.collapsedTools": "all",
+    "chat.allowAnonymousAccess": true,
+    "chat.checkpoints.showFileChanges": true,
+    "chat.customAgentInSubagent.enabled": true,
+    "chat.edits2.enabled": true,
+    "chat.emptyState.history.enabled": true,
+    "chat.mcp.assisted.nuget.enabled": true,
+    "chat.mcp.gallery.enabled": true,
+    "chat.renderRelatedFiles": true,
+    "chat.tools.terminal.autoReplyToPrompts": true,
+    "chat.tools.terminal.ignoreDefaultAutoApproveRules": true,
+    "chat.tools.terminal.blockDetectedFileWrites": "never",
+    "chat.useNestedAgentsMdFiles": true,
+    "inlineChat.lineEmptyHint": true,
+    "inlineChat.finishOnType": true,
+    "inlineChat.enableV2": true
+  },
+  "extensions": {
+    "recommendations": [
+      "appsmithery.vscode-codechef",
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "github.copilot",
+      "github.copilot-chat"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [],
+    "compounds": []
+  }
 }
