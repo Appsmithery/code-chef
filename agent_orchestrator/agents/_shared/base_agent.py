@@ -198,7 +198,7 @@ class BaseAgent:
         except:
             pass
 
-        # Return gradient client itself (has invoke/ainvoke methods)
+        # Return gradient client itself (now has ainvoke/invoke methods for compatibility)
         return gradient_client
 
     def _bind_tools(self) -> BaseChatModel | Any:
