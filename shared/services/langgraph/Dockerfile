@@ -30,12 +30,12 @@ RUN pip install --no-cache-dir \
     httpx>=0.27.0 \
     pyyaml>=6.0
 
-# Expose port
-EXPOSE 8009
+# Expose port (default 8010, configurable via PORT env var)
+EXPOSE 8010
 
-# Health check
+# Health check - uses PORT env var with fallback to 8010
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import httpx; httpx.get('http://localhost:8009/health')"
+    CMD python -c "import httpx; import os; httpx.get(f'http://localhost:{os.getenv(\"PORT\", \"8010\")}/health')"
 
 # Run FastAPI server
 CMD ["python", "-m", "services.langgraph.main"]
