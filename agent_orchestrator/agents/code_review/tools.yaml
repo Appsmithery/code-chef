@@ -37,7 +37,7 @@ agent:
     - Use static analysis tools (SonarQube, Snyk, Semgrep) when available
 
 tools:
-  progressive_strategy: AGENT_PROFILE
+  progressive_strategy: SEMANTIC
   allowed_servers:
     - github
     - sonarqube
