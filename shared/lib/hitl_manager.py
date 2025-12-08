@@ -1,4 +1,3 @@
-"""
 """Human-in-the-Loop (HITL) Manager for autonomous workflow approval.
 Coordinates approval requests, policy enforcement, and state persistence.
 
