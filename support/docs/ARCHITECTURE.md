@@ -143,24 +143,26 @@ See `config/mcp-agent-tool-mapping.yaml` for complete agent-to-tool mapping.
 
 The orchestrator supports multiple strategies for loading MCP tools, optimizing token usage and response latency:
 
-| Strategy       | Tool Count | When to Use                          | Token Savings |
-| -------------- | ---------- | ------------------------------------ | ------------- |
-| `MINIMAL`      | 10-30      | Simple tasks, keyword-matched        | ~78%          |
-| `AGENT_PROFILE`| 30-60      | Agent-priority tools, multi-step     | ~70%          |
-| `PROGRESSIVE`  | 30-60      | Sequential loading as needed         | ~75%          |
-| `SEMANTIC`     | 10-20      | LLM-based keyword extraction         | ~96%          |
-| `FULL`         | 150+       | Debugging, tool discovery issues     | 0% (baseline) |
+| Strategy        | Tool Count | When to Use                      | Token Savings |
+| --------------- | ---------- | -------------------------------- | ------------- |
+| `MINIMAL`       | 10-30      | Simple tasks, keyword-matched    | ~78%          |
+| `AGENT_PROFILE` | 30-60      | Agent-priority tools, multi-step | ~70%          |
+| `PROGRESSIVE`   | 30-60      | Sequential loading as needed     | ~75%          |
+| `SEMANTIC`      | 10-20      | LLM-based keyword extraction     | ~96%          |
+| `FULL`          | 150+       | Debugging, tool discovery issues | 0% (baseline) |
 
 **Semantic Strategy Features:**
+
 - LLM extracts task-relevant keywords before tool selection
 - Caches extracted keywords to avoid redundant LLM calls
 - Returns tools with minimal metadata (name-only or short descriptions)
 - Configurable detail levels: `name`, `short`, `full`
 
 **Configuration:** Agent strategies are set in `agent_orchestrator/agents/<agent>/tools.yaml`:
+
 ```yaml
 tools:
-  progressive_strategy: SEMANTIC  # supervisor, code_review
+  progressive_strategy: SEMANTIC # supervisor, code_review
   # progressive_strategy: MINIMAL  # feature_dev, infrastructure, cicd, documentation
 ```
 
