@@ -1,0 +1,39 @@
+{
+	"folders": [
+		{
+			"name": "code-chef",
+			"path": ".."
+		},
+		{
+			"name": "IB-Agent",
+			"path": "../../IB Agent"
+		}
+	],
+	"settings": {
+		"files.exclude": {
+			"**/__pycache__": true,
+			"**/.pytest_cache": true,
+			"**/node_modules": false
+		},
+		"python.analysis.extraPaths": [
+			"${workspaceFolder:code-chef}",
+			"${workspaceFolder:code-chef}/shared",
+			"${workspaceFolder:code-chef}/agent_orchestrator"
+		],
+		"terminal.integrated.cwd": "${workspaceFolder:code-chef}"
+	},
+	"extensions": {
+		"recommendations": [
+			"appsmithery.vscode-codechef",
+			"ms-python.python",
+			"ms-python.vscode-pylance",
+			"github.copilot",
+			"github.copilot-chat"
+		]
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [],
+		"compounds": []
+	}
+}
