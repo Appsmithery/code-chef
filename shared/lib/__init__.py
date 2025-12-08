@@ -11,6 +11,7 @@ __all__ = [
     "error_classification",
     "error_pattern_memory",
     "error_recovery_engine",
+    "error_recovery_metrics",
     "circuit_breaker",
     "retry_logic",
     # Qdrant
@@ -64,4 +65,17 @@ from .circuit_breaker import (
 from .qdrant_client import (
     QdrantCloudClient,
     get_qdrant_client,
+)
+
+# Error recovery metrics exports
+from .error_recovery_metrics import (
+    record_recovery_attempt,
+    record_error_classified,
+    record_circuit_breaker_change,
+    record_pattern_cache_hit,
+    record_tier_escalation,
+    record_hitl_escalation,
+    record_loop_detection,
+    record_time_to_recovery,
+    record_pattern_similarity,
 )
