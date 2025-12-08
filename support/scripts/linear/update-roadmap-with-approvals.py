@@ -3,13 +3,13 @@
 Update Linear Roadmap with Approval Workflow
 
 This script:
-1. Fetches current Linear roadmap issues for AI DevOps Agent Platform project
+1. Fetches current Linear roadmap issues for code/chef project
 2. Analyzes completed work and proposes updates
 3. Submits update proposal via orchestrator with approval workflow
 4. Sends approval notification to @lead-minion in Linear
 
 Usage:
-    $env:LINEAR_API_KEY="lin_oauth_..."
+    $env:LINEAR_API_KEY="lin_api_..."
     python support/scripts/update-roadmap-with-approvals.py
 """
 
@@ -21,12 +21,13 @@ import httpx
 from datetime import datetime
 from typing import Dict, List, Any
 
-# Linear configuration
-LINEAR_API_KEY = os.getenv(
-    "LINEAR_API_KEY",
-    "lin_oauth_8f8990917b7e520efcd51f8ebe84055a251f53f8738bb526c8f2fac8ff0a1571",
-)
-LINEAR_PROJECT_ID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
+# Linear configuration - use Personal API Key (create at https://linear.app/dev-ops/settings/api)
+LINEAR_API_KEY = os.getenv("LINEAR_API_KEY")
+if not LINEAR_API_KEY:
+    print("ERROR: LINEAR_API_KEY not set")
+    sys.exit(1)
+    
+LINEAR_PROJECT_ID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # code/chef
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "https://codechef.appsmithery.co/api")
 
 # Completed phases based on our work

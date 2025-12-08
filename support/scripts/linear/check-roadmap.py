@@ -31,7 +31,7 @@ query {
 
 result = client.execute(query)
 
-print("\n=== AI DevOps Agent Platform - Linear Roadmap ===\n")
+print("\n=== code/chef - Linear Roadmap ===\n")
 for node in result["issues"]["nodes"]:
     status_icon = (
         "✅"

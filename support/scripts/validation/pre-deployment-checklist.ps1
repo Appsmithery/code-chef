@@ -118,9 +118,9 @@ Test-CheckItem -Name "Gradient AI credentials configured" -Critical -Test {
     return $false
 }
 
-Test-CheckItem -Name "Linear OAuth configured" -Test {
+Test-CheckItem -Name "Linear Personal API Key configured" -Test {
     $env_content = Get-Content "config/env/.env" -Raw
-    $has_api_key = $env_content -match "LINEAR_API_KEY=lin_oauth_"
+    $has_api_key = $env_content -match "LINEAR_API_KEY=lin_api_"  # Personal API Key format
     if ($has_api_key) {
         Write-Host "    Linear: CONFIGURED" -ForegroundColor Gray
         return $true

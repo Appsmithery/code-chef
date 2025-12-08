@@ -244,7 +244,7 @@ ORCHESTRATOR_URL=http://localhost:8001
 
 # Required for real API tests
 GRADIENT_API_KEY=your-key
-LINEAR_API_KEY=lin_oauth_...
+LINEAR_API_KEY=lin_api_...  # Personal API Key from https://linear.app/dev-ops/settings/api
 LANGSMITH_API_KEY=lsv2_sk_...
 ```
 

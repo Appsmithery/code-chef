@@ -353,13 +353,13 @@ def get_roadmap_updater() -> LinearRoadmapUpdater:
     return _roadmap_updater
 
 
-# Workspace constants (updated for workspace rename)
-WORKSPACE_ID = "project-roadmaps"  # Workspace name
-WORKSPACE_NAME = "Project Roadmaps"
-TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # Project Roadmaps (PR) team
+# Workspace constants (updated for dev-ops team)
+WORKSPACE_ID = "dev-ops"  # Team/Workspace name
+WORKSPACE_NAME = "dev-ops"
+TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # dev-ops (CHEF) team
 
 # Project constants
-PROJECT_ID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
+PROJECT_ID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # code/chef
 PROJECT_SHORT_ID = "78b3b839d36b"
 
 # Workspace-level approval hub (created 2025-11-18)
@@ -367,10 +367,10 @@ APPROVAL_HUB_ISSUE_ID = "PR-68"  # Team-level issue for all approvals
 
 # Multi-project registry
 PROJECT_REGISTRY = {
-    "dev-tools": {
+    "codechef": {
         "id": "b21cbaa1-9f09-40f4-b62a-73e0f86dd501",
         "short_id": "78b3b839d36b",
-        "name": "AI DevOps Agent Platform",
+        "name": "code/chef",
         "orchestrator_url": "https://codechef.appsmithery.co/api",
     },
     "twkr": {
