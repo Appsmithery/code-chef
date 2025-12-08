@@ -20,8 +20,42 @@ import logging
 from typing import Optional
 
 try:
-    from prometheus_client import Counter, Histogram, Gauge, Info
+    from prometheus_client import Counter, Histogram, Gauge, Info, REGISTRY
     PROMETHEUS_AVAILABLE = True
+    
+    def _get_or_create_counter(name, description, labelnames):
+        """Get existing counter or create a new one."""
+        try:
+            return Counter(name, description, labelnames)
+        except ValueError:
+            # Already registered, retrieve existing
+            return REGISTRY._names_to_collectors.get(name, Counter(name, description, labelnames))
+    
+    def _get_or_create_histogram(name, description, labelnames, buckets=None):
+        """Get existing histogram or create a new one."""
+        try:
+            if buckets:
+                return Histogram(name, description, labelnames, buckets=buckets)
+            return Histogram(name, description, labelnames)
+        except ValueError:
+            return REGISTRY._names_to_collectors.get(name, Histogram(name, description, labelnames))
+    
+    def _get_or_create_gauge(name, description, labelnames=None):
+        """Get existing gauge or create a new one."""
+        try:
+            if labelnames:
+                return Gauge(name, description, labelnames)
+            return Gauge(name, description)
+        except ValueError:
+            return REGISTRY._names_to_collectors.get(name, Gauge(name, description))
+    
+    def _get_or_create_info(name, description):
+        """Get existing info or create a new one."""
+        try:
+            return Info(name, description)
+        except ValueError:
+            return REGISTRY._names_to_collectors.get(name, Info(name, description))
+            
 except ImportError:
     PROMETHEUS_AVAILABLE = False
     # Stub classes for when prometheus_client is not installed
@@ -42,6 +76,15 @@ except ImportError:
     class Info:
         def __init__(self, *args, **kwargs): pass
         def info(self, *args, **kwargs): pass
+    
+    def _get_or_create_counter(name, description, labelnames):
+        return Counter()
+    def _get_or_create_histogram(name, description, labelnames, buckets=None):
+        return Histogram()
+    def _get_or_create_gauge(name, description, labelnames=None):
+        return Gauge()
+    def _get_or_create_info(name, description):
+        return Info()
 
 logger = logging.getLogger(__name__)
 
@@ -54,49 +97,49 @@ SUBSYSTEM = "error_recovery"
 # ============================================================================
 
 # Recovery attempts by tier, category, and result
-recovery_attempts_total = Counter(
+recovery_attempts_total = _get_or_create_counter(
     f"{NAMESPACE}_{SUBSYSTEM}_recovery_attempts_total",
     "Total number of error recovery attempts",
     ["tier", "category", "result"]
 )
 
 # Errors classified by category and severity
-errors_classified_total = Counter(
+errors_classified_total = _get_or_create_counter(
     f"{NAMESPACE}_{SUBSYSTEM}_errors_classified_total",
     "Total number of errors classified",
     ["category", "severity"]
 )
 
 # Circuit breaker state changes
-circuit_breaker_state_changes_total = Counter(
+circuit_breaker_state_changes_total = _get_or_create_counter(
     f"{NAMESPACE}_{SUBSYSTEM}_circuit_breaker_state_changes_total",
     "Total number of circuit breaker state changes",
     ["circuit_name", "from_state", "to_state"]
 )
 
 # Pattern cache hits and misses
-pattern_cache_operations_total = Counter(
+pattern_cache_operations_total = _get_or_create_counter(
     f"{NAMESPACE}_{SUBSYSTEM}_pattern_cache_operations_total",
     "Total pattern cache operations",
     ["operation"]  # hit, miss, store
 )
 
 # Tier escalations
-tier_escalations_total = Counter(
+tier_escalations_total = _get_or_create_counter(
     f"{NAMESPACE}_{SUBSYSTEM}_tier_escalations_total",
     "Total tier escalations during recovery",
     ["from_tier", "to_tier", "category"]
 )
 
 # HITL escalations (Tier 4)
-hitl_escalations_total = Counter(
+hitl_escalations_total = _get_or_create_counter(
     f"{NAMESPACE}_{SUBSYSTEM}_hitl_escalations_total",
     "Total escalations to human-in-the-loop",
     ["category", "severity"]
 )
 
 # Loop detections
-loop_detections_total = Counter(
+loop_detections_total = _get_or_create_counter(
     f"{NAMESPACE}_{SUBSYSTEM}_loop_detections_total",
     "Total recovery loop detections",
     ["category"]
@@ -107,7 +150,7 @@ loop_detections_total = Counter(
 # ============================================================================
 
 # Recovery duration by tier and category
-recovery_duration_seconds = Histogram(
+recovery_duration_seconds = _get_or_create_histogram(
     f"{NAMESPACE}_{SUBSYSTEM}_recovery_duration_seconds",
     "Time spent in recovery by tier and category",
     ["tier", "category"],
@@ -115,7 +158,7 @@ recovery_duration_seconds = Histogram(
 )
 
 # Time to recovery (total time from error to resolution)
-time_to_recovery_seconds = Histogram(
+time_to_recovery_seconds = _get_or_create_histogram(
     f"{NAMESPACE}_{SUBSYSTEM}_time_to_recovery_seconds",
     "Total time from error occurrence to successful recovery",
     ["category"],
@@ -123,7 +166,7 @@ time_to_recovery_seconds = Histogram(
 )
 
 # Pattern similarity scores
-pattern_similarity_scores = Histogram(
+pattern_similarity_scores = _get_or_create_histogram(
     f"{NAMESPACE}_{SUBSYSTEM}_pattern_similarity_scores",
     "Distribution of pattern similarity scores",
     ["category"],
@@ -135,28 +178,28 @@ pattern_similarity_scores = Histogram(
 # ============================================================================
 
 # Current circuit breaker states (0=closed, 1=half-open, 2=open)
-circuit_breaker_state = Gauge(
+circuit_breaker_state = _get_or_create_gauge(
     f"{NAMESPACE}_{SUBSYSTEM}_circuit_breaker_state",
     "Current state of circuit breakers (0=closed, 1=half-open, 2=open)",
     ["circuit_name"]
 )
 
 # Pattern cache size
-pattern_cache_size = Gauge(
+pattern_cache_size = _get_or_create_gauge(
     f"{NAMESPACE}_{SUBSYSTEM}_pattern_cache_size",
     "Number of patterns in local cache",
     []
 )
 
 # Recovery success rate by tier (calculated gauge)
-recovery_success_rate = Gauge(
+recovery_success_rate = _get_or_create_gauge(
     f"{NAMESPACE}_{SUBSYSTEM}_recovery_success_rate",
     "Success rate of recovery by tier (0.0 to 1.0)",
     ["tier"]
 )
 
 # Active recovery operations
-active_recoveries = Gauge(
+active_recoveries = _get_or_create_gauge(
     f"{NAMESPACE}_{SUBSYSTEM}_active_recoveries",
     "Number of currently active recovery operations",
     ["tier"]
@@ -167,7 +210,7 @@ active_recoveries = Gauge(
 # ============================================================================
 
 # Error recovery system info
-error_recovery_info = Info(
+error_recovery_info = _get_or_create_info(
     f"{NAMESPACE}_{SUBSYSTEM}_info",
     "Information about error recovery system configuration"
 )
