@@ -29,7 +29,7 @@ import httpx
 from langsmith import traceable
 
 # Import canonical types from shared location
-from .types import InsightType, CapturedInsight
+from .core_types import InsightType, CapturedInsight
 
 logger = logging.getLogger(__name__)
 
