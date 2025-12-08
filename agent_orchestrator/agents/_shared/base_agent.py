@@ -411,18 +411,71 @@ class BaseAgent:
             return self.llm
 
     def _extract_task_description(self, messages: List[BaseMessage]) -> str:
-        """Extract task description from most recent HumanMessage.
+        """Extract clean task intent from conversation messages.
+
+        Implements structured extraction per Part 3 of tracing optimization plan:
+        1. Use last human message if <500 chars and not a system prompt
+        2. Otherwise, extract first line as headline
+        3. Fallback: "Task for {agent_name} agent"
 
         Args:
             messages: List of conversation messages
 
         Returns:
-            Task description (max 500 chars) for tool matching
+            Task description (max 500 chars) for tool matching and tracing
         """
+        # Find the last human message
+        last_human_msg = None
         for msg in reversed(messages):
             if isinstance(msg, HumanMessage):
-                return msg.content[:500]  # Limit for tool matching efficiency
-        return ""
+                last_human_msg = msg
+                break
+
+        if not last_human_msg:
+            return f"Task for {self.agent_name} agent"
+
+        content = last_human_msg.content.strip()
+
+        # Skip if it looks like a system prompt (too long or contains typical markers)
+        system_prompt_markers = [
+            "you are",
+            "your role",
+            "system:",
+            "instructions:",
+            "## role",
+            "## guidelines",
+        ]
+        content_lower = content.lower()
+        is_system_prompt = len(content) > 1000 or any(
+            marker in content_lower[:200] for marker in system_prompt_markers
+        )
+
+        if is_system_prompt:
+            # Extract first meaningful line as headline
+            lines = [ln.strip() for ln in content.split("\n") if ln.strip()]
+            for line in lines:
+                # Skip markdown headers, comments, and very short lines
+                if (
+                    not line.startswith("#")
+                    and not line.startswith("//")
+                    and not line.startswith("*")
+                    and len(line) > 10
+                ):
+                    return line[:500]
+            return f"Task for {self.agent_name} agent"
+
+        # Use full message if under 500 chars
+        if len(content) <= 500:
+            return content
+
+        # Otherwise, extract first sentence or line
+        first_line = content.split("\n")[0].strip()
+        if len(first_line) <= 500:
+            return first_line
+
+        # Truncate at last word boundary before 500 chars
+        truncated = content[:500].rsplit(" ", 1)[0]
+        return truncated + "..."
 
     def get_system_prompt(self) -> str:
         """Get agent-specific system prompt from system.prompt.md file or YAML config.

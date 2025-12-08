@@ -1,0 +1,89 @@
+# Tracing Configuration
+# Centralized sample rates and policies for LangSmith observability
+# Part 2.3 of Dynamic MCP Tool Selection and Tracing Optimization plan
+
+langsmith:
+  # Project settings (per-agent projects for filtering)
+  projects:
+    orchestrator: "code-chef-orchestrator"
+    feature_dev: "code-chef-feature-dev"
+    code_review: "code-chef-code-review"
+    infrastructure: "code-chef-infrastructure"
+    cicd: "code-chef-cicd"
+    documentation: "code-chef-documentation"
+
+  # Default settings
+  defaults:
+    enabled: true
+    run_name_max_length: 100 # Truncate long run names for readability
+
+# Sampling rates by operation type
+# 0.0 = never trace, 1.0 = always trace
+sampling:
+  # Background/polling operations (high volume, low value per trace)
+  background_polling:
+    rate: 0.1 # 10% - env override: HITL_POLLING_SAMPLE_RATE
+    description: "HITL approval polling loop, heartbeats"
+
+  # MCP tool loading (medium volume, useful for debugging)
+  mcp_tool_loading:
+    rate: 0.5 # 50% - balance visibility vs volume
+    description: "Progressive tool loading, tool binding"
+
+  # Agent invocations (core business logic, high value)
+  agent_invocation:
+    rate: 1.0 # 100% - always trace agent work
+    description: "Agent invoke(), task execution"
+
+  # Error recovery (critical for debugging)
+  error_recovery:
+    rate: 1.0 # 100% - always trace recovery attempts
+    description: "Recovery tiers, remediation attempts"
+
+  # Inter-agent communication
+  inter_agent:
+    rate: 1.0 # 100% - trace agent-to-agent requests
+    description: "request_agent(), broadcast_status()"
+
+  # Memory operations (cross-agent knowledge)
+  memory_operations:
+    rate: 0.5 # 50% - balance insight storage vs volume
+    description: "retrieve_relevant(), store_insight()"
+
+# Trace metadata enrichment
+metadata:
+  # Always include these fields in trace metadata
+  required_fields:
+    - agent_name
+    - workflow_id
+    - thread_id
+
+  # Optional fields (included when available)
+  optional_fields:
+    - task_description
+    - tool_count
+    - strategy
+    - correlation_id
+
+# Run name formatting
+run_names:
+  # Pattern: {operation}:{context}
+  # Max length enforced by run_name_max_length
+  patterns:
+    agent_invoke: "{agent_name}:{task_description_headline}"
+    tool_loading: "tools:{strategy}:{agent_name}"
+    memory_retrieve: "memory:retrieve:{agent_name}"
+    memory_store: "memory:store:{insight_type}"
+    inter_agent: "ipc:{source}→{target}:{request_type}"
+
+  # Truncation settings
+  truncation:
+    task_description: 50 # Max chars for task in run name
+    strategy: "ellipsis" # "ellipsis" adds "..." or "truncate" hard cuts
+
+# Environment variable overrides
+# These env vars take precedence over YAML config
+env_overrides:
+  HITL_POLLING_SAMPLE_RATE: "sampling.background_polling.rate"
+  MCP_TOOL_LOADING_SAMPLE_RATE: "sampling.mcp_tool_loading.rate"
+  LANGSMITH_TRACING_ENABLED: "langsmith.defaults.enabled"

@@ -54,6 +54,55 @@ discovery_summary:
     zen: 3
 
 # ============================================================================
+# META-TOOLS FOR AGENT SELF-DISCOVERY
+# ============================================================================
+# These tools enable agents to dynamically discover available tools at runtime
+# following Anthropic's "Code Execution with MCP" pattern.
+
+meta_tools:
+  search_available_tools:
+    description: "Search for MCP tools by keyword, server, or description"
+    enabled: true
+    parameters:
+      query:
+        type: "string"
+        required: true
+        description: "Search query (matches tool name, description, or server)"
+      detail_level:
+        type: "string"
+        required: false
+        default: "name_description"
+        enum: ["name_only", "name_description", "full_schema"]
+        description: |
+          Level of detail to return:
+          - name_only: ~10 tokens/tool (fast discovery)
+          - name_description: ~50 tokens/tool (balanced, default)
+          - full_schema: ~150 tokens/tool (for invocation)
+      max_results:
+        type: "integer"
+        required: false
+        default: 20
+        description: "Maximum number of tools to return"
+    implementation:
+      type: "internal"
+      handler: "progressive_mcp_loader.search_tools"
+    use_cases:
+      - "Find tools for a specific task dynamically"
+      - "Discover tools when static keyword mapping misses"
+      - "Get full schema for a tool before invocation"
+
+  list_mcp_servers:
+    description: "List all available MCP servers and their tool counts"
+    enabled: true
+    parameters: {}
+    implementation:
+      type: "internal"
+      handler: "mcp_discovery.discover_servers"
+    use_cases:
+      - "Get overview of available capabilities"
+      - "Identify which server provides a tool"
+
+# ============================================================================
 # AGENT-SPECIFIC TOOL MAPPINGS
 # ============================================================================
 
