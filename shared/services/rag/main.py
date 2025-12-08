@@ -361,11 +361,11 @@ class CollectionInfo(BaseModel):
 
 # ============================================================================
 # Agent Memory Models (Cross-Agent Knowledge Sharing)
-# Issue: CHEF-198 - Using shared InsightType from shared/lib/types.py
+# Issue: CHEF-198 - Using shared InsightType from shared/lib/core_types.py
 # ============================================================================
 
 try:
-    from types import InsightType
+    from shared.lib.core_types import InsightType
 except ImportError:
     # Fallback if running standalone
     from enum import Enum
