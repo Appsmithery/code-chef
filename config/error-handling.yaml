@@ -368,3 +368,205 @@ success_criteria:
   mean_time_to_recovery_tier_0_1_seconds: 10
   max_deadlocks_per_day: 0
   linear_issue_creation_rate: 1.0 # 100% for terminal errors
+
+# Per-Agent Error Recovery Overrides
+# Granular control over recovery behavior for each agent
+agent_overrides:
+  feature_dev:
+    max_tier: TIER_2 # RAG-assisted recovery
+    max_retries: 3
+    fail_fast: false
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout_seconds: 60
+    category_overrides:
+      llm:
+        max_retries: 3
+        timeout_seconds: 90
+      mcp:
+        max_retries: 2
+        timeout_seconds: 30
+      dependency:
+        max_retries: 2
+        timeout_seconds: 30
+
+  code_review:
+    max_tier: TIER_2
+    max_retries: 2
+    fail_fast: false
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout_seconds: 60
+    category_overrides:
+      llm:
+        max_retries: 2
+        timeout_seconds: 60
+      mcp:
+        max_retries: 2
+        timeout_seconds: 30
+
+  infrastructure:
+    max_tier: TIER_1 # Fail-fast for infrastructure
+    max_retries: 1
+    fail_fast: true
+    circuit_breaker:
+      failure_threshold: 2
+      recovery_timeout_seconds: 120
+    category_overrides:
+      docker:
+        max_retries: 2
+        timeout_seconds: 120
+      network:
+        max_retries: 1
+        timeout_seconds: 30
+      auth:
+        max_retries: 0 # No retry for auth failures
+        timeout_seconds: 10
+      database:
+        max_retries: 1
+        timeout_seconds: 15
+
+  cicd:
+    max_tier: TIER_2
+    max_retries: 3
+    fail_fast: false
+    circuit_breaker:
+      failure_threshold: 5
+      recovery_timeout_seconds: 60
+    category_overrides:
+      network:
+        max_retries: 5 # More retries for flaky CI networks
+        timeout_seconds: 30
+      docker:
+        max_retries: 3
+        timeout_seconds: 120
+      dependency:
+        max_retries: 3
+        timeout_seconds: 60
+
+  documentation:
+    max_tier: TIER_2
+    max_retries: 3
+    fail_fast: false
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout_seconds: 60
+    category_overrides:
+      llm:
+        max_retries: 3
+        timeout_seconds: 60
+      mcp:
+        max_retries: 2
+        timeout_seconds: 30
+
+  supervisor:
+    max_tier: TIER_3 # Agent-assisted diagnosis for orchestration
+    max_retries: 2
+    fail_fast: false
+    circuit_breaker:
+      failure_threshold: 3
+      recovery_timeout_seconds: 90
+    category_overrides:
+      llm:
+        max_retries: 2
+        timeout_seconds: 60
+      database:
+        max_retries: 2
+        timeout_seconds: 30
+
+# Per-Workflow Error Recovery Overrides
+# Granular control over recovery behavior for each workflow type
+workflow_overrides:
+  "feature.workflow":
+    default_tier: TIER_2
+    max_workflow_retries: 2
+    step_overrides:
+      implement_feature:
+        max_tier: TIER_2
+        max_retries: 2
+      code_review:
+        max_tier: TIER_2
+        max_retries: 2
+      run_tests:
+        max_tier: TIER_1
+        max_retries: 1
+      update_infrastructure:
+        max_tier: TIER_1
+        max_retries: 0
+        fail_fast: true
+      merge_feature:
+        max_tier: TIER_1
+        max_retries: 1
+
+  "infrastructure.workflow":
+    default_tier: TIER_1
+    max_workflow_retries: 0 # No workflow-level retries
+    fail_fast: true
+    step_overrides:
+      analyze_changes:
+        max_tier: TIER_1
+        max_retries: 1
+      generate_plan:
+        max_tier: TIER_1
+        max_retries: 1
+      apply_changes:
+        max_tier: TIER_0
+        max_retries: 0
+        fail_fast: true
+      rollback_changes:
+        max_tier: TIER_1
+        max_retries: 2
+
+  "hotfix.workflow":
+    default_tier: TIER_1
+    max_workflow_retries: 0
+    fail_fast: true
+    step_overrides:
+      code_review:
+        max_tier: TIER_1
+        max_retries: 1
+      run_critical_tests:
+        max_tier: TIER_1
+        max_retries: 1
+      deploy_production:
+        max_tier: TIER_0
+        max_retries: 0
+        fail_fast: true
+      rollback_production:
+        max_tier: TIER_1
+        max_retries: 2
+
+  "docs-update.workflow":
+    default_tier: TIER_2
+    max_workflow_retries: 2
+    step_overrides:
+      validate_docs_only:
+        max_tier: TIER_2
+        max_retries: 2
+      review_documentation:
+        max_tier: TIER_2
+        max_retries: 2
+      merge_documentation:
+        max_tier: TIER_1
+        max_retries: 1
+
+  "pr-deployment.workflow":
+    default_tier: TIER_2
+    max_workflow_retries: 1
+    step_overrides:
+      code_review:
+        max_tier: TIER_2
+        max_retries: 2
+      run_tests:
+        max_tier: TIER_1
+        max_retries: 1
+      deploy_staging:
+        max_tier: TIER_1
+        max_retries: 1
+      deploy_production:
+        max_tier: TIER_0
+        max_retries: 0
+        fail_fast: true
+      rollback_production:
+        max_tier: TIER_1
+        max_retries: 2

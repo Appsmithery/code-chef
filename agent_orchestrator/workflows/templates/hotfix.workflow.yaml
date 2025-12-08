@@ -81,12 +81,62 @@ steps:
 error_handling:
   - step: "code_review"
     on_error: "notify_failure"
+    recovery_tier: TIER_1 # Fast recovery for hotfix
+    max_retries: 1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 2
+    escalation_path: ["hitl"]
 
   - step: "run_critical_tests"
     on_error: "notify_failure"
+    recovery_tier: TIER_1
+    max_retries: 1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["hitl"]
 
   - step: "deploy_production"
     on_error: "rollback_production"
+    recovery_tier: TIER_0 # No recovery, immediate rollback
+    max_retries: 0
+    fail_fast: true
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 1
+    escalation_path: ["hitl"]
+
+# Top-level error recovery configuration for hotfix workflow
+# Hotfix uses minimal recovery to prioritize speed and safety
+error_recovery:
+  enabled: true
+  default_tier: TIER_1 # Conservative for production hotfixes
+  max_workflow_retries: 0 # No workflow retries for hotfixes
+  fail_fast: true
+
+  # Step-specific tier limits (all conservative)
+  step_overrides:
+    code_review:
+      max_tier: TIER_1
+      max_retries: 1
+    run_critical_tests:
+      max_tier: TIER_1
+      max_retries: 1
+    deploy_production:
+      max_tier: TIER_0
+      max_retries: 0
+      fail_fast: true
+    rollback_production:
+      max_tier: TIER_1
+      max_retries: 2
+
+  # Immediate escalation for hotfix failures
+  escalation:
+    on_any_failure: true
+    create_linear_issue: true
+    priority: "critical"
+    notify_channels: ["slack", "pagerduty"]
 
 # Notifications (all channels for hotfixes)
 notifications:

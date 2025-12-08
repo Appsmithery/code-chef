@@ -61,3 +61,27 @@ memory:
     - security_finding
     - code_pattern
     - error_pattern
+
+# Error recovery configuration (integrated with ErrorRecoveryEngine)
+error_recovery:
+  enabled: true
+  max_tier: TIER_2 # RAG-assisted for security pattern matching
+  max_retries: 2
+  fail_fast: false
+
+  # Category-specific overrides
+  category_overrides:
+    llm:
+      max_tier: TIER_2
+      max_retries: 2
+    mcp:
+      max_tier: TIER_1
+      max_retries: 2
+    network:
+      max_tier: TIER_1
+      max_retries: 3
+
+  # Circuit breaker settings
+  circuit_breaker:
+    enabled: true
+    use_defaults: true

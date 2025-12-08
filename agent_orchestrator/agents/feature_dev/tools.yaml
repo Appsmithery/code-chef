@@ -59,3 +59,30 @@ memory:
     - code_pattern
     - error_pattern
     - architectural_decision
+
+# Error recovery configuration (integrated with ErrorRecoveryEngine)
+error_recovery:
+  enabled: true
+  max_tier: TIER_2 # RAG-assisted recovery for code generation errors
+  max_retries: 3
+  fail_fast: false
+
+  # Category-specific overrides
+  category_overrides:
+    llm:
+      max_tier: TIER_2
+      max_retries: 3
+    mcp:
+      max_tier: TIER_1
+      max_retries: 2
+    dependency:
+      max_tier: TIER_1
+      max_retries: 2
+    network:
+      max_tier: TIER_1
+      max_retries: 5
+
+  # Circuit breaker settings
+  circuit_breaker:
+    enabled: true
+    use_defaults: true # Use config/error-handling.yaml defaults

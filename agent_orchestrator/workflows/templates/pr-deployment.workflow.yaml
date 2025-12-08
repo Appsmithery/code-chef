@@ -122,15 +122,74 @@ steps:
 error_handling:
   - step: "code_review"
     on_error: "notify_failure"
+    recovery_tier: TIER_2
+    max_retries: 2
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["supervisor"]
 
   - step: "run_tests"
     on_error: "notify_failure"
+    recovery_tier: TIER_1
+    max_retries: 1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 5
+    escalation_path: ["cicd", "supervisor"]
 
   - step: "deploy_staging"
     on_error: "notify_failure"
+    recovery_tier: TIER_1
+    max_retries: 1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["infrastructure", "supervisor"]
 
   - step: "deploy_production"
     on_error: "rollback_production"
+    recovery_tier: TIER_0 # No recovery, immediate rollback
+    max_retries: 0
+    fail_fast: true
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 1
+    escalation_path: ["hitl"]
+
+# Top-level error recovery configuration for PR deployment workflow
+error_recovery:
+  enabled: true
+  default_tier: TIER_2
+  max_workflow_retries: 1
+
+  # Step-specific tier limits
+  step_overrides:
+    code_review:
+      max_tier: TIER_2
+      max_retries: 2
+    run_tests:
+      max_tier: TIER_1
+      max_retries: 1
+    deploy_staging:
+      max_tier: TIER_1
+      max_retries: 1
+    deploy_production:
+      max_tier: TIER_0
+      max_retries: 0
+      fail_fast: true
+    rollback_production:
+      max_tier: TIER_1
+      max_retries: 2
+
+  # Fallback chain for LLM failures
+  llm_fallback_chain:
+    - model: "llama3.3-70b"
+      provider: "gradient"
+    - model: "llama3-8b"
+      provider: "gradient"
+    - model: "gpt-4o-mini"
+      provider: "openai"
 
 # Notifications
 notifications:

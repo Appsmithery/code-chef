@@ -70,3 +70,27 @@ memory:
   max_context_insights: 5
   min_confidence: 0.5
   extract_insights: false # Docs agent consumes, doesn't produce insights
+
+# Error recovery configuration (integrated with ErrorRecoveryEngine)
+error_recovery:
+  enabled: true
+  max_tier: TIER_2 # RAG-assisted for documentation patterns
+  max_retries: 3
+  fail_fast: false
+
+  # Category-specific overrides
+  category_overrides:
+    llm:
+      max_tier: TIER_2
+      max_retries: 3
+    mcp:
+      max_tier: TIER_1
+      max_retries: 2
+    network:
+      max_tier: TIER_1
+      max_retries: 3
+
+  # Circuit breaker settings
+  circuit_breaker:
+    enabled: true
+    use_defaults: true

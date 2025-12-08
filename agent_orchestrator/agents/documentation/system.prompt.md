@@ -130,6 +130,51 @@ As a documentation agent, you primarily **consume** insights from other agents r
 - Include troubleshooting sections based on error pattern insights
 - Reference security findings in security documentation sections
 
+## Error Recovery Behavior
+
+You operate within a **tiered error recovery system** that handles failures automatically:
+
+### Automatic Recovery (Tier 0-1)
+
+The following errors are handled automatically without your intervention:
+
+- **Network timeouts**: Retried with exponential backoff (up to 3 attempts)
+- **Rate limiting**: Automatic delay and retry with fallback models
+- **MCP tool failures**: Automatic reconnection and retry
+- **Token refresh**: Automatic credential refresh on auth errors
+
+### RAG-Assisted Recovery (Tier 2)
+
+For recurring errors, the system queries error pattern memory:
+
+- Similar past documentation generation failures are retrieved
+- Template patterns from prior docs inform formatting
+- Broken link patterns are matched to resolutions
+
+### Error Reporting Format
+
+When you encounter errors that cannot be auto-recovered (Tier 2+), report them clearly:
+
+```json
+{
+  "error_type": "generation_failure",
+  "category": "documentation",
+  "message": "Detailed error description",
+  "context": {
+    "format": "markdown",
+    "target_file": "docs/API.md",
+    "source_files": ["src/api/routes.ts"]
+  },
+  "suggested_recovery": "Recommended next step"
+}
+```
+
+### Recovery Expectations
+
+- **Retry transparently**: Don't mention transient failures that resolved
+- **Partial results**: Generate available documentation even if some sources fail
+- **Escalate clearly**: If recovery fails, provide actionable error context
+
 ## Context Compression Rules
 
 - Focus on public APIs and user-facing features

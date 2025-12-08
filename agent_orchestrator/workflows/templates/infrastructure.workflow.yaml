@@ -175,17 +175,70 @@ steps:
 error_handling:
   - step: "analyze_changes"
     on_error: "notify_failure"
+    recovery_tier: TIER_1
+    max_retries: 1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["supervisor"]
 
   - step: "generate_plan"
     on_error: "notify_failure"
+    recovery_tier: TIER_1
+    max_retries: 1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["supervisor"]
 
   - step: "apply_changes"
     on_error: "rollback_changes"
     max_retries: 0 # No retries for infrastructure apply
+    recovery_tier: TIER_0 # Immediate escalation for apply failures
+    fail_fast: true
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 1 # Immediate circuit break
+    escalation_path: ["hitl"]
 
   - step: "rollback_changes"
     on_error: "notify_rollback_failed"
     max_retries: 2 # Try rollback twice
+    recovery_tier: TIER_1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 2
+    escalation_path: ["hitl"]
+
+# Top-level error recovery configuration for infrastructure workflow
+# Uses fail-fast strategy to prevent cascading infrastructure failures
+error_recovery:
+  enabled: true
+  default_tier: TIER_1 # Conservative default for infrastructure
+  max_workflow_retries: 0 # No workflow-level retries for infrastructure
+  fail_fast: true
+
+  # Step-specific tier limits (all conservative for infrastructure)
+  step_overrides:
+    analyze_changes:
+      max_tier: TIER_1
+      max_retries: 1
+    generate_plan:
+      max_tier: TIER_1
+      max_retries: 1
+    apply_changes:
+      max_tier: TIER_0
+      max_retries: 0
+      fail_fast: true
+    rollback_changes:
+      max_tier: TIER_1
+      max_retries: 2
+
+  # Immediate HITL escalation for infrastructure failures
+  escalation:
+    on_any_failure: true
+    create_linear_issue: true
+    priority: "critical"
 
 # Notifications
 notifications:

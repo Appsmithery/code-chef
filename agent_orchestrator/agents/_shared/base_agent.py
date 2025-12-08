@@ -58,6 +58,22 @@ try:
 except ImportError:
     MEMORY_ENABLED = False
     AgentMemoryManager = None
+
+# Error recovery integration (CHEF error recovery engine)
+try:
+    from lib.error_recovery_engine import (
+        RecoveryTier,
+        get_error_recovery_engine,
+        with_recovery,
+    )
+    
+    ERROR_RECOVERY_ENABLED = True
+except ImportError:
+    ERROR_RECOVERY_ENABLED = False
+    RecoveryTier = None
+    get_error_recovery_engine = None
+    with_recovery = None
+
     InsightType = None
     Insight = None
 
@@ -120,6 +136,19 @@ class BaseAgent:
                     f"[{agent_name}] Agent memory initialization failed: {e}"
                 )
 
+        # Initialize error recovery configuration from tools.yaml
+        self._error_recovery_config = self._load_error_recovery_config()
+        self._error_recovery_enabled = (
+            ERROR_RECOVERY_ENABLED and 
+            self._error_recovery_config.get("enabled", True)
+        )
+        if self._error_recovery_enabled:
+            logger.info(
+                f"[{agent_name}] Error recovery enabled: "
+                f"max_tier={self._error_recovery_config.get('max_tier', 'TIER_2')}, "
+                f"max_retries={self._error_recovery_config.get('max_retries', 3)}"
+            )
+
         # Initialize LLM with agent-specific model (without tools - bound at invoke time)
         self.llm = self._initialize_llm()
 
@@ -132,6 +161,97 @@ class BaseAgent:
         # Inter-agent communication via EventBus (Phase 6 - CHEF-110)
         self._event_bus: Optional[EventBus] = None
         self._event_bus_connected = False
+
+    def _load_error_recovery_config(self) -> Dict[str, Any]:
+        """Load error recovery configuration from tools.yaml.
+        
+        Returns:
+            Error recovery configuration dict with defaults applied.
+            
+        Expected YAML structure in tools.yaml:
+        ```yaml
+        error_recovery:
+          enabled: true
+          max_tier: TIER_2
+          max_retries: 3
+          fail_fast: false
+          category_overrides:
+            llm:
+              max_tier: TIER_2
+              max_retries: 3
+          circuit_breaker:
+            enabled: true
+            use_defaults: true
+        ```
+        """
+        # Defaults for error recovery
+        defaults = {
+            "enabled": True,
+            "max_tier": "TIER_2",
+            "max_retries": 3,
+            "fail_fast": False,
+            "category_overrides": {},
+            "circuit_breaker": {
+                "enabled": True,
+                "use_defaults": True,
+            },
+        }
+        
+        error_recovery_config = self.config.get("error_recovery", {})
+        
+        # Merge with defaults
+        merged = {**defaults, **error_recovery_config}
+        
+        # Ensure circuit_breaker has defaults
+        if "circuit_breaker" in error_recovery_config:
+            merged["circuit_breaker"] = {
+                **defaults["circuit_breaker"],
+                **error_recovery_config.get("circuit_breaker", {}),
+            }
+        
+        return merged
+
+    def get_recovery_settings(
+        self, 
+        category: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Get error recovery settings for this agent.
+        
+        Used by @with_recovery decorator to apply agent-specific recovery settings.
+        
+        Args:
+            category: Optional error category for category-specific overrides
+                     (e.g., 'llm', 'mcp', 'network', 'docker', 'auth')
+        
+        Returns:
+            Dict with recovery settings:
+            - max_tier: RecoveryTier enum value or string
+            - max_retries: int
+            - fail_fast: bool
+            - circuit_breaker: dict with circuit breaker settings
+        """
+        config = self._error_recovery_config.copy()
+        
+        # Apply category-specific overrides if provided
+        if category and category in config.get("category_overrides", {}):
+            category_config = config["category_overrides"][category]
+            for key in ["max_tier", "max_retries", "fail_fast"]:
+                if key in category_config:
+                    config[key] = category_config[key]
+        
+        # Convert tier string to enum if error recovery is available
+        if ERROR_RECOVERY_ENABLED and RecoveryTier:
+            tier_str = config.get("max_tier", "TIER_2")
+            if isinstance(tier_str, str):
+                try:
+                    config["max_tier_enum"] = RecoveryTier[tier_str]
+                except KeyError:
+                    logger.warning(
+                        f"[{self.agent_name}] Invalid tier '{tier_str}', defaulting to TIER_2"
+                    )
+                    config["max_tier_enum"] = RecoveryTier.TIER_2
+        
+        return config
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load agent configuration from YAML file.
