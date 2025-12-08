@@ -38,7 +38,12 @@
     "inlineChat.lineEmptyHint": true,
     "inlineChat.finishOnType": true,
     "inlineChat.enableV2": true,
-    "chat.editor.wordWrap": "on"
+    "chat.editor.wordWrap": "on",
+    "codechef.apiKey": "gt5Ae88fz-inOpFmRf1kVAkOJSV3enR7qr8ri1V2so0",
+    "codechef.maxResponseTokens": 8000,
+    "codechef.ragMaxResults": 20,
+    "codechef.ragCollection": "feature_specs",
+    "codechef.linearHubIssue": "CHEF-68"
   },
   "extensions": {
     "recommendations": [
