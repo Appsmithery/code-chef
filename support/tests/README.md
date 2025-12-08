@@ -117,7 +117,7 @@ pytest support/tests/integration/ -v
 
 ```bash
 export GRADIENT_API_KEY="your-gradient-key"
-export LINEAR_API_KEY="lin_oauth_..."
+export LINEAR_API_KEY="lin_api_..."  # Personal API Key from https://linear.app/dev-ops/settings/api
 export LANGSMITH_API_KEY="lsv2_sk_..."
 ```
 

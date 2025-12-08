@@ -12,25 +12,25 @@
 # - PR-68 is workspace-level, NOT project-specific
 
 # Default project for orchestrator (when --project-id not specified)
-default_project: "ai-devops-agent-platform"
+default_project: "codechef"
 
-# Team ID for Project Roadmaps workspace
+# Team ID for dev-ops workspace
 team_id: "f5b610be-ac34-4983-918b-2c9d00aa9b7a"
 
 # Known projects in workspace
 projects:
-  ai-devops-agent-platform:
+  codechef:
     uuid: "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"
-    name: "AI DevOps Agent Platform"
+    name: "code/chef"
     slug: "78b3b839d36b"
-    url: "https://linear.app/project-roadmaps/project/ai-devops-agent-platform-78b3b839d36b"
+    url: "https://linear.app/dev-ops/project/codechef-78b3b839d36b"
     description: "Multi-agent AI DevOps automation platform"
 
   twkr-agentic-resume-workflow:
     uuid: "86f8cc40-de06-4e3d-b7c8-ed95193737bc"
     name: "TWKR Agentic Resume Workflow"
     slug: "30f6ea5be0a6"
-    url: "https://linear.app/project-roadmaps/project/twkr-agentic-resume-workflow-30f6ea5be0a6"
+    url: "https://linear.app/dev-ops/project/twkr-agentic-resume-workflow-30f6ea5be0a6"
     description: "AI-powered resume optimization and job application workflow automation"
 
   # Add more projects here as they are created

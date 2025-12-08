@@ -16,7 +16,7 @@ This script should be used by agents for roadmap updates to ensure:
 4. Appropriate metadata and labels
 
 Usage Examples:
-    # Create a new phase issue with sub-tasks (AI DevOps Agent Platform)
+    # Create a new phase issue with sub-tasks (code/chef)
     python support/scripts/agent-linear-update.py create-phase \
         --project-id "b21cbaa1-9f09-40f4-b62a-73e0f86dd501" \
         --phase-number 7 \
@@ -56,14 +56,14 @@ if not LINEAR_API_KEY:
 GRAPHQL_ENDPOINT = "https://api.linear.app/graphql"
 
 # Default project configuration (can be overridden via CLI args)
-DEFAULT_PROJECT_UUID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
-DEFAULT_TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # Project Roadmaps (PR)
+DEFAULT_PROJECT_UUID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # code/chef
+DEFAULT_TEAM_ID = "f5b610be-ac34-4983-918b-2c9d00aa9b7a"  # dev-ops (CHEF)
 
-# Known projects in Project Roadmaps workspace
+# Known projects in dev-ops workspace
 PROJECT_REGISTRY = {
-    "ai-devops-agent-platform": {
+    "codechef": {
         "uuid": "b21cbaa1-9f09-40f4-b62a-73e0f86dd501",
-        "name": "AI DevOps Agent Platform",
+        "name": "code/chef",
         "slug": "78b3b839d36b"
     },
     "twkr-agentic-resume-workflow": {

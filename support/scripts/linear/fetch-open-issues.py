@@ -17,7 +17,7 @@ if not LINEAR_API_KEY:
     sys.exit(1)
 
 GRAPHQL_ENDPOINT = "https://api.linear.app/graphql"
-PROJECT_UUID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # AI DevOps Agent Platform
+PROJECT_UUID = "b21cbaa1-9f09-40f4-b62a-73e0f86dd501"  # code/chef
 
 # Define stale threshold (7 days)
 STALE_DAYS = 7
