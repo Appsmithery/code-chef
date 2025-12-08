@@ -37,7 +37,8 @@
     "chat.useNestedAgentsMdFiles": true,
     "inlineChat.lineEmptyHint": true,
     "inlineChat.finishOnType": true,
-    "inlineChat.enableV2": true
+    "inlineChat.enableV2": true,
+    "chat.editor.wordWrap": "on"
   },
   "extensions": {
     "recommendations": [
