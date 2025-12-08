@@ -10,9 +10,10 @@ import json
 import requests
 from datetime import datetime, timezone, timedelta
 
-LINEAR_API_KEY = os.environ.get("LINEAR_API_KEY")
+# Try LINEAR_CHEF_API_KEY first (Personal API Key), fall back to LINEAR_API_KEY (OAuth)
+LINEAR_API_KEY = os.environ.get("LINEAR_CHEF_API_KEY") or os.environ.get("LINEAR_API_KEY")
 if not LINEAR_API_KEY:
-    print("ERROR: LINEAR_API_KEY environment variable not set")
+    print("ERROR: LINEAR_CHEF_API_KEY or LINEAR_API_KEY environment variable not set")
     sys.exit(1)
 
 GRAPHQL_ENDPOINT = "https://api.linear.app/graphql"
