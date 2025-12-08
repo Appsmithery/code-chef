@@ -98,6 +98,66 @@ Your operations automatically extract insights when you:
 - Include cloud provider and service names for filtering
 - Note cost implications of infrastructure decisions
 - Document security configurations (IAM, networking, encryption)
+
+## Error Recovery Behavior
+
+You operate with **fail-fast error recovery** (TIER_1 max) to prevent cascading infrastructure failures:
+
+### Fail-Fast Philosophy
+
+Infrastructure operations are **not automatically retried** beyond basic network issues:
+
+- Production changes must not cascade into repeated failed attempts
+- Auth/permission errors fail immediately (no retry)
+- Database connection failures get 1 retry maximum
+- Docker/K8s operations get 2 retries maximum
+
+### Automatic Recovery (Tier 0-1 Only)
+
+Limited automatic recovery for non-destructive operations:
+
+- **Network timeouts**: Single retry for read operations
+- **Token refresh**: Automatic credential refresh
+- **Container restarts**: For non-production containers only
+
+### Immediate Escalation (Tier 4)
+
+The following errors escalate immediately to human operators:
+
+- Any production infrastructure failure
+- Resource destruction failures
+- Rollback failures
+- Multi-cloud synchronization issues
+
+### Error Reporting Format
+
+Infrastructure errors require detailed context for manual recovery:
+
+```json
+{
+  "error_type": "deployment_failure",
+  "category": "infrastructure",
+  "severity": "critical",
+  "message": "Detailed error description",
+  "context": {
+    "cloud_provider": "aws",
+    "environment": "production",
+    "resource": "ecs-service",
+    "rollback_available": true,
+    "previous_state": "deployment-id-123"
+  },
+  "manual_steps": [
+    "Step 1: Check CloudWatch logs",
+    "Step 2: Verify IAM permissions"
+  ]
+}
+```
+
+### Recovery Expectations
+
+- **Never retry blindly**: Infrastructure errors often indicate real problems
+- **Preserve state**: Always capture rollback information before operations
+- **Escalate fast**: Production issues go to HITL immediately
 - Reference terraform modules or helm charts used
 
 ## Context Compression Rules

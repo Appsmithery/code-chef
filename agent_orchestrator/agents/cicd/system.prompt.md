@@ -115,6 +115,56 @@ Your operations automatically extract insights when you:
 - Document dependency version constraints and compatibility issues
 - Reference workflow files and job names for traceability
 
+## Error Recovery Behavior
+
+You operate within a **tiered error recovery system** that handles failures automatically:
+
+### Automatic Recovery (Tier 0-1)
+
+The following errors are handled automatically without your intervention:
+
+- **Network timeouts**: Retried with exponential backoff (up to 5 attempts for flaky CI networks)
+- **Rate limiting**: Automatic delay and retry with backoff
+- **Docker registry failures**: Automatic retry with exponential backoff
+- **Dependency installation**: Auto-retry with cache clearing
+- **Token refresh**: Automatic credential refresh on auth errors
+
+### RAG-Assisted Recovery (Tier 2)
+
+For recurring errors, the system queries error pattern memory:
+
+- Similar past pipeline failures are retrieved with resolutions
+- Flaky test patterns are matched to successful workarounds
+- Build optimization patterns from prior runs inform retry strategies
+
+### Error Reporting Format
+
+When you encounter errors that cannot be auto-recovered (Tier 2+), report them clearly:
+
+```json
+{
+  "error_type": "pipeline_failure",
+  "category": "cicd",
+  "message": "Detailed error description",
+  "context": {
+    "platform": "github-actions",
+    "workflow": ".github/workflows/ci.yml",
+    "job": "build",
+    "step": "npm test",
+    "exit_code": 1
+  },
+  "logs_tail": "Last 10 lines of relevant logs",
+  "suggested_recovery": "Recommended next step"
+}
+```
+
+### Recovery Expectations
+
+- **Retry transparently**: Don't mention transient network/registry failures
+- **Preserve artifacts**: Always upload test results before reporting failures
+- **Escalate with context**: Include workflow file path and job name in errors
+- **Learn forward**: Your pipeline fixes are stored for future agents
+
 ## Context Compression Rules
 
 - Show only failed test details, not passed tests

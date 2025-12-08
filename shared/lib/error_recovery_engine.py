@@ -1177,27 +1177,128 @@ def get_error_recovery_engine() -> ErrorRecoveryEngine:
     return _recovery_engine
 
 
+def _get_config_recovery_settings(
+    agent_name: Optional[str] = None,
+    step_id: Optional[str] = None,
+    workflow_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Load error recovery settings from configuration files.
+    
+    Resolution order (later overrides earlier):
+    1. Global defaults from config/error-handling.yaml
+    2. Agent-specific overrides from config/error-handling.yaml agent_overrides
+    3. Workflow-specific overrides from config/error-handling.yaml workflow_overrides
+    4. Step-specific overrides from workflow template
+    
+    Args:
+        agent_name: Agent name for agent-specific overrides
+        step_id: Step ID for step-specific overrides
+        workflow_id: Workflow ID for workflow-specific overrides
+    
+    Returns:
+        Dict with resolved recovery settings (max_tier, max_retries, fail_fast)
+    """
+    config = _load_config()
+    
+    # Start with defaults
+    settings = {
+        "max_tier": RecoveryTier.TIER_2,
+        "max_retries": 3,
+        "fail_fast": False,
+    }
+    
+    # Apply agent overrides if available
+    if agent_name and "agent_overrides" in config:
+        agent_config = config["agent_overrides"].get(agent_name, {})
+        if "max_tier" in agent_config:
+            tier_str = agent_config["max_tier"]
+            try:
+                settings["max_tier"] = RecoveryTier[tier_str]
+            except KeyError:
+                logger.warning(f"Invalid tier '{tier_str}' for agent {agent_name}")
+        if "max_retries" in agent_config:
+            settings["max_retries"] = agent_config["max_retries"]
+        if "fail_fast" in agent_config:
+            settings["fail_fast"] = agent_config["fail_fast"]
+    
+    # Apply workflow overrides if available
+    if workflow_id and "workflow_overrides" in config:
+        # Try exact match first, then partial match
+        workflow_config = None
+        for wf_key in config["workflow_overrides"]:
+            if workflow_id == wf_key or workflow_id.startswith(wf_key.replace(".workflow", "")):
+                workflow_config = config["workflow_overrides"][wf_key]
+                break
+        
+        if workflow_config:
+            if "default_tier" in workflow_config:
+                tier_str = workflow_config["default_tier"]
+                try:
+                    settings["max_tier"] = RecoveryTier[tier_str]
+                except KeyError:
+                    logger.warning(f"Invalid tier '{tier_str}' for workflow {workflow_id}")
+            if "max_workflow_retries" in workflow_config:
+                settings["max_retries"] = workflow_config["max_workflow_retries"]
+            if "fail_fast" in workflow_config:
+                settings["fail_fast"] = workflow_config["fail_fast"]
+            
+            # Apply step-specific overrides
+            if step_id and "step_overrides" in workflow_config:
+                step_config = workflow_config["step_overrides"].get(step_id, {})
+                if "max_tier" in step_config:
+                    tier_str = step_config["max_tier"]
+                    try:
+                        settings["max_tier"] = RecoveryTier[tier_str]
+                    except KeyError:
+                        logger.warning(f"Invalid tier '{tier_str}' for step {step_id}")
+                if "max_retries" in step_config:
+                    settings["max_retries"] = step_config["max_retries"]
+                if "fail_fast" in step_config:
+                    settings["fail_fast"] = step_config["fail_fast"]
+    
+    return settings
+
+
 # Decorator for agent-level recovery
 def with_recovery(
-    max_retries: int = 3,
-    max_tier: RecoveryTier = RecoveryTier.TIER_1,
+    max_retries: Optional[int] = None,
+    max_tier: Optional[RecoveryTier] = None,
     step_id: Optional[str] = None,
     agent_name: Optional[str] = None,
+    use_config: bool = True,
 ):
     """
     Decorator for agent nodes to handle Tier 0-1 errors locally.
     
+    Configuration Resolution (when use_config=True):
+        1. Explicit decorator args take priority
+        2. Falls back to config/error-handling.yaml agent_overrides
+        3. Falls back to workflow template error_recovery settings
+        4. Falls back to global defaults (TIER_1, 3 retries)
+    
     Usage:
-        @with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1)
+        # Use config-based settings (recommended)
+        @with_recovery(agent_name="feature_dev")
         async def my_agent_node(state: WorkflowState) -> WorkflowState:
-            # Agent logic here
+            pass
+        
+        # Override with explicit settings
+        @with_recovery(max_retries=5, max_tier=RecoveryTier.TIER_2)
+        async def another_node(state: WorkflowState) -> WorkflowState:
+            pass
+        
+        # Disable config lookup (use explicit args only)
+        @with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1, use_config=False)
+        async def legacy_node(state: WorkflowState) -> WorkflowState:
             pass
     
     Args:
-        max_retries: Maximum retry attempts
-        max_tier: Maximum tier for local recovery (default: TIER_1)
+        max_retries: Maximum retry attempts (None = use config)
+        max_tier: Maximum tier for local recovery (None = use config)
         step_id: Optional step identifier for circuit breaker
-        agent_name: Optional agent name for routing
+        agent_name: Agent name for config lookup and routing
+        use_config: Whether to load settings from configuration files (default: True)
     """
     def decorator(func: Callable[..., Awaitable[T]]) -> Callable[..., Awaitable[T]]:
         @wraps(func)
@@ -1209,15 +1310,55 @@ def with_recovery(
             if args and hasattr(args[0], 'get'):
                 workflow_id = args[0].get('workflow_id')
             
+            # Resolve recovery settings from config with explicit overrides
+            effective_max_retries = max_retries
+            effective_max_tier = max_tier
+            effective_fail_fast = False
+            
+            if use_config:
+                config_settings = _get_config_recovery_settings(
+                    agent_name=agent_name,
+                    step_id=step_id or func.__name__,
+                    workflow_id=workflow_id,
+                )
+                # Only use config values if explicit args not provided
+                if effective_max_retries is None:
+                    effective_max_retries = config_settings["max_retries"]
+                if effective_max_tier is None:
+                    effective_max_tier = config_settings["max_tier"]
+                effective_fail_fast = config_settings.get("fail_fast", False)
+            
+            # Apply final defaults for backward compatibility
+            if effective_max_retries is None:
+                effective_max_retries = 3
+            if effective_max_tier is None:
+                effective_max_tier = RecoveryTier.TIER_1
+            
+            logger.debug(
+                f"[with_recovery] {func.__name__}: "
+                f"max_tier={effective_max_tier.name}, "
+                f"max_retries={effective_max_retries}, "
+                f"fail_fast={effective_fail_fast}, "
+                f"use_config={use_config}"
+            )
+            
             last_exception = None
             
-            for attempt in range(max_retries + 1):
+            for attempt in range(effective_max_retries + 1):
                 try:
                     return await func(*args, **kwargs)
                 except Exception as e:
                     last_exception = e
                     
-                    if attempt >= max_retries:
+                    # Fail-fast mode: don't retry, escalate immediately
+                    if effective_fail_fast:
+                        logger.info(
+                            f"[with_recovery] {func.__name__}: "
+                            f"Fail-fast enabled, escalating immediately"
+                        )
+                        raise e
+                    
+                    if attempt >= effective_max_retries:
                         break
                     
                     # Attempt recovery
@@ -1230,14 +1371,14 @@ def with_recovery(
                         step_id=step_id or func.__name__,
                         agent_name=agent_name,
                         operation=retry_op,
-                        max_tier=max_tier,
+                        max_tier=effective_max_tier,
                     )
                     
                     if outcome.success:
                         return outcome.recovery_value
                     
                     # If recovery escalated beyond our max tier, re-raise
-                    if outcome.final_tier.value > max_tier.value:
+                    if outcome.final_tier.value > effective_max_tier.value:
                         raise e
             
             # All attempts exhausted
@@ -1247,3 +1388,4 @@ def with_recovery(
         
         return wrapper
     return decorator
+

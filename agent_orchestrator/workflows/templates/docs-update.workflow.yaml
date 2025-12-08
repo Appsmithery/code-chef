@@ -122,12 +122,55 @@ steps:
 error_handling:
   - step: "validate_docs_only"
     on_error: "notify_failure"
+    recovery_tier: TIER_2
+    max_retries: 2
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["supervisor"]
 
   - step: "review_documentation"
     on_error: "notify_failure"
+    recovery_tier: TIER_2 # RAG-assisted for doc patterns
+    max_retries: 2
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["supervisor"]
 
   - step: "merge_documentation"
     on_error: "notify_failure"
+    recovery_tier: TIER_1
+    max_retries: 1
+    circuit_breaker:
+      enabled: true
+      failure_threshold: 3
+    escalation_path: ["supervisor"]
+
+# Top-level error recovery configuration for docs workflow
+error_recovery:
+  enabled: true
+  default_tier: TIER_2
+  max_workflow_retries: 2
+
+  # Step-specific tier limits
+  step_overrides:
+    validate_docs_only:
+      max_tier: TIER_2
+      max_retries: 2
+    review_documentation:
+      max_tier: TIER_2
+      max_retries: 2
+    merge_documentation:
+      max_tier: TIER_1
+      max_retries: 1
+
+  # Fallback chain for LLM failures
+  llm_fallback_chain:
+    - model: "mistral-nemo-instruct-2407"
+      provider: "gradient"
+    - model: "llama3-8b"
+      provider: "gradient"
 
 # Notifications
 notifications:

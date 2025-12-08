@@ -70,3 +70,30 @@ memory:
     - error_pattern
     - task_resolution
   tags: [cicd, deployment, automation, multi-platform]
+
+# Error recovery configuration (integrated with ErrorRecoveryEngine)
+error_recovery:
+  enabled: true
+  max_tier: TIER_2 # RAG-assisted for pipeline error patterns
+  max_retries: 3
+  fail_fast: false
+
+  # Category-specific overrides
+  category_overrides:
+    network:
+      max_tier: TIER_1
+      max_retries: 5 # More retries for flaky network in CI
+    docker:
+      max_tier: TIER_1
+      max_retries: 3
+    mcp:
+      max_tier: TIER_1
+      max_retries: 2
+    dependency:
+      max_tier: TIER_1
+      max_retries: 3
+
+  # Circuit breaker settings
+  circuit_breaker:
+    enabled: true
+    use_defaults: true

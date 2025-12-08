@@ -64,3 +64,33 @@ memory:
     - architectural_decision
     - error_pattern
     - task_resolution
+
+# Error recovery configuration (integrated with ErrorRecoveryEngine)
+# Infrastructure agent uses TIER_1 for fail-fast behavior to prevent
+# cascading failures in production infrastructure operations
+error_recovery:
+  enabled: true
+  max_tier: TIER_1 # Fail-fast for infrastructure - no RAG/LLM recovery
+  max_retries: 1 # Minimal retries for infrastructure changes
+  fail_fast: true # Escalate immediately on non-retriable errors
+
+  # Category-specific overrides
+  category_overrides:
+    docker:
+      max_tier: TIER_1
+      max_retries: 2
+    network:
+      max_tier: TIER_0
+      max_retries: 1
+    auth:
+      max_tier: TIER_0
+      max_retries: 0 # No retry for auth failures
+    database:
+      max_tier: TIER_1
+      max_retries: 1
+
+  # Circuit breaker settings (tighter thresholds)
+  circuit_breaker:
+    enabled: true
+    failure_threshold: 2 # Open circuit after 2 failures
+    recovery_timeout_seconds: 120 # Wait longer before retrying

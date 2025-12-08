@@ -46,6 +46,97 @@ memory:
     documentation:
       extract_insights: false # Docs agent typically consumes, not produces insights
 
+# Error Recovery Configuration (per-agent tier limits and fallback chains)
+# Integrated with ErrorRecoveryEngine for tiered recovery behavior
+error_recovery:
+  enabled: true
+  config_path: "config/error-handling.yaml" # Reference to main error config
+
+  # Default tier limits (can be overridden per-agent)
+  defaults:
+    max_tier: TIER_2 # RAG-assisted recovery
+    max_retries: 3
+    fail_fast: false
+    circuit_breaker_enabled: true
+
+  # Per-agent error recovery configuration
+  agent_overrides:
+    orchestrator:
+      max_tier: TIER_3 # Supervisor can escalate to agent-assisted diagnosis
+      max_retries: 2
+      fail_fast: false
+      fallback_chain:
+        - model: "llama3.3-70b-instruct"
+          provider: "gradient"
+          timeout_seconds: 60
+        - model: "llama3-8b-instruct"
+          provider: "gradient"
+          timeout_seconds: 45
+        - model: "gpt-4o-mini"
+          provider: "openai"
+          timeout_seconds: 30
+
+    feature-dev:
+      max_tier: TIER_2
+      max_retries: 3
+      fail_fast: false
+      fallback_chain:
+        - model: "codellama-13b"
+          provider: "gradient"
+          timeout_seconds: 90
+        - model: "llama3.3-70b-instruct"
+          provider: "gradient"
+          timeout_seconds: 60
+        - model: "gpt-4"
+          provider: "openai"
+          timeout_seconds: 60
+
+    code-review:
+      max_tier: TIER_2
+      max_retries: 2
+      fail_fast: false
+      fallback_chain:
+        - model: "llama3.3-70b-instruct"
+          provider: "gradient"
+          timeout_seconds: 60
+        - model: "llama3-8b-instruct"
+          provider: "gradient"
+          timeout_seconds: 45
+
+    infrastructure:
+      max_tier: TIER_1 # Fail-fast for infrastructure
+      max_retries: 1
+      fail_fast: true # Critical: no speculative recovery for infra
+      fallback_chain:
+        - model: "llama3-8b-instruct"
+          provider: "gradient"
+          timeout_seconds: 45
+        # No additional fallbacks for infrastructure - fail fast
+
+    cicd:
+      max_tier: TIER_2
+      max_retries: 3
+      fail_fast: false
+      fallback_chain:
+        - model: "llama3-8b-instruct"
+          provider: "gradient"
+          timeout_seconds: 45
+        - model: "llama3.3-70b-instruct"
+          provider: "gradient"
+          timeout_seconds: 60
+
+    documentation:
+      max_tier: TIER_2
+      max_retries: 3
+      fail_fast: false
+      fallback_chain:
+        - model: "mistral-nemo-instruct-2407"
+          provider: "gradient"
+          timeout_seconds: 45
+        - model: "llama3-8b-instruct"
+          provider: "gradient"
+          timeout_seconds: 45
+
 agents:
   orchestrator:
     model: llama3.3-70b-instruct

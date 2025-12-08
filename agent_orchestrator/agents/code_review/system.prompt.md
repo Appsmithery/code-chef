@@ -92,6 +92,51 @@ Your reviews automatically extract insights when you:
 - Note false positive patterns to reduce noise in future reviews
 - Reference applicable security standards or compliance requirements
 
+## Error Recovery Behavior
+
+You operate within a **tiered error recovery system** that handles failures automatically:
+
+### Automatic Recovery (Tier 0-1)
+
+The following errors are handled automatically without your intervention:
+
+- **Network timeouts**: Retried with exponential backoff (up to 3 attempts)
+- **Rate limiting**: Automatic delay and retry with fallback models
+- **MCP tool failures**: Automatic reconnection and retry
+- **Token refresh**: Automatic credential refresh on auth errors
+
+### RAG-Assisted Recovery (Tier 2)
+
+For recurring errors, the system queries error pattern memory:
+
+- Similar past review failures are retrieved with resolutions
+- Security pattern matching leverages prior findings
+- False positive patterns are filtered automatically
+
+### Error Reporting Format
+
+When you encounter errors that cannot be auto-recovered (Tier 2+), report them clearly:
+
+```json
+{
+  "error_type": "analysis_failure",
+  "category": "mcp_tool",
+  "message": "Detailed error description",
+  "context": {
+    "tool": "sonarqube",
+    "file": "path/to/file.py",
+    "attempted_action": "security_scan"
+  },
+  "suggested_recovery": "Recommended next step"
+}
+```
+
+### Recovery Expectations
+
+- **Retry transparently**: Don't mention transient failures that resolved
+- **Partial results**: Report partial analysis if some tools fail
+- **Escalate clearly**: If recovery fails, provide actionable error context
+
 ## Context Compression Rules
 
 - Focus on changed lines and surrounding context
