@@ -49,7 +49,7 @@ class MCPBridgeClient:
     
     def __init__(
         self,
-        gateway_url: str = "http://45.55.173.72:8000",
+        gateway_url: str = "http://45.55.173.72:8001",
         timeout: float = 30.0,
         enable_caching: bool = True,
         cache_ttl: int = 300,
@@ -58,8 +58,12 @@ class MCPBridgeClient:
         """
         Initialize MCP Bridge Client
         
+        CHEF-118: Default endpoint is orchestrator (port 8001) which exposes
+        MCP tool discovery and invocation endpoints. The gateway (port 8000)
+        handles Linear OAuth integration.
+        
         Args:
-            gateway_url: MCP gateway endpoint
+            gateway_url: MCP orchestrator endpoint (default: 8001 for tools)
             timeout: Request timeout in seconds
             enable_caching: Enable tool catalog caching
             cache_ttl: Cache time-to-live in seconds

@@ -1924,6 +1924,319 @@ async def get_server_details(server_name: str):
     return {"success": True, "server": server}
 
 
+# =============================================================================
+# MCP TOOL DISCOVERY ENDPOINTS (CHEF-118)
+# =============================================================================
+# These endpoints enable MCP Bridge Clients to discover and invoke tools.
+# They expose the ProgressiveMCPLoader functionality via REST API.
+# =============================================================================
+
+
+@app.get("/tools")
+@traceable(name="api_get_all_tools", tags=["api", "mcp", "tools", "discovery"])
+async def get_all_tools():
+    """Get complete catalog of all MCP tools.
+
+    Returns all available tools from all MCP servers (150+ tools).
+    This is the full tool list for clients that need complete discovery.
+
+    CHEF-118: Implements MCP Tool Discovery Endpoints.
+
+    Response:
+        {
+            "success": true,
+            "tools": [
+                {
+                    "name": "tool_name",
+                    "server": "server_name",
+                    "description": "Tool description",
+                    "parameters": {...}
+                },
+                ...
+            ],
+            "count": 150,
+            "servers": ["server1", "server2", ...],
+            "strategy": "full"
+        }
+    """
+    try:
+        # Use progressive loader with FULL strategy to get all tools
+        all_toolsets = progressive_loader.get_tools_for_task(
+            task_description="*",  # Wildcard to get all tools
+            strategy=ToolLoadingStrategy.FULL,
+        )
+
+        # Flatten toolsets into tool list
+        tools = []
+        servers = set()
+
+        for toolset in all_toolsets:
+            servers.add(toolset.server)
+            for tool_name in toolset.tools:
+                tools.append({
+                    "name": tool_name,
+                    "server": toolset.server,
+                    "rationale": toolset.rationale,
+                    "priority": toolset.priority,
+                })
+
+        logger.info(f"[Tools API] Returning {len(tools)} tools from {len(servers)} servers")
+
+        return {
+            "success": True,
+            "tools": tools,
+            "count": len(tools),
+            "servers": sorted(list(servers)),
+            "strategy": "full",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"[Tools API] Failed to get all tools: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Tool discovery failed: {str(e)}")
+
+
+@app.get("/tools/progressive")
+@traceable(name="api_get_progressive_tools", tags=["api", "mcp", "tools", "progressive"])
+async def get_progressive_tools(task: str = None):
+    """Get task-filtered MCP tools using progressive disclosure.
+
+    Returns only tools relevant to the specified task (10-30 tools vs 150+).
+    Uses keyword matching to select appropriate MCP servers and tools.
+
+    CHEF-118: Implements progressive tool loading endpoint.
+
+    Query Parameters:
+        task: Task description for tool matching (e.g., "commit changes to git")
+
+    Response:
+        {
+            "success": true,
+            "tools": [...],
+            "count": 15,
+            "servers": ["gitmcp"],
+            "strategy": "progressive",
+            "keywords_matched": ["commit", "git"],
+            "token_savings_estimate": "~85%"
+        }
+    """
+    if not task:
+        raise HTTPException(
+            status_code=400,
+            detail="Query parameter 'task' is required. Example: /tools/progressive?task=commit+changes"
+        )
+
+    try:
+        # Use progressive loader with PROGRESSIVE strategy
+        relevant_toolsets = progressive_loader.get_tools_for_task(
+            task_description=task,
+            strategy=ToolLoadingStrategy.PROGRESSIVE,
+        )
+
+        # Get stats about what was matched
+        stats = progressive_loader.get_tool_usage_stats(relevant_toolsets)
+
+        # Flatten toolsets into tool list
+        tools = []
+        servers = set()
+        keywords_matched = set()
+
+        for toolset in relevant_toolsets:
+            servers.add(toolset.server)
+            for tool_name in toolset.tools:
+                tools.append({
+                    "name": tool_name,
+                    "server": toolset.server,
+                    "rationale": toolset.rationale,
+                    "priority": toolset.priority,
+                })
+
+        # Extract matched keywords from rationale
+        for toolset in relevant_toolsets:
+            if "keyword" in toolset.rationale.lower():
+                # Parse keywords from rationale like "Matched keywords: git, commit"
+                keywords_matched.update(
+                    [kw.strip() for kw in toolset.rationale.split(":")[1].split(",")]
+                    if ":" in toolset.rationale else []
+                )
+
+        logger.info(
+            f"[Tools API] Progressive: {len(tools)} tools for task '{task[:50]}...' "
+            f"(servers: {', '.join(servers)})"
+        )
+
+        return {
+            "success": True,
+            "tools": tools,
+            "count": len(tools),
+            "servers": sorted(list(servers)),
+            "strategy": "progressive",
+            "keywords_matched": sorted(list(keywords_matched)),
+            "task": task,
+            "stats": stats,
+            "token_savings_estimate": f"~{max(0, 100 - (len(tools) / 1.5)):.0f}%",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"[Tools API] Progressive discovery failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Progressive tool discovery failed: {str(e)}")
+
+
+class ToolInvocationRequest(BaseModel):
+    """Request body for tool invocation."""
+    arguments: Dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
+    timeout: Optional[float] = Field(default=30.0, description="Request timeout in seconds")
+
+
+@app.post("/tools/{tool_name}")
+@traceable(name="api_invoke_tool", tags=["api", "mcp", "tools", "invoke"])
+async def invoke_tool(tool_name: str, request: ToolInvocationRequest):
+    """Invoke an MCP tool by name.
+
+    Routes the tool invocation to the appropriate MCP server and returns
+    the result. This is the primary endpoint for tool execution.
+
+    CHEF-118: Implements MCP tool invocation proxy.
+
+    Path Parameters:
+        tool_name: Name of the tool to invoke (e.g., "memory/read", "gitmcp/commit")
+
+    Request Body:
+        {
+            "arguments": {"key": "value", ...},
+            "timeout": 30.0
+        }
+
+    Response:
+        {
+            "success": true,
+            "result": {...},
+            "tool": "tool_name",
+            "server": "server_name",
+            "execution_time_ms": 150.5,
+            "citations": [...]
+        }
+    """
+    import time
+
+    start_time = time.time()
+
+    try:
+        # Parse tool name to extract server if format is "server/tool"
+        if "/" in tool_name:
+            server_name, actual_tool = tool_name.split("/", 1)
+        else:
+            # Find server that has this tool
+            server_name = None
+            actual_tool = tool_name
+
+            # Search through discovered servers for the tool
+            all_toolsets = progressive_loader.get_tools_for_task(
+                task_description=tool_name,
+                strategy=ToolLoadingStrategy.PROGRESSIVE,
+            )
+
+            for toolset in all_toolsets:
+                if tool_name in toolset.tools or actual_tool in toolset.tools:
+                    server_name = toolset.server
+                    break
+
+            if not server_name:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Tool '{tool_name}' not found. Use /tools to list available tools."
+                )
+
+        # Invoke the tool via MCP client
+        result = await mcp_client.call_tool(
+            server=server_name,
+            tool=actual_tool,
+            params=request.arguments,
+        )
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
+        logger.info(
+            f"[Tools API] Invoked {server_name}/{actual_tool} "
+            f"(time: {execution_time_ms:.1f}ms, args: {list(request.arguments.keys())})"
+        )
+
+        return {
+            "success": True,
+            "result": result,
+            "tool": actual_tool,
+            "server": server_name,
+            "execution_time_ms": execution_time_ms,
+            "citations": result.get("citations", []) if isinstance(result, dict) else [],
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        execution_time_ms = (time.time() - start_time) * 1000
+        logger.error(
+            f"[Tools API] Tool invocation failed: {tool_name} - {e}",
+            exc_info=True
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"Tool invocation failed: {str(e)}"
+        )
+
+
+@app.get("/tools/servers")
+@traceable(name="api_list_tool_servers", tags=["api", "mcp", "tools", "servers"])
+async def list_tool_servers():
+    """List all available MCP tool servers.
+
+    Returns a list of MCP servers with their tool counts and status.
+
+    Response:
+        {
+            "success": true,
+            "servers": [
+                {
+                    "name": "gitmcp",
+                    "tools_count": 15,
+                    "status": "connected"
+                },
+                ...
+            ],
+            "total_servers": 18,
+            "total_tools": 150
+        }
+    """
+    try:
+        discovery = mcp_discovery.discover_servers()
+
+        servers = []
+        total_tools = 0
+
+        for server_name, server_info in discovery.get("servers", {}).items():
+            tool_count = len(server_info.get("tools", []))
+            total_tools += tool_count
+            servers.append({
+                "name": server_name,
+                "tools_count": tool_count,
+                "status": server_info.get("status", "unknown"),
+                "description": server_info.get("description", ""),
+            })
+
+        return {
+            "success": True,
+            "servers": servers,
+            "total_servers": len(servers),
+            "total_tools": total_tools,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+
+    except Exception as e:
+        logger.error(f"[Tools API] Failed to list servers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Server listing failed: {str(e)}")
+
+
 @app.get("/linear/issues")
 async def get_linear_issues():
     """Fetch issues from Linear roadmap."""

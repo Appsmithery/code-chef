@@ -8,6 +8,17 @@ Architecture:
 - Conditional edges based on LLM routing decisions
 - HITL approval nodes for high-risk operations
 - PostgreSQL checkpointing for workflow resume
+- **WorkflowEngine integration for declarative YAML templates** (Phase 6 - CHEF-110)
+
+Workflow Execution Modes:
+1. **Supervisor-driven**: Dynamic LLM routing via supervisor node (default)
+2. **Template-driven**: Declarative YAML workflows via WorkflowEngine
+
+The template-driven mode enables:
+- Deterministic step execution from YAML templates
+- LLM decision gates at strategic points
+- Event-sourced state for auditability
+- Resource locking for concurrent operation prevention
 """
 
 import sys
@@ -31,6 +42,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 # Import real agent classes from agents module
 from agents import get_agent as get_real_agent
 
+# Import WorkflowEngine for template-driven execution (Phase 6 - CHEF-110)
+from workflows.workflow_engine import WorkflowEngine, WorkflowStatus as WFStatus
+from workflows.workflow_router import WorkflowRouter, get_workflow_router
+
 
 # Define workflow state
 class WorkflowState(TypedDict):
@@ -50,6 +65,11 @@ class WorkflowState(TypedDict):
     Cross-Agent Memory Fields (CHEF-206):
         captured_insights: Insights extracted during workflow, persisted in checkpoint
         memory_context: Retrieved context at checkpoint time for injection on resume
+
+    Template-Driven Workflow Fields (CHEF-110):
+        workflow_template: Name of YAML template to execute (e.g., "pr-deployment.workflow.yaml")
+        workflow_context: Initial context variables for template rendering
+        use_template_engine: Whether to use WorkflowEngine instead of supervisor routing
     """
 
     messages: Annotated[List[BaseMessage], "append"]  # Append-only message history
@@ -64,10 +84,52 @@ class WorkflowState(TypedDict):
     # Cross-agent memory fields (JSON-serializable for PostgresSaver)
     captured_insights: List[Dict[str, Any]]  # Insights from agents during workflow
     memory_context: Optional[str]  # Retrieved context on resume
+    # Template-driven workflow fields (CHEF-110)
+    workflow_template: Optional[str]  # YAML template name (e.g., "pr-deployment.workflow.yaml")
+    workflow_context: Optional[Dict[str, Any]]  # Template context variables
+    use_template_engine: bool  # If True, use WorkflowEngine instead of supervisor
 
 
 # Agent cache with bound LLM instances
 _agent_cache: Dict[str, Any] = {}
+
+# WorkflowEngine instance for template-driven execution (Phase 6 - CHEF-110)
+_workflow_engine: Optional[WorkflowEngine] = None
+_workflow_router: Optional[WorkflowRouter] = None
+
+
+def get_workflow_engine() -> WorkflowEngine:
+    """Get or create WorkflowEngine singleton.
+
+    Provides template-driven workflow execution as an alternative to
+    supervisor-based dynamic routing.
+
+    Returns:
+        WorkflowEngine instance
+    """
+    global _workflow_engine
+    if _workflow_engine is None:
+        _workflow_engine = WorkflowEngine(
+            templates_dir="agent_orchestrator/workflows/templates"
+        )
+        logger.info("[LangGraph] Initialized WorkflowEngine for template-driven execution")
+    return _workflow_engine
+
+
+def get_router() -> WorkflowRouter:
+    """Get or create WorkflowRouter singleton.
+
+    Routes incoming tasks to appropriate workflow templates based on
+    heuristic pattern matching with LLM fallback.
+
+    Returns:
+        WorkflowRouter instance
+    """
+    global _workflow_router
+    if _workflow_router is None:
+        _workflow_router = get_workflow_router()
+        logger.info("[LangGraph] Initialized WorkflowRouter for task→workflow matching")
+    return _workflow_router
 
 
 def get_agent(agent_name: str):
@@ -549,6 +611,207 @@ async def approval_node(state: WorkflowState) -> WorkflowState:
     }
 
 
+# =========================================================================
+# TEMPLATE-DRIVEN WORKFLOW EXECUTION (Phase 6 - CHEF-110)
+# =========================================================================
+
+@traceable(name="workflow_router_node", tags=["langgraph", "node", "workflow", "router"])
+async def workflow_router_node(state: WorkflowState) -> WorkflowState:
+    """Route incoming task to appropriate workflow template.
+
+    Uses WorkflowRouter to match task description against available YAML
+    workflow templates. Falls back to supervisor-based routing if no
+    template matches with sufficient confidence.
+
+    This node runs at the start of the graph when use_template_engine=True,
+    selecting the right workflow template for the task.
+    """
+    router = get_router()
+
+    # Extract task description from messages
+    task_description = ""
+    for msg in state["messages"]:
+        if isinstance(msg, HumanMessage):
+            task_description = msg.content
+            break
+
+    if not task_description:
+        logger.warning("[WorkflowRouter] No task description found, falling back to supervisor")
+        return {
+            "messages": [],
+            "current_agent": "workflow_router",
+            "next_agent": "supervisor",
+            "use_template_engine": False,
+        }
+
+    try:
+        # Route task to workflow template
+        selection = await router.route(task_description)
+
+        if selection.confidence >= 0.7:
+            logger.info(
+                f"[WorkflowRouter] Matched '{selection.workflow_id}' "
+                f"(confidence={selection.confidence:.2f}, method={selection.method})"
+            )
+            return {
+                "messages": [
+                    AIMessage(
+                        content=f"Routed to workflow template: {selection.workflow_id} "
+                        f"(confidence: {selection.confidence:.2f})"
+                    )
+                ],
+                "current_agent": "workflow_router",
+                "next_agent": "workflow_executor",
+                "workflow_template": f"{selection.workflow_id}.workflow.yaml",
+                "use_template_engine": True,
+            }
+        else:
+            # Low confidence - fall back to supervisor
+            logger.info(
+                f"[WorkflowRouter] Low confidence ({selection.confidence:.2f}), "
+                f"falling back to supervisor routing"
+            )
+            return {
+                "messages": [
+                    AIMessage(
+                        content=f"Workflow routing uncertain (confidence: {selection.confidence:.2f}). "
+                        f"Using supervisor for dynamic routing."
+                    )
+                ],
+                "current_agent": "workflow_router",
+                "next_agent": "supervisor",
+                "use_template_engine": False,
+            }
+
+    except Exception as e:
+        logger.error(f"[WorkflowRouter] Routing failed: {e}")
+        return {
+            "messages": [AIMessage(content=f"Workflow routing error: {e}")],
+            "current_agent": "workflow_router",
+            "next_agent": "supervisor",
+            "use_template_engine": False,
+        }
+
+
+@traceable(name="workflow_executor_node", tags=["langgraph", "node", "workflow", "executor"])
+async def workflow_executor_node(state: WorkflowState) -> WorkflowState:
+    """Execute workflow using declarative YAML template.
+
+    Runs the full workflow template via WorkflowEngine, which handles:
+    - Sequential step execution
+    - LLM decision gates
+    - HITL approval integration
+    - Resource locking
+    - Event-sourced state persistence
+
+    This replaces the supervisor→agent→supervisor loop with a single
+    template-driven execution.
+    """
+    engine = get_workflow_engine()
+
+    template_name = state.get("workflow_template")
+    if not template_name:
+        logger.error("[WorkflowExecutor] No workflow template specified")
+        return {
+            "messages": [AIMessage(content="No workflow template specified")],
+            "current_agent": "workflow_executor",
+            "next_agent": "end",
+            "task_result": {"error": "No workflow template specified"},
+        }
+
+    # Build context from messages and existing workflow_context
+    context = dict(state.get("workflow_context") or {})
+
+    # Extract additional context from messages
+    for msg in state["messages"]:
+        if isinstance(msg, HumanMessage):
+            context["task_description"] = msg.content
+            break
+
+    context["workflow_id"] = state.get("workflow_id", str(uuid.uuid4()))
+    context["thread_id"] = state.get("thread_id", "")
+
+    logger.info(
+        f"[WorkflowExecutor] Executing template '{template_name}' "
+        f"with context keys: {list(context.keys())}"
+    )
+
+    try:
+        # Execute workflow via WorkflowEngine
+        workflow_state = await engine.execute_workflow(
+            template_name=template_name,
+            context=context,
+        )
+
+        # Check workflow result
+        if workflow_state.status == WFStatus.COMPLETED:
+            logger.info(f"[WorkflowExecutor] Workflow completed successfully")
+            return {
+                "messages": [
+                    AIMessage(
+                        content=f"Workflow '{workflow_state.definition.name}' completed. "
+                        f"Steps executed: {len(workflow_state.outputs)}"
+                    )
+                ],
+                "current_agent": "workflow_executor",
+                "next_agent": "end",
+                "task_result": {
+                    "workflow_name": workflow_state.definition.name,
+                    "status": "completed",
+                    "outputs": workflow_state.outputs,
+                    "steps_completed": len(
+                        [s for s, st in workflow_state.step_statuses.items() if st.value == "completed"]
+                    ),
+                },
+            }
+
+        elif workflow_state.status == WFStatus.PAUSED:
+            # HITL approval required - interrupt for resume
+            logger.info(f"[WorkflowExecutor] Workflow paused for HITL approval")
+            return {
+                "messages": [
+                    AIMessage(
+                        content=f"Workflow paused at step '{workflow_state.current_step}' "
+                        f"awaiting HITL approval."
+                    )
+                ],
+                "current_agent": "workflow_executor",
+                "next_agent": "approval",
+                "requires_approval": True,
+                "pending_operation": f"Workflow '{workflow_state.definition.name}' step: {workflow_state.current_step}",
+            }
+
+        else:
+            # Workflow failed
+            logger.error(
+                f"[WorkflowExecutor] Workflow failed: {workflow_state.error_message}"
+            )
+            return {
+                "messages": [
+                    AIMessage(
+                        content=f"Workflow failed at step '{workflow_state.failed_step}': "
+                        f"{workflow_state.error_message}"
+                    )
+                ],
+                "current_agent": "workflow_executor",
+                "next_agent": "end",
+                "task_result": {
+                    "status": "failed",
+                    "error": workflow_state.error_message,
+                    "failed_step": workflow_state.failed_step,
+                },
+            }
+
+    except Exception as e:
+        logger.error(f"[WorkflowExecutor] Execution failed: {e}", exc_info=True)
+        return {
+            "messages": [AIMessage(content=f"Workflow execution error: {e}")],
+            "current_agent": "workflow_executor",
+            "next_agent": "end",
+            "task_result": {"status": "error", "error": str(e)},
+        }
+
+
 # Define routing logic
 def route_from_supervisor(state: WorkflowState) -> str:
     """Conditional edge from supervisor to next agent.
@@ -583,9 +846,63 @@ def should_continue(state: WorkflowState) -> str:
     return "supervisor" if next_agent != "end" else "end"
 
 
+def route_entry_point(state: WorkflowState) -> str:
+    """Route from entry point to either workflow router or supervisor.
+
+    Determines whether to use template-driven (WorkflowEngine) or
+    supervisor-driven (LLM dynamic) routing based on state flags.
+
+    Phase 6 - CHEF-110: Enables declarative workflow templates.
+    """
+    # Explicit template mode
+    if state.get("use_template_engine", False) and state.get("workflow_template"):
+        return "workflow_executor"
+
+    # Check if we should try workflow routing first
+    # (can be enabled globally or per-request)
+    if state.get("use_template_engine", False):
+        return "workflow_router"
+
+    # Default: supervisor-based dynamic routing
+    return "supervisor"
+
+
+def route_from_workflow_router(state: WorkflowState) -> str:
+    """Route from workflow router to executor or supervisor.
+
+    After WorkflowRouter attempts to match a template:
+    - If matched with confidence >= 0.7 → workflow_executor
+    - Otherwise → supervisor (fallback to dynamic routing)
+    """
+    next_agent = state.get("next_agent", "supervisor")
+
+    if next_agent == "workflow_executor" and state.get("workflow_template"):
+        return "workflow_executor"
+
+    return "supervisor"
+
+
+def route_from_workflow_executor(state: WorkflowState) -> str:
+    """Route from workflow executor after template execution.
+
+    After WorkflowEngine executes a template:
+    - If completed → end
+    - If paused for HITL → approval
+    - If failed → end (with error in task_result)
+    """
+    if state.get("requires_approval", False):
+        return "approval"
+
+    return "end"
+
+
 # Build the workflow graph
 def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
     """Create the LangGraph workflow with all agent nodes.
+
+    Supports two execution modes (CHEF-110):
+    1. **Supervisor-driven**: Dynamic LLM routing via supervisor node (default)
+    2. **Template-driven**: Declarative YAML workflows via WorkflowEngine
 
     Args:
         checkpoint_conn_string: PostgreSQL connection string for checkpointing
@@ -606,8 +923,44 @@ def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
     workflow.add_node("documentation", documentation_node)
     workflow.add_node("approval", approval_node)
 
-    # Set entry point
-    workflow.set_entry_point("supervisor")
+    # Add template-driven workflow nodes (CHEF-110)
+    workflow.add_node("workflow_router", workflow_router_node)
+    workflow.add_node("workflow_executor", workflow_executor_node)
+
+    # Set entry point with conditional routing
+    workflow.set_entry_point("entry_router")
+
+    # Entry router: Choose between template-driven or supervisor-driven
+    workflow.add_node("entry_router", lambda state: state)  # Pass-through node
+    workflow.add_conditional_edges(
+        "entry_router",
+        route_entry_point,
+        {
+            "workflow_router": "workflow_router",
+            "workflow_executor": "workflow_executor",
+            "supervisor": "supervisor",
+        },
+    )
+
+    # Workflow router routes to executor or falls back to supervisor
+    workflow.add_conditional_edges(
+        "workflow_router",
+        route_from_workflow_router,
+        {
+            "workflow_executor": "workflow_executor",
+            "supervisor": "supervisor",
+        },
+    )
+
+    # Workflow executor routes to approval or end
+    workflow.add_conditional_edges(
+        "workflow_executor",
+        route_from_workflow_executor,
+        {
+            "approval": "approval",
+            "end": END,
+        },
+    )
 
     # Add conditional edges from supervisor to agents
     workflow.add_conditional_edges(
