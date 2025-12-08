@@ -46,6 +46,24 @@ from agents import get_agent as get_real_agent
 from workflows.workflow_engine import WorkflowEngine, WorkflowStatus as WFStatus
 from workflows.workflow_router import WorkflowRouter, get_workflow_router
 
+# Import error recovery decorator for agent-level resilience (CHEF-Error-Handling)
+try:
+    from shared.lib.error_recovery_engine import with_recovery, RecoveryTier
+    ERROR_RECOVERY_ENABLED = True
+    logger.info("[LangGraph] Error recovery decorator available for agent nodes")
+except ImportError:
+    ERROR_RECOVERY_ENABLED = False
+    # Fallback no-op decorator
+    def with_recovery(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    from enum import IntEnum
+    class RecoveryTier(IntEnum):
+        TIER_0 = 0
+        TIER_1 = 1
+    logger.warning("[LangGraph] Error recovery decorator not available")
+
 
 # Define workflow state
 class WorkflowState(TypedDict):
@@ -200,8 +218,10 @@ def _collect_agent_insights(
     return new_insights
 
 
-# Define agent nodes
+# Define agent nodes with error recovery decorators (CHEF-Error-Handling)
+# @with_recovery handles Tier 0-1 errors locally with configurable retry counts
 @traceable(name="supervisor_node", tags=["langgraph", "node", "supervisor"])
+@with_recovery(max_retries=2, max_tier=RecoveryTier.TIER_1, step_id="supervisor", agent_name="supervisor")
 async def supervisor_node(state: WorkflowState) -> WorkflowState:
     """Supervisor agent node - routes tasks to specialized agents.
 
@@ -272,6 +292,7 @@ REASONING: Task completed
 
 
 @traceable(name="feature_dev_node", tags=["langgraph", "node", "feature-dev"])
+@with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1, step_id="feature-dev", agent_name="feature-dev")
 async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     """Feature development agent node - implements code.
 
@@ -322,6 +343,7 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="code_review_node", tags=["langgraph", "node", "code-review"])
+@with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1, step_id="code-review", agent_name="code-review")
 async def code_review_node(state: WorkflowState) -> WorkflowState:
     """Code review agent node - analyzes code quality.
 
@@ -372,6 +394,7 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="infrastructure_node", tags=["langgraph", "node", "infrastructure"])
+@with_recovery(max_retries=2, max_tier=RecoveryTier.TIER_1, step_id="infrastructure", agent_name="infrastructure")
 async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     """Infrastructure agent node - manages cloud resources.
 
@@ -422,6 +445,7 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="cicd_node", tags=["langgraph", "node", "cicd"])
+@with_recovery(max_retries=2, max_tier=RecoveryTier.TIER_1, step_id="cicd", agent_name="cicd")
 async def cicd_node(state: WorkflowState) -> WorkflowState:
     """CI/CD agent node - handles deployments.
 
@@ -468,6 +492,7 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="documentation_node", tags=["langgraph", "node", "documentation"])
+@with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1, step_id="documentation", agent_name="documentation")
 async def documentation_node(state: WorkflowState) -> WorkflowState:
     """Documentation agent node - writes technical docs.
 
