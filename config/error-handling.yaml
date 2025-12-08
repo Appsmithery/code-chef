@@ -1,0 +1,370 @@
+# Error Handling Configuration for Code-Chef Self-Healing Architecture
+# Defines all circuit breaker, retry, timeout, fallback, and memory retention policies
+
+version: "1.0"
+description: "Comprehensive error handling configuration for tiered recovery"
+
+# Recovery Tier Settings
+tiers:
+  tier_0:
+    name: "Instant Heuristic Triage"
+    timeout_ms: 10
+    token_budget: 0
+    enabled: true
+    actions:
+      - error_classification
+      - circuit_breaker_check
+      - cached_resolution_lookup
+    description: "Instant classification and cache lookup"
+
+  tier_1:
+    name: "Automatic Remediation"
+    timeout_seconds: 5
+    token_budget: 0
+    enabled: true
+    actions:
+      - retry_with_backoff
+      - dependency_auto_install
+      - token_refresh
+      - container_restart
+      - context_truncation
+    description: "Automatic fixes without LLM involvement"
+
+  tier_2:
+    name: "RAG-Assisted Recovery"
+    timeout_seconds: 30
+    token_budget: 50
+    enabled: true
+    actions:
+      - query_error_pattern_memory
+      - apply_previous_fixes
+      - store_new_patterns
+    description: "Use error pattern memory for recovery"
+
+  tier_3:
+    name: "Agent-Assisted Diagnosis"
+    timeout_seconds: 120
+    token_budget: 500
+    enabled: true
+    actions:
+      - route_to_infrastructure_agent
+      - use_mcp_tools
+      - generate_recovery_plan
+      - execute_recovery_plan
+    target_agent: "infrastructure"
+    description: "LLM-powered diagnosis and recovery"
+
+  tier_4:
+    name: "Human-in-the-Loop Escalation"
+    timeout_seconds: null # Async, no timeout
+    token_budget: null
+    enabled: true
+    actions:
+      - create_linear_issue
+      - pause_workflow
+      - webhook_notification
+      - await_human_decision
+    linear_project: "CHEF"
+    description: "Escalate to human operators"
+
+# Circuit Breaker Configuration
+circuit_breaker:
+  default:
+    failure_threshold: 5 # Failures before opening circuit
+    recovery_timeout_seconds: 60 # Time before trying half-open
+    success_threshold: 2 # Successes to close circuit
+    half_open_max_calls: 1 # Max calls in half-open state
+
+  per_category:
+    network:
+      failure_threshold: 3
+      recovery_timeout_seconds: 30
+      success_threshold: 1
+
+    llm:
+      failure_threshold: 5
+      recovery_timeout_seconds: 120 # LLMs may need longer recovery
+      success_threshold: 2
+
+    mcp:
+      failure_threshold: 3
+      recovery_timeout_seconds: 45
+      success_threshold: 1
+
+    docker:
+      failure_threshold: 2
+      recovery_timeout_seconds: 60
+      success_threshold: 1
+
+    database:
+      failure_threshold: 3
+      recovery_timeout_seconds: 30
+      success_threshold: 2
+
+# Retry Configuration
+retry:
+  default:
+    max_retries: 3
+    initial_delay_seconds: 1.0
+    max_delay_seconds: 60.0
+    exponential_base: 2.0
+    jitter: true # ±25% randomness
+    jitter_percent: 0.25
+
+  per_category:
+    network:
+      max_retries: 5
+      initial_delay_seconds: 0.5
+      max_delay_seconds: 30.0
+
+    llm:
+      max_retries: 3
+      initial_delay_seconds: 2.0
+      max_delay_seconds: 120.0
+      exponential_base: 2.5 # Slower backoff for rate limits
+
+    auth:
+      max_retries: 2
+      initial_delay_seconds: 1.0
+      max_delay_seconds: 10.0 # Quick fail for auth issues
+
+    dependency:
+      max_retries: 2
+      initial_delay_seconds: 1.0
+      max_delay_seconds: 30.0
+
+    database:
+      max_retries: 4
+      initial_delay_seconds: 0.5
+      max_delay_seconds: 15.0
+
+# Timeout Configuration (per operation type)
+timeouts:
+  default_operation_seconds: 30
+
+  per_operation:
+    llm_inference: 60
+    mcp_tool_call: 30
+    docker_operation: 120
+    git_operation: 60
+    database_query: 15
+    api_request: 30
+    file_operation: 10
+    webhook_call: 10
+    linear_api: 30
+
+# Model Fallback Chain (for LLM errors)
+llm_fallback:
+  enabled: true
+
+  chains:
+    default:
+      - model: "llama3.3-70b"
+        provider: "gradient"
+        timeout_seconds: 60
+      - model: "llama3-8b"
+        provider: "gradient"
+        timeout_seconds: 45
+      - model: "gpt-4o-mini"
+        provider: "openai"
+        timeout_seconds: 30
+        requires_api_key: true
+
+    code_generation:
+      - model: "codellama-13b"
+        provider: "gradient"
+        timeout_seconds: 90
+      - model: "llama3.3-70b"
+        provider: "gradient"
+        timeout_seconds: 60
+      - model: "gpt-4"
+        provider: "openai"
+        timeout_seconds: 60
+        requires_api_key: true
+
+    lightweight:
+      - model: "llama3-8b"
+        provider: "gradient"
+        timeout_seconds: 30
+      - model: "gpt-4o-mini"
+        provider: "openai"
+        timeout_seconds: 20
+        requires_api_key: true
+
+# Error Pattern Memory Configuration
+error_pattern_memory:
+  enabled: true
+
+  qdrant:
+    collection_name: "error_patterns"
+    vector_size: 384 # MiniLM embedding size
+    distance: "cosine"
+    on_disk: true
+
+  retrieval:
+    min_similarity_score: 0.75 # Minimum score to consider a match
+    top_k: 5 # Number of patterns to retrieve
+    max_age_days: 90 # Ignore patterns older than this
+
+  storage:
+    retention_days: 90 # Delete patterns after this
+    max_patterns_per_error: 5 # Max resolutions per error signature
+    min_success_rate: 0.5 # Only store patterns with good success rate
+
+  embedding:
+    model: "all-MiniLM-L6-v2"
+    batch_size: 32
+
+# Loop Protection (prevent infinite recovery loops)
+loop_protection:
+  enabled: true
+
+  max_recovery_attempts_per_error: 5 # Max recoveries for same error signature
+  max_tier_escalations_per_workflow: 10 # Max tier escalations per workflow run
+  cooldown_seconds: 300 # Cooldown before resetting attempt counter
+
+  # Infinite loop detection
+  loop_detection:
+    window_seconds: 60
+    max_identical_errors: 3 # If same error 3x in 60s, break loop
+    action: "escalate_to_tier_4"
+
+# Special Scenario Protocols
+protocols:
+  llm_context_overflow:
+    strategy: "truncate_and_retry"
+    truncation_strategies:
+      - method: "tail_trim"
+        retain_tokens: 3000
+      - method: "middle_trim"
+        retain_start_tokens: 1500
+        retain_end_tokens: 1500
+      - method: "summarize"
+        target_tokens: 2000
+    max_attempts: 3
+
+  model_rate_limiting:
+    strategy: "exponential_backoff_with_fallback"
+    initial_wait_seconds: 5
+    max_wait_seconds: 300
+    fallback_to_alternative_model: true
+
+  mcp_server_crash:
+    strategy: "restart_and_reconnect"
+    max_restart_attempts: 3
+    restart_delay_seconds: 5
+    fallback: "alternative_mcp_server"
+
+  workflow_collision:
+    strategy: "lock_and_queue"
+    lock_timeout_seconds: 300
+    queue_max_size: 10
+    dead_letter_after_minutes: 30
+
+  resource_exhaustion:
+    strategy: "cleanup_and_retry"
+    cleanup_actions:
+      - "docker_prune_images"
+      - "docker_prune_containers"
+      - "clear_temp_files"
+      - "gc_python_objects"
+    max_cleanup_attempts: 2
+
+  stale_git_branch:
+    strategy: "fetch_and_rebase"
+    max_auto_rebase_conflicts: 0 # Only auto-rebase if no conflicts
+    fallback: "escalate_to_tier_3"
+
+  credential_expiry:
+    strategy: "refresh_and_retry"
+    refresh_before_expiry_seconds: 300
+    cache_refresh_results: true
+    fallback: "escalate_to_tier_4"
+
+  partial_tool_response:
+    strategy: "retry_with_smaller_input"
+    chunk_size_reduction: 0.5 # Reduce input by 50%
+    max_retries: 3
+    combine_partial_results: true
+
+  agent_infinite_loop:
+    strategy: "break_loop_and_escalate"
+    max_iterations: 50
+    max_same_output_count: 3 # If same output 3x, break
+    escalation_tier: 3
+
+  webhook_failure:
+    strategy: "retry_with_exponential_backoff"
+    max_retries: 5
+    dead_letter_queue: true
+    dlq_retention_hours: 72
+
+# Notification Configuration
+notifications:
+  enabled: true
+
+  channels:
+    slack:
+      enabled: false
+      webhook_url: "${SLACK_WEBHOOK_URL}"
+      channel: "#code-chef-alerts"
+
+    linear:
+      enabled: true
+      project: "CHEF"
+      team: "engineering"
+
+    email:
+      enabled: false
+      recipients: []
+
+  # When to notify
+  triggers:
+    tier_4_escalation: true
+    critical_error: true
+    circuit_breaker_open: true
+    recovery_success_after_tier_3: true
+
+# Metrics and Monitoring
+metrics:
+  enabled: true
+
+  prometheus:
+    namespace: "codechef"
+    subsystem: "error_recovery"
+
+    counters:
+      - name: "recovery_attempts_total"
+        labels: ["tier", "category", "result"]
+      - name: "errors_classified_total"
+        labels: ["category", "severity"]
+      - name: "circuit_breaker_state_changes_total"
+        labels: ["step_id", "state"]
+
+    histograms:
+      - name: "recovery_duration_seconds"
+        labels: ["tier", "category"]
+        buckets: [0.01, 0.05, 0.1, 0.5, 1.0, 5.0, 30.0, 120.0]
+      - name: "time_to_recovery_seconds"
+        labels: ["category"]
+        buckets: [0.1, 0.5, 1.0, 5.0, 10.0, 30.0, 60.0, 120.0]
+
+    gauges:
+      - name: "circuit_breaker_state"
+        labels: ["step_id"]
+      - name: "error_pattern_cache_size"
+        labels: []
+      - name: "recovery_success_rate"
+        labels: ["tier"]
+
+  grafana:
+    dashboard_uid: "error-recovery"
+    folder: "Code-Chef"
+
+# Success Criteria Thresholds (for alerting)
+success_criteria:
+  tier_0_1_auto_recovery_rate: 0.90 # 90% of retriable errors
+  pattern_cache_hit_rate: 0.70 # 70% after 2 weeks
+  mean_time_to_recovery_tier_0_1_seconds: 10
+  max_deadlocks_per_day: 0
+  linear_issue_creation_rate: 1.0 # 100% for terminal errors
