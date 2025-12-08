@@ -7,15 +7,22 @@ Based on Anthropic's progressive disclosure pattern:
 https://www.anthropic.com/engineering/code-execution-with-mcp
 
 Issue: CHEF-200 - Added @traceable decorators for LangSmith visibility.
+Issue: CHEF-XXX - Added semantic tool discovery with LLM-based keyword extraction.
 """
 
+import hashlib
 import logging
-from typing import Dict, List, Any, Optional, Set
+import os
+import time
+from typing import Dict, List, Any, Optional, Set, Tuple
 from dataclasses import dataclass
 from enum import Enum
 from langsmith import traceable
 
 logger = logging.getLogger(__name__)
+
+# Cache TTL for semantic search results (5 minutes)
+SEMANTIC_CACHE_TTL = int(os.getenv("MCP_SEMANTIC_CACHE_TTL", "300"))
 
 
 class ToolLoadingStrategy(str, Enum):
@@ -24,6 +31,7 @@ class ToolLoadingStrategy(str, Enum):
     MINIMAL = "minimal"  # Only load tools mentioned in task description
     AGENT_PROFILE = "agent_profile"  # Load tools from assigned agent's profile
     PROGRESSIVE = "progressive"  # Start minimal, expand as needed
+    SEMANTIC = "semantic"  # LLM-based semantic tool discovery
     FULL = "full"  # Load all 150+ tools (legacy behavior)
 
 
@@ -49,10 +57,15 @@ class ProgressiveMCPLoader:
         mcp_client: Any,  # MCPClient instance
         mcp_discovery: Any,  # MCPToolkitDiscovery instance
         default_strategy: ToolLoadingStrategy = ToolLoadingStrategy.PROGRESSIVE,
+        llm_client: Optional[Any] = None,  # Optional LLM for semantic extraction
     ):
         self.mcp_client = mcp_client
         self.mcp_discovery = mcp_discovery
         self.default_strategy = default_strategy
+        self.llm_client = llm_client
+
+        # Semantic search cache: {hash(task_desc + agent_name): (toolsets, timestamp)}
+        self._semantic_cache: Dict[str, Tuple[List["ToolSet"], float]] = {}
 
         # Task-specific keywords mapped to MCP servers
         self.keyword_to_servers = {
@@ -166,6 +179,9 @@ class ProgressiveMCPLoader:
         elif strategy == ToolLoadingStrategy.PROGRESSIVE:
             return self._get_progressive_tools(task_description, assigned_agent)
 
+        elif strategy == ToolLoadingStrategy.SEMANTIC:
+            return self._get_semantic_tools(task_description, assigned_agent)
+
         elif strategy == ToolLoadingStrategy.FULL:
             return self._get_all_tools()
 
@@ -209,7 +225,7 @@ class ProgressiveMCPLoader:
                     ToolSet(
                         server=server,
                         tools=tools,
-                        rationale=f"Keyword match in task description",
+                        rationale="Keyword match in task description",
                         priority="high",
                     )
                 )
@@ -298,6 +314,201 @@ class ProgressiveMCPLoader:
             f"[ProgressiveMCP] Progressive strategy: loaded {len(toolsets)} servers"
         )
         return toolsets
+
+    def _get_semantic_tools(
+        self, task_description: str, assigned_agent: Optional[str]
+    ) -> List[ToolSet]:
+        """
+        Semantic tool discovery using LLM-based keyword extraction.
+
+        Implements Anthropic's "Code Execution with MCP" pattern:
+        1. Extract 3-5 keywords from task using lightweight LLM
+        2. Query tool search with extracted keywords
+        3. Merge with agent's critical tools
+        4. Cap at 30 tools for token efficiency
+
+        Falls back to progressive strategy if LLM unavailable.
+        Note: Tracing consolidated at get_tools_for_task() level.
+        """
+        # Check cache first
+        cache_key = self._get_semantic_cache_key(task_description, assigned_agent)
+        cached = self._get_from_cache(cache_key)
+        if cached is not None:
+            logger.debug(f"[ProgressiveMCP] Semantic cache hit for key {cache_key[:8]}")
+            return cached
+
+        # Fallback to progressive if no LLM available
+        if not self.llm_client:
+            logger.debug("[ProgressiveMCP] No LLM client, falling back to progressive")
+            return self._get_progressive_tools(task_description, assigned_agent)
+
+        try:
+            # Extract keywords using lightweight LLM
+            keywords = self._extract_keywords_llm(task_description)
+            
+            if not keywords:
+                logger.warning("[ProgressiveMCP] No keywords extracted, falling back")
+                return self._get_progressive_tools(task_description, assigned_agent)
+
+            # Build toolsets from extracted keywords
+            toolsets = []
+            matched_servers: Set[str] = set()
+
+            # Always include universal tools
+            for server in self.always_available_servers:
+                tools = self._get_server_tools(server)
+                if tools:
+                    toolsets.append(
+                        ToolSet(
+                            server=server,
+                            tools=tools,
+                            rationale="Universal tool",
+                            priority="critical",
+                        )
+                    )
+                    matched_servers.add(server)
+
+            # Match keywords to servers
+            for keyword in keywords:
+                keyword_lower = keyword.lower()
+                for kw, servers in self.keyword_to_servers.items():
+                    if keyword_lower in kw or kw in keyword_lower:
+                        matched_servers.update(servers)
+
+            # Load matched servers
+            for server in matched_servers:
+                if server in self.always_available_servers:
+                    continue  # Already added
+                tools = self._get_server_tools(server)
+                if tools:
+                    toolsets.append(
+                        ToolSet(
+                            server=server,
+                            tools=tools,
+                            rationale=f"Semantic match: {', '.join(keywords[:3])}",
+                            priority="high",
+                        )
+                    )
+
+            # Add agent's critical tools (hybrid strategy)
+            if assigned_agent:
+                agent_tools = self._get_agent_profile_tools(assigned_agent)
+                for toolset in agent_tools:
+                    if toolset.priority == "critical":
+                        if not any(ts.server == toolset.server for ts in toolsets):
+                            toolsets.append(toolset)
+
+            # Cap total tools at 30
+            total_tools = sum(len(ts.tools) for ts in toolsets)
+            if total_tools > 30:
+                toolsets = self._cap_toolsets(toolsets, max_tools=30)
+
+            # Cache result
+            self._set_cache(cache_key, toolsets)
+
+            logger.info(
+                f"[ProgressiveMCP] Semantic strategy: loaded {len(toolsets)} servers "
+                f"with keywords {keywords}"
+            )
+            return toolsets
+
+        except Exception as e:
+            logger.warning(f"[ProgressiveMCP] Semantic extraction failed: {e}")
+            return self._get_progressive_tools(task_description, assigned_agent)
+
+    def _extract_keywords_llm(self, task_description: str) -> List[str]:
+        """
+        Extract 3-5 keywords from task description using lightweight LLM.
+
+        Uses a simple prompt to extract tool-relevant keywords.
+        Designed for fast, low-token responses (~50 tokens).
+        """
+        if not self.llm_client:
+            return []
+
+        try:
+            prompt = f"""Extract 3-5 keywords from this task that indicate what tools are needed.
+Focus on: actions (read, write, deploy), technologies (docker, git, kubernetes), 
+and domains (testing, monitoring, documentation).
+
+Task: {task_description[:300]}
+
+Return only a comma-separated list of keywords, nothing else.
+Example: git, deploy, docker, testing"""
+
+            response = self.llm_client.invoke(prompt)
+            content = response.content if hasattr(response, "content") else str(response)
+            
+            # Parse comma-separated keywords
+            keywords = [kw.strip().lower() for kw in content.split(",") if kw.strip()]
+            
+            # Limit to 5 keywords
+            return keywords[:5]
+
+        except Exception as e:
+            logger.warning(f"[ProgressiveMCP] Keyword extraction failed: {e}")
+            return []
+
+    def _get_semantic_cache_key(
+        self, task_description: str, assigned_agent: Optional[str]
+    ) -> str:
+        """Generate cache key for semantic search results."""
+        key_input = f"{task_description[:200]}:{assigned_agent or 'none'}"
+        return hashlib.md5(key_input.encode()).hexdigest()
+
+    def _get_from_cache(self, cache_key: str) -> Optional[List[ToolSet]]:
+        """Get toolsets from cache if not expired."""
+        if cache_key not in self._semantic_cache:
+            return None
+        
+        toolsets, timestamp = self._semantic_cache[cache_key]
+        if time.time() - timestamp > SEMANTIC_CACHE_TTL:
+            del self._semantic_cache[cache_key]
+            return None
+        
+        return toolsets
+
+    def _set_cache(self, cache_key: str, toolsets: List[ToolSet]) -> None:
+        """Store toolsets in cache with current timestamp."""
+        self._semantic_cache[cache_key] = (toolsets, time.time())
+        
+        # Prune old entries (keep max 100)
+        if len(self._semantic_cache) > 100:
+            oldest_key = min(
+                self._semantic_cache.keys(),
+                key=lambda k: self._semantic_cache[k][1]
+            )
+            del self._semantic_cache[oldest_key]
+
+    def _cap_toolsets(self, toolsets: List[ToolSet], max_tools: int = 30) -> List[ToolSet]:
+        """Cap total tool count while preserving high-priority toolsets."""
+        # Sort by priority
+        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+        sorted_toolsets = sorted(
+            toolsets,
+            key=lambda ts: priority_order.get(ts.priority, 4)
+        )
+        
+        result = []
+        total_tools = 0
+        
+        for toolset in sorted_toolsets:
+            if total_tools + len(toolset.tools) <= max_tools:
+                result.append(toolset)
+                total_tools += len(toolset.tools)
+            elif total_tools < max_tools:
+                # Partial inclusion - trim tools
+                remaining = max_tools - total_tools
+                trimmed = ToolSet(
+                    server=toolset.server,
+                    tools=toolset.tools[:remaining],
+                    rationale=toolset.rationale + " (trimmed)",
+                    priority=toolset.priority,
+                )
+                result.append(trimmed)
+                break
+        
+        return result
 
     def _get_all_tools(self) -> List[ToolSet]:
         """
