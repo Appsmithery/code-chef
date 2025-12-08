@@ -129,7 +129,11 @@ class ProgressiveMCPLoader:
             "time",  # Timestamps
         ]
 
-    @traceable(name="mcp_get_tools_for_task", tags=["mcp", "tools"])
+    @traceable(
+        name="mcp_get_tools_for_task",
+        tags=["mcp", "tools", "progressive-disclosure"],
+        metadata={"component": "progressive_mcp_loader"},
+    )
     def get_tools_for_task(
         self,
         task_description: str,
@@ -138,6 +142,10 @@ class ProgressiveMCPLoader:
     ) -> List[ToolSet]:
         """
         Get relevant MCP tools for a task using progressive disclosure.
+
+        This is the primary public method for tool selection. Internal methods
+        (_get_minimal_tools, _get_agent_profile_tools, etc.) are not individually
+        traced to reduce trace volume and consolidate observability.
 
         Args:
             task_description: Natural language task description
@@ -164,12 +172,12 @@ class ProgressiveMCPLoader:
         else:
             raise ValueError(f"Unknown loading strategy: {strategy}")
 
-    @traceable(name="mcp_get_minimal_tools", tags=["mcp", "tools"])
     def _get_minimal_tools(self, task_description: str) -> List[ToolSet]:
         """
         Get minimal tool set based on task keywords.
 
         Only loads servers mentioned in task description.
+        Note: Tracing consolidated at get_tools_for_task() level.
         """
         toolsets = []
         description_lower = task_description.lower()
@@ -211,12 +219,12 @@ class ProgressiveMCPLoader:
         )
         return toolsets
 
-    @traceable(name="mcp_get_agent_profile_tools", tags=["mcp", "tools"])
     def _get_agent_profile_tools(self, agent_name: Optional[str]) -> List[ToolSet]:
         """
         Get tools from agent's profile (recommended + shared).
 
         Uses config/mcp-agent-tool-mapping.yaml definitions.
+        Note: Tracing consolidated at get_tools_for_task() level.
         """
         if not agent_name:
             return self._get_minimal_tools("default")
@@ -263,7 +271,6 @@ class ProgressiveMCPLoader:
         )
         return toolsets
 
-    @traceable(name="mcp_get_progressive_tools", tags=["mcp", "tools"])
     def _get_progressive_tools(
         self, task_description: str, assigned_agent: Optional[str]
     ) -> List[ToolSet]:
@@ -271,6 +278,7 @@ class ProgressiveMCPLoader:
         Progressive disclosure: Start minimal, add agent-specific tools.
 
         This is the recommended strategy for balancing context and capability.
+        Note: Tracing consolidated at get_tools_for_task() level.
         """
         # Start with minimal tools based on task
         toolsets = self._get_minimal_tools(task_description)
@@ -291,13 +299,13 @@ class ProgressiveMCPLoader:
         )
         return toolsets
 
-    @traceable(name="mcp_get_all_tools", tags=["mcp", "tools"])
     def _get_all_tools(self) -> List[ToolSet]:
         """
         Get all 150+ MCP tools (legacy behavior).
 
         WARNING: This will consume significant LLM context tokens.
         Only use for debugging or when full capability is required.
+        Note: Tracing consolidated at get_tools_for_task() level.
         """
         toolsets = []
 

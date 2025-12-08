@@ -140,12 +140,23 @@ async def lifespan(app: FastAPI):
 
     # Start HITL approval polling task (fallback for missed webhooks)
     import asyncio
+    import random
+
+    # Sampling rate for HITL polling traces (0.1 = 10% of traces logged)
+    HITL_POLLING_SAMPLE_RATE = float(os.getenv("HITL_POLLING_SAMPLE_RATE", "0.1"))
 
     async def poll_pending_approvals():
-        """Fallback: runs every 30s to catch missed webhooks."""
+        """Fallback: runs every 30s to catch missed webhooks.
+        
+        Uses LangSmith sampling to reduce trace volume for background polling.
+        Only HITL_POLLING_SAMPLE_RATE (default 10%) of polls are traced.
+        """
         while True:
             try:
                 await asyncio.sleep(30)  # Poll every 30 seconds
+                
+                # Sampling: only trace a fraction of polling iterations
+                should_trace = random.random() < HITL_POLLING_SAMPLE_RATE
 
                 async with await hitl_manager._get_connection() as conn:
                     async with conn.cursor() as cursor:
@@ -159,8 +170,15 @@ async def lifespan(app: FastAPI):
                             """
                         )
                         pending = await cursor.fetchall()
+                        
+                        # Log poll results only when sampled (reduces log volume)
+                        if should_trace and pending:
+                            logger.debug(
+                                f"[HITL Polling] Sampled poll found {len(pending)} pending approvals"
+                            )
 
                         for req_id, thread_id, checkpoint_id, workflow_id in pending:
+                            # Always log actual resumptions (important events)
                             logger.info(
                                 f"[HITL Polling] Found unresumed approval: {req_id}"
                             )
