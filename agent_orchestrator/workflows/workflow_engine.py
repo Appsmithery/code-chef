@@ -51,6 +51,26 @@ from shared.lib.dependency_handler import (
     get_dependency_handler,
 )
 
+# Import error recovery engine for tiered recovery (CHEF-Error-Handling)
+try:
+    from shared.lib.error_recovery_engine import (
+        ErrorRecoveryEngine,
+        RecoveryOutcome,
+        RecoveryResult,
+        get_error_recovery_engine,
+    )
+    from shared.lib.error_classification import (
+        ErrorCategory,
+        RecoveryTier,
+        classify_error,
+    )
+    ERROR_RECOVERY_ENABLED = True
+except ImportError:
+    ERROR_RECOVERY_ENABLED = False
+    ErrorRecoveryEngine = None
+    get_error_recovery_engine = None
+    logger.warning("Error recovery engine not available")
+
 try:
     from shared.services.state.client import StateClient
 except ImportError:
@@ -178,6 +198,18 @@ class WorkflowEngine:
             orchestrator_root=str(Path(__file__).parent.parent.parent),
             linear_client=linear_client,
         )
+        
+        # Initialize error recovery engine for tiered recovery (CHEF-Error-Handling)
+        self.error_recovery_engine: Optional[ErrorRecoveryEngine] = None
+        if ERROR_RECOVERY_ENABLED:
+            try:
+                self.error_recovery_engine = get_error_recovery_engine()
+                logger.info(
+                    "[WorkflowEngine] Error recovery engine initialized - "
+                    "Tiered recovery enabled for Tier 0-4"
+                )
+            except Exception as e:
+                logger.warning(f"[WorkflowEngine] Failed to initialize error recovery engine: {e}")
 
         # Task 5.3: Calculate TTL in seconds
         self.ttl_seconds = self.WORKFLOW_TTL_HOURS * 3600
@@ -842,12 +874,16 @@ class WorkflowEngine:
         error: Exception,
     ) -> Optional[Dict[str, Any]]:
         """
-        Handle workflow errors with configured error handlers.
+        Handle workflow errors with tiered recovery system.
         
-        Supports:
-        - Dependency error detection and auto-remediation
-        - Retry with exponential backoff for transient errors
-        - Escalation to Linear for unrecoverable errors
+        Uses ErrorRecoveryEngine for intelligent tiered recovery:
+        - Tier 0: Instant heuristic triage (<10ms, 0 tokens)
+        - Tier 1: Automatic remediation (<5s, 0 tokens)
+        - Tier 2: RAG-assisted recovery (<30s, ~50 tokens)
+        - Tier 3: Agent-assisted diagnosis (<2min, ~500 tokens)
+        - Tier 4: Human-in-the-loop escalation (async)
+        
+        Falls back to legacy dependency handler for backward compatibility.
         
         Returns:
             Dict with remediation result if handled, None otherwise
@@ -855,7 +891,78 @@ class WorkflowEngine:
         import traceback
         tb_str = traceback.format_exc()
         
-        # Check for dependency errors (ModuleNotFoundError, ImportError)
+        # Try tiered recovery first (CHEF-Error-Handling)
+        if self.error_recovery_engine:
+            logger.info(
+                f"[WorkflowEngine] Using tiered recovery for error in step '{step.id}': "
+                f"{type(error).__name__}"
+            )
+            
+            # Create a retry operation that re-executes the step
+            async def retry_step_operation():
+                return await self._execute_step(step, state)
+            
+            try:
+                outcome = await self.error_recovery_engine.recover(
+                    exception=error,
+                    workflow_id=state.workflow_id,
+                    step_id=step.id,
+                    agent_name=step.agent,
+                    operation=retry_step_operation,
+                    context={"traceback": tb_str[:2000], "step_payload": step.payload},
+                    max_tier=RecoveryTier.TIER_3,  # Don't auto-escalate to HITL here
+                )
+                
+                if outcome.success:
+                    logger.info(
+                        f"[WorkflowEngine] Tiered recovery succeeded at Tier {outcome.final_tier.value} "
+                        f"for step '{step.id}'"
+                    )
+                    
+                    # Emit recovery success event
+                    await self._emit_event(
+                        workflow_id=state.workflow_id,
+                        action=WorkflowAction.COMPLETE_STEP,  # Step recovered
+                        step_id=step.id,
+                        data={
+                            "recovery_tier": outcome.final_tier.value,
+                            "recovery_result": outcome.result.value,
+                            "recovery_metrics": outcome.metrics,
+                        },
+                    )
+                    
+                    return {
+                        "recovered": True,
+                        "tier": outcome.final_tier.value,
+                        "result": outcome.result.value,
+                        "metrics": outcome.metrics,
+                    }
+                else:
+                    logger.warning(
+                        f"[WorkflowEngine] Tiered recovery failed for step '{step.id}'. "
+                        f"Final tier: {outcome.final_tier.value}, Result: {outcome.result.value}"
+                    )
+                    
+                    # If we exhausted all tiers up to TIER_3, escalate to HITL
+                    if outcome.final_tier == RecoveryTier.TIER_3:
+                        logger.info(
+                            f"[WorkflowEngine] Escalating to HITL (Tier 4) for step '{step.id}'"
+                        )
+                        if self.linear_client:
+                            await self._create_escalation_issue(state, step, error, tb_str)
+                        return {
+                            "escalated": True,
+                            "reason": str(error),
+                            "recovery_tier": outcome.final_tier.value,
+                        }
+                    
+            except Exception as recovery_error:
+                logger.error(
+                    f"[WorkflowEngine] Error recovery engine failed: {recovery_error}. "
+                    f"Falling back to legacy handler."
+                )
+        
+        # Legacy: Check for dependency errors (ModuleNotFoundError, ImportError)
         if isinstance(error, (ModuleNotFoundError, ImportError)):
             logger.warning(
                 f"Dependency error in step '{step.id}': {error}. "
