@@ -52,6 +52,14 @@ from .circuit_breaker import (
     CircuitState,
 )
 
+# Import metrics (optional - graceful degradation if not available)
+try:
+    from . import error_recovery_metrics as metrics
+    METRICS_ENABLED = True
+except ImportError:
+    METRICS_ENABLED = False
+    metrics = None
+
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
@@ -370,6 +378,13 @@ class ErrorRecoveryEngine:
         classification = classify_error(exception, context)
         signature = get_error_signature(exception, classification)
         
+        # Record error classification in metrics
+        if METRICS_ENABLED:
+            metrics.record_error_classified(
+                category=classification.category.value,
+                severity=classification.severity.value,
+            )
+        
         # Create recovery context
         recovery_ctx = RecoveryContext(
             exception=exception,
@@ -383,6 +398,8 @@ class ErrorRecoveryEngine:
         # Check for recovery loops
         if await self._loop_protection.check_loop(signature, workflow_id):
             logger.error(f"Recovery loop detected for {signature.to_key()}, escalating to HITL")
+            if METRICS_ENABLED:
+                metrics.record_loop_detection(category=classification.category.value)
             return RecoveryOutcome(
                 success=False,
                 final_tier=RecoveryTier.TIER_4,
@@ -418,6 +435,13 @@ class ErrorRecoveryEngine:
                     if current_tier.value >= RecoveryTier.TIER_1.value:
                         await self._store_successful_pattern(recovery_ctx, outcome)
                     
+                    # Record successful recovery in metrics
+                    if METRICS_ENABLED:
+                        metrics.record_time_to_recovery(
+                            category=classification.category.value,
+                            total_seconds=recovery_ctx.total_duration_seconds,
+                        )
+                    
                     # Reset workflow counters on success
                     if workflow_id:
                         await self._loop_protection.reset_workflow(workflow_id)
@@ -443,6 +467,14 @@ class ErrorRecoveryEngine:
                 next_tier = RecoveryTier(current_tier.value + 1)
                 if next_tier.value <= max_tier.value:
                     recovery_ctx.tier_escalations += 1
+                    
+                    # Record tier escalation in metrics
+                    if METRICS_ENABLED:
+                        metrics.record_tier_escalation(
+                            from_tier=current_tier.value,
+                            to_tier=next_tier.value,
+                            category=classification.category.value,
+                        )
                     
                     if workflow_id:
                         await self._loop_protection.record_escalation(workflow_id)
@@ -512,7 +544,27 @@ class ErrorRecoveryEngine:
                 context=context,
             )
         
-        return await handler(context, operation)
+        # Track active recovery
+        if METRICS_ENABLED:
+            metrics.start_recovery(tier.value)
+        
+        try:
+            outcome = await handler(context, operation)
+            
+            # Record recovery attempt metrics
+            if METRICS_ENABLED and context.attempts:
+                last_attempt = context.attempts[-1]
+                metrics.record_recovery_attempt(
+                    tier=tier.value,
+                    category=context.classification.category.value,
+                    result=outcome.result.value,
+                    duration_seconds=last_attempt.duration_seconds,
+                )
+            
+            return outcome
+        finally:
+            if METRICS_ENABLED:
+                metrics.end_recovery(tier.value)
     
     async def _handle_tier_0(
         self,
@@ -552,6 +604,10 @@ class ErrorRecoveryEngine:
         cached_pattern = self._pattern_memory._get_from_cache(context.signature.to_key())
         
         if cached_pattern and cached_pattern.is_effective:
+            # Record cache hit
+            if METRICS_ENABLED:
+                metrics.record_pattern_cache_hit(hit=True)
+            
             context.pattern_matches.append(PatternMatch(
                 pattern=cached_pattern,
                 similarity_score=1.0,
@@ -577,6 +633,10 @@ class ErrorRecoveryEngine:
                     )
                 except Exception:
                     pass  # Fall through to next tier
+        else:
+            # Record cache miss
+            if METRICS_ENABLED:
+                metrics.record_pattern_cache_hit(hit=False)
         
         context.attempts.append(RecoveryAttempt(
             tier=RecoveryTier.TIER_0,
@@ -826,6 +886,13 @@ class ErrorRecoveryEngine:
                     f"(score: {best_match.similarity_score:.2f})"
                 )
                 
+                # Record pattern similarity score
+                if METRICS_ENABLED:
+                    metrics.record_pattern_similarity(
+                        category=context.classification.category.value,
+                        score=best_match.similarity_score,
+                    )
+                
                 # Try to apply resolution steps
                 if operation and best_match.pattern.resolution_steps:
                     # For now, just retry - more sophisticated step execution could be added
@@ -959,6 +1026,13 @@ class ErrorRecoveryEngine:
         linear_project = tier_config.get("linear_project", "CHEF")
         
         logger.info(f"Tier 4: Escalating to human via Linear (project: {linear_project})")
+        
+        # Record HITL escalation in metrics
+        if METRICS_ENABLED:
+            metrics.record_hitl_escalation(
+                category=context.classification.category.value,
+                severity=context.classification.severity.value,
+            )
         
         # Build issue content
         issue_title = f"[Auto-Recovery] {context.classification.category.value.upper()}: {context.signature.error_type}"
