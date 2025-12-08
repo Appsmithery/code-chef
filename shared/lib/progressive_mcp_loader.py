@@ -1,4 +1,3 @@
-"""
 """Progressive MCP Tool Disclosure for Orchestrator Agent
 
 Implements lazy loading of MCP tools based on task requirements to reduce
