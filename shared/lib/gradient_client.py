@@ -246,6 +246,68 @@ class GradientClient:
     def is_enabled(self) -> bool:
         return self._enabled
 
+    async def ainvoke(
+        self,
+        messages: list,
+        config: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """Async invoke method for LangChain Runnable interface compatibility.
+
+        This allows GradientClient to be used as a drop-in replacement for
+        LangChain LLMs when tools are unavailable.
+
+        Args:
+            messages: List of LangChain message objects
+            config: Optional runnable configuration (ignored)
+
+        Returns:
+            LangChain AIMessage with response content
+        """
+        from langchain_core.messages import AIMessage
+
+        # Extract system and human messages
+        system_prompt = None
+        prompt = ""
+        for msg in messages:
+            if hasattr(msg, "type"):
+                if msg.type == "system":
+                    system_prompt = msg.content
+                elif msg.type == "human":
+                    prompt = msg.content
+            elif hasattr(msg, "content"):
+                # Fallback for message-like objects
+                prompt = msg.content
+
+        result = await self.complete(
+            prompt=prompt,
+            system_prompt=system_prompt,
+            temperature=0.7,
+            max_tokens=2000,
+        )
+
+        return AIMessage(content=result["content"])
+
+    def invoke(
+        self,
+        messages: list,
+        config: Optional[Dict[str, Any]] = None,
+    ) -> Any:
+        """Sync invoke method for LangChain Runnable interface compatibility.
+
+        Wraps the async ainvoke method for synchronous contexts.
+
+        Args:
+            messages: List of LangChain message objects
+            config: Optional runnable configuration (ignored)
+
+        Returns:
+            LangChain AIMessage with response content
+        """
+        import asyncio
+        return asyncio.get_event_loop().run_until_complete(
+            self.ainvoke(messages, config)
+        )
+
     def get_llm_with_tools(
         self, tools: list, temperature: float = 0.7, max_tokens: int = 2000
     ):
