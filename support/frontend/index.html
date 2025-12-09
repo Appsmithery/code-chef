@@ -19,6 +19,24 @@
       name="description"
       content="Orchestrate your infrastructure with AI agents. From code generation to deployment, let the Chef handle the heat."
     />
+    <script type="module">
+      import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: "dark",
+        themeVariables: {
+          darkMode: true,
+          background: "transparent",
+          primaryColor: "#bcece0",
+          primaryTextColor: "#fffdf2",
+          primaryBorderColor: "#4c5270",
+          lineColor: "#bcece0",
+          secondaryColor: "#887bb0",
+          tertiaryColor: "#f4b9b8",
+          fontFamily: "Fira Code, monospace",
+        },
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>
