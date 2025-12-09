@@ -67,14 +67,16 @@ The Documentation agent creates README files, API docs, and architecture diagram
 
 ### 🧠 Smart Model Selection
 
-code/chef automatically picks the right AI model for each task:
+code/chef automatically picks the right AI model for each task via OpenRouter:
 
-| Task            | Model             | Why                        |
-| --------------- | ----------------- | -------------------------- |
-| Code Generation | Claude 3.5 Sonnet | Best-in-class coding       |
-| Code Review     | GPT-4o            | Strong reasoning           |
-| Infrastructure  | Llama 3.1 70B     | Cost-effective for configs |
-| Documentation   | Claude 3.5 Sonnet | Excellent writing          |
+| Task            | Model              | Cost/1M | Why                            |
+| --------------- | ------------------ | ------- | ------------------------------ |
+| Orchestration   | Claude 3.5 Sonnet  | $3.00   | Best reasoning for routing     |
+| Code Generation | Qwen 2.5 Coder 32B | $0.07   | Purpose-built for coding       |
+| Code Review     | DeepSeek V3        | $0.75   | Excellent analytical reasoning |
+| Infrastructure  | Gemini 2.0 Flash   | $0.25   | Fast, 1M context for IaC       |
+| CI/CD           | Gemini 2.0 Flash   | $0.25   | Great at YAML generation       |
+| Documentation   | DeepSeek V3        | $0.75   | Strong technical writing       |
 
 ### 🏗️ Architecture Overview
 
@@ -85,14 +87,14 @@ flowchart TB
     end
 
     subgraph Orchestrator["🧑‍🍳 code/chef Orchestrator"]
-        Supervisor["Supervisor\n(Head Chef)"]
+        Supervisor["Supervisor\n(Claude 3.5)"]
 
         subgraph Agents["Specialized Agents"]
-            FeatureDev["🚀 Feature Dev\nClaude 3.5"]
-            CodeReview["🔍 Code Review\nGPT-4o"]
-            CICD["⚡ CI/CD\nLlama 3.1"]
-            Infra["🏗️ Infrastructure\nLlama 3.1"]
-            Docs["📚 Documentation\nClaude 3.5"]
+            FeatureDev["🚀 Feature Dev\nQwen Coder 32B"]
+            CodeReview["🔍 Code Review\nDeepSeek V3"]
+            CICD["⚡ CI/CD\nGemini Flash"]
+            Infra["🏗️ Infrastructure\nGemini Flash"]
+            Docs["📚 Documentation\nDeepSeek V3"]
         end
 
         Tools["🔧 150+ MCP Tools"]

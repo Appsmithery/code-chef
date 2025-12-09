@@ -8,27 +8,28 @@ provider: openrouter # Default provider (gradient, claude, mistral, openai, open
 # OpenRouter Provider Configuration (Multi-Model Gateway)
 # Documentation: https://openrouter.ai/docs
 # Models: https://openrouter.ai/models
+# Last optimized: December 9, 2025 - 72% cost reduction
 openrouter:
   base_url: https://openrouter.ai/api/v1
   default_model: anthropic/claude-3-5-sonnet
   streaming: true # SSE streaming enabled
   # Fallback models for automatic failover
   fallback_models:
-    - openai/gpt-4o
-    - meta-llama/llama-3.1-70b-instruct
-    - google/gemini-2.0-flash-exp:free
+    - deepseek/deepseek-chat
+    - google/gemini-2.0-flash-001
+    - qwen/qwen-2.5-coder-32b-instruct
   # Development tier (free/cheap models for testing)
   dev_models:
     - google/gemini-2.0-flash-exp:free
-    - meta-llama/llama-3.1-8b-instruct:free
+    - qwen/qwen-2.5-coder-32b-instruct
   # Agent-specific model preferences (used when provider=openrouter)
   agent_models:
-    orchestrator: anthropic/claude-3-5-sonnet
-    feature_dev: anthropic/claude-3-5-sonnet # Best for code generation
-    code_review: openai/gpt-4o # Good reasoning for reviews
-    infrastructure: meta-llama/llama-3.1-70b-instruct
-    cicd: meta-llama/llama-3.1-70b-instruct
-    documentation: anthropic/claude-3-5-sonnet
+    orchestrator: anthropic/claude-3-5-sonnet # Routing needs top-tier reasoning
+    feature_dev: qwen/qwen-2.5-coder-32b-instruct # Purpose-built for code gen ($0.07/M)
+    code_review: deepseek/deepseek-chat # DeepSeek V3 excels at code analysis ($0.75/M)
+    infrastructure: google/gemini-2.0-flash-001 # Fast, 1M context, great function calling ($0.25/M)
+    cicd: google/gemini-2.0-flash-001 # Same + high uptime for pipelines ($0.25/M)
+    documentation: deepseek/deepseek-chat # Strong writing + 164K context ($0.75/M)
 
 # Cross-Agent Knowledge Sharing Configuration
 memory:
@@ -109,14 +110,14 @@ error_recovery:
       max_retries: 3
       fail_fast: false
       fallback_chain:
-        - model: "anthropic/claude-3-5-sonnet"
-          provider: "openrouter"
-          timeout_seconds: 90
-        - model: "openai/gpt-4o"
+        - model: "qwen/qwen-2.5-coder-32b-instruct"
           provider: "openrouter"
           timeout_seconds: 60
-        - model: "codellama-13b"
-          provider: "gradient"
+        - model: "deepseek/deepseek-chat"
+          provider: "openrouter"
+          timeout_seconds: 60
+        - model: "anthropic/claude-3-5-sonnet"
+          provider: "openrouter"
           timeout_seconds: 90
 
     code-review:
@@ -124,14 +125,14 @@ error_recovery:
       max_retries: 2
       fail_fast: false
       fallback_chain:
-        - model: "openai/gpt-4o"
+        - model: "deepseek/deepseek-chat"
           provider: "openrouter"
           timeout_seconds: 60
         - model: "anthropic/claude-3-5-sonnet"
           provider: "openrouter"
           timeout_seconds: 60
-        - model: "llama3.3-70b-instruct"
-          provider: "gradient"
+        - model: "google/gemini-2.0-flash-001"
+          provider: "openrouter"
           timeout_seconds: 45
 
     infrastructure:
@@ -139,7 +140,7 @@ error_recovery:
       max_retries: 1
       fail_fast: true # Critical: no speculative recovery for infra
       fallback_chain:
-        - model: "meta-llama/llama-3.1-70b-instruct"
+        - model: "google/gemini-2.0-flash-001"
           provider: "openrouter"
           timeout_seconds: 45
         # No additional fallbacks for infrastructure - fail fast
@@ -149,29 +150,29 @@ error_recovery:
       max_retries: 3
       fail_fast: false
       fallback_chain:
-        - model: "meta-llama/llama-3.1-70b-instruct"
+        - model: "google/gemini-2.0-flash-001"
           provider: "openrouter"
           timeout_seconds: 45
+        - model: "deepseek/deepseek-chat"
+          provider: "openrouter"
+          timeout_seconds: 60
         - model: "anthropic/claude-3-5-sonnet"
           provider: "openrouter"
           timeout_seconds: 60
-        - model: "llama3-8b-instruct"
-          provider: "gradient"
-          timeout_seconds: 45
 
     documentation:
       max_tier: TIER_2
       max_retries: 3
       fail_fast: false
       fallback_chain:
+        - model: "deepseek/deepseek-chat"
+          provider: "openrouter"
+          timeout_seconds: 45
         - model: "anthropic/claude-3-5-sonnet"
           provider: "openrouter"
           timeout_seconds: 45
-        - model: "openai/gpt-4o"
+        - model: "google/gemini-2.0-flash-001"
           provider: "openrouter"
-          timeout_seconds: 45
-        - model: "mistral-nemo-instruct-2407"
-          provider: "gradient"
           timeout_seconds: 45
 
 agents:
@@ -187,56 +188,56 @@ agents:
     langsmith_project: code-chef-orchestrator
 
   feature-dev:
-    model: anthropic/claude-3-5-sonnet
+    model: qwen/qwen-2.5-coder-32b-instruct
     provider: openrouter
     temperature: 0.7
     max_tokens: 4000
-    cost_per_1m_tokens: 3.00
-    context_window: 200000
+    cost_per_1m_tokens: 0.07 # Qwen Coder 32B ($0.03 in / $0.11 out avg)
+    context_window: 32768
     use_case: code_generation
-    tags: [feature-development, python, streaming]
+    tags: [feature-development, python, typescript, streaming]
     langsmith_project: code-chef-feature-dev
 
   code-review:
-    model: openai/gpt-4o
+    model: deepseek/deepseek-chat
     provider: openrouter
-    temperature: 0.3
+    temperature: 0.2
     max_tokens: 4000
-    cost_per_1m_tokens: 2.50 # GPT-4o via OpenRouter
-    context_window: 128000
+    cost_per_1m_tokens: 0.75 # DeepSeek V3 ($0.30 in / $1.20 out avg)
+    context_window: 163840
     use_case: code_analysis
     tags: [quality-assurance, security, streaming]
     langsmith_project: code-chef-code-review
 
   infrastructure:
-    model: meta-llama/llama-3.1-70b-instruct
+    model: google/gemini-2.0-flash-001
     provider: openrouter
-    temperature: 0.5
+    temperature: 0.3
     max_tokens: 2000
-    cost_per_1m_tokens: 0.88 # Llama 3.1 70B via OpenRouter
-    context_window: 128000
+    cost_per_1m_tokens: 0.25 # Gemini Flash 2.0 ($0.10 in / $0.40 out avg)
+    context_window: 1048576
     use_case: infrastructure_config
-    tags: [terraform, kubernetes, docker, streaming]
+    tags: [terraform, kubernetes, docker, yaml, streaming]
     langsmith_project: code-chef-infrastructure
 
   cicd:
-    model: meta-llama/llama-3.1-70b-instruct
+    model: google/gemini-2.0-flash-001
     provider: openrouter
-    temperature: 0.5
+    temperature: 0.3
     max_tokens: 2000
-    cost_per_1m_tokens: 0.88
-    context_window: 128000
+    cost_per_1m_tokens: 0.25 # Gemini Flash 2.0 ($0.10 in / $0.40 out avg)
+    context_window: 1048576
     use_case: pipeline_generation
-    tags: [github-actions, jenkins, streaming]
+    tags: [github-actions, jenkins, yaml, streaming]
     langsmith_project: code-chef-cicd
 
   documentation:
-    model: anthropic/claude-3-5-sonnet
+    model: deepseek/deepseek-chat
     provider: openrouter
-    temperature: 0.7
+    temperature: 0.6
     max_tokens: 4000
-    cost_per_1m_tokens: 3.00
-    context_window: 200000
+    cost_per_1m_tokens: 0.75 # DeepSeek V3 ($0.30 in / $1.20 out avg)
+    context_window: 163840
     use_case: documentation_generation
     tags: [markdown, technical-writing, streaming]
     langsmith_project: code-chef-documentation
@@ -256,15 +257,36 @@ environments:
       provider: openrouter
 
   development:
-    # Development uses free/cheaper models for cost savings
+    # Development uses cheap models for cost savings (still high quality)
+    orchestrator:
+      model: deepseek/deepseek-chat
+      provider: openrouter
+    code-review:
+      model: qwen/qwen-2.5-coder-32b-instruct
+      provider: openrouter
+    feature-dev:
+      model: qwen/qwen-2.5-coder-32b-instruct
+      provider: openrouter
+    infrastructure:
+      model: google/gemini-2.0-flash-001
+      provider: openrouter
+    cicd:
+      model: google/gemini-2.0-flash-001
+      provider: openrouter
+    documentation:
+      model: deepseek/deepseek-chat
+      provider: openrouter
+
+  # Free tier fallback (for testing/demos)
+  free-tier:
     orchestrator:
       model: google/gemini-2.0-flash-exp:free
       provider: openrouter
     code-review:
-      model: meta-llama/llama-3.1-8b-instruct:free
+      model: google/gemini-2.0-flash-exp:free
       provider: openrouter
     feature-dev:
-      model: meta-llama/llama-3.1-8b-instruct:free
+      model: google/gemini-2.0-flash-exp:free
       provider: openrouter
     infrastructure:
       model: google/gemini-2.0-flash-exp:free
@@ -275,15 +297,3 @@ environments:
     documentation:
       model: google/gemini-2.0-flash-exp:free
       provider: openrouter
-
-  # Gradient fallback (if OpenRouter is unavailable)
-  gradient-fallback:
-    orchestrator:
-      model: llama3.3-70b-instruct
-      provider: gradient
-    code-review:
-      model: llama3.3-70b-instruct
-      provider: gradient
-    feature-dev:
-      model: codellama-13b
-      provider: gradient
