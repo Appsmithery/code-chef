@@ -22,7 +22,7 @@
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
       mermaid.initialize({
-        startOnLoad: true,
+        startOnLoad: false,
         theme: "dark",
         themeVariables: {
           darkMode: true,
@@ -36,6 +36,7 @@
           fontFamily: "Fira Code, monospace",
         },
       });
+      window.mermaid = mermaid;
     </script>
   </head>
   <body>
