@@ -62,9 +62,11 @@
 		reverse_proxy documentation:8006
 	}
 
-	# Serve frontend files from mounted volume (MUST come after API handlers)
+	# Serve React SPA from mounted volume (MUST come after API handlers)
+	# SPA routing: try file, then fallback to index.html for client-side routing
 	handle {
 		root * /srv/frontend
+		encode gzip
 		try_files {path} /index.html
 		file_server
 	}
