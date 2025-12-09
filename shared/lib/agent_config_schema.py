@@ -10,111 +10,98 @@ Enforces:
 """
 
 from typing import Dict, List, Literal, Optional, Union
-from pydantic import BaseModel, Field, field_validator
 
+from pydantic import BaseModel, Field, field_validator
 
 # =============================================================================
 # Error Recovery Configuration Schemas
 # =============================================================================
 
+
 class CircuitBreakerConfig(BaseModel):
     """Circuit breaker configuration for error recovery."""
-    
+
     enabled: bool = Field(
-        default=True,
-        description="Whether circuit breaker is enabled for this agent"
+        default=True, description="Whether circuit breaker is enabled for this agent"
     )
     use_defaults: bool = Field(
-        default=True,
-        description="Use defaults from config/error-handling.yaml"
+        default=True, description="Use defaults from config/error-handling.yaml"
     )
     failure_threshold: Optional[int] = Field(
         default=None,
         ge=1,
         le=20,
-        description="Number of failures before circuit opens (1-20)"
+        description="Number of failures before circuit opens (1-20)",
     )
     recovery_timeout_seconds: Optional[int] = Field(
         default=None,
         ge=10,
         le=600,
-        description="Seconds before attempting recovery (10-600)"
+        description="Seconds before attempting recovery (10-600)",
     )
 
 
 class CategoryOverrideConfig(BaseModel):
     """Category-specific error recovery overrides."""
-    
-    max_tier: Optional[Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"]] = Field(
-        default=None,
-        description="Maximum recovery tier for this category"
+
+    max_tier: Optional[Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"]] = (
+        Field(default=None, description="Maximum recovery tier for this category")
     )
     max_retries: Optional[int] = Field(
         default=None,
         ge=0,
         le=10,
-        description="Maximum retry attempts for this category (0-10)"
+        description="Maximum retry attempts for this category (0-10)",
     )
     timeout_seconds: Optional[int] = Field(
         default=None,
         ge=1,
         le=600,
-        description="Timeout in seconds for this category (1-600)"
+        description="Timeout in seconds for this category (1-600)",
     )
     fail_fast: Optional[bool] = Field(
-        default=None,
-        description="Escalate immediately on non-retriable errors"
+        default=None, description="Escalate immediately on non-retriable errors"
     )
 
 
 class ErrorRecoveryConfig(BaseModel):
     """Error recovery configuration for agents and workflows.
-    
+
     Integrated with ErrorRecoveryEngine for tiered recovery behavior.
     Can be specified in:
     - Agent tools.yaml (per-agent config)
     - Workflow templates (per-workflow config)
     - config/error-handling.yaml (global overrides)
     """
-    
-    enabled: bool = Field(
-        default=True,
-        description="Whether error recovery is enabled"
-    )
+
+    enabled: bool = Field(default=True, description="Whether error recovery is enabled")
     max_tier: Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"] = Field(
         default="TIER_2",
-        description="Maximum recovery tier (TIER_0=instant, TIER_1=auto, TIER_2=RAG, TIER_3=agent, TIER_4=HITL)"
+        description="Maximum recovery tier (TIER_0=instant, TIER_1=auto, TIER_2=RAG, TIER_3=agent, TIER_4=HITL)",
     )
     max_retries: int = Field(
-        default=3,
-        ge=0,
-        le=10,
-        description="Maximum retry attempts (0-10)"
+        default=3, ge=0, le=10, description="Maximum retry attempts (0-10)"
     )
     fail_fast: bool = Field(
-        default=False,
-        description="Escalate immediately on non-retriable errors"
+        default=False, description="Escalate immediately on non-retriable errors"
     )
     category_overrides: Optional[Dict[str, CategoryOverrideConfig]] = Field(
         default=None,
-        description="Category-specific recovery overrides (llm, mcp, network, docker, auth, database)"
+        description="Category-specific recovery overrides (llm, mcp, network, docker, auth, database)",
     )
     circuit_breaker: Optional[CircuitBreakerConfig] = Field(
-        default=None,
-        description="Circuit breaker configuration"
+        default=None, description="Circuit breaker configuration"
     )
-    
+
     @field_validator("max_tier")
     @classmethod
     def validate_tier_format(cls, v: str) -> str:
         """Ensure tier follows TIER_N format."""
         valid_tiers = {"TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"}
         if v not in valid_tiers:
-            raise ValueError(
-                f"Invalid tier '{v}'. Must be one of: {valid_tiers}"
-            )
+            raise ValueError(f"Invalid tier '{v}'. Must be one of: {valid_tiers}")
         return v
-    
+
     @field_validator("category_overrides")
     @classmethod
     def validate_categories(
@@ -123,11 +110,20 @@ class ErrorRecoveryConfig(BaseModel):
         """Validate category names are recognized."""
         if v is None:
             return v
-        valid_categories = {"llm", "mcp", "network", "docker", "auth", "database", "dependency"}
+        valid_categories = {
+            "llm",
+            "mcp",
+            "network",
+            "docker",
+            "auth",
+            "database",
+            "dependency",
+        }
         for category in v.keys():
             if category not in valid_categories:
                 # Warn but don't fail for extensibility
                 import logging
+
                 logging.getLogger(__name__).warning(
                     f"Unrecognized error category '{category}'. "
                     f"Standard categories: {valid_categories}"
@@ -137,64 +133,51 @@ class ErrorRecoveryConfig(BaseModel):
 
 class FallbackModelConfig(BaseModel):
     """LLM fallback model configuration."""
-    
+
     model: str = Field(
         ...,
-        description="Model name (e.g., 'llama3.3-70b-instruct')"
+        description="Model name (e.g., 'llama3.3-70b-instruct', 'anthropic/claude-3-5-sonnet')",
     )
-    provider: Literal["gradient", "openai", "claude", "mistral"] = Field(
-        default="gradient",
-        description="Model provider"
+    provider: Literal["gradient", "openai", "claude", "mistral", "openrouter"] = Field(
+        default="gradient", description="Model provider"
     )
     timeout_seconds: int = Field(
-        default=60,
-        ge=10,
-        le=300,
-        description="Timeout for this fallback model"
+        default=60, ge=10, le=300, description="Timeout for this fallback model"
     )
 
 
 class AgentErrorRecoveryOverride(BaseModel):
     """Per-agent error recovery configuration in models.yaml."""
-    
+
     max_tier: Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"] = Field(
-        default="TIER_2",
-        description="Maximum recovery tier for this agent"
+        default="TIER_2", description="Maximum recovery tier for this agent"
     )
     max_retries: int = Field(
-        default=3,
-        ge=0,
-        le=10,
-        description="Maximum retry attempts"
+        default=3, ge=0, le=10, description="Maximum retry attempts"
     )
     fail_fast: bool = Field(
-        default=False,
-        description="Escalate immediately on non-retriable errors"
+        default=False, description="Escalate immediately on non-retriable errors"
     )
     fallback_chain: Optional[List[FallbackModelConfig]] = Field(
-        default=None,
-        description="Ordered list of fallback models for LLM errors"
+        default=None, description="Ordered list of fallback models for LLM errors"
     )
 
 
 class ErrorRecoveryModelsConfig(BaseModel):
     """Error recovery configuration in models.yaml."""
-    
+
     enabled: bool = Field(
-        default=True,
-        description="Whether error recovery is enabled globally"
+        default=True, description="Whether error recovery is enabled globally"
     )
     config_path: str = Field(
         default="config/error-handling.yaml",
-        description="Path to main error handling configuration"
+        description="Path to main error handling configuration",
     )
     defaults: Optional[ErrorRecoveryConfig] = Field(
-        default=None,
-        description="Default error recovery settings for all agents"
+        default=None, description="Default error recovery settings for all agents"
     )
     agent_overrides: Optional[Dict[str, AgentErrorRecoveryOverride]] = Field(
-        default=None,
-        description="Per-agent error recovery overrides"
+        default=None, description="Per-agent error recovery overrides"
     )
 
 
@@ -202,14 +185,15 @@ class ErrorRecoveryModelsConfig(BaseModel):
 # Agent Configuration Schemas
 # =============================================================================
 
+
 class AgentConfig(BaseModel):
     """Configuration for a single agent's LLM instance."""
 
     model: str = Field(
         ...,
-        description="LLM model name (e.g., 'llama3.3-70b-instruct', 'codellama-13b')",
+        description="LLM model name (e.g., 'llama3.3-70b-instruct', 'anthropic/claude-3-5-sonnet')",
     )
-    provider: Literal["gradient", "claude", "mistral", "openai"] = Field(
+    provider: Literal["gradient", "claude", "mistral", "openai", "openrouter"] = Field(
         default="gradient", description="LLM provider to use"
     )
     temperature: float = Field(
@@ -242,7 +226,7 @@ class AgentConfig(BaseModel):
     @field_validator("max_tokens")
     @classmethod
     def validate_max_tokens_for_gradient(cls, v: int, info) -> int:
-        """Gradient AI requires max_tokens >= 256."""
+        """Gradient AI requires max_tokens >= 256. OpenRouter has no minimum."""
         provider = info.data.get("provider", "gradient")
         if provider == "gradient" and v < 256:
             raise ValueError(
@@ -306,7 +290,7 @@ class ModelsConfig(BaseModel):
     )
     error_recovery: Optional[ErrorRecoveryModelsConfig] = Field(
         default=None,
-        description="Error recovery configuration with per-agent overrides and fallback chains"
+        description="Error recovery configuration with per-agent overrides and fallback chains",
     )
 
     @field_validator("agents")
@@ -336,94 +320,73 @@ class ModelsConfig(BaseModel):
 # Workflow Error Handling Schemas
 # =============================================================================
 
+
 class WorkflowStepErrorHandling(BaseModel):
     """Error handling configuration for a workflow step."""
-    
-    step: str = Field(
-        ...,
-        description="Step ID this error handling applies to"
-    )
+
+    step: str = Field(..., description="Step ID this error handling applies to")
     on_error: str = Field(
         ...,
-        description="Step to transition to on error (e.g., 'notify_failure', 'rollback')"
+        description="Step to transition to on error (e.g., 'notify_failure', 'rollback')",
     )
     max_retries: Optional[int] = Field(
-        default=None,
-        ge=0,
-        le=10,
-        description="Maximum retry attempts for this step"
+        default=None, ge=0, le=10, description="Maximum retry attempts for this step"
     )
     rollback: Optional[bool] = Field(
-        default=None,
-        description="Whether to trigger rollback on failure"
+        default=None, description="Whether to trigger rollback on failure"
     )
-    recovery_tier: Optional[Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"]] = Field(
-        default=None,
-        description="Maximum recovery tier for this step"
-    )
+    recovery_tier: Optional[
+        Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"]
+    ] = Field(default=None, description="Maximum recovery tier for this step")
     fail_fast: Optional[bool] = Field(
-        default=None,
-        description="Escalate immediately without retry"
+        default=None, description="Escalate immediately without retry"
     )
     circuit_breaker: Optional[CircuitBreakerConfig] = Field(
-        default=None,
-        description="Circuit breaker configuration for this step"
+        default=None, description="Circuit breaker configuration for this step"
     )
     escalation_path: Optional[List[str]] = Field(
         default=None,
-        description="Ordered list of agents/targets for escalation (e.g., ['supervisor', 'hitl'])"
+        description="Ordered list of agents/targets for escalation (e.g., ['supervisor', 'hitl'])",
     )
 
 
 class WorkflowStepOverride(BaseModel):
     """Step-specific error recovery overrides in workflow error_recovery block."""
-    
-    max_tier: Optional[Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"]] = Field(
-        default=None,
-        description="Maximum recovery tier for this step"
+
+    max_tier: Optional[Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"]] = (
+        Field(default=None, description="Maximum recovery tier for this step")
     )
     max_retries: Optional[int] = Field(
-        default=None,
-        ge=0,
-        le=10,
-        description="Maximum retry attempts"
+        default=None, ge=0, le=10, description="Maximum retry attempts"
     )
     fail_fast: Optional[bool] = Field(
-        default=None,
-        description="Escalate immediately without retry"
+        default=None, description="Escalate immediately without retry"
     )
 
 
 class WorkflowErrorRecoveryConfig(BaseModel):
     """Top-level error recovery configuration for workflow templates."""
-    
+
     enabled: bool = Field(
-        default=True,
-        description="Whether error recovery is enabled for this workflow"
+        default=True, description="Whether error recovery is enabled for this workflow"
     )
     default_tier: Literal["TIER_0", "TIER_1", "TIER_2", "TIER_3", "TIER_4"] = Field(
-        default="TIER_2",
-        description="Default recovery tier for workflow steps"
+        default="TIER_2", description="Default recovery tier for workflow steps"
     )
     max_workflow_retries: int = Field(
-        default=2,
-        ge=0,
-        le=5,
-        description="Maximum workflow-level retry attempts"
+        default=2, ge=0, le=5, description="Maximum workflow-level retry attempts"
     )
     fail_fast: bool = Field(
-        default=False,
-        description="Escalate immediately on any step failure"
+        default=False, description="Escalate immediately on any step failure"
     )
     step_overrides: Optional[Dict[str, WorkflowStepOverride]] = Field(
-        default=None,
-        description="Step-specific recovery overrides keyed by step ID"
+        default=None, description="Step-specific recovery overrides keyed by step ID"
     )
     llm_fallback_chain: Optional[List[FallbackModelConfig]] = Field(
         default=None,
-        description="Ordered list of fallback models for LLM errors in this workflow"
+        description="Ordered list of fallback models for LLM errors in this workflow",
     )
     escalation: Optional[Dict[str, Union[bool, str, List[str]]]] = Field(
         default=None,
-        description="Escalation settings (on_any_failure, create_linear_issue, priority, notify_channels)"
+        description="Escalation settings (on_any_failure, create_linear_issue, priority, notify_channels)",
     )

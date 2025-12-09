@@ -9,55 +9,58 @@ Primary Role: Task delegation, context routing, and workflow coordination
 
 """
 
-from fastapi import FastAPI, HTTPException, Request, Depends, Security
-from fastapi.security import APIKeyHeader
-from starlette.middleware.base import BaseHTTPMiddleware
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, List, Any
-from enum import Enum
-from datetime import datetime
-import uvicorn
-import os
-import httpx
+import asyncio
+import json
 import logging
-import uuid
+import os
 import secrets
-from prometheus_fastapi_instrumentator import Instrumentator
-from prometheus_client import Counter, Histogram
-from langsmith import traceable
+import uuid
+from datetime import datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from lib.mcp_client import MCPClient, resolve_manifest_path
+import httpx
+import uvicorn
+from fastapi import Depends, FastAPI, HTTPException, Request, Security
+from fastapi.responses import StreamingResponse
+from fastapi.security import APIKeyHeader
+from langsmith import traceable
+from lib.event_bus import Event, get_event_bus
+from lib.github_permalink_generator import enrich_markdown_with_permalinks_stateless
 from lib.gradient_client import get_gradient_client
 from lib.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
-from lib.mcp_discovery import get_mcp_discovery
-from lib.linear_client import get_linear_client
-from lib.mcp_tool_client import get_mcp_tool_client
+from lib.hitl_manager import get_hitl_manager
+from lib.intent_recognizer import IntentType, get_intent_recognizer, intent_to_task
+from lib.langchain_memory import HybridMemory
 from lib.langgraph_base import (
     BaseAgentState,
-    get_postgres_checkpointer,
     create_workflow_config,
+    get_postgres_checkpointer,
+)
+from lib.linear_client import get_linear_client
+from lib.linear_project_manager import get_project_manager
+from lib.mcp_client import MCPClient, resolve_manifest_path
+from lib.mcp_discovery import get_mcp_discovery
+from lib.mcp_tool_client import get_mcp_tool_client
+from lib.notifiers import (
+    EmailConfig,
+    EmailNotifier,
+    LinearWorkspaceNotifier,
+    NotificationConfig,
+)
+from lib.progressive_mcp_loader import (
+    ProgressiveMCPLoader,
+    ToolLoadingStrategy,
+    get_progressive_loader,
 )
 from lib.qdrant_client import get_qdrant_client
-from lib.langchain_memory import HybridMemory
-from lib.progressive_mcp_loader import (
-    get_progressive_loader,
-    ToolLoadingStrategy,
-    ProgressiveMCPLoader,
-)
+from lib.registry_client import AgentCapability, RegistryClient
 from lib.risk_assessor import get_risk_assessor
-from lib.hitl_manager import get_hitl_manager
-from lib.intent_recognizer import get_intent_recognizer, intent_to_task, IntentType
 from lib.session_manager import get_session_manager
-from lib.event_bus import get_event_bus, Event
-from lib.notifiers import (
-    LinearWorkspaceNotifier,
-    EmailNotifier,
-    NotificationConfig,
-    EmailConfig,
-)
-from lib.registry_client import RegistryClient, AgentCapability
-from lib.linear_project_manager import get_project_manager
-from lib.github_permalink_generator import enrich_markdown_with_permalinks_stateless
+from prometheus_client import Counter, Histogram
+from prometheus_fastapi_instrumentator import Instrumentator
+from pydantic import BaseModel, Field
+from starlette.middleware.base import BaseHTTPMiddleware
 
 try:
     from lib.dependency_handler import (
@@ -147,14 +150,14 @@ async def lifespan(app: FastAPI):
 
     async def poll_pending_approvals():
         """Fallback: runs every 30s to catch missed webhooks.
-        
+
         Uses LangSmith sampling to reduce trace volume for background polling.
         Only HITL_POLLING_SAMPLE_RATE (default 10%) of polls are traced.
         """
         while True:
             try:
                 await asyncio.sleep(30)  # Poll every 30 seconds
-                
+
                 # Sampling: only trace a fraction of polling iterations
                 should_trace = random.random() < HITL_POLLING_SAMPLE_RATE
 
@@ -170,7 +173,7 @@ async def lifespan(app: FastAPI):
                             """
                         )
                         pending = await cursor.fetchall()
-                        
+
                         # Log poll results only when sampled (reduces log volume)
                         if should_trace and pending:
                             logger.debug(
@@ -2005,14 +2008,18 @@ async def get_all_tools():
         for toolset in all_toolsets:
             servers.add(toolset.server)
             for tool_name in toolset.tools:
-                tools.append({
-                    "name": tool_name,
-                    "server": toolset.server,
-                    "rationale": toolset.rationale,
-                    "priority": toolset.priority,
-                })
+                tools.append(
+                    {
+                        "name": tool_name,
+                        "server": toolset.server,
+                        "rationale": toolset.rationale,
+                        "priority": toolset.priority,
+                    }
+                )
 
-        logger.info(f"[Tools API] Returning {len(tools)} tools from {len(servers)} servers")
+        logger.info(
+            f"[Tools API] Returning {len(tools)} tools from {len(servers)} servers"
+        )
 
         return {
             "success": True,
@@ -2029,7 +2036,9 @@ async def get_all_tools():
 
 
 @app.get("/tools/progressive")
-@traceable(name="api_get_progressive_tools", tags=["api", "mcp", "tools", "progressive"])
+@traceable(
+    name="api_get_progressive_tools", tags=["api", "mcp", "tools", "progressive"]
+)
 async def get_progressive_tools(task: str = None):
     """Get task-filtered MCP tools using progressive disclosure.
 
@@ -2055,7 +2064,7 @@ async def get_progressive_tools(task: str = None):
     if not task:
         raise HTTPException(
             status_code=400,
-            detail="Query parameter 'task' is required. Example: /tools/progressive?task=commit+changes"
+            detail="Query parameter 'task' is required. Example: /tools/progressive?task=commit+changes",
         )
 
     try:
@@ -2076,12 +2085,14 @@ async def get_progressive_tools(task: str = None):
         for toolset in relevant_toolsets:
             servers.add(toolset.server)
             for tool_name in toolset.tools:
-                tools.append({
-                    "name": tool_name,
-                    "server": toolset.server,
-                    "rationale": toolset.rationale,
-                    "priority": toolset.priority,
-                })
+                tools.append(
+                    {
+                        "name": tool_name,
+                        "server": toolset.server,
+                        "rationale": toolset.rationale,
+                        "priority": toolset.priority,
+                    }
+                )
 
         # Extract matched keywords from rationale
         for toolset in relevant_toolsets:
@@ -2089,7 +2100,8 @@ async def get_progressive_tools(task: str = None):
                 # Parse keywords from rationale like "Matched keywords: git, commit"
                 keywords_matched.update(
                     [kw.strip() for kw in toolset.rationale.split(":")[1].split(",")]
-                    if ":" in toolset.rationale else []
+                    if ":" in toolset.rationale
+                    else []
                 )
 
         logger.info(
@@ -2112,13 +2124,20 @@ async def get_progressive_tools(task: str = None):
 
     except Exception as e:
         logger.error(f"[Tools API] Progressive discovery failed: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=f"Progressive tool discovery failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Progressive tool discovery failed: {str(e)}"
+        )
 
 
 class ToolInvocationRequest(BaseModel):
     """Request body for tool invocation."""
-    arguments: Dict[str, Any] = Field(default_factory=dict, description="Tool arguments")
-    timeout: Optional[float] = Field(default=30.0, description="Request timeout in seconds")
+
+    arguments: Dict[str, Any] = Field(
+        default_factory=dict, description="Tool arguments"
+    )
+    timeout: Optional[float] = Field(
+        default=30.0, description="Request timeout in seconds"
+    )
 
 
 @app.post("/tools/{tool_name}")
@@ -2177,7 +2196,7 @@ async def invoke_tool(tool_name: str, request: ToolInvocationRequest):
             if not server_name:
                 raise HTTPException(
                     status_code=404,
-                    detail=f"Tool '{tool_name}' not found. Use /tools to list available tools."
+                    detail=f"Tool '{tool_name}' not found. Use /tools to list available tools.",
                 )
 
         # Invoke the tool via MCP client
@@ -2200,7 +2219,9 @@ async def invoke_tool(tool_name: str, request: ToolInvocationRequest):
             "tool": actual_tool,
             "server": server_name,
             "execution_time_ms": execution_time_ms,
-            "citations": result.get("citations", []) if isinstance(result, dict) else [],
+            "citations": (
+                result.get("citations", []) if isinstance(result, dict) else []
+            ),
             "timestamp": datetime.utcnow().isoformat(),
         }
 
@@ -2209,13 +2230,9 @@ async def invoke_tool(tool_name: str, request: ToolInvocationRequest):
     except Exception as e:
         execution_time_ms = (time.time() - start_time) * 1000
         logger.error(
-            f"[Tools API] Tool invocation failed: {tool_name} - {e}",
-            exc_info=True
+            f"[Tools API] Tool invocation failed: {tool_name} - {e}", exc_info=True
         )
-        raise HTTPException(
-            status_code=500,
-            detail=f"Tool invocation failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Tool invocation failed: {str(e)}")
 
 
 @app.get("/tools/servers")
@@ -2249,12 +2266,14 @@ async def list_tool_servers():
         for server_name, server_info in discovery.get("servers", {}).items():
             tool_count = len(server_info.get("tools", []))
             total_tools += tool_count
-            servers.append({
-                "name": server_name,
-                "tools_count": tool_count,
-                "status": server_info.get("status", "unknown"),
-                "description": server_info.get("description", ""),
-            })
+            servers.append(
+                {
+                    "name": server_name,
+                    "tools_count": tool_count,
+                    "status": server_info.get("status", "unknown"),
+                    "description": server_info.get("description", ""),
+                }
+            )
 
         return {
             "success": True,
@@ -2456,7 +2475,7 @@ async def execute_workflow(task_id: str):
 
     # Import LangGraph components
     from graph import WorkflowState, get_agent
-    from langchain_core.messages import HumanMessage, AIMessage
+    from langchain_core.messages import AIMessage, HumanMessage
 
     for subtask in task.subtasks:
         try:
@@ -2751,8 +2770,9 @@ async def decompose_with_llm(
 
     This enables actual tool usage during task decomposition.
     """
-    import uuid
     import json
+    import uuid
+
     from langchain_core.messages import HumanMessage, SystemMessage
 
     system_prompt = """You are an expert DevOps orchestrator. Analyze development requests and decompose them into discrete subtasks for specialized agents.
@@ -3197,9 +3217,131 @@ What would you like to do?"""
         raise HTTPException(status_code=500, detail=f"Chat processing failed: {str(e)}")
 
 
+# ============================================================================
+# Streaming Chat Interface (SSE - Server-Sent Events)
+# ============================================================================
+
+
+class ChatStreamRequest(BaseModel):
+    """Streaming chat request from user."""
+
+    message: str = Field(..., description="User's message")
+    session_id: Optional[str] = Field(
+        None, description="Session ID (auto-generated if not provided)"
+    )
+    user_id: Optional[str] = Field(None, description="User identifier")
+    context: Optional[Dict[str, Any]] = Field(None, description="Additional context")
+    workspace_config: Optional[Dict[str, Any]] = Field(
+        None, description="Workspace configuration from VS Code extension"
+    )
+
+
+@app.post("/chat/stream", tags=["chat"])
+@traceable(name="chat_stream", tags=["chat", "streaming", "sse"])
+async def chat_stream_endpoint(request: ChatStreamRequest):
+    """
+    Stream chat response via Server-Sent Events (SSE).
+
+    Provides real-time token-by-token responses for the @chef chat participant.
+    Uses LangGraph's astream_events for streaming LLM output.
+
+    Event types:
+    - content: Token chunk from LLM
+    - agent_complete: Agent finished processing
+    - tool_call: Tool invocation (for visibility)
+    - done: Stream complete
+    - error: Error occurred
+
+    Example SSE response:
+        data: {"type": "content", "content": "I'll help you"}
+        data: {"type": "content", "content": " create that"}
+        data: {"type": "agent_complete", "agent": "feature_dev"}
+        data: {"type": "done"}
+    """
+    session_id = request.session_id or f"stream-{uuid.uuid4()}"
+
+    async def event_generator():
+        """Generate SSE events from LangGraph stream."""
+        try:
+            # Import the graph for streaming
+            from graph import WorkflowState, get_graph
+            from langchain_core.messages import HumanMessage
+
+            graph = get_graph()
+            if not graph:
+                yield f"data: {json.dumps({'type': 'error', 'error': 'Graph not available'})}\n\n"
+                return
+
+            # Build initial state
+            initial_state: WorkflowState = {
+                "messages": [HumanMessage(content=request.message)],
+                "current_agent": "orchestrator",
+                "next_agent": None,
+                "task_result": None,
+                "approvals": [],
+                "requires_approval": False,
+                "workflow_id": session_id,
+                "thread_id": session_id,
+                "pending_operation": None,
+            }
+
+            config = {"configurable": {"thread_id": session_id}}
+
+            # Stream events from LangGraph
+            async for event in graph.astream_events(
+                initial_state, config, version="v2"
+            ):
+                event_kind = event.get("event", "")
+
+                # Stream LLM tokens
+                if event_kind == "on_chat_model_stream":
+                    chunk = event.get("data", {}).get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield f"data: {json.dumps({'type': 'content', 'content': chunk.content})}\n\n"
+
+                # Agent completed
+                elif event_kind == "on_chain_end":
+                    name = event.get("name", "")
+                    if "agent" in name.lower() or name in [
+                        "orchestrator",
+                        "feature_dev",
+                        "code_review",
+                        "infrastructure",
+                        "cicd",
+                        "documentation",
+                    ]:
+                        yield f"data: {json.dumps({'type': 'agent_complete', 'agent': name})}\n\n"
+
+                # Tool calls (optional visibility)
+                elif event_kind == "on_tool_start":
+                    tool_name = event.get("name", "unknown")
+                    yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name})}\n\n"
+
+                # Add small delay to prevent overwhelming the client
+                await asyncio.sleep(0.01)
+
+            # Stream complete
+            yield f"data: {json.dumps({'type': 'done', 'session_id': session_id})}\n\n"
+
+        except Exception as e:
+            logger.error(f"Chat stream error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
 # === Agent-to-Agent Communication (Phase 6) ===
 
-from lib.agent_events import AgentRequestEvent, AgentResponseEvent, AgentRequestType
+from lib.agent_events import AgentRequestEvent, AgentRequestType, AgentResponseEvent
 from lib.agent_request_handler import handle_agent_request
 
 
@@ -3363,7 +3505,8 @@ async def orchestrate_langgraph(request: TaskRequest):
     - Same multi-agent capabilities
     - Progressive tool disclosure per agent
     """
-    from graph import app as workflow_app, WorkflowState
+    from graph import WorkflowState
+    from graph import app as workflow_app
     from langchain_core.messages import HumanMessage
 
     task_id = str(uuid.uuid4())
@@ -3469,8 +3612,8 @@ async def handle_linear_approval_webhook(request: Request):
     - issueId: Linear issue ID
     - comment: Comment with approval decision
     """
-    import hmac
     import hashlib
+    import hmac
 
     # Verify webhook signature
     signing_secret = os.getenv("LINEAR_WEBHOOK_SIGNING_SECRET", "")
@@ -3559,7 +3702,8 @@ async def resume_langgraph_workflow(
 
     CHEF-207: On resume, injects captured_insights from checkpoint state as context.
     """
-    from graph import app as workflow_app, WorkflowState
+    from graph import WorkflowState
+    from graph import app as workflow_app
     from lib.langgraph_base import get_postgres_checkpointer
 
     logger.info(
@@ -3912,8 +4056,8 @@ async def smart_execute_workflow(request: SmartWorkflowRequest):
     Returns:
         SmartWorkflowResponse with selection details and optional workflow_id
     """
-    from workflows.workflow_router import get_workflow_router, WorkflowSelection
     from workflows.workflow_engine import WorkflowEngine
+    from workflows.workflow_router import WorkflowSelection, get_workflow_router
 
     # Get or create the workflow router
     router = get_workflow_router(
@@ -4260,7 +4404,8 @@ async def export_workflow_events(
         (Downloads audit-report-abc-123.pdf)
     """
     from workflows.workflow_engine import WorkflowEngine
-    from shared.lib.workflow_events import export_events_to_json, export_events_to_csv
+
+    from shared.lib.workflow_events import export_events_to_csv, export_events_to_json
 
     engine = WorkflowEngine(
         gradient_client=gradient_client,
@@ -4380,6 +4525,7 @@ async def get_workflow_state_at_timestamp(workflow_id: str, timestamp: str):
         }
     """
     from workflows.workflow_engine import WorkflowEngine
+
     from shared.lib.workflow_reducer import get_state_at_timestamp
 
     engine = WorkflowEngine(
@@ -4615,6 +4761,7 @@ async def retry_workflow_from_step(
         }
     """
     from workflows.workflow_engine import WorkflowEngine
+
     from shared.lib.retry_logic import RetryConfig
 
     engine = WorkflowEngine(
@@ -4642,8 +4789,8 @@ async def retry_workflow_from_step(
             )
 
         # Emit RETRY_STEP event
+        from shared.lib.retry_logic import RetryConfig, calculate_backoff
         from shared.lib.workflow_reducer import WorkflowAction
-        from shared.lib.retry_logic import calculate_backoff, RetryConfig
 
         config = RetryConfig(max_retries=max_retries)
         backoff_delay = calculate_backoff(retry_count, config)

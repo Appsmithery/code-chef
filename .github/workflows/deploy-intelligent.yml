@@ -122,6 +122,8 @@ jobs:
           echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+          # OpenRouter (Multi-Model LLM Gateway)
+          echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> config/env/.env
           # Linear Integration
           echo "LINEAR_TEAM_ID=${{ secrets.LINEAR_TEAM_ID }}" >> config/env/.env
           echo "LINEAR_API_KEY=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
@@ -195,6 +197,8 @@ jobs:
           echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+          # OpenRouter (Multi-Model LLM Gateway)
+          echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> config/env/.env
           # Linear Integration
           echo "LINEAR_TEAM_ID=${{ secrets.LINEAR_TEAM_ID }}" >> config/env/.env
           echo "LINEAR_API_KEY=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env

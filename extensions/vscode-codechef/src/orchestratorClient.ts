@@ -69,6 +69,29 @@ export interface ChatResponse {
     };
 }
 
+/**
+ * Stream chunk types from /chat/stream SSE endpoint
+ */
+export interface StreamChunk {
+    type: 'content' | 'agent_complete' | 'tool_call' | 'done' | 'error';
+    content?: string;
+    agent?: string;
+    tool?: string;
+    session_id?: string;
+    error?: string;
+}
+
+/**
+ * Request body for streaming chat
+ */
+export interface ChatStreamRequest {
+    message: string;
+    session_id?: string;
+    user_id?: string;
+    context?: Record<string, any>;
+    workspace_config?: Record<string, any>;
+}
+
 export interface SmartWorkflowRequest {
     task_description: string;
     explicit_workflow?: string;
@@ -178,6 +201,86 @@ export class OrchestratorClient {
     async chat(message: ChatMessage): Promise<ChatResponse> {
         const response = await this.client.post('/chat', message);
         return response.data;
+    }
+
+    /**
+     * Stream chat response via Server-Sent Events (SSE)
+     * Yields chunks as they arrive for real-time token-by-token display
+     * 
+     * @param request Chat stream request with message and optional session
+     * @yields StreamChunk events from the server
+     * 
+     * @example
+     * ```typescript
+     * for await (const chunk of client.chatStream({ message: 'Hello' })) {
+     *     if (chunk.type === 'content') {
+     *         stream.markdown(chunk.content!);
+     *     }
+     * }
+     * ```
+     */
+    async *chatStream(request: ChatStreamRequest): AsyncGenerator<StreamChunk> {
+        const url = `${this.client.defaults.baseURL}/chat/stream`;
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+        };
+        if (this.apiKey) {
+            headers['X-API-Key'] = this.apiKey;
+        }
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(request),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Stream failed: ${response.status} ${response.statusText}`);
+        }
+
+        if (!response.body) {
+            throw new Error('No response body for streaming');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                
+                // Process complete SSE messages (separated by double newlines)
+                const messages = buffer.split('\n\n');
+                buffer = messages.pop() || '';
+
+                for (const message of messages) {
+                    if (message.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(message.slice(6));
+                            yield data as StreamChunk;
+                        } catch (parseError) {
+                            console.warn('Failed to parse SSE message:', message);
+                        }
+                    }
+                }
+            }
+
+            // Process any remaining buffer
+            if (buffer.startsWith('data: ')) {
+                try {
+                    const data = JSON.parse(buffer.slice(6));
+                    yield data as StreamChunk;
+                } catch {
+                    // Ignore incomplete final message
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
     }
 
     async approve(taskId: string, approvalId: string): Promise<void> {

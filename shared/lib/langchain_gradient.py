@@ -16,9 +16,10 @@ DigitalOcean Gradient AI Products:
    - Features: Agent workspaces, knowledge bases, guardrails
 """
 
-import os
 import logging
-from typing import Optional, Literal, Union
+import os
+from typing import Literal, Optional, Union
+
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,14 @@ MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 # OpenAI (direct)
 OPENAI_API_KEY = os.getenv("OPEN_AI_DEVTOOLS_KEY")
 
+# OpenRouter (Multi-Model Gateway)
+# Documentation: https://openrouter.ai/docs
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+OPENROUTER_BASE_URL = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+OPENROUTER_DEFAULT_MODEL = os.getenv(
+    "OPENROUTER_DEFAULT_MODEL", "anthropic/claude-3-5-sonnet"
+)
+
 # LangSmith tracing is automatic when LANGCHAIN_TRACING_V2=true
 # No callback handlers needed - tracing works natively with LangChain
 LANGSMITH_ENABLED = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
@@ -66,7 +75,9 @@ def get_llm(
     model: Optional[str] = None,
     temperature: float = 0.7,
     max_tokens: int = 2000,
-    provider: Optional[Literal["gradient", "claude", "mistral", "openai"]] = None,
+    provider: Optional[
+        Literal["gradient", "claude", "mistral", "openai", "openrouter"]
+    ] = None,
     **kwargs,
 ) -> Union[ChatOpenAI, "ChatAnthropic", "ChatMistralAI"]:
     """
@@ -89,6 +100,13 @@ def get_llm(
         - mistral-nemo-instruct-2407
         - See full list: https://inference.do-ai.run/v1/models
 
+    OpenRouter Models (Multi-Model Gateway):
+        - anthropic/claude-3-5-sonnet (recommended for code)
+        - openai/gpt-4o (good all-rounder)
+        - meta-llama/llama-3.1-70b-instruct (cost-effective)
+        - google/gemini-2.0-flash-exp:free (free tier)
+        - See full list: https://openrouter.ai/models
+
     Examples:
         # Use default (Gradient AI Serverless Inference)
         llm = get_llm("orchestrator", model="llama3.3-70b-instruct")
@@ -98,6 +116,9 @@ def get_llm(
 
         # Override to Mistral
         llm = get_llm("feature-dev", model="mistral-large-latest", provider="mistral")
+
+        # Override to OpenRouter (access 200+ models)
+        llm = get_llm("orchestrator", model="anthropic/claude-3-5-sonnet", provider="openrouter")
     """
     provider = provider or LLM_PROVIDER
     # LangSmith tracing is automatic - no callbacks needed
@@ -174,6 +195,31 @@ def get_llm(
             model=model or "gpt-4o-mini",
             temperature=temperature,
             max_tokens=max_tokens,
+            tags=tags,
+            model_kwargs=kwargs,
+        )
+
+    elif provider == "openrouter":
+        if not OPENROUTER_API_KEY:
+            logger.warning(
+                f"[{agent_name}] OPENROUTER_API_KEY not set, LLM calls will fail"
+            )
+            logger.warning(f"[{agent_name}] Get API key at: https://openrouter.ai/keys")
+            return None
+
+        # Use OpenRouter's OpenAI-compatible API
+        # https://openrouter.ai/docs#quick-start
+        return ChatOpenAI(
+            base_url=OPENROUTER_BASE_URL,
+            api_key=OPENROUTER_API_KEY,
+            model=model or OPENROUTER_DEFAULT_MODEL,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            streaming=True,  # Enable streaming for astream support
+            default_headers={
+                "HTTP-Referer": "https://codechef.appsmithery.co",
+                "X-Title": "code-chef DevOps Platform",
+            },
             tags=tags,
             model_kwargs=kwargs,
         )
