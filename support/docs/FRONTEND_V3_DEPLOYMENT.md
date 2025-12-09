@@ -55,12 +55,12 @@ support/frontend/v3/
 
 ### Key Files & Permalinks
 
-| File | Purpose | GitHub Link |
-|------|---------|-------------|
-| `vite.config.ts` | Build configuration | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/support/frontend/v3/vite.config.ts) |
-| `deploy/docker-compose.yml` | Caddy volume mount | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/deploy/docker-compose.yml#L320-L325) |
-| `config/caddy/Caddyfile` | SPA routing config | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/config/caddy/Caddyfile#L64-L69) |
-| `src/pages/Home.tsx` | Main landing page | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/support/frontend/v3/src/pages/Home.tsx) |
+| File                        | Purpose             | GitHub Link                                                                                                                           |
+| --------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `vite.config.ts`            | Build configuration | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/support/frontend/v3/vite.config.ts)     |
+| `deploy/docker-compose.yml` | Caddy volume mount  | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/deploy/docker-compose.yml#L320-L325)    |
+| `config/caddy/Caddyfile`    | SPA routing config  | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/config/caddy/Caddyfile#L64-L69)         |
+| `src/pages/Home.tsx`        | Main landing page   | [View](https://github.com/Appsmithery/Dev-Tools/blob/4aa26a62135b7acb1ea3777eb4fff6cac8336ac8/support/frontend/v3/src/pages/Home.tsx) |
 
 ### Docker Compose Changes
 
@@ -108,16 +108,17 @@ Old static HTML files moved to: [`support/frontend/deprecated/`](https://github.
 
 ## Build Performance
 
-| Metric | Size (Raw) | Size (Gzipped) |
-|--------|------------|----------------|
-| **Total Bundle** | 343 KB | 89 KB |
-| Vendor chunk (React + deps) | 146 KB | 48 KB |
-| App chunk (code-chef code) | 90 KB | 29 KB |
-| UI chunk (Lucide + Sonner) | 38 KB | 11 KB |
-| CSS (Tailwind purged) | 69 KB | 11 KB |
-| HTML | 7 KB | 2 KB |
+| Metric                      | Size (Raw) | Size (Gzipped) |
+| --------------------------- | ---------- | -------------- |
+| **Total Bundle**            | 343 KB     | 89 KB          |
+| Vendor chunk (React + deps) | 146 KB     | 48 KB          |
+| App chunk (code-chef code)  | 90 KB      | 29 KB          |
+| UI chunk (Lucide + Sonner)  | 38 KB      | 11 KB          |
+| CSS (Tailwind purged)       | 69 KB      | 11 KB          |
+| HTML                        | 7 KB       | 2 KB           |
 
 **Vite Build Output**:
+
 ```
 ✓ 1487 modules transformed.
 dist/index.html                   7.14 kB │ gzip:  2.24 kB
@@ -175,11 +176,13 @@ docker compose ps caddy
 ### 3. Verify Deployment
 
 Open in browser:
+
 - **Homepage**: https://codechef.appsmithery.co
 - **Health Check**: https://codechef.appsmithery.co/api/health
 - **Test SPA routing**: Navigate around, then refresh page—should not 404
 
 Check browser console for errors:
+
 ```javascript
 // Should see React mount logs, no errors
 ```
@@ -242,12 +245,14 @@ docker compose restart caddy
 ## Known Issues & Limitations
 
 ### Current Limitations
+
 1. **No Agents/Servers pages yet**: Only Homepage implemented in v3
    - Old pages still in `deprecated/` if needed
 2. **No Cookbook/Docs page**: Future enhancement
 3. **Theme preference**: Stored in localStorage (not synced across devices)
 
 ### Future Enhancements
+
 - [ ] Migrate Agents page to React
 - [ ] Migrate Servers page to React
 - [ ] Add Cookbook/Documentation section
@@ -285,6 +290,7 @@ docker compose restart caddy
 ## Success Criteria
 
 ✅ **Deployment Successful** if:
+
 1. Homepage loads in < 2 seconds (LCP)
 2. Zero 404 errors on valid routes
 3. Theme toggle persists across sessions
