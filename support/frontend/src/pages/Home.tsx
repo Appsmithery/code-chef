@@ -47,6 +47,7 @@ export default function Home() {
                 <Button
                   size="lg"
                   className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 px-8 font-medium"
+                  onClick={() => (window.location.href = "/agents")}
                 >
                   <Bot className="mr-2 h-5 w-5" />
                   Meet the Team
@@ -55,6 +56,7 @@ export default function Home() {
                   size="lg"
                   variant="outline"
                   className="border-accent/30 text-accent hover:bg-accent hover:text-accent-foreground h-12 px-8 font-medium"
+                  onClick={() => (window.location.href = "/cookbook")}
                 >
                   <BookOpen className="mr-2 h-5 w-5" />
                   Read Cookbook
@@ -63,19 +65,34 @@ export default function Home() {
 
               <div className="grid grid-cols-3 gap-8 pt-8 border-t border-border">
                 <div>
-                  <div className="text-3xl font-bold text-secondary">6</div>
+                  <div
+                    className="text-3xl font-bold"
+                    style={{ color: "#fff4bd" }}
+                  >
+                    6
+                  </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     AI Agents
                   </div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-secondary">20+</div>
+                  <div
+                    className="text-3xl font-bold"
+                    style={{ color: "#fff4bd" }}
+                  >
+                    20+
+                  </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     MCP Servers
                   </div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-secondary">178+</div>
+                  <div
+                    className="text-3xl font-bold"
+                    style={{ color: "#fff4bd" }}
+                  >
+                    178+
+                  </div>
                   <div className="text-sm text-muted-foreground mt-1">
                     Tools Available
                   </div>
@@ -325,7 +342,7 @@ export default function Home() {
             >
               <Card className="h-full bg-card border-border hover:border-accent transition-all duration-300 hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-medium">
+                  <CardTitle className="text-2xl font-bold">
                     Orchestrator API
                   </CardTitle>
                   <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">
@@ -333,7 +350,7 @@ export default function Home() {
                   </Badge>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                  <div className="text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     :8001
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
@@ -351,13 +368,13 @@ export default function Home() {
             >
               <Card className="h-full bg-card border-border hover:border-secondary transition-all duration-300 hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-medium">Tracing</CardTitle>
+                  <CardTitle className="text-2xl font-bold">Tracing</CardTitle>
                   <Badge className="bg-secondary/20 text-secondary hover:bg-secondary/30 border-none">
                     Connected
                   </Badge>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                  <div className="text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     LangSmith
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
@@ -375,7 +392,7 @@ export default function Home() {
             >
               <Card className="h-full bg-card border-border hover:border-primary transition-all duration-300 hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-medium">
+                  <CardTitle className="text-2xl font-bold">
                     Monitoring
                   </CardTitle>
                   <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">
@@ -383,7 +400,7 @@ export default function Home() {
                   </Badge>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-muted-foreground group-hover:text-foreground transition-colors">
+                  <div className="text-lg font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                     Grafana Cloud
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
