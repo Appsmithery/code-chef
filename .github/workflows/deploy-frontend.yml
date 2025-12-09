@@ -1,63 +1,63 @@
 name: Deploy Frontend to Production
 
 on:
-    push:
-        branches:
-            - main
-        paths:
-            - "support/frontend/src/**"
-            - "support/frontend/public/**"
-            - "support/frontend/package.json"
-            - "support/frontend/vite.config.ts"
-            - "support/frontend/tailwind.config.ts"
+  push:
+    branches:
+      - main
+    paths:
+      - "support/frontend/src/**"
+      - "support/frontend/public/**"
+      - "support/frontend/package.json"
+      - "support/frontend/vite.config.ts"
+      - "support/frontend/tailwind.config.ts"
 
-    workflow_dispatch: # Allow manual triggers
+  workflow_dispatch: # Allow manual triggers
 
 jobs:
-    build-and-deploy:
-        runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: "20"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-            - name: Install dependencies
-              working-directory: support/frontend
-              run: npm install
+      - name: Install dependencies
+        working-directory: support/frontend
+        run: npm install
 
-            - name: Build production bundle
-              working-directory: support/frontend
-              run: npm run build
+      - name: Build production bundle
+        working-directory: support/frontend
+        run: npm run build
 
-            - name: Copy built files to server
-              run: |
-                  # Create SSH key file
-                  echo "${{ secrets.DROPLET_SSH_KEY }}" > /tmp/deploy_key
-                  chmod 600 /tmp/deploy_key
-                  # Sync dist folder to server
-                  rsync -avz --delete -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no" \
-                    support/frontend/dist/ ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/opt/Dev-Tools/support/frontend/dist/
-                  # Cleanup
-                  rm /tmp/deploy_key
+      - name: Copy built files to server
+        run: |
+          # Create SSH key file
+          echo "${{ secrets.DROPLET_SSH_KEY }}" > /tmp/deploy_key
+          chmod 600 /tmp/deploy_key
+          # Sync dist folder to server
+          rsync -avz --delete -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no" \
+            support/frontend/dist/ ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/opt/Dev-Tools/support/frontend/dist/
+          # Cleanup
+          rm /tmp/deploy_key
 
-            - name: Restart Caddy
-              uses: appleboy/ssh-action@v1.0.0
-              with:
-                  host: ${{ secrets.DROPLET_HOST }}
-                  username: ${{ secrets.DROPLET_USER }}
-                  key: ${{ secrets.DROPLET_SSH_KEY }}
-                  script: |
-                      cd /opt/Dev-Tools/deploy
-                      docker compose restart caddy
-                      echo "✅ Frontend deployed successfully"
+      - name: Restart Caddy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd /opt/Dev-Tools/deploy
+            docker compose restart caddy
+            echo "✅ Frontend deployed successfully"
 
-            - name: Verify deployment
-              run: |
-                  echo "🔍 Verifying deployment..."
-                  curl -f https://codechef.appsmithery.co/ || exit 1
-                  echo "✅ Homepage is live"
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          curl -f https://codechef.appsmithery.co/ || exit 1
+          echo "✅ Homepage is live"
