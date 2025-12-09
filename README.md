@@ -76,6 +76,54 @@ code/chef automatically picks the right AI model for each task:
 | Infrastructure  | Llama 3.1 70B     | Cost-effective for configs |
 | Documentation   | Claude 3.5 Sonnet | Excellent writing          |
 
+### 🏗️ Architecture Overview
+
+```mermaid
+flowchart TB
+    subgraph VSCode["🖥️ VS Code"]
+        Chat["@chef Add JWT auth to my Express API"]
+    end
+
+    subgraph Orchestrator["🧑‍🍳 code/chef Orchestrator"]
+        Supervisor["Supervisor\n(Head Chef)"]
+
+        subgraph Agents["Specialized Agents"]
+            FeatureDev["🚀 Feature Dev\nClaude 3.5"]
+            CodeReview["🔍 Code Review\nGPT-4o"]
+            CICD["⚡ CI/CD\nLlama 3.1"]
+            Infra["🏗️ Infrastructure\nLlama 3.1"]
+            Docs["📚 Documentation\nClaude 3.5"]
+        end
+
+        Tools["🔧 150+ MCP Tools"]
+    end
+
+    subgraph Integrations["External Services"]
+        GitHub["🐙 GitHub"]
+        Linear["📋 Linear"]
+        Docker["🐳 Docker"]
+        Metrics["📊 Metrics"]
+    end
+
+    Chat --> Supervisor
+    Supervisor --> FeatureDev
+    Supervisor --> CodeReview
+    Supervisor --> CICD
+    Supervisor --> Infra
+    Supervisor --> Docs
+
+    FeatureDev --> Tools
+    CodeReview --> Tools
+    CICD --> Tools
+    Infra --> Tools
+    Docs --> Tools
+
+    Tools --> GitHub
+    Tools --> Linear
+    Tools --> Docker
+    Tools --> Metrics
+```
+
 ---
 
 ## 🚀 Get Started in 2 Minutes
