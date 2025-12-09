@@ -7,89 +7,22 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useTheme } from "@/contexts/ThemeContext";
+import Layout from "@/components/Layout";
 import {
   Activity,
   ArrowRight,
   BookOpen,
   Bot,
   Cloud,
-  Github,
-  Moon,
   Search,
   ShieldCheck,
-  Sun,
   Terminal,
   Wrench,
 } from "lucide-react";
 
 export default function Home() {
-  const { theme, toggleTheme } = useTheme();
-
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-accent selection:text-accent-foreground">
-      {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center">
-            <img
-              src="/logos/banner_logo_transparent.svg"
-              alt="code/chef logo"
-              className="h-10 w-auto"
-            />
-          </div>
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
-            <a
-              href="#"
-              className="text-accent transition-colors hover:text-accent/80"
-            >
-              Home
-            </a>
-            <a
-              href="#agents"
-              className="text-foreground transition-colors hover:text-accent"
-            >
-              Agents
-            </a>
-            <a
-              href="#servers"
-              className="text-foreground transition-colors hover:text-accent"
-            >
-              Servers
-            </a>
-            <a
-              href="#cookbook"
-              className="text-foreground transition-colors hover:text-accent"
-            >
-              Cookbook
-            </a>
-          </nav>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="text-foreground hover:text-accent transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === "light" ? (
-                <Moon className="h-5 w-5" />
-              ) : (
-                <Sun className="h-5 w-5" />
-              )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-foreground hover:text-accent"
-            >
-              <Github className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1">
+    <Layout>
         {/* Hero Section */}
         <section className="relative overflow-hidden py-20 md:py-32 lg:py-40 bg-gradient-to-br from-background via-background to-muted">
           {/* Decorative Background */}
@@ -106,15 +39,10 @@ export default function Home() {
 
                 <div className="space-y-4">
                   <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
-                    <span className="text-accent">DevOps</span> <br />
-                    <span className="text-foreground">Automation</span> <br />
-                    <span className="text-muted-foreground text-2xl md:text-3xl font-normal">
-                      for the modern kitchen.
-                    </span>
+                    <span className="text-accent">code/chef</span>
                   </h1>
-                  <p className="text-lg text-muted-foreground max-w-[600px] leading-relaxed">
-                    Orchestrate your infrastructure with AI agents. From code
-                    generation to deployment, let the Chef handle the heat.
+                  <p className="text-2xl md:text-3xl text-muted-foreground max-w-[600px] leading-relaxed">
+                    AI DevOps agents and workflows for the modern code kitchen.
                   </p>
                 </div>
 
@@ -476,34 +404,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-background py-12">
-        <div className="container flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              © 2025 code/chef — "Yes, Chef!"
-            </span>
-          </div>
-
-          <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-accent transition-colors">
-              Documentation
-            </a>
-            <span className="text-border">|</span>
-            <a
-              href="https://github.com/Appsmithery/code-chef"
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-accent transition-colors flex items-center gap-2"
-            >
-              <Github className="h-4 w-4" />
-              GitHub
-            </a>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </Layout>
   );
 }
