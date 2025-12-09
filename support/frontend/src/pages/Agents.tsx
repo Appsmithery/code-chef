@@ -60,7 +60,7 @@ export default function Agents() {
             <div className="relative hidden lg:flex items-center justify-center">
               <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-full blur opacity-20"></div>
               <img
-                src="/logos/hat_icon_transparent.svg"
+                src="/logos/knives_icon_transparent.svg"
                 alt="code/chef"
                 className="relative w-64 h-64 object-contain"
               />
