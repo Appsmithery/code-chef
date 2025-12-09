@@ -1,9 +1,15 @@
+---
+status: active
+category: architecture-and-platform
+last_updated: 2025-12-09
+---
+
 # code/chef Architecture
 
 **Version:** v1.0  
 **Last Updated:** December 9, 2025
 
-See [QUICKSTART.md](QUICKSTART.md) for setup | [DEPLOYMENT.md](DEPLOYMENT.md) for deployment
+See [../getting-started/quickstart.md](../getting-started/quickstart.md) for setup | [../getting-started/deployment.md](../getting-started/deployment.md) for deployment
 
 ---
 
@@ -244,6 +250,6 @@ All services run in Docker containers via `docker-compose`.
 
 ## Related Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** — Installation and first steps
-- **[DEPLOYMENT.md](DEPLOYMENT.md)** — Production deployment guide
+- **[quickstart.md](../getting-started/quickstart.md)** — Installation and first steps
+- **[deployment.md](../getting-started/deployment.md)** — Production deployment guide
 - **[README](../../README.md)** — Feature overview

@@ -1,8 +1,14 @@
+---
+status: active
+category: integrations
+last_updated: 2025-12-09
+---
+
 # Linear Integration Guide
 
 **Version:** v0.3.1  
 **Status:** ✅ Production Ready  
-**Last Updated:** November 25, 2025
+**Last Updated:** December 9, 2025
 
 **Recent Updates:**
 

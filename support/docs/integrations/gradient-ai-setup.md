@@ -200,7 +200,6 @@ embeddings = get_embeddings()  # Uses OpenAI if EMBEDDING_PROVIDER=gradient
 
 ## Next Steps
 
-- [Multi-Provider Configuration](LLM_MULTI_PROVIDER.md)
-- [Cost Optimization Strategies](LLM_MULTI_PROVIDER.md#cost-optimization-strategies)
-- [LangSmith Tracing Setup](LANGSMITH_TRACING.md)
+- [LangSmith Tracing Setup](langsmith-tracing.md)
+- [Observability Guide](observability-guide.md)
 - [DO API Reference](https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform)

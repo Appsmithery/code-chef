@@ -6,56 +6,99 @@
 
 ## Quick Start
 
-| Document                                 | Description                        |
-| ---------------------------------------- | ---------------------------------- |
-| **[QUICKSTART.md](QUICKSTART.md)**       | 15-minute setup guide              |
-| **[ARCHITECTURE.md](ARCHITECTURE.md)**   | System design + LangGraph workflow |
-| **[DEPLOYMENT.md](DEPLOYMENT.md)**       | Production deployment              |
-| **[OBSERVABILITY.md](OBSERVABILITY.md)** | Monitoring + tracing               |
+| Document                                                          | Description                        |
+| ----------------------------------------------------------------- | ---------------------------------- |
+| **[quickstart.md](getting-started/quickstart.md)**                | 15-minute setup guide              |
+| **[architecture.md](architecture-and-platform/architecture.md)**  | System design + LangGraph workflow |
+| **[deployment.md](getting-started/deployment.md)**                | Production deployment              |
+| **[observability-guide.md](integrations/observability-guide.md)** | Monitoring + tracing               |
 
 ---
 
-## Structure
+## Documentation Structure
 
 ```
 support/docs/
- QUICKSTART.md
- ARCHITECTURE.md
- DEPLOYMENT.md
- OBSERVABILITY.md
- LINEAR_HITL_WORKFLOW.md
- architecture/          # Architecture deep-dives
- guides/                # Integration guides
- operations/            # Operational procedures
+├── getting-started/              # Essential setup and deployment
+│   ├── quickstart.md
+│   ├── deployment.md
+│   └── frontend-v3-deployment.md
+├── architecture-and-platform/    # Core system design
+│   ├── architecture.md
+│   ├── langgraph-integration.md
+│   ├── multi-agent-workflows.md
+│   ├── task-orchestration.md
+│   └── rag-documentation-aggregation.md
+├── integrations/                 # External service integrations
+│   ├── linear-integration-guide.md
+│   ├── linear-hitl-workflow.md
+│   ├── langsmith-tracing.md
+│   ├── gradient-ai-setup.md
+│   └── observability-guide.md
+├── operations/                   # Operational procedures
+│   ├── cleanup-quick-reference.md
+│   ├── disaster-recovery.md
+│   ├── docker-cleanup.md
+│   ├── grafana-dashboard-guide.md
+│   ├── import-grafana-dashboards.md
+│   ├── rag-qdrant-alignment.md
+│   ├── rag-semantic-search.md
+│   ├── secrets-management.md
+│   └── secrets-rotation.md
+├── reference/                    # Technical references
+│   ├── mcp-integration.md
+│   ├── langgraph-quick-ref.md
+│   ├── event-protocol.md
+│   ├── notification-system.md
+│   └── shared-lib-notifications.md
+└── legacy-archive/               # Archived/deprecated docs
 ```
 
 ---
 
 ## Find What You Need
 
-### Setup & Deployment
+### 🚀 Getting Started
 
-- Local setup [QUICKSTART.md](QUICKSTART.md)
-- Production deploy [DEPLOYMENT.md](DEPLOYMENT.md)
-- Manage secrets [operations/SECRETS_MANAGEMENT.md](operations/SECRETS_MANAGEMENT.md)
+- [Local setup](getting-started/quickstart.md)
+- [Production deployment](getting-started/deployment.md)
+- [Frontend V3 deployment](getting-started/frontend-v3-deployment.md)
 
-### Architecture & Design
+### 🏗️ Architecture & Platform
 
-- System overview [ARCHITECTURE.md](ARCHITECTURE.md)
-- LangGraph workflow [architecture/LANGGRAPH_INTEGRATION.md](architecture/LANGGRAPH_INTEGRATION.md)
-- MCP tools (150+) [architecture/MCP_INTEGRATION.md](architecture/MCP_INTEGRATION.md)
+- [System overview](architecture-and-platform/architecture.md)
+- [LangGraph integration](architecture-and-platform/langgraph-integration.md)
+- [Multi-agent workflows](architecture-and-platform/multi-agent-workflows.md)
+- [Task orchestration](architecture-and-platform/task-orchestration.md)
+- [RAG documentation aggregation](architecture-and-platform/rag-documentation-aggregation.md)
 
-### Integrations
+### 🔌 Integrations
 
-- Linear + HITL [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
-- LangSmith tracing [guides/LANGSMITH_TRACING.md](guides/LANGSMITH_TRACING.md)
-- Gradient AI [guides/GRADIENT_AI_SETUP.md](guides/GRADIENT_AI_SETUP.md)
+- [Linear + HITL workflow](integrations/linear-integration-guide.md)
+- [Linear HITL workflow details](integrations/linear-hitl-workflow.md)
+- [LangSmith tracing](integrations/langsmith-tracing.md)
+- [Gradient AI setup](integrations/gradient-ai-setup.md)
+- [Observability guide](integrations/observability-guide.md)
 
-### Operations
+### ⚙️ Operations
 
-- Monitor services [OBSERVABILITY.md](OBSERVABILITY.md)
-- Clean Docker [operations/CLEANUP_QUICK_REFERENCE.md](operations/CLEANUP_QUICK_REFERENCE.md)
-- Disaster recovery [operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)
+- [Cleanup quick reference](operations/cleanup-quick-reference.md)
+- [Docker cleanup](operations/docker-cleanup.md)
+- [Disaster recovery](operations/disaster-recovery.md)
+- [Secrets management](operations/secrets-management.md)
+- [Secrets rotation](operations/secrets-rotation.md)
+- [Grafana dashboards](operations/grafana-dashboard-guide.md)
+- [Import Grafana dashboards](operations/import-grafana-dashboards.md)
+- [RAG Qdrant alignment](operations/rag-qdrant-alignment.md)
+- [RAG semantic search](operations/rag-semantic-search.md)
+
+### 📚 Reference
+
+- [MCP integration (150+ tools)](reference/mcp-integration.md)
+- [LangGraph quick reference](reference/langgraph-quick-ref.md)
+- [Event protocol](reference/event-protocol.md)
+- [Notification system](reference/notification-system.md)
+- [Shared lib notifications](reference/shared-lib-notifications.md)
 
 ---
 
@@ -102,24 +145,39 @@ LangGraph workflows with PostgreSQL checkpointing
 
 ---
 
-## Recent Changes (November 25, 2025)
+## Document Status
 
-**Documentation Consolidation:**
+| Status          | Folder                     | Description                           |
+| --------------- | -------------------------- | ------------------------------------- |
+| ✅ **Active**   | getting-started/           | Essential setup and deployment guides |
+| ✅ **Active**   | architecture-and-platform/ | Core system architecture and design   |
+| ✅ **Active**   | integrations/              | Third-party service integrations      |
+| ✅ **Active**   | operations/                | Operational runbooks and procedures   |
+| ✅ **Active**   | reference/                 | Technical references and API docs     |
+| 📦 **Archived** | legacy-archive/            | Deprecated/superseded documentation   |
 
-- Created QUICKSTART.md (all-in-one setup guide)
-- Rewrote ARCHITECTURE.md (v0.3 LangGraph focus)
-- Unified DEPLOYMENT.md (all strategies in one doc)
-- Consolidated LINEAR_INTEGRATION.md (combined 5 Linear docs)
-- Removed 40+ redundant/outdated files
-- **Net reduction**: 60+ files 15 essential docs (~75%)
+---
 
-**Deprecated Paths** (update bookmarks):
+## Recent Changes (December 9, 2025)
 
-- ~~WORKSPACE_AWARE_ARCHITECTURE.md~~ [ARCHITECTURE.md](ARCHITECTURE.md)
-- ~~DEPLOYMENT_GUIDE.md~~ [DEPLOYMENT.md](DEPLOYMENT.md)
-- ~~SETUP_GUIDE.md~~ [QUICKSTART.md](QUICKSTART.md)
-- ~~api/AGENT_ENDPOINTS.md~~ [ARCHITECTURE.md](ARCHITECTURE.md)
-- ~~guides/integration/LINEAR_SETUP.md~~ [guides/LINEAR_INTEGRATION.md](guides/LINEAR_INTEGRATION.md)
+**Documentation Reorganization:**
+
+- Restructured into taxonomy-based folders (getting-started, architecture-and-platform, integrations, operations, reference)
+- Renamed all docs to kebab-case for consistency
+- Consolidated redundant guides into focused documents
+- Moved legacy content to legacy-archive/ with index
+- Updated README with clear navigation paths for #codebase compatibility
+- **Net result**: Improved discoverability and maintainability
+
+**Path Updates** (update bookmarks):
+
+- ~~QUICKSTART.md~~ → [getting-started/quickstart.md](getting-started/quickstart.md)
+- ~~ARCHITECTURE.md~~ → [architecture-and-platform/architecture.md](architecture-and-platform/architecture.md)
+- ~~DEPLOYMENT.md~~ → [getting-started/deployment.md](getting-started/deployment.md)
+- ~~LINEAR_INTEGRATION_GUIDE.md~~ → [integrations/linear-integration-guide.md](integrations/linear-integration-guide.md)
+- ~~OBSERVABILITY_GUIDE.md~~ → [integrations/observability-guide.md](integrations/observability-guide.md)
+- ~~architecture/LANGGRAPH_INTEGRATION.md~~ → [architecture-and-platform/langgraph-integration.md](architecture-and-platform/langgraph-integration.md)
+- ~~guides/LANGSMITH_TRACING.md~~ → [integrations/langsmith-tracing.md](integrations/langsmith-tracing.md)
 
 ---
 

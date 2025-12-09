@@ -1,3 +1,9 @@
+---
+status: active
+category: operations
+last_updated: 2025-12-09
+---
+
 # Secrets Management System
 
 Dev-Tools implements a modular, overlay-based secrets management system with provenance tracking for secure agent orchestration.
