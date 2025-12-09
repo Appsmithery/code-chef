@@ -235,8 +235,47 @@ export default function Home() {
                 </p>
               </CardContent>
             </Card>
+          </div>
 
-            {/* Standard Feature */}
+          {/* Secondary Features - Evenly Spaced */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+            {/* RAG Semantic Search */}
+            <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
+              <CardHeader>
+                <div className="mb-2 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
+                  <Search className="h-6 w-6" />
+                </div>
+                <CardTitle className="text-lg">RAG Semantic Search</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-3">
+                  Qdrant Cloud with 1,200+ vectors across code patterns, Linear
+                  issues, and documentation for contextual assistance.
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  <Badge
+                    variant="secondary"
+                    className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
+                  >
+                    Code Patterns
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
+                  >
+                    Linear Issues
+                  </Badge>
+                  <Badge
+                    variant="secondary"
+                    className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
+                  >
+                    Documentation
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Full Observability */}
             <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
               <CardHeader>
                 <div className="mb-2 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
@@ -252,41 +291,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Large Feature */}
-            <Card className="md:col-span-2 bg-card border-border hover:border-accent/50 transition-all duration-300 group">
-              <CardHeader>
-                <div className="mb-2 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
-                  <Search className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-xl">RAG Semantic Search</CardTitle>
-                <CardDescription className="text-base">
-                  Qdrant Cloud with 1,200+ vectors across code patterns, Linear
-                  issues, and documentation for contextual assistance.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex gap-2 flex-wrap">
-                <Badge
-                  variant="secondary"
-                  className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none"
-                >
-                  Code Patterns
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none"
-                >
-                  Linear Issues
-                </Badge>
-                <Badge
-                  variant="secondary"
-                  className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none"
-                >
-                  Documentation
-                </Badge>
-              </CardContent>
-            </Card>
-
-            {/* Standard Feature */}
+            {/* Human-in-the-Loop */}
             <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
               <CardHeader>
                 <div className="mb-2 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
@@ -302,7 +307,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Standard Feature */}
+            {/* Cloud-Native Agents */}
             <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
               <CardHeader>
                 <div className="mb-2 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
