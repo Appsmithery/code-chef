@@ -4,19 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/contexts/ThemeContext";
 import { 
   Bot, 
-  Server, 
   Wrench, 
   Activity, 
-  GitPullRequest, 
   Search, 
   Cloud, 
   Terminal, 
-  Cpu, 
   ShieldCheck, 
   BookOpen, 
   Github,
-  CheckCircle2,
-  AlertCircle,
   ArrowRight,
   Moon,
   Sun
