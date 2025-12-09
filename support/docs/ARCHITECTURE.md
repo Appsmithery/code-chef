@@ -11,41 +11,50 @@ See [QUICKSTART.md](QUICKSTART.md) for setup | [DEPLOYMENT.md](DEPLOYMENT.md) fo
 
 When you type `@chef Add authentication to my app`, here's what happens:
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            Your VS Code                                      │
-│  ┌────────────────────────────────────────────────────────────────────────┐ │
-│  │  Copilot Chat: @chef Add JWT authentication to my Express API         │ │
-│  └────────────────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         code/chef Orchestrator                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐   │
-│  │  🧑‍🍳 Supervisor (Head Chef)                                          │   │
-│  │  • Understands your request                                          │   │
-│  │  • Routes to the right specialist                                    │   │
-│  │  • Coordinates multi-step workflows                                  │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-│                                    │                                        │
-│         ┌──────────────────────────┼──────────────────────────┐            │
-│         ▼                          ▼                          ▼            │
-│  ┌─────────────┐          ┌─────────────┐          ┌─────────────┐        │
-│  │ Feature Dev │          │ Code Review │          │   CI/CD     │        │
-│  │ Claude 3.5  │          │   GPT-4o    │          │ Llama 3.1   │        │
-│  └─────────────┘          └─────────────┘          └─────────────┘        │
-│         │                          │                          │            │
-│  ┌─────────────┐          ┌─────────────┐          ┌─────────────┐        │
-│  │Infrastructure│          │Documentation│          │  150+ MCP   │        │
-│  │ Llama 3.1   │          │ Claude 3.5  │          │   Tools     │        │
-│  └─────────────┘          └─────────────┘          └─────────────┘        │
-└─────────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  📁 Your Codebase  │  🐙 GitHub  │  📋 Linear  │  🐳 Docker  │  📊 Metrics │
-└─────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph VSCode["🖥️ VS Code"]
+        Chat["@chef Add JWT auth to my Express API"]
+    end
+
+    subgraph Orchestrator["🧑‍🍳 code/chef Orchestrator"]
+        Supervisor["Supervisor\n(Head Chef)"]
+
+        subgraph Agents["Specialized Agents"]
+            FeatureDev["🚀 Feature Dev\nClaude 3.5"]
+            CodeReview["🔍 Code Review\nGPT-4o"]
+            CICD["⚡ CI/CD\nLlama 3.1"]
+            Infra["🏗️ Infrastructure\nLlama 3.1"]
+            Docs["📚 Documentation\nClaude 3.5"]
+        end
+
+        Tools["🔧 150+ MCP Tools"]
+    end
+
+    subgraph Integrations["External Services"]
+        GitHub["🐙 GitHub"]
+        Linear["📋 Linear"]
+        Docker["🐳 Docker"]
+        Metrics["📊 Metrics"]
+    end
+
+    Chat --> Supervisor
+    Supervisor --> FeatureDev
+    Supervisor --> CodeReview
+    Supervisor --> CICD
+    Supervisor --> Infra
+    Supervisor --> Docs
+
+    FeatureDev --> Tools
+    CodeReview --> Tools
+    CICD --> Tools
+    Infra --> Tools
+    Docs --> Tools
+
+    Tools --> GitHub
+    Tools --> Linear
+    Tools --> Docker
+    Tools --> Metrics
 ```
 
 ---
@@ -96,22 +105,24 @@ Writes README files, API documentation, architecture diagrams, and inline code c
 
 code/chef uses **OpenRouter** to access the best AI models for each task:
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│                        OpenRouter                              │
-│  ┌─────────────────────────────────────────────────────────┐  │
-│  │  200+ Models • Single API • Automatic Fallback          │  │
-│  └─────────────────────────────────────────────────────────┘  │
-│                                                                │
-│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│   │Claude 3.5    │  │   GPT-4o     │  │ Llama 3.1    │       │
-│   │Sonnet        │  │              │  │   70B        │       │
-│   │              │  │              │  │              │       │
-│   │• Code Gen    │  │• Reasoning   │  │• Config Gen  │       │
-│   │• Docs        │  │• Analysis    │  │• Pipelines   │       │
-│   │• Planning    │  │• Review      │  │• IaC         │       │
-│   └──────────────┘  └──────────────┘  └──────────────┘       │
-└───────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph OpenRouter["☁️ OpenRouter Gateway"]
+        direction TB
+        API["Single API\n200+ Models\nAutomatic Fallback"]
+    end
+
+    subgraph Models["AI Models"]
+        direction LR
+        Claude["🟣 Claude 3.5 Sonnet\n• Code Generation\n• Documentation\n• Planning"]
+        GPT["🟢 GPT-4o\n• Reasoning\n• Analysis\n• Code Review"]
+        Llama["🔵 Llama 3.1 70B\n• Config Generation\n• Pipelines\n• Infrastructure"]
+    end
+
+    Request["Your Request"] --> OpenRouter
+    OpenRouter --> Claude
+    OpenRouter --> GPT
+    OpenRouter --> Llama
 ```
 
 ### Why Multi-Model?
@@ -129,28 +140,19 @@ code/chef uses **OpenRouter** to access the best AI models for each task:
 
 code/chef uses pre-built workflows for common development patterns:
 
-### Feature Development Workflow
+```mermaid
+flowchart LR
+    subgraph Feature["Feature Development"]
+        F1["Analyze"] --> F2["Implement"] --> F3["Review"] --> F4["Test"] --> F5["PR"]
+    end
 
-```
-Analyze Requirements → Implement Feature → Code Review → Write Tests → Create PR
-```
+    subgraph Deploy["PR Deployment"]
+        D1["Validate"] --> D2["Test"] --> D3["Scan"] --> D4["Stage"] --> D5["Notify"]
+    end
 
-### PR Deployment Workflow
-
-```
-Validate PR → Run Tests → Security Scan → Deploy to Staging → Notify Team
-```
-
-### Hotfix Workflow
-
-```
-Assess Impact → Apply Fix → Expedited Review → Deploy → Post-mortem
-```
-
-### Documentation Update Workflow
-
-```
-Scan Codebase → Generate Docs → Review for Accuracy → Commit
+    subgraph Hotfix["Hotfix"]
+        H1["Assess"] --> H2["Fix"] --> H3["Review"] --> H4["Deploy"]
+    end
 ```
 
 ---
@@ -186,20 +188,17 @@ code/chef connects to 150+ tools through the **Model Context Protocol (MCP)**:
 
 For high-risk operations, code/chef asks for approval:
 
-```
-┌────────────────────────────────────────────────────────┐
-│  ⚠️ Approval Required                                  │
-│                                                        │
-│  Action: Deploy to production                          │
-│  Risk Level: High                                      │
-│                                                        │
-│  Details:                                              │
-│  - Affects 3 services                                  │
-│  - Requires database migration                         │
-│  - Estimated downtime: 2 minutes                       │
-│                                                        │
-│  [Approve in Linear] or reply "approve" in chat       │
-└────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Request["⚠️ Approval Required"]
+        Action["Deploy to production"]
+        Risk["Risk Level: High"]
+        Details["• Affects 3 services\n• Database migration\n• ~2 min downtime"]
+    end
+
+    Request --> Decision{Approve?}
+    Decision -->|Yes| Execute["✅ Execute"]
+    Decision -->|No| Cancel["❌ Cancel"]
 ```
 
 ### Risk Assessment
