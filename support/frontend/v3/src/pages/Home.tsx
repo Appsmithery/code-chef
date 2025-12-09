@@ -370,7 +370,7 @@ export default function Home() {
                   <div className="mb-2 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
                     <Cloud className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-lg">Production Ready</CardTitle>
+                  <CardTitle className="text-lg">Cloud-Native Agents</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground text-sm leading-relaxed">
