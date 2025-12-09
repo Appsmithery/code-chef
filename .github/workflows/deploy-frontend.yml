@@ -1,0 +1,59 @@
+name: Deploy Frontend to Production
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'support/frontend/v3/src/**'
+      - 'support/frontend/v3/public/**'
+      - 'support/frontend/v3/package.json'
+      - 'support/frontend/v3/vite.config.ts'
+      - 'support/frontend/v3/tailwind.config.ts'
+
+  workflow_dispatch: # Allow manual triggers
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: support/frontend/v3/package-lock.json
+
+      - name: Install dependencies
+        working-directory: support/frontend/v3
+        run: npm ci
+
+      - name: Build production bundle
+        working-directory: support/frontend/v3
+        run: npm run build
+
+      - name: Deploy to DigitalOcean
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            cd /opt/code-chef
+            git pull origin main
+            cd support/frontend/v3
+            npm ci
+            npm run build
+            cd /opt/code-chef
+            docker compose restart caddy
+            echo "✅ Frontend deployed successfully"
+
+      - name: Verify deployment
+        run: |
+          echo "🔍 Verifying deployment..."
+          curl -f https://codechef.appsmithery.co/ || exit 1
+          echo "✅ Homepage is live"
