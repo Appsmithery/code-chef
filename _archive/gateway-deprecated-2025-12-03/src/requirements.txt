@@ -1,2 +1,0 @@
-# The MCP gateway is now implemented in Node.js.
-# This requirements file is intentionally empty.
