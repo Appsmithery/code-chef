@@ -1,20 +1,20 @@
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { agents } from "@/data/platform";
 import {
-    Activity,
-    Bot,
-    FileCode,
-    GitPullRequest,
-    Server,
-    Shield,
+  Activity,
+  Bot,
+  FileCode,
+  GitPullRequest,
+  Server,
+  Shield,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -30,23 +30,41 @@ export default function Agents() {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-br from-background via-background to-muted">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <Badge
-              variant="outline"
-              className="border-accent/30 text-accent bg-accent/5"
-            >
-              AI Agent Team
-            </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
-              Meet the <span className="text-accent">Team</span>
-            </h1>
-            <p className="text-xl text-muted-foreground leading-relaxed">
-              Six specialized AI agents working together to automate your DevOps
-              workflow. Each agent is optimized for specific tasks and powered
-              by state-of-the-art language models.
-            </p>
+      <section className="relative overflow-hidden py-20 md:py-32 lg:py-40 bg-gradient-to-br from-background via-background to-muted">
+        {/* Decorative Background */}
+        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none -mr-48 -mt-48" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl pointer-events-none -ml-48 -mb-48" />
+
+        <div className="container relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div className="space-y-8">
+              <div className="space-y-4">
+                <Badge
+                  variant="outline"
+                  className="border-accent/30 text-accent bg-accent/5"
+                >
+                  AI Agent Team
+                </Badge>
+                <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
+                  Meet the <span className="text-accent">Team</span>
+                </h1>
+                <p className="text-xl md:text-2xl text-muted-foreground max-w-[600px] leading-relaxed">
+                  Six specialized AI agents working together to automate your
+                  DevOps workflow. Each agent is optimized for specific tasks
+                  and powered by state-of-the-art language models.
+                </p>
+              </div>
+            </div>
+
+            {/* Logo Visual */}
+            <div className="relative hidden lg:flex items-center justify-center">
+              <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-full blur opacity-20"></div>
+              <img
+                src="/logos/hat_icon_transparent.svg"
+                alt="code/chef"
+                className="relative w-64 h-64 object-contain"
+              />
+            </div>
           </div>
         </div>
       </section>
@@ -141,12 +159,14 @@ export default function Agents() {
                 traced via LangSmith for debugging and optimization.
               </p>
             </div>
-          
-          {/* Architecture Diagram */}
-          <div className="mt-12 bg-card border border-border rounded-lg p-8">
-            <div className="prose prose-invert max-w-none">
-              <pre className="language-mermaid bg-background/50 p-6 rounded-lg overflow-x-auto">
-                <code>{`flowchart TB
+
+            {/* Architecture Diagram */}
+            <div className="mt-12 relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-2xl blur opacity-10"></div>
+              <div className="relative bg-transparent border border-border rounded-xl overflow-hidden shadow-lg">
+                <div className="prose prose-invert max-w-none">
+                  <pre className="language-mermaid bg-transparent p-8 rounded-lg overflow-x-auto">
+                    <code>{`flowchart TB
     subgraph VSCode["🖥️ VS Code"]
         Chat["@chef Add JWT auth to my Express API"]
     end
@@ -188,8 +208,27 @@ export default function Agents() {
     Tools --> GitHub
     Tools --> Linear
     Tools --> Docker
-    Tools --> Metrics`}</code>
-              </pre>
+    Tools --> Metrics
+
+    style VSCode fill:transparent,stroke:#4c5270
+    style Orchestrator fill:transparent,stroke:#4c5270
+    style Agents fill:transparent,stroke:#4c5270
+    style Integrations fill:transparent,stroke:#4c5270
+    style Chat fill:transparent,stroke:#bcece0
+    style Supervisor fill:transparent,stroke:#bcece0
+    style FeatureDev fill:transparent,stroke:#bcece0
+    style CodeReview fill:transparent,stroke:#bcece0
+    style CICD fill:transparent,stroke:#bcece0
+    style Infra fill:transparent,stroke:#bcece0
+    style Docs fill:transparent,stroke:#bcece0
+    style Tools fill:transparent,stroke:#bcece0
+    style GitHub fill:transparent,stroke:#f4b9b8
+    style Linear fill:transparent,stroke:#f4b9b8
+    style Docker fill:transparent,stroke:#f4b9b8
+    style Metrics fill:transparent,stroke:#f4b9b8`}</code>
+                  </pre>
+                </div>
+              </div>
             </div>
           </div>
         </div>
