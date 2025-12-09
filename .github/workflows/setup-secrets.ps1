@@ -10,7 +10,8 @@ Write-Host ""
 # Check if GitHub CLI is installed
 try {
     gh --version | Out-Null
-} catch {
+}
+catch {
     Write-Host "❌ GitHub CLI (gh) not installed" -ForegroundColor Red
     Write-Host ""
     Write-Host "Install from: https://cli.github.com/" -ForegroundColor Yellow
@@ -21,7 +22,8 @@ try {
 # Check if authenticated
 try {
     gh auth status 2>&1 | Out-Null
-} catch {
+}
+catch {
     Write-Host "❌ Not authenticated with GitHub" -ForegroundColor Red
     Write-Host "Run: gh auth login" -ForegroundColor Yellow
     exit 1
@@ -58,9 +60,11 @@ $SSH_KEY_ED25519 = "$env:USERPROFILE\.ssh\id_ed25519"
 if (Test-Path $SSH_KEY_ED25519) {
     $SSH_KEY_PATH = $SSH_KEY_ED25519
     Write-Host "   Found: id_ed25519" -ForegroundColor Green
-} elseif (Test-Path $SSH_KEY_PATH) {
+}
+elseif (Test-Path $SSH_KEY_PATH) {
     Write-Host "   Found: id_rsa" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "   ❌ No SSH key found" -ForegroundColor Red
     Write-Host ""
     Write-Host "   Generate one with:" -ForegroundColor Yellow
@@ -82,7 +86,8 @@ $SECRETS = gh secret list --repo $REPO | Out-String
 
 if ($SECRETS -match "DROPLET_HOST" -and $SECRETS -match "DROPLET_USER" -and $SECRETS -match "DROPLET_SSH_KEY") {
     Write-Host "   ✅ All secrets configured" -ForegroundColor Green
-} else {
+}
+else {
     Write-Host "   ⚠️  Some secrets may be missing" -ForegroundColor Yellow
 }
 

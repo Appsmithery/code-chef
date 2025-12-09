@@ -5,16 +5,20 @@ Automated build and deployment for code-chef React frontend using GitHub Actions
 ## Workflows
 
 ### 1. Deploy Frontend (`deploy-frontend.yml`)
+
 **Trigger**: Push to `main` branch with frontend changes  
 **Actions**:
+
 - Builds production bundle
 - Deploys to DigitalOcean droplet via SSH
 - Restarts Caddy to serve new files
 - Verifies deployment health
 
 ### 2. Frontend Preview (`frontend-preview.yml`)
+
 **Trigger**: Pull requests with frontend changes  
 **Actions**:
+
 - Type checks TypeScript
 - Builds production bundle
 - Reports bundle size in PR comment
@@ -27,10 +31,10 @@ Go to: **Settings → Secrets and variables → Actions → New repository secre
 
 Add these secrets:
 
-| Secret Name | Value | Description |
-|-------------|-------|-------------|
-| `DROPLET_HOST` | `45.55.173.72` | DigitalOcean droplet IP |
-| `DROPLET_USER` | `root` | SSH user |
+| Secret Name       | Value           | Description             |
+| ----------------- | --------------- | ----------------------- |
+| `DROPLET_HOST`    | `45.55.173.72`  | DigitalOcean droplet IP |
+| `DROPLET_USER`    | `root`          | SSH user                |
 | `DROPLET_SSH_KEY` | `<private_key>` | SSH private key content |
 
 #### Getting SSH Private Key
@@ -59,6 +63,7 @@ echo "ssh-ed25519 AAAA..." >> ~/.ssh/authorized_keys
 ### 2. Enable Workflows
 
 Workflows are automatically enabled when pushed to `main`. You can also:
+
 - **Manual trigger**: Go to Actions → Deploy Frontend → Run workflow
 - **Monitor**: Actions tab shows all workflow runs
 
@@ -96,6 +101,7 @@ graph LR
 ### Path Triggers
 
 Workflows only run when these paths change:
+
 - `support/frontend/v3/src/**` (source code)
 - `support/frontend/v3/public/**` (assets)
 - `support/frontend/v3/package.json` (dependencies)
