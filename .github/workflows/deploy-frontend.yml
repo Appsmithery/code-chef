@@ -41,12 +41,12 @@ jobs:
                   username: ${{ secrets.DROPLET_USER }}
                   key: ${{ secrets.DROPLET_SSH_KEY }}
                   script: |
-                      cd /opt/code-chef
+                      cd /opt/Dev-Tools
                       git pull origin main
                       cd support/frontend
                       npm install
                       npm run build
-                      cd /opt/code-chef
+                      cd /opt/Dev-Tools/deploy
                       docker compose restart caddy
                       echo "✅ Frontend deployed successfully"
 
