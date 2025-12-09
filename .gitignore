@@ -96,3 +96,53 @@ yarn.lock
 # Reports and generated content
 support/reports/*.json
 !support/reports/.gitkeep
+
+# ============================================================================
+# ARCHIVE & DEPRECATED DIRECTORIES (security - may contain old secrets)
+# ============================================================================
+_archive/
+*/_archive/
+**/_archive/
+**/temp-*/
+**/_temp/
+support/scripts/_completed/
+
+# ============================================================================
+# BUILD ARTIFACTS
+# ============================================================================
+# Keep only latest VSIX in git - old versions should be deleted
+*.vsix
+!extensions/vscode-codechef/vscode-codechef-*.vsix
+
+# LangGraph generated files
+.langgraph_api/
+
+# Hypothesis test data
+.hypothesis/
+
+# ============================================================================
+# WORKSPACE FILES (may contain local settings/secrets)
+# ============================================================================
+# Workspace files can contain local paths and secrets - use .template versions
+*.code-workspace
+!*.code-workspace.template
+
+# Test workspaces
+TEST/
+
+# ============================================================================
+# ADDITIONAL SECURITY PATTERNS
+# ============================================================================
+# SSH keys and certificates
+id_rsa*
+id_ed25519*
+*.cer
+
+# API response caches that might contain sensitive data
+*.cache
+.cache/
+
+# Local development overrides
+*.local
+*.local.*
+.env.local
