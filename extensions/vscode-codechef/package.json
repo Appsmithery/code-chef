@@ -208,6 +208,13 @@
           "markdownDescription": "**Environment Profile**\n\n| Profile | Models | Cost |\n|---------|--------|------|\n| production | llama3.3-70b, codellama-13b | $0.20-0.60/1M tokens |\n| development | llama3-8b (all agents) | $0.20/1M tokens |\n\n*Switch to development for testing and experimentation*",
           "order": 3
         },
+        "codechef.useStreaming": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time streaming responses in chat.",
+          "markdownDescription": "**Enable Streaming Responses** ⚡\n\nWhen enabled, chat responses are streamed token-by-token for a more natural conversation flow.\n\n- **Enabled**: Real-time SSE streaming (recommended)\n- **Disabled**: Full response after processing\n\n*Disable if experiencing connection issues or prefer full responses*",
+          "order": 4
+        },
         "codechef.toolLoadingStrategy": {
           "type": "string",
           "enum": [
