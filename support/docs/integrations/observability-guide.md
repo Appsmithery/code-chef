@@ -1,6 +1,12 @@
+---
+status: active
+category: integrations
+last_updated: 2025-12-09
+---
+
 # LLM Observability Guide
 
-**Last Updated**: December 5, 2025  
+**Last Updated**: December 9, 2025  
 **Audience**: DevOps Engineers, SREs, Platform Team
 
 ---
@@ -565,7 +571,7 @@ python support/scripts/validation/test_llm_provider.py
 - [Model Configuration](../../config/agents/models.yaml) - LLM settings (single source of truth)
 - [RAG Configuration](../../config/rag/indexing.yaml) - Collection definitions
 - [Testing Guide](../../support/tests/TESTING_GUIDE.md) - Test suite documentation
-- [Deployment Guide](DEPLOYMENT.md) - Deploy procedures
+- [Deployment Guide](../getting-started/deployment.md) - Deploy procedures
 - [LangSmith Dashboard](https://smith.langchain.com/) - LLM tracing
 - [Grafana Cloud](https://appsmithery.grafana.net) - Metrics dashboards
 

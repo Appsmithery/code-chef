@@ -1,3 +1,9 @@
+---
+status: active
+category: architecture-and-platform
+last_updated: 2025-12-09
+---
+
 # LangGraph Integration Guide
 
 ## Overview

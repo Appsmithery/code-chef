@@ -1,10 +1,16 @@
+---
+status: active
+category: getting-started
+last_updated: 2025-12-09
+---
+
 # Dev-Tools Deployment Guide
 
 **Version:** v0.3  
 **Status:** Production Ready  
-**Last Updated:** November 25, 2025
+**Last Updated:** December 9, 2025
 
-See [QUICKSTART.md](QUICKSTART.md) for local setup | [ARCHITECTURE.md](ARCHITECTURE.md) for system design
+See [quickstart.md](quickstart.md) for local setup | [../architecture-and-platform/architecture.md](../architecture-and-platform/architecture.md) for system design
 
 ---
 
@@ -418,8 +424,8 @@ ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose up -d --buil
 
 ## Related Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - Local setup
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System design
+- **[quickstart.md](quickstart.md)** - Local setup
+- **[architecture.md](../architecture-and-platform/architecture.md)** - System design
 - **[operations/SECRETS_MANAGEMENT.md](operations/SECRETS_MANAGEMENT.md)** - Security
 - **[operations/CLEANUP_QUICK_REFERENCE.md](operations/CLEANUP_QUICK_REFERENCE.md)** - Docker hygiene
 - **[operations/DISASTER_RECOVERY.md](operations/DISASTER_RECOVERY.md)** - Complete DR guide

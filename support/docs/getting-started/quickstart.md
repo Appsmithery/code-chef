@@ -1,3 +1,9 @@
+---
+status: active
+category: getting-started
+last_updated: 2025-12-09
+---
+
 # code/chef Quick Start Guide
 
 Get up and running with code/chef in 5 minutes.
@@ -158,7 +164,7 @@ For production setup on DigitalOcean or other cloud providers:
 .\support\scripts\deploy\deploy-to-droplet.ps1 -DeployType full
 ```
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for complete production setup.
+See [deployment.md](deployment.md) for complete production setup.
 
 ---
 
@@ -195,5 +201,5 @@ docker-compose up -d
 ## Next Steps
 
 - **[README](../../README.md)** — Feature overview
-- **[ARCHITECTURE](ARCHITECTURE.md)** — How it works under the hood
-- **[DEPLOYMENT](DEPLOYMENT.md)** — Production deployment
+- **[architecture.md](../architecture-and-platform/architecture.md)** — How it works under the hood
+- **[deployment.md](deployment.md)** — Production deployment

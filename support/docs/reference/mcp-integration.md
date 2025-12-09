@@ -1,7 +1,13 @@
+---
+status: active
+category: reference
+last_updated: 2025-12-09
+---
+
 # MCP Integration Guide
 
 **Version:** 1.1.0
-**Last Updated:** 2025-12-07
+**Last Updated:** December 9, 2025
 **Purpose:** Document MCP Gateway architecture, tool-to-agent mappings, and integration patterns
 
 ---
@@ -814,8 +820,7 @@ await invoke_mcp_tool(
 
 - **[MCP Specification](https://modelcontextprotocol.io)** - Official MCP protocol documentation
 - **[config/mcp-agent-tool-mapping.yaml](../config/mcp-agent-tool-mapping.yaml)** - Complete tool mappings
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture overview
-- **[AGENT_ENDPOINTS.md](AGENT_ENDPOINTS.md)** - Agent API reference
+- **[architecture.md](../architecture-and-platform/architecture.md)** - System architecture overview
 
 ---
 
