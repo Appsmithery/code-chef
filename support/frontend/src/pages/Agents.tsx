@@ -49,9 +49,10 @@ export default function Agents() {
                   Le <span className="text-accent">Brigade</span>
                 </h1>
                 <p className="text-xl md:text-2xl text-muted-foreground max-w-[600px] leading-relaxed">
-                  Six specialized AI agents working together to automate your
-                  DevOps workflow. Each agent is optimized for specific tasks
-                  and powered by state-of-the-art language models.
+                  The code/chef kitchen comes fully-staffed with six specialized
+                  AI agents working together to automate your DevOps workflow.
+                  Each agent is optimized for specific tasks and powered by
+                  state-of-the-art LLMs.
                 </p>
               </div>
             </div>
