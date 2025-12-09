@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Github, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { Github, Moon, Sun } from "lucide-react";
 import { Link } from "wouter";
 
 interface LayoutProps {
@@ -92,7 +92,9 @@ export default function Layout({ children }: LayoutProps) {
 
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
             <Link href="/cookbook">
-              <a className="hover:text-accent transition-colors">Documentation</a>
+              <a className="hover:text-accent transition-colors">
+                Documentation
+              </a>
             </Link>
             <span className="text-border">|</span>
             <a

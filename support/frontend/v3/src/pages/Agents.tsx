@@ -1,8 +1,21 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Layout from "@/components/Layout";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { agents } from "@/data/platform";
-import { Activity, Bot, FileCode, GitPullRequest, Server, Shield } from "lucide-react";
+import {
+  Activity,
+  Bot,
+  FileCode,
+  GitPullRequest,
+  Server,
+  Shield,
+} from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
   orchestrator: <Bot className="h-6 w-6" />,
@@ -20,14 +33,19 @@ export default function Agents() {
       <section className="py-20 md:py-32 bg-gradient-to-br from-background via-background to-muted">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center space-y-6">
-            <Badge variant="outline" className="border-accent/30 text-accent bg-accent/5">
+            <Badge
+              variant="outline"
+              className="border-accent/30 text-accent bg-accent/5"
+            >
               AI Agent Team
             </Badge>
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
               Meet the <span className="text-accent">Team</span>
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Six specialized AI agents working together to automate your DevOps workflow. Each agent is optimized for specific tasks and powered by state-of-the-art language models.
+              Six specialized AI agents working together to automate your DevOps
+              workflow. Each agent is optimized for specific tasks and powered
+              by state-of-the-art language models.
             </p>
           </div>
         </div>
@@ -48,8 +66,14 @@ export default function Agents() {
                       {iconMap[agent.id]}
                     </div>
                     <Badge
-                      variant={agent.status === "online" ? "default" : "secondary"}
-                      className={agent.status === "online" ? "bg-primary/20 text-primary hover:bg-primary/30 border-none" : ""}
+                      variant={
+                        agent.status === "online" ? "default" : "secondary"
+                      }
+                      className={
+                        agent.status === "online"
+                          ? "bg-primary/20 text-primary hover:bg-primary/30 border-none"
+                          : ""
+                      }
                     >
                       {agent.status}
                     </Badge>
@@ -62,18 +86,26 @@ export default function Agents() {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Model:</span>
-                    <span className="font-medium text-foreground">{agent.model}</span>
+                    <span className="font-medium text-foreground">
+                      {agent.model}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Provider:</span>
-                    <span className="font-medium text-foreground">{agent.provider}</span>
+                    <span className="font-medium text-foreground">
+                      {agent.provider}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Port:</span>
-                    <span className="font-mono text-foreground">:{agent.port}</span>
+                    <span className="font-mono text-foreground">
+                      :{agent.port}
+                    </span>
                   </div>
                   <div className="pt-4 border-t border-border">
-                    <div className="text-sm font-medium text-muted-foreground mb-2">Capabilities:</div>
+                    <div className="text-sm font-medium text-muted-foreground mb-2">
+                      Capabilities:
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {agent.capabilities.map((capability) => (
                         <Badge
@@ -102,13 +134,29 @@ export default function Agents() {
             </h2>
             <div className="space-y-6 text-muted-foreground leading-relaxed">
               <p>
-                The <span className="text-accent font-medium">Orchestrator</span> (Head Chef) receives incoming tasks and intelligently routes them to the most appropriate specialized agent. Using LangGraph's StateGraph workflow engine, it maintains context across multi-step operations and coordinates handoffs between agents.
+                The{" "}
+                <span className="text-accent font-medium">Orchestrator</span>{" "}
+                (Head Chef) receives incoming tasks and intelligently routes
+                them to the most appropriate specialized agent. Using
+                LangGraph's StateGraph workflow engine, it maintains context
+                across multi-step operations and coordinates handoffs between
+                agents.
               </p>
               <p>
-                Each agent is powered by carefully selected language models optimized for their specific domain. The <span className="text-accent font-medium">Feature Development</span> agent uses CodeLlama for superior code generation, while review and planning agents leverage Llama 3.3 for reasoning capabilities.
+                Each agent is powered by carefully selected language models
+                optimized for their specific domain. The{" "}
+                <span className="text-accent font-medium">
+                  Feature Development
+                </span>{" "}
+                agent uses CodeLlama for superior code generation, while review
+                and planning agents leverage Llama 3.3 for reasoning
+                capabilities.
               </p>
               <p>
-                Progressive tool loading ensures agents only access the MCP tools they need for each task, reducing token costs by 80-90% while maintaining full capability. All agent interactions are traced via LangSmith for debugging and optimization.
+                Progressive tool loading ensures agents only access the MCP
+                tools they need for each task, reducing token costs by 80-90%
+                while maintaining full capability. All agent interactions are
+                traced via LangSmith for debugging and optimization.
               </p>
             </div>
           </div>

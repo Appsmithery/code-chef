@@ -1,8 +1,22 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import Layout from "@/components/Layout";
-import { BookOpen, Code, GitBranch, Layers, Workflow, Zap, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  BookOpen,
+  Code,
+  ExternalLink,
+  GitBranch,
+  Layers,
+  Workflow,
+  Zap,
+} from "lucide-react";
 
 const recipes = [
   {
@@ -140,14 +154,18 @@ export default function Cookbook() {
       <section className="py-20 md:py-32 bg-gradient-to-br from-background via-background to-muted">
         <div className="container">
           <div className="max-w-3xl mx-auto text-center space-y-6">
-            <Badge variant="outline" className="border-accent/30 text-accent bg-accent/5">
+            <Badge
+              variant="outline"
+              className="border-accent/30 text-accent bg-accent/5"
+            >
               Documentation
             </Badge>
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight">
               The <span className="text-accent">Cookbook</span>
             </h1>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Recipes, guides, and reference documentation for building with code-chef. From quick start to advanced workflows.
+              Recipes, guides, and reference documentation for building with
+              code-chef. From quick start to advanced workflows.
             </p>
           </div>
         </div>
@@ -162,7 +180,9 @@ export default function Cookbook() {
                 <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                   {section.icon}
                 </div>
-                <h2 className="text-3xl font-bold tracking-tight">{section.category}</h2>
+                <h2 className="text-3xl font-bold tracking-tight">
+                  {section.category}
+                </h2>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {section.items.map((item) => (
@@ -184,7 +204,11 @@ export default function Cookbook() {
                         className="w-full border-accent/30 text-accent hover:bg-accent/10 hover:border-accent"
                         asChild
                       >
-                        <a href={item.link} target="_blank" rel="noopener noreferrer">
+                        <a
+                          href={item.link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
                           View Documentation
                           <ExternalLink className="ml-2 h-4 w-4" />
                         </a>
@@ -206,7 +230,8 @@ export default function Cookbook() {
               Contributing to the Cookbook
             </h2>
             <p className="text-xl text-muted-foreground leading-relaxed">
-              Found a recipe missing? Documentation unclear? Submit a PR to improve the cookbook for everyone.
+              Found a recipe missing? Documentation unclear? Submit a PR to
+              improve the cookbook for everyone.
             </p>
             <Button
               size="lg"
@@ -243,10 +268,15 @@ export default function Cookbook() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    All agent interactions traced with @traceable decorators. Per-agent projects for isolated debugging.
+                    All agent interactions traced with @traceable decorators.
+                    Per-agent projects for isolated debugging.
                   </p>
                   <Button variant="outline" className="w-full" asChild>
-                    <a href="https://smith.langchain.com" target="_blank" rel="noopener noreferrer">
+                    <a
+                      href="https://smith.langchain.com"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       Open LangSmith
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
@@ -262,10 +292,15 @@ export default function Cookbook() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Prometheus metrics and Loki logs visualized in Grafana. Real-time service health monitoring.
+                    Prometheus metrics and Loki logs visualized in Grafana.
+                    Real-time service health monitoring.
                   </p>
                   <Button variant="outline" className="w-full" asChild>
-                    <a href="https://appsmithery.grafana.net" target="_blank" rel="noopener noreferrer">
+                    <a
+                      href="https://appsmithery.grafana.net"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       Open Grafana
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
