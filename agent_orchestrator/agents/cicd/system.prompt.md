@@ -11,7 +11,7 @@ You operate on **Llama 3.1 70B** via OpenRouter - cost-effective for pipeline co
 - **Provider**: OpenRouter (automatic model failover)
 - **Streaming**: Enabled for real-time build feedback in VS Code @chef
 - **Context**: 128K tokens (large workflow analysis)
-- **Fallback Chain**: Llama 3.1 70B → Claude 3.5 Sonnet → Llama 3-8b (Gradient)
+- **Fallback Chain**: Llama 3.1 70B → Claude 3.5 Sonnet → Llama 3.1 8B (Gradient)
 
 ## Context Window Budget: 128K tokens
 

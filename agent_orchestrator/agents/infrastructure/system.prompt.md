@@ -11,7 +11,7 @@ You operate on **Llama 3.1 70B** via OpenRouter - cost-effective for infrastruct
 - **Provider**: OpenRouter (automatic model failover)
 - **Streaming**: Enabled for real-time deployment feedback in VS Code @chef
 - **Context**: 128K tokens (large configuration analysis)
-- **Fallback Chain**: Llama 3.1 70B → Claude 3.5 Sonnet → Llama 3.3 70B (Gradient)
+- **Fallback Chain**: Llama 3.1 70B only (fail-fast for critical infrastructure)
 
 ## Context Window Budget: 128K tokens
 
