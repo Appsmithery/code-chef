@@ -34,7 +34,9 @@ export default function Home() {
             <div className="space-y-8">
               <div className="space-y-4">
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
-                  <span className="text-accent">code/chef</span>
+                  <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    code/chef
+                  </span>
                 </h1>
                 <p className="text-2xl md:text-3xl text-muted-foreground max-w-[600px] leading-relaxed">
                   AI DevOps agents and workflows for the modern code kitchen.
