@@ -46,7 +46,10 @@ export default function Agents() {
                   AI Agent Team
                 </Badge>
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
-                  Le <span className="text-accent">Brigade</span>
+                  <span style={{ color: "#887bb0" }}>Le</span>{" "}
+                  <span style={{ color: "#fffdf2" }} className="italic">
+                    Brigade
+                  </span>
                 </h1>
                 <p className="text-xl md:text-2xl text-muted-foreground max-w-[600px] leading-relaxed">
                   The code/chef kitchen comes fully-staffed with six specialized
@@ -165,9 +168,12 @@ export default function Agents() {
             <div className="mt-12 relative">
               <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-2xl blur opacity-10"></div>
               <div className="relative bg-transparent border border-border rounded-xl overflow-hidden shadow-lg">
-                <div className="prose prose-invert max-w-none">
-                  <pre className="language-mermaid bg-transparent p-8 rounded-lg overflow-x-auto">
-                    <code>{`flowchart TB
+                <div className="p-8">
+                  <div
+                    className="mermaid bg-transparent"
+                    style={{ fontSize: "14px" }}
+                  >
+                    {`flowchart TB
     subgraph VSCode["🖥️ VS Code"]
         Chat["@chef Add JWT auth to my Express API"]
     end
@@ -226,8 +232,8 @@ export default function Agents() {
     style GitHub fill:transparent,stroke:#f4b9b8
     style Linear fill:transparent,stroke:#f4b9b8
     style Docker fill:transparent,stroke:#f4b9b8
-    style Metrics fill:transparent,stroke:#f4b9b8`}</code>
-                  </pre>
+    style Metrics fill:transparent,stroke:#f4b9b8`}
+                  </div>
                 </div>
               </div>
             </div>
