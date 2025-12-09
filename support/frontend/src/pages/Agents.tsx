@@ -84,25 +84,7 @@ export default function Agents() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Model:</span>
-                    <span className="font-medium text-foreground">
-                      {agent.model}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Provider:</span>
-                    <span className="font-medium text-foreground">
-                      {agent.provider}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Port:</span>
-                    <span className="font-mono text-foreground">
-                      :{agent.port}
-                    </span>
-                  </div>
-                  <div className="pt-4 border-t border-border">
+                  <div>
                     <div className="text-sm font-medium text-muted-foreground mb-2">
                       Capabilities:
                     </div>

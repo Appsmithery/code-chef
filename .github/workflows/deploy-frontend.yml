@@ -45,16 +45,18 @@ jobs:
           # Cleanup
           rm /tmp/deploy_key
 
-      - name: Restart Caddy
+      - name: Sync repo and restart Caddy
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.DROPLET_HOST }}
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
-            cd /opt/Dev-Tools/deploy
-            docker compose restart caddy
-            echo "✅ Frontend deployed successfully"
+            cd /opt/Dev-Tools
+            git pull origin main
+            cd deploy
+            docker compose up -d --force-recreate caddy
+            echo "✅ Frontend deployed and Caddy recreated"
 
       - name: Verify deployment
         run: |
