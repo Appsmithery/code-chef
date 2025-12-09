@@ -3,9 +3,9 @@ name: Frontend Build Preview
 on:
     pull_request:
         paths:
-            - "support/frontend/v3/src/**"
-            - "support/frontend/v3/public/**"
-            - "support/frontend/v3/package.json"
+            - "support/frontend/src/**"
+            - "support/frontend/public/**"
+            - "support/frontend/package.json"
 
 jobs:
     build-preview:
@@ -21,15 +21,15 @@ jobs:
                   node-version: "20"
 
             - name: Install dependencies
-              working-directory: support/frontend/v3
+              working-directory: support/frontend
               run: npm install
 
             - name: Run type check
-              working-directory: support/frontend/v3
+              working-directory: support/frontend
               run: npm run build
 
             - name: Build bundle analysis
-              working-directory: support/frontend/v3
+              working-directory: support/frontend
               run: |
                   echo "📦 Build Analysis:"
                   du -sh dist/*
@@ -43,7 +43,7 @@ jobs:
                   script: |
                       const fs = require('fs');
                       const distSize = require('child_process')
-                        .execSync('du -sh support/frontend/v3/dist')
+                        .execSync('du -sh support/frontend/dist')
                         .toString()
                         .split('\t')[0];
 

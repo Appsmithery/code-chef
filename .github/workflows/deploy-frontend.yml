@@ -5,11 +5,11 @@ on:
         branches:
             - main
         paths:
-            - "support/frontend/v3/src/**"
-            - "support/frontend/v3/public/**"
-            - "support/frontend/v3/package.json"
-            - "support/frontend/v3/vite.config.ts"
-            - "support/frontend/v3/tailwind.config.ts"
+            - "support/frontend/src/**"
+            - "support/frontend/public/**"
+            - "support/frontend/package.json"
+            - "support/frontend/vite.config.ts"
+            - "support/frontend/tailwind.config.ts"
 
     workflow_dispatch: # Allow manual triggers
 
@@ -27,11 +27,11 @@ jobs:
                   node-version: "20"
 
             - name: Install dependencies
-              working-directory: support/frontend/v3
+              working-directory: support/frontend
               run: npm install
 
             - name: Build production bundle
-              working-directory: support/frontend/v3
+              working-directory: support/frontend
               run: npm run build
 
             - name: Deploy to DigitalOcean
@@ -43,7 +43,7 @@ jobs:
                   script: |
                       cd /opt/code-chef
                       git pull origin main
-                      cd support/frontend/v3
+                      cd support/frontend
                       npm install
                       npm run build
                       cd /opt/code-chef
