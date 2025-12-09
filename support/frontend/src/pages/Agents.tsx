@@ -1,20 +1,20 @@
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
 } from "@/components/ui/card";
 import { agents } from "@/data/platform";
 import {
-  Activity,
-  Bot,
-  FileCode,
-  GitPullRequest,
-  Server,
-  Shield,
+    Activity,
+    Bot,
+    FileCode,
+    GitPullRequest,
+    Server,
+    Shield,
 } from "lucide-react";
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -140,6 +140,56 @@ export default function Agents() {
                 while maintaining full capability. All agent interactions are
                 traced via LangSmith for debugging and optimization.
               </p>
+            </div>
+          
+          {/* Architecture Diagram */}
+          <div className="mt-12 bg-card border border-border rounded-lg p-8">
+            <div className="prose prose-invert max-w-none">
+              <pre className="language-mermaid bg-background/50 p-6 rounded-lg overflow-x-auto">
+                <code>{`flowchart TB
+    subgraph VSCode["🖥️ VS Code"]
+        Chat["@chef Add JWT auth to my Express API"]
+    end
+
+    subgraph Orchestrator["🧑‍🍳 code/chef Orchestrator"]
+        Supervisor["Supervisor\\n(Head Chef)"]
+        
+        subgraph Agents["Specialized Agents"]
+            FeatureDev["🚀 Feature Dev\\nClaude 3.5"]
+            CodeReview["🔍 Code Review\\nGPT-4o"]
+            CICD["⚡ CI/CD\\nLlama 3.1"]
+            Infra["🏗️ Infrastructure\\nLlama 3.1"]
+            Docs["📚 Documentation\\nClaude 3.5"]
+        end
+        
+        Tools["🔧 150+ MCP Tools"]
+    end
+
+    subgraph Integrations["External Services"]
+        GitHub["🐙 GitHub"]
+        Linear["📋 Linear"]
+        Docker["🐳 Docker"]
+        Metrics["📊 Metrics"]
+    end
+
+    Chat --> Supervisor
+    Supervisor --> FeatureDev
+    Supervisor --> CodeReview
+    Supervisor --> CICD
+    Supervisor --> Infra
+    Supervisor --> Docs
+    
+    FeatureDev --> Tools
+    CodeReview --> Tools
+    CICD --> Tools
+    Infra --> Tools
+    Docs --> Tools
+    
+    Tools --> GitHub
+    Tools --> Linear
+    Tools --> Docker
+    Tools --> Metrics`}</code>
+              </pre>
             </div>
           </div>
         </div>
