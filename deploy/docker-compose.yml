@@ -321,7 +321,7 @@ services:
       - CADDY_ACME_EMAIL=${CADDY_ACME_EMAIL:-alex@appsmithery.co}
     volumes:
       - ../config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ../support/frontend/v3/dist:/srv/frontend:ro
+      - ../support/frontend/dist:/srv/frontend:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:
