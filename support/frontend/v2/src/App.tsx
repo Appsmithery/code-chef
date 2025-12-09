@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Agents from "@/pages/Agents";
 import NotFound from "@/pages/NotFound";
+import Agents from "@/pages/Agents";
 import Servers from "@/pages/Servers";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
