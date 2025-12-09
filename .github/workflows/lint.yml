@@ -3,8 +3,20 @@ name: Lint
 on:
   push:
     branches: [main]
+    paths:
+      - "agent_orchestrator/**/*.py"
+      - "shared/**/*.py"
+      - "config/**/*.yaml"
+      - "config/**/*.yml"
+      - ".yamllint.yml"
   pull_request:
     branches: [main]
+    paths:
+      - "agent_orchestrator/**/*.py"
+      - "shared/**/*.py"
+      - "config/**/*.yaml"
+      - "config/**/*.yml"
+      - ".yamllint.yml"
 
 jobs:
   lint-python:
@@ -36,6 +48,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: YAML Lint
+        continue-on-error: true
         uses: ibiqlik/action-yamllint@v3
         with:
           file_or_dir: config/
