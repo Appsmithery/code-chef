@@ -53,14 +53,19 @@ class CodeChefChatParticipant {
         });
         this.contextExtractor = new contextExtractor_1.ContextExtractor();
         this.sessionManager = new sessionManager_1.SessionManager(context);
+        // Enable streaming by default, can be configured
+        this.useStreaming = config.get('useStreaming', true);
         // Initialize handlers
         this.statusHandler = new statusHandler_1.StatusHandler(this.client, () => this.lastTaskId);
         this.workflowHandler = new workflowHandler_1.WorkflowHandler(this.client, this.contextExtractor);
-        // Listen for configuration changes to update API key
+        // Listen for configuration changes to update API key and streaming
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('codechef.apiKey')) {
                 const newApiKey = vscode.workspace.getConfiguration('codechef').get('apiKey');
                 this.client.setApiKey(newApiKey || undefined);
+            }
+            if (e.affectsConfiguration('codechef.useStreaming')) {
+                this.useStreaming = vscode.workspace.getConfiguration('codechef').get('useStreaming', true);
             }
         });
     }
@@ -69,6 +74,10 @@ class CodeChefChatParticipant {
         // Handle commands
         if (request.command) {
             return await this.handleCommand(request.command, userMessage, stream, token);
+        }
+        // Use streaming for conversational chat
+        if (this.useStreaming) {
+            return await this.handleStreamingChat(userMessage, context, stream, token);
         }
         stream.progress('Analyzing workspace context...');
         try {
@@ -122,6 +131,81 @@ class CodeChefChatParticipant {
         catch (error) {
             (0, responseRenderer_1.renderError)(error, stream);
             return { errorDetails: { message: error.message } };
+        }
+    }
+    /**
+     * Handle chat request with real-time SSE streaming.
+     * Provides token-by-token response display for natural conversation flow.
+     */
+    async handleStreamingChat(userMessage, context, stream, token) {
+        stream.progress('Connecting to code/chef...');
+        try {
+            // Extract workspace context
+            const workspaceContext = await this.contextExtractor.extract();
+            // Get or create session
+            const sessionId = this.sessionManager.getOrCreateSession(context);
+            let currentAgent = '';
+            let sessionIdFromStream = sessionId;
+            // Stream response token by token
+            for await (const chunk of this.client.chatStream({
+                message: userMessage,
+                session_id: sessionId,
+                context: workspaceContext,
+                workspace_config: (0, settings_1.buildWorkspaceConfig)()
+            })) {
+                // Check for cancellation
+                if (token.isCancellationRequested) {
+                    stream.markdown('\n\n*Response cancelled*');
+                    break;
+                }
+                switch (chunk.type) {
+                    case 'content':
+                        // Stream content token by token
+                        if (chunk.content) {
+                            stream.markdown(chunk.content);
+                        }
+                        break;
+                    case 'agent_complete':
+                        // Log agent transitions (optional UI feedback)
+                        if (chunk.agent && chunk.agent !== currentAgent) {
+                            currentAgent = chunk.agent;
+                            console.log(`code/chef: Agent ${chunk.agent} completed`);
+                        }
+                        break;
+                    case 'tool_call':
+                        // Optional: show tool usage
+                        if (chunk.tool) {
+                            console.log(`code/chef: Tool called: ${chunk.tool}`);
+                        }
+                        break;
+                    case 'error':
+                        stream.markdown(`\n\n❌ **Error**: ${chunk.error}`);
+                        return {
+                            errorDetails: { message: chunk.error || 'Unknown streaming error' }
+                        };
+                    case 'done':
+                        if (chunk.session_id) {
+                            sessionIdFromStream = chunk.session_id;
+                        }
+                        break;
+                }
+            }
+            return {
+                metadata: {
+                    status: 'success',
+                    streaming: true,
+                    sessionId: sessionIdFromStream
+                }
+            };
+        }
+        catch (error) {
+            // Fallback to non-streaming on error
+            console.error('Streaming failed, error:', error.message);
+            stream.markdown(`\n\n❌ **Streaming Error**: ${error.message}\n\n`);
+            stream.markdown('*Tip: You can disable streaming in settings with `codechef.useStreaming: false`*\n');
+            return {
+                errorDetails: { message: error.message }
+            };
         }
     }
     async handleCommand(command, args, stream, token) {
