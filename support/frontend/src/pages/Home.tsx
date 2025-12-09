@@ -351,9 +351,7 @@ export default function Home() {
             >
               <Card className="h-full bg-card border-border hover:border-secondary transition-all duration-300 hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-lg font-medium">
-                    Tracing
-                  </CardTitle>
+                  <CardTitle className="text-lg font-medium">Tracing</CardTitle>
                   <Badge className="bg-secondary/20 text-secondary hover:bg-secondary/30 border-none">
                     Connected
                   </Badge>
