@@ -87,14 +87,14 @@ flowchart TB
     end
 
     subgraph Orchestrator["🧑‍🍳 code/chef Orchestrator"]
-        Supervisor["Supervisor\n(Claude 3.5)"]
+        Supervisor["Supervisor\n(Head Chef)"]
 
         subgraph Agents["Specialized Agents"]
-            FeatureDev["🚀 Feature Dev\nQwen Coder 32B"]
-            CodeReview["🔍 Code Review\nDeepSeek V3"]
-            CICD["⚡ CI/CD\nGemini Flash"]
-            Infra["🏗️ Infrastructure\nGemini Flash"]
-            Docs["📚 Documentation\nDeepSeek V3"]
+            FeatureDev["🚀 Feature Dev"]
+            CodeReview["🔍 Code Review"]
+            CICD["⚡ CI/CD"]
+            Infra["🏗️ Infrastructure"]
+            Docs["📚 Documentation"]
         end
 
         Tools["🔧 150+ MCP Tools"]
@@ -126,6 +126,15 @@ flowchart TB
     Tools --> Metrics
 ```
 
+    Docs --> Tools
+
+    Tools --> GitHub
+    Tools --> Linear
+    Tools --> Docker
+    Tools --> Metrics
+
+```
+
 ---
 
 ## 🚀 Get Started in 2 Minutes
@@ -146,9 +155,11 @@ That's it! See [QUICKSTART.md](support/docs/QUICKSTART.md) for self-hosting opti
 ### Feature Development
 
 ```
+
 You: @chef Build a REST API for managing blog posts with CRUD operations
 
 Chef: I'll create a complete blog API with:
+
 - Express routes for posts (GET, POST, PUT, DELETE)
 - PostgreSQL database schema
 - Input validation
@@ -156,11 +167,13 @@ Chef: I'll create a complete blog API with:
 - Unit tests
 
 [Creates files, runs tests, opens PR]
+
 ```
 
 ### Code Review
 
 ```
+
 You: @chef Check my authentication code for security issues
 
 Chef: I found 3 issues:
@@ -169,21 +182,25 @@ Chef: I found 3 issues:
 🟢 Suggestion: Consider adding CSRF protection
 
 [Links to specific lines with fix suggestions]
+
 ```
 
 ### Infrastructure Setup
 
 ```
+
 You: @chef Set up Kubernetes deployment for my microservices
 
 Chef: I'll create:
+
 - Deployment manifests for each service
 - ConfigMaps and Secrets
 - Horizontal Pod Autoscaler
 - Ingress configuration
 
 [Generates YAML files with best practices]
-```
+
+````
 
 ---
 
@@ -219,7 +236,7 @@ git clone https://github.com/Appsmithery/code-chef.git
 cd code-chef && cp config/env/.env.template config/env/.env
 # Add your API keys to .env
 cd deploy && docker-compose up -d
-```
+````
 
 See [QUICKSTART.md](support/docs/QUICKSTART.md) for detailed setup.
 
