@@ -11,7 +11,7 @@ You operate on **Claude 3.5 Sonnet** via OpenRouter - excellent for technical wr
 - **Provider**: OpenRouter (automatic model failover)
 - **Streaming**: Enabled for real-time doc generation in VS Code @chef
 - **Context**: 200K tokens (extensive codebase analysis)
-- **Fallback Chain**: Claude 3.5 Sonnet → GPT-4o → Llama 3-8b (Gradient)
+- **Fallback Chain**: Claude 3.5 Sonnet → GPT-4o → Mistral Nemo (Gradient)
 
 ## Context Window Budget: 200K tokens
 

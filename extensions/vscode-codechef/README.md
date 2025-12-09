@@ -1,202 +1,242 @@
-# code/chef - AI DevOps Team
+# code/chef — Your AI Development Team
 
 [![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Orchestrator-purple?logo=langchain)](https://www.langchain.com/langgraph)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-150+-green)](https://github.com/Appsmithery/code-chef)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-Multi--Model-orange)](https://openrouter.ai)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-The code/chef VS Code extension brings LangGraph-powered, multi-agent workflows directly into Copilot Chat with 150+ MCP tools and intelligent workflow routing.
+> **Talk to your code. Ship faster.**
 
-## Architecture
+code/chef is an AI-powered development team that lives in VS Code. Just type `@chef` in Copilot Chat and describe what you want—feature implementation, code reviews, infrastructure setup, CI/CD pipelines, or documentation. The AI team handles the rest.
 
-**Flow:** User → `@chef` → Orchestrator → Specialized Agents → RAG / Context / MCP Tools → Artifacts → User
+---
 
-| Component             | Description                                                   |
-| --------------------- | ------------------------------------------------------------- |
-| **Chat Participant**  | `@chef` chat participant in Copilot Chat                      |
-| **Orchestrator API**  | Supervisor (Head Chef) + Workflow Router                      |
-| **Agent Nodes**       | feature-dev, code-review, infrastructure, cicd, documentation |
-| **MCP Tools**         | 150+ tools (Linear, GitHub, Docker, Pylance...)               |
-| **RAG Context**       | Semantic search via Qdrant for code patterns & library docs   |
-| **State Persistence** | PostgreSQL for workflow state, checkpoints, HITL approvals    |
-| **StateGraph**        | LangGraph orchestration with interrupt/resume for HITL        |
+## ✨ What Can code/chef Do?
 
-## Features
+### 🚀 Build Features
 
-- **`@chef` Chat Participant** - Natural language task submission via Copilot Chat
-- **Smart Workflow Router** - Heuristic + LLM-based workflow selection with confidence scoring
-- **LangGraph StateGraph** - Multi-agent orchestration with PostgreSQL checkpointing
-- **150+ MCP Tools** - Progressive disclosure reduces tokens by 80-90%
-- **HITL Approvals** - Linear integration for high-risk operations
-
-## Installation
-
-### Option 1: VSIX from GitHub Releases (Recommended)
-
-1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
-2. Download the latest `vscode-codechef-*.vsix` file
-3. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
-4. Select the downloaded file and reload
-
-### Option 2: Build from Source
-
-```bash
-cd extensions/vscode-codechef
-npm install && npm run compile
-npx vsce package
-code --install-extension vscode-codechef-*.vsix
+```
+@chef Add user authentication with JWT tokens and password reset
 ```
 
-## Quick Start
+The Feature Dev agent writes production-ready code with tests.
 
-### 1. Configure
+### 🔍 Review Code
+
+```
+@chef Review this PR for security vulnerabilities
+```
+
+The Code Review agent analyzes for security issues, performance, and best practices.
+
+### 🏗️ Set Up Infrastructure
+
+```
+@chef Create a Docker Compose setup for my Node.js app with PostgreSQL
+```
+
+The Infrastructure agent generates Dockerfiles, compose files, and Terraform configs.
+
+### ⚡ Automate Pipelines
+
+```
+@chef Create a GitHub Actions workflow for testing and deployment
+```
+
+The CI/CD agent builds your pipelines across GitHub Actions, GitLab CI, Jenkins, and more.
+
+### 📚 Write Documentation
+
+```
+@chef Document the API endpoints in this codebase
+```
+
+The Documentation agent creates README files, API docs, and architecture diagrams.
+
+---
+
+## 🎯 Why code/chef?
+
+| Traditional Workflow          | With code/chef               |
+| ----------------------------- | ---------------------------- |
+| Switch between 5+ tools       | One chat interface           |
+| Copy-paste context everywhere | AI understands your codebase |
+| Wait for code reviews         | Instant AI analysis          |
+| Manual documentation          | Auto-generated docs          |
+| Complex CI/CD setup           | Plain English commands       |
+
+### 🧠 Smart Model Selection
+
+code/chef automatically picks the right AI model for each task:
+
+| Task            | Model             | Why                        |
+| --------------- | ----------------- | -------------------------- |
+| Code Generation | Claude 3.5 Sonnet | Best-in-class coding       |
+| Code Review     | GPT-4o            | Strong reasoning           |
+| Infrastructure  | Llama 3.1 70B     | Cost-effective for configs |
+| Documentation   | Claude 3.5 Sonnet | Excellent writing          |
+
+---
+
+## 🚀 Get Started in 2 Minutes
+
+### Step 1: Install
+
+**From GitHub Releases** (recommended):
+
+1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
+2. Download `vscode-codechef-*.vsix`
+3. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
+4. Select the file and reload
+
+**From VS Code Marketplace**:
+
+1. Open Extensions (`Ctrl+Shift+X`)
+2. Search "code/chef"
+3. Click Install
+
+### Step 2: Configure
 
 Press `Ctrl+Shift+P` → "code/chef: Configure"
 
-**Required Settings:**
+Enter your API key (get from your administrator).
 
-| Setting                    | Description                                                            |
-| -------------------------- | ---------------------------------------------------------------------- |
-| `codechef.orchestratorUrl` | Orchestrator endpoint (default: `https://codechef.appsmithery.co/api`) |
-| `codechef.apiKey`          | API key for authentication (get from administrator)                    |
-
-### 2. Start Using
+### Step 3: Start Cooking
 
 Open Copilot Chat and type:
 
 ```
-@chef Add JWT authentication to my Express API
+@chef Build a REST API for user management with JWT auth
 ```
 
-Or use a workflow command:
+That's it! The AI team handles the rest.
+
+---
+
+## 💬 Example Conversations
+
+### Feature Development
 
 ```
-@chef /workflow Deploy PR #123 to production
+You: @chef Build a REST API for managing blog posts with CRUD operations
+
+Chef: I'll create a complete blog API with:
+- Express routes for posts (GET, POST, PUT, DELETE)
+- PostgreSQL database schema
+- Input validation
+- Error handling
+- Unit tests
+
+[Creates files, runs tests, opens PR]
 ```
 
-## Slash Commands
+### Code Review
 
-| Command                            | Description              | Example                          |
-| ---------------------------------- | ------------------------ | -------------------------------- |
-| `@chef <task>`                     | Submit development task  | `@chef Add authentication`       |
-| `@chef /status [id]`               | Check task status        | `@chef /status abc123`           |
-| `@chef /approve <task> <approval>` | Approve pending task     | `@chef /approve abc123 xyz`      |
-| `@chef /workflow [name] <task>`    | Execute workflow         | `@chef /workflow Deploy PR #123` |
-| `@chef /workflows`                 | List available workflows | `@chef /workflows`               |
-| `@chef /tools`                     | List available MCP tools | `@chef /tools`                   |
+```
+You: @chef Check my authentication code for security issues
 
-## Command Palette
+Chef: I found 3 issues:
+🔴 Critical: Password stored in plain text (line 45)
+🟡 Warning: Missing rate limiting on login endpoint
+🟢 Suggestion: Consider adding CSRF protection
+
+[Links to specific lines with fix suggestions]
+```
+
+---
+
+## 🔧 Commands
+
+### Chat Commands
+
+| Command                  | What it does                 |
+| ------------------------ | ---------------------------- |
+| `@chef <task>`           | Execute any development task |
+| `@chef /status`          | Check current task progress  |
+| `@chef /workflow <name>` | Run a specific workflow      |
+| `@chef /tools`           | See available integrations   |
+
+### Command Palette
 
 Press `Ctrl+Shift+P` and search for:
 
-| Command                             | Description                  |
-| ----------------------------------- | ---------------------------- |
-| `code/chef: Submit Task`            | Submit via input box         |
-| `code/chef: Check Task Status`      | Check task status            |
-| `code/chef: Show Pending Approvals` | Open Linear approval hub     |
-| `code/chef: Health Check`           | Test orchestrator connection |
-| `code/chef: Open LangSmith Traces`  | View LLM traces              |
-| `code/chef: Open Grafana Metrics`   | View dashboards              |
-| `code/chef: Open Settings`          | Configure extension          |
-| `code/chef: Clear Cache`            | Clear session cache          |
+| Command                   | Description          |
+| ------------------------- | -------------------- |
+| `code/chef: Submit Task`  | Submit via input box |
+| `code/chef: Health Check` | Test connection      |
+| `code/chef: Configure`    | Open settings        |
+| `code/chef: Clear Cache`  | Reset session        |
 
-## Configuration
+---
 
-### Connection & Authentication
+## ⚙️ Settings
 
-| Setting                    | Default                               | Description                |
-| -------------------------- | ------------------------------------- | -------------------------- |
-| `codechef.orchestratorUrl` | `https://codechef.appsmithery.co/api` | Orchestrator endpoint      |
-| `codechef.apiKey`          | `""`                                  | API key for authentication |
+### Essential Settings
+
+| Setting                    | Description                          |
+| -------------------------- | ------------------------------------ |
+| `codechef.orchestratorUrl` | Server URL (default: hosted service) |
+| `codechef.apiKey`          | Your API key                         |
 
 ### Workflow Settings
 
-| Setting                             | Default | Description                                                                     |
-| ----------------------------------- | ------- | ------------------------------------------------------------------------------- |
-| `codechef.defaultWorkflow`          | `auto`  | Default workflow (auto/feature/pr-deployment/hotfix/infrastructure/docs-update) |
-| `codechef.workflowAutoExecute`      | `true`  | Auto-execute without confirmation                                               |
-| `codechef.workflowConfirmThreshold` | `0.7`   | Confidence threshold for confirmation (0.0-1.0)                                 |
-| `codechef.showWorkflowPreview`      | `true`  | Show preview before execution                                                   |
+| Setting                        | Default | Description                  |
+| ------------------------------ | ------- | ---------------------------- |
+| `codechef.defaultWorkflow`     | `auto`  | Automatic workflow selection |
+| `codechef.showWorkflowPreview` | `true`  | Preview before execution     |
 
-### Token Optimization
+### Streaming (Real-time Responses)
 
-| Setting                        | Default       | Description                                                    |
-| ------------------------------ | ------------- | -------------------------------------------------------------- |
-| `codechef.environment`         | `production`  | Model selection (production/development)                       |
-| `codechef.toolLoadingStrategy` | `progressive` | Tool loading strategy (minimal/progressive/agent_profile/full) |
-| `codechef.maxToolsPerRequest`  | `30`          | Max tools exposed per request                                  |
-| `codechef.enableContext7Cache` | `true`        | Cache library IDs (90% savings)                                |
+| Setting                 | Default | Description                      |
+| ----------------------- | ------- | -------------------------------- |
+| `codechef.useStreaming` | `true`  | Enable real-time token streaming |
 
-### Context & RAG
+---
 
-| Setting                     | Default         | Description                    |
-| --------------------------- | --------------- | ------------------------------ |
-| `codechef.maxContextTokens` | `8000`          | Token budget for agent context |
-| `codechef.ragEnabled`       | `true`          | Include RAG context in prompts |
-| `codechef.ragMaxResults`    | `5`             | Max semantic search results    |
-| `codechef.ragCollection`    | `code_patterns` | Primary RAG collection         |
+## 🔌 Integrations
 
-### Cost Controls
+code/chef connects to your existing tools:
 
-| Setting                       | Default | Description                       |
-| ----------------------------- | ------- | --------------------------------- |
-| `codechef.dailyTokenBudget`   | `0`     | Daily limit (0 = unlimited)       |
-| `codechef.showTokenUsage`     | `true`  | Show token count after requests   |
-| `codechef.costAlertThreshold` | `0.10`  | Warning threshold per request ($) |
+- **GitHub** — PRs, issues, actions
+- **Linear** — Project management, approvals
+- **Docker** — Container management
+- **Databases** — PostgreSQL, Redis
 
-### Linear Integration
+---
 
-| Setting                         | Default        | Description                         |
-| ------------------------------- | -------------- | ----------------------------------- |
-| `codechef.linearHubIssue`       | `DEV-68`       | Approval hub issue ID               |
-| `codechef.linearWorkspaceSlug`  | `dev-ops`      | Linear workspace slug               |
-| `codechef.linearTeamId`         | `f5b610be-...` | Linear team ID for project creation |
-| `codechef.autoApproveThreshold` | `low`          | Auto-approve risk level             |
-
-### Observability
-
-| Setting                 | Default                           | Description          |
-| ----------------------- | --------------------------------- | -------------------- |
-| `codechef.langsmithUrl` | LangSmith project URL             | LangSmith traces URL |
-| `codechef.grafanaUrl`   | `https://appsmithery.grafana.net` | Grafana metrics URL  |
-
-## Troubleshooting
+## ❓ Troubleshooting
 
 ### Cannot connect to orchestrator
 
 1. Check URL: `Ctrl+Shift+P` → "code/chef: Configure"
-2. Verify API key is set in settings
-3. Test health: `curl https://codechef.appsmithery.co/api/health`
+2. Verify API key is set
+3. Run health check: `Ctrl+Shift+P` → "code/chef: Health Check"
 
-### 401 Unauthorized
-
-1. Get API key from administrator
-2. Set in VS Code settings: `codechef.apiKey`
-
-### No tools appearing
+### No response from @chef
 
 1. Clear cache: `Ctrl+Shift+P` → "code/chef: Clear Cache"
 2. Restart VS Code
+3. Check Output panel (`Ctrl+Shift+U`) for errors
 
-## Development
+---
 
-```bash
-# Build
-npm run compile
+## 🏢 Self-Hosting
 
-# Watch mode
-npm run watch
+Want full control? Run your own code/chef instance. See the [main repository](https://github.com/Appsmithery/code-chef) for setup instructions.
 
-# Package VSIX
-npx vsce package
+---
 
-# Lint
-npm run lint
-```
+## 📄 License
 
-## License
+MIT License — see [LICENSE](LICENSE)
 
-MIT License - see [LICENSE](LICENSE)
+---
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/Appsmithery/code-chef)
+- [Quick Start Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/QUICKSTART.md)
+- [Linear Project](https://linear.app/dev-ops/project/codechef-78b3b839d36b)
 
 ## Links
 

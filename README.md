@@ -1,203 +1,212 @@
-# code/chef - AI DevOps Team
+# code/chef — Your AI Development Team
 
 [![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
 [![LangGraph](https://img.shields.io/badge/LangGraph-Orchestrator-purple?logo=langchain)](https://www.langchain.com/langgraph)
-[![MCP Tools](https://img.shields.io/badge/MCP_Tools-150+-green)](https://github.com/Appsmithery/code-chef)
+[![OpenRouter](https://img.shields.io/badge/OpenRouter-Multi--Model-orange)](https://openrouter.ai)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
-> LangGraph-powered multi-agent DevOps automation with 150+ MCP tools
+> **Talk to your code. Ship faster.**
 
-code/chef is a unified AI DevOps automation platform built on a single orchestrator container using LangGraph multi-agent workflows. The VS Code extension brings this directly into Copilot Chat via the `@chef` participant.
+code/chef is an AI-powered development team that lives in VS Code. Just type `@chef` in Copilot Chat and describe what you want—feature implementation, code reviews, infrastructure setup, CI/CD pipelines, or documentation. The AI team handles the rest.
 
-## Architecture
+---
 
-**Flow:** User → `@chef` → Orchestrator → Specialized Agents → RAG / Context / MCP Tools → Artifacts → User
+## ✨ What Can code/chef Do?
 
-| Component             | Description                                                   |
-| --------------------- | ------------------------------------------------------------- |
-| **Chat Participant**  | `@chef` chat participant in Copilot Chat                      |
-| **Orchestrator API**  | Supervisor (Head Chef) + Workflow Router                      |
-| **Agent Nodes**       | feature-dev, code-review, infrastructure, cicd, documentation |
-| **MCP Tools**         | 150+ tools (Linear, GitHub, Docker, Pylance...)               |
-| **RAG Context**       | Semantic search via Qdrant for code patterns & library docs   |
-| **State Persistence** | PostgreSQL for workflow state, checkpoints, HITL approvals    |
-| **StateGraph**        | LangGraph orchestration with interrupt/resume for HITL        |
+### 🚀 Build Features
 
 ```
-code-chef/
-├── agent_orchestrator/       # LangGraph StateGraph with all agent nodes
-│   ├── agents/               # Specialized agent implementations
-│   │   ├── supervisor/       # Task routing & orchestration
-│   │   ├── feature_dev/      # Feature implementation
-│   │   ├── code_review/      # Quality analysis & security
-│   │   ├── infrastructure/   # IaC (Terraform, Docker)
-│   │   ├── cicd/             # Pipeline automation
-│   │   └── documentation/    # Docs & architecture diagrams
-│   ├── workflows/            # Declarative workflow templates
-│   └── graph.py              # LangGraph StateGraph definition
-├── shared/lib/               # Shared utilities
-│   ├── mcp_client.py         # Direct MCP tool invocation
-│   ├── progressive_mcp_loader.py  # Token-efficient tool loading
-│   └── gradient_client.py    # DigitalOcean Gradient AI
-├── extensions/vscode-codechef/  # VS Code extension
-├── config/                   # All configuration
-│   ├── agents/models.yaml    # LLM model configuration
-│   ├── routing/              # Task routing rules
-│   └── env/                  # Environment templates
-└── deploy/                   # Docker Compose stack
+@chef Add user authentication with JWT tokens and password reset
 ```
 
-## Key Features
+The Feature Dev agent writes production-ready code with tests.
 
-- **`@chef` Chat Participant** - Natural language task submission via Copilot Chat
-- **Smart Workflow Router** - Heuristic + LLM-based workflow selection with confidence scoring
-- **LangGraph StateGraph** - Multi-agent orchestration with PostgreSQL checkpointing
-- **150+ MCP Tools** - Progressive disclosure reduces tokens by 80-90%
-- **HITL Approvals** - Linear integration for high-risk operations
+### 🔍 Review Code
 
-## Resource Metrics
+```
+@chef Review this PR for security vulnerabilities
+```
 
-Consolidated architecture delivers significant efficiency gains:
+The Code Review agent analyzes for security issues, performance, and best practices.
 
-| Metric | Before (Microservices) | After (LangGraph) |
-|--------|------------------------|-------------------|
-| Memory | 900MB RAM | 154MB RAM |
-| CPU | 100% idle | 0.2% idle |
-| Containers | 6+ agents | 1 orchestrator |
+### 🏗️ Set Up Infrastructure
 
-## Quick Start
+```
+@chef Create a Docker Compose setup for my Node.js app with PostgreSQL
+```
 
-### VS Code Extension
+The Infrastructure agent generates Dockerfiles, compose files, and Terraform configs.
 
-1. Install from [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef) or [GitHub Releases](https://github.com/Appsmithery/code-chef/releases)
-2. Configure: `Ctrl+Shift+P` → "code/chef: Configure"
-3. Use: `@chef Add JWT authentication to my Express API`
+### ⚡ Automate Pipelines
 
-### Self-Hosted Orchestrator
+```
+@chef Create a GitHub Actions workflow for testing and deployment
+```
+
+The CI/CD agent builds your pipelines across GitHub Actions, GitLab CI, Jenkins, and more.
+
+### 📚 Write Documentation
+
+```
+@chef Document the API endpoints in this codebase
+```
+
+The Documentation agent creates README files, API docs, and architecture diagrams.
+
+---
+
+## 🎯 Why code/chef?
+
+| Traditional Workflow          | With code/chef               |
+| ----------------------------- | ---------------------------- |
+| Switch between 5+ tools       | One chat interface           |
+| Copy-paste context everywhere | AI understands your codebase |
+| Wait for code reviews         | Instant AI analysis          |
+| Manual documentation          | Auto-generated docs          |
+| Complex CI/CD setup           | Plain English commands       |
+
+### 🧠 Smart Model Selection
+
+code/chef automatically picks the right AI model for each task:
+
+| Task            | Model             | Why                        |
+| --------------- | ----------------- | -------------------------- |
+| Code Generation | Claude 3.5 Sonnet | Best-in-class coding       |
+| Code Review     | GPT-4o            | Strong reasoning           |
+| Infrastructure  | Llama 3.1 70B     | Cost-effective for configs |
+| Documentation   | Claude 3.5 Sonnet | Excellent writing          |
+
+---
+
+## 🚀 Get Started in 2 Minutes
+
+### Install the VS Code Extension
+
+1. **Download** from [GitHub Releases](https://github.com/Appsmithery/code-chef/releases)
+2. **Install**: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
+3. **Configure**: `Ctrl+Shift+P` → "code/chef: Configure"
+4. **Use**: Open Copilot Chat and type `@chef <your request>`
+
+That's it! See [QUICKSTART.md](support/docs/QUICKSTART.md) for self-hosting options.
+
+---
+
+## 💬 Example Conversations
+
+### Feature Development
+
+```
+You: @chef Build a REST API for managing blog posts with CRUD operations
+
+Chef: I'll create a complete blog API with:
+- Express routes for posts (GET, POST, PUT, DELETE)
+- PostgreSQL database schema
+- Input validation
+- Error handling
+- Unit tests
+
+[Creates files, runs tests, opens PR]
+```
+
+### Code Review
+
+```
+You: @chef Check my authentication code for security issues
+
+Chef: I found 3 issues:
+🔴 Critical: Password stored in plain text (line 45)
+🟡 Warning: Missing rate limiting on login endpoint
+🟢 Suggestion: Consider adding CSRF protection
+
+[Links to specific lines with fix suggestions]
+```
+
+### Infrastructure Setup
+
+```
+You: @chef Set up Kubernetes deployment for my microservices
+
+Chef: I'll create:
+- Deployment manifests for each service
+- ConfigMaps and Secrets
+- Horizontal Pod Autoscaler
+- Ingress configuration
+
+[Generates YAML files with best practices]
+```
+
+---
+
+## 🔧 Slash Commands
+
+| Command                  | What it does                 |
+| ------------------------ | ---------------------------- |
+| `@chef <task>`           | Execute any development task |
+| `@chef /status`          | Check current task progress  |
+| `@chef /workflow <name>` | Run a specific workflow      |
+| `@chef /tools`           | See available integrations   |
+
+---
+
+## 🔌 Integrations
+
+code/chef connects to your existing tools:
+
+- **GitHub** — PRs, issues, actions
+- **Linear** — Project management, approvals
+- **Docker** — Container management
+- **Databases** — PostgreSQL, Redis
+- **Cloud** — DigitalOcean, AWS (coming)
+
+---
+
+## 🏢 Self-Hosting
+
+Want full control? Run your own code/chef instance.
 
 ```bash
-# Clone and configure
 git clone https://github.com/Appsmithery/code-chef.git
-cd code-chef
-cp config/env/.env.template config/env/.env
-# Edit .env with your API keys (or configure via GitHub Secrets for CI/CD)
-
-# Start services
+cd code-chef && cp config/env/.env.template config/env/.env
+# Add your API keys to .env
 cd deploy && docker-compose up -d
-
-# Verify health
-curl http://localhost:8001/health
 ```
 
-### Service Ports
+See [QUICKSTART.md](support/docs/QUICKSTART.md) for detailed setup.
 
-| Service             | Port | Purpose                  |
-| ------------------- | ---- | ------------------------ |
-| Orchestrator        | 8001 | LangGraph agent nodes    |
-| RAG Context         | 8007 | Semantic code search     |
-| State Persistence   | 8008 | Workflow state           |
-| PostgreSQL          | 5432 | Relational database      |
-| Redis               | 6379 | Event bus & caching      |
+---
 
-## Usage
+## 📖 Documentation
 
-### Chat Participant Commands
+| Guide                                        | Description                 |
+| -------------------------------------------- | --------------------------- |
+| [Quick Start](support/docs/QUICKSTART.md)    | Installation & first steps  |
+| [Architecture](support/docs/ARCHITECTURE.md) | How it works under the hood |
+| [Deployment](support/docs/DEPLOYMENT.md)     | Production setup            |
 
-| Command                            | Description              | Example                          |
-| ---------------------------------- | ------------------------ | -------------------------------- |
-| `@chef <task>`                     | Submit development task  | `@chef Add authentication`       |
-| `@chef /status [id]`               | Check task status        | `@chef /status abc123`           |
-| `@chef /workflow [name] <task>`    | Execute workflow         | `@chef /workflow Deploy PR #123` |
-| `@chef /tools`                     | List available MCP tools | `@chef /tools`                   |
+---
 
-### API Usage
-
-```bash
-# Submit a task
-curl -X POST http://localhost:8001/orchestrate \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: $ORCHESTRATOR_API_KEY" \
-  -d '{"description": "Add user authentication with JWT", "priority": "high"}'
-```
-
-## LLM Configuration
-
-**Single Source of Truth:** `config/agents/models.yaml`
-
-```yaml
-agents:
-  orchestrator:
-    model: llama3.3-70b-instruct
-    cost_per_1m_tokens: 0.60
-  feature_dev:
-    model: codellama-13b-instruct
-    cost_per_1m_tokens: 0.20
-```
-
-Hot-reload model changes without rebuild:
-```bash
-nano config/agents/models.yaml
-docker compose restart orchestrator
-```
-
-## Observability
-
-- **LLM Traces**: [LangSmith](https://smith.langchain.com) - prompts, completions, tokens, latencies
-- **HTTP Metrics**: [Grafana Cloud](https://appsmithery.grafana.net) via Alloy
-- **Workflow State**: PostgreSQL with LangGraph checkpointing
-- **Vector Operations**: Qdrant Cloud
-
-## Documentation
-
-| Topic | Location |
-|-------|----------|
-| Architecture | [support/docs/ARCHITECTURE.md](support/docs/ARCHITECTURE.md) |
-| Deployment | [support/docs/DEPLOYMENT.md](support/docs/DEPLOYMENT.md) |
-| LangGraph Design | [support/docs/LANGGRAPH_ARCHITECTURE.md](support/docs/LANGGRAPH_ARCHITECTURE.md) |
-| API Reference | [support/docs/AGENT_ENDPOINTS.md](support/docs/AGENT_ENDPOINTS.md) |
-| VS Code Extension | [extensions/vscode-codechef/README.md](extensions/vscode-codechef/README.md) |
-
-## Development
-
-```bash
-# Start stack
-cd deploy && docker-compose up -d
-
-# View logs
-docker-compose logs -f orchestrator
-
-# Rebuild after code changes
-docker-compose up -d --build orchestrator
-
-# Run tests
-pytest support/tests -v
-```
-
-### Adding a New Agent Node
-
-1. Create `agent_orchestrator/agents/<name>/` with `__init__.py`, `system.prompt.md`
-2. Inherit from `_shared.base_agent.BaseAgent`
-3. Wire into `graph.py` StateGraph with conditional edges
-4. Add model config to `config/agents/models.yaml`
-5. Update tool mapping in `config/mcp-agent-tool-mapping.yaml`
-
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create feature branch: `git checkout -b feature/amazing-feature`
 3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
+4. Push: `git push origin feature/amazing-feature`
 5. Open Pull Request
 
-## License
+---
 
-MIT License - see [LICENSE](LICENSE)
+## 📄 License
 
-## Links
+MIT License — see [LICENSE](LICENSE)
+
+---
+
+## 🔗 Links
 
 - [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
 - [GitHub Repository](https://github.com/Appsmithery/code-chef)
 - [Linear Project](https://linear.app/dev-ops/project/codechef-78b3b839d36b)
+
 - [LangSmith Traces](https://smith.langchain.com)
 - [Grafana Metrics](https://appsmithery.grafana.net)
 
