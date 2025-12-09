@@ -45,13 +45,12 @@ support/docs/
 │   ├── rag-semantic-search.md
 │   ├── secrets-management.md
 │   └── secrets-rotation.md
-├── reference/                    # Technical references
-│   ├── mcp-integration.md
-│   ├── langgraph-quick-ref.md
-│   ├── event-protocol.md
-│   ├── notification-system.md
-│   └── shared-lib-notifications.md
-└── legacy-archive/               # Archived/deprecated docs
+└── reference/                    # Technical references
+    ├── mcp-integration.md
+    ├── langgraph-quick-ref.md
+    ├── event-protocol.md
+    ├── notification-system.md
+    └── shared-lib-notifications.md
 ```
 
 ---
@@ -154,7 +153,6 @@ LangGraph workflows with PostgreSQL checkpointing
 | ✅ **Active**   | integrations/              | Third-party service integrations      |
 | ✅ **Active**   | operations/                | Operational runbooks and procedures   |
 | ✅ **Active**   | reference/                 | Technical references and API docs     |
-| 📦 **Archived** | legacy-archive/            | Deprecated/superseded documentation   |
 
 ---
 
@@ -165,7 +163,7 @@ LangGraph workflows with PostgreSQL checkpointing
 - Restructured into taxonomy-based folders (getting-started, architecture-and-platform, integrations, operations, reference)
 - Renamed all docs to kebab-case for consistency
 - Consolidated redundant guides into focused documents
-- Moved legacy content to legacy-archive/ with index
+- Removed legacy-archive/ folder (deprecated content cleaned up)
 - Updated README with clear navigation paths for #codebase compatibility
 - **Net result**: Improved discoverability and maintainability
 
