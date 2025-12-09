@@ -146,13 +146,13 @@ LangGraph workflows with PostgreSQL checkpointing
 
 ## Document Status
 
-| Status          | Folder                     | Description                           |
-| --------------- | -------------------------- | ------------------------------------- |
-| ✅ **Active**   | getting-started/           | Essential setup and deployment guides |
-| ✅ **Active**   | architecture-and-platform/ | Core system architecture and design   |
-| ✅ **Active**   | integrations/              | Third-party service integrations      |
-| ✅ **Active**   | operations/                | Operational runbooks and procedures   |
-| ✅ **Active**   | reference/                 | Technical references and API docs     |
+| Status        | Folder                     | Description                           |
+| ------------- | -------------------------- | ------------------------------------- |
+| ✅ **Active** | getting-started/           | Essential setup and deployment guides |
+| ✅ **Active** | architecture-and-platform/ | Core system architecture and design   |
+| ✅ **Active** | integrations/              | Third-party service integrations      |
+| ✅ **Active** | operations/                | Operational runbooks and procedures   |
+| ✅ **Active** | reference/                 | Technical references and API docs     |
 
 ---
 
