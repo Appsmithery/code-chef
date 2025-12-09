@@ -1,4 +1,5 @@
 import Layout from "@/components/Layout";
+import MermaidDiagram from "@/components/MermaidDiagram";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -25,6 +26,67 @@ const iconMap: Record<string, React.ReactNode> = {
   cicd: <GitPullRequest className="h-6 w-6" />,
   documentation: <Activity className="h-6 w-6" />,
 };
+
+const architectureDiagram = `flowchart TB
+    subgraph VSCode["🖥️ VS Code"]
+        Chat["@chef Add JWT auth to my Express API"]
+    end
+
+    subgraph Orchestrator["🧑‍🍳 code/chef Orchestrator"]
+        Supervisor["Supervisor\\n(Head Chef)"]
+        
+        subgraph Agents["Specialized Agents"]
+            FeatureDev["🚀 Feature Dev\\nClaude 3.5"]
+            CodeReview["🔍 Code Review\\nGPT-4o"]
+            CICD["⚡ CI/CD\\nLlama 3.1"]
+            Infra["🏗️ Infrastructure\\nLlama 3.1"]
+            Docs["📚 Documentation\\nClaude 3.5"]
+        end
+        
+        Tools["🔧 150+ MCP Tools"]
+    end
+
+    subgraph Integrations["External Services"]
+        GitHub["🐙 GitHub"]
+        Linear["📋 Linear"]
+        Docker["🐳 Docker"]
+        Metrics["📊 Metrics"]
+    end
+
+    Chat --> Supervisor
+    Supervisor --> FeatureDev
+    Supervisor --> CodeReview
+    Supervisor --> CICD
+    Supervisor --> Infra
+    Supervisor --> Docs
+    
+    FeatureDev --> Tools
+    CodeReview --> Tools
+    CICD --> Tools
+    Infra --> Tools
+    Docs --> Tools
+    
+    Tools --> GitHub
+    Tools --> Linear
+    Tools --> Docker
+    Tools --> Metrics
+
+    style VSCode fill:transparent,stroke:#4c5270
+    style Orchestrator fill:transparent,stroke:#4c5270
+    style Agents fill:transparent,stroke:#4c5270
+    style Integrations fill:transparent,stroke:#4c5270
+    style Chat fill:transparent,stroke:#bcece0
+    style Supervisor fill:transparent,stroke:#bcece0
+    style FeatureDev fill:transparent,stroke:#bcece0
+    style CodeReview fill:transparent,stroke:#bcece0
+    style CICD fill:transparent,stroke:#bcece0
+    style Infra fill:transparent,stroke:#bcece0
+    style Docs fill:transparent,stroke:#bcece0
+    style Tools fill:transparent,stroke:#bcece0
+    style GitHub fill:transparent,stroke:#f4b9b8
+    style Linear fill:transparent,stroke:#f4b9b8
+    style Docker fill:transparent,stroke:#f4b9b8
+    style Metrics fill:transparent,stroke:#f4b9b8`;
 
 export default function Agents() {
   return (
@@ -169,71 +231,7 @@ export default function Agents() {
               <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-2xl blur opacity-10"></div>
               <div className="relative bg-transparent border border-border rounded-xl overflow-hidden shadow-lg">
                 <div className="p-8">
-                  <div
-                    className="mermaid bg-transparent"
-                    style={{ fontSize: "14px" }}
-                  >
-                    {`flowchart TB
-    subgraph VSCode["🖥️ VS Code"]
-        Chat["@chef Add JWT auth to my Express API"]
-    end
-
-    subgraph Orchestrator["🧑‍🍳 code/chef Orchestrator"]
-        Supervisor["Supervisor\\n(Head Chef)"]
-        
-        subgraph Agents["Specialized Agents"]
-            FeatureDev["🚀 Feature Dev\\nClaude 3.5"]
-            CodeReview["🔍 Code Review\\nGPT-4o"]
-            CICD["⚡ CI/CD\\nLlama 3.1"]
-            Infra["🏗️ Infrastructure\\nLlama 3.1"]
-            Docs["📚 Documentation\\nClaude 3.5"]
-        end
-        
-        Tools["🔧 150+ MCP Tools"]
-    end
-
-    subgraph Integrations["External Services"]
-        GitHub["🐙 GitHub"]
-        Linear["📋 Linear"]
-        Docker["🐳 Docker"]
-        Metrics["📊 Metrics"]
-    end
-
-    Chat --> Supervisor
-    Supervisor --> FeatureDev
-    Supervisor --> CodeReview
-    Supervisor --> CICD
-    Supervisor --> Infra
-    Supervisor --> Docs
-    
-    FeatureDev --> Tools
-    CodeReview --> Tools
-    CICD --> Tools
-    Infra --> Tools
-    Docs --> Tools
-    
-    Tools --> GitHub
-    Tools --> Linear
-    Tools --> Docker
-    Tools --> Metrics
-
-    style VSCode fill:transparent,stroke:#4c5270
-    style Orchestrator fill:transparent,stroke:#4c5270
-    style Agents fill:transparent,stroke:#4c5270
-    style Integrations fill:transparent,stroke:#4c5270
-    style Chat fill:transparent,stroke:#bcece0
-    style Supervisor fill:transparent,stroke:#bcece0
-    style FeatureDev fill:transparent,stroke:#bcece0
-    style CodeReview fill:transparent,stroke:#bcece0
-    style CICD fill:transparent,stroke:#bcece0
-    style Infra fill:transparent,stroke:#bcece0
-    style Docs fill:transparent,stroke:#bcece0
-    style Tools fill:transparent,stroke:#bcece0
-    style GitHub fill:transparent,stroke:#f4b9b8
-    style Linear fill:transparent,stroke:#f4b9b8
-    style Docker fill:transparent,stroke:#f4b9b8
-    style Metrics fill:transparent,stroke:#f4b9b8`}
-                  </div>
+                  <MermaidDiagram chart={architectureDiagram} />
                 </div>
               </div>
             </div>
