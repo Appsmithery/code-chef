@@ -36,11 +36,11 @@ const architectureDiagram = `flowchart TB
         Supervisor["Supervisor\\n(Head Chef)"]
         
         subgraph Agents["Specialized Agents"]
-            FeatureDev["🚀 Feature Dev\\nClaude 3.5"]
-            CodeReview["🔍 Code Review\\nGPT-4o"]
-            CICD["⚡ CI/CD\\nLlama 3.1"]
-            Infra["🏗️ Infrastructure\\nLlama 3.1"]
-            Docs["📚 Documentation\\nClaude 3.5"]
+            FeatureDev["🚀 Feature Dev"]
+            CodeReview["🔍 Code Review"]
+            CICD["⚡ CI/CD"]
+            Infra["🏗️ Infrastructure"]
+            Docs["📚 Documentation"]
         end
         
         Tools["🔧 150+ MCP Tools"]
