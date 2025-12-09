@@ -352,7 +352,7 @@ export default function Home() {
               <Card className="h-full bg-card border-border hover:border-secondary transition-all duration-300 hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-lg font-medium">
-                    LangSmith
+                    Tracing
                   </CardTitle>
                   <Badge className="bg-secondary/20 text-secondary hover:bg-secondary/30 border-none">
                     Connected
@@ -360,7 +360,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-                    Tracing
+                    LangSmith
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     LLM tracing and debugging dashboard
@@ -378,7 +378,7 @@ export default function Home() {
               <Card className="h-full bg-card border-border hover:border-primary transition-all duration-300 hover:shadow-md">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-lg font-medium">
-                    Grafana Cloud
+                    Monitoring
                   </CardTitle>
                   <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">
                     Metrics
@@ -386,7 +386,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-muted-foreground group-hover:text-foreground transition-colors">
-                    Monitoring
+                    Grafana Cloud
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     Prometheus metrics and dashboards
