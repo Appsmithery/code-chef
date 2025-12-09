@@ -46,7 +46,7 @@ export default function Agents() {
                   AI Agent Team
                 </Badge>
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
-                  Meet the <span className="text-accent">Team</span>
+                  Le <span className="text-accent">Brigade</span>
                 </h1>
                 <p className="text-xl md:text-2xl text-muted-foreground max-w-[600px] leading-relaxed">
                   Six specialized AI agents working together to automate your
