@@ -171,7 +171,7 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Google Sans Code', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Fira Code', 'Google Sans Code', 'Consolas', 'Monaco', monospace;
   }
 
   h1,
@@ -181,7 +181,7 @@
   h5,
   h6 {
     @apply font-bold tracking-tight;
-    font-family: 'Google Sans Code', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Fira Code', 'Google Sans Code', 'Consolas', 'Monaco', monospace;
   }
 
   /* Custom Scrollbar */
