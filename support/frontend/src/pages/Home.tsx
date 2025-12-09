@@ -32,11 +32,6 @@ export default function Home() {
         <div className="container relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
-              <div className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-medium text-accent">
-                <span className="flex h-2 w-2 rounded-full bg-primary mr-2 animate-pulse"></span>
-                System Operational
-              </div>
-
               <div className="space-y-4">
                 <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight leading-tight">
                   <span className="text-accent">code/chef</span>

@@ -34,18 +34,24 @@ jobs:
               working-directory: support/frontend
               run: npm run build
 
-            - name: Deploy to DigitalOcean
+            - name: Copy built files to server
+              run: |
+                  # Create SSH key file
+                  echo "${{ secrets.DROPLET_SSH_KEY }}" > /tmp/deploy_key
+                  chmod 600 /tmp/deploy_key
+                  # Sync dist folder to server
+                  rsync -avz --delete -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no" \
+                    support/frontend/dist/ ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/opt/Dev-Tools/support/frontend/dist/
+                  # Cleanup
+                  rm /tmp/deploy_key
+
+            - name: Restart Caddy
               uses: appleboy/ssh-action@v1.0.0
               with:
                   host: ${{ secrets.DROPLET_HOST }}
                   username: ${{ secrets.DROPLET_USER }}
                   key: ${{ secrets.DROPLET_SSH_KEY }}
                   script: |
-                      cd /opt/Dev-Tools
-                      git pull origin main
-                      cd support/frontend
-                      npm install
-                      npm run build
                       cd /opt/Dev-Tools/deploy
                       docker compose restart caddy
                       echo "✅ Frontend deployed successfully"
