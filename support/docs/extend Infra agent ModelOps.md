@@ -504,6 +504,11 @@ HUGGINGFACE_HUB_TOKEN=hf_...
 HUGGINGFACE_JOBS_ENABLED=true
 MODELOPS_DEFAULT_BASE_MODEL=Qwen/Qwen2.5-Coder-7B
 MODELOPS_HUB_ORG=appsmithery
+
+# ModelOps - HuggingFace Space (Production)
+MODELOPS_SPACE_URL=https://appsmithery-code-chef-modelops-trainer.hf.space
+MODELOPS_SPACE_TOKEN=hf_...  # HF token with write permissions
+MODELOPS_USE_SPACE=true  # Use Space API instead of local AutoTrain
 ```
 
 ### 8. User-Facing Commands (VS Code Extension)
@@ -586,6 +591,12 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 - [ ] Add HuggingFace tokens to `config/env/.env.template`
 - [ ] Unit tests for registry and training
 - [ ] Test local training on development machine (optional)
+
+**HuggingFace Space**: Production training service deployed at `deploy/huggingface-spaces/modelops-trainer/`
+
+- REST API for job submission and monitoring
+- Gradio UI for manual testing
+- See `DEPLOYMENT.md` for setup instructions
 
 **Estimated effort**: 2-3 days (reduced from 4-5 days - AutoTrain simplifies significantly)
 
