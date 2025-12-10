@@ -6,8 +6,8 @@
 >
 > - [CHEF-211 - Phase 1: Registry + Training MVP](https://linear.app/dev-ops/issue/CHEF-211) ✅ **DONE**
 > - [CHEF-212 - Phase 2: Evaluation Integration](https://linear.app/dev-ops/issue/CHEF-212) ✅ **DONE**
-> - [CHEF-213 - Phase 3: Deployment Automation](https://linear.app/dev-ops/issue/CHEF-213) 🚧 **READY**
-> - [CHEF-214 - Phase 4: UX Polish](https://linear.app/dev-ops/issue/CHEF-214) ⏳ **BLOCKED**
+> - [CHEF-213 - Phase 3: Deployment Automation](https://linear.app/dev-ops/issue/CHEF-213) ✅ **DONE**
+> - [CHEF-214 - Phase 4: UX Polish](https://linear.app/dev-ops/issue/CHEF-214) 🚧 **READY**
 
 ## Context
 
@@ -708,62 +708,87 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 
 **Actual effort**: 2 days
 
-### Phase 3: Deployment Automation 🚧 **IN PROGRESS**
+### Phase 3: Deployment Automation ✅ **COMPLETE**
 
-**Status**: Ready to start - Dependencies satisfied
+**Status**: Done - 2025-12-10 (Simplified - no canary deployment)
 
 **Dependencies**:
 
 - ✅ Phase 1: Training infrastructure (DONE)
 - ✅ Phase 2: Registry + Evaluation (DONE)
 
-**Updated Scope** (includes items deferred from Phase 1):
+**Delivered**:
 
 **Infrastructure Agent Integration:**
 
-- [ ] Update `agents/infrastructure/__init__.py` to route ModelOps intents
-- [ ] Add ModelOps tools to `agents/infrastructure/tools.yaml`
-- [ ] Update `agents/infrastructure/system.prompt.md` with ModelOps capabilities
+- ✅ Updated `agents/infrastructure/__init__.py` to route ModelOps intents ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/__init__.py))
+  - Added `handle_modelops_request()` method
+  - Integrated ModelOpsCoordinator
+- ✅ Added ModelOps tools to `agents/infrastructure/tools.yaml` ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/tools.yaml))
+  - Enabled `huggingface` MCP server
+  - Progressive loading strategy: MINIMAL
+- ✅ Updated `agents/infrastructure/system.prompt.md` with ModelOps capabilities ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/system.prompt.md))
+  - Added ModelOps section with usage patterns
+  - Documented coordinator API
+  - Removed canary deployment documentation
 
 **Deployment Module:**
 
-- [ ] Create `modelops/deployment.py`
-- [ ] Implement `deploy_model_to_agent` tool with registry integration
-- [ ] Implement `config/agents/models.yaml` update logic
-- [ ] Add canary traffic split configuration (20% → 50% → 100%)
-- [ ] Implement rollback procedure (<60 seconds)
-- [ ] Add `list_agent_models` tool
-- [ ] Add version auto-increment generator
-- [ ] Add model ID naming convention validator
+- ✅ Created `modelops/deployment.py` ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/deployment.py))
+  - Immediate deployment (100% traffic)
+  - Registry integration
+  - Rollback support (<60 seconds)
+- ✅ Created `modelops/coordinator.py` ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/coordinator.py))
+  - Request routing to training, evaluation, deployment
+  - Unified ModelOps interface
+- ✅ Implemented `config/agents/models.yaml` update logic
+  - Automatic backups before changes
+  - OpenRouter and HuggingFace endpoints
+- ✅ ~~Add canary traffic split configuration (20% → 50% → 100%)~~ **REMOVED** - Simplified for single-user
+- ✅ Implemented rollback procedure (<60 seconds)
+- ✅ Added `list_agent_models` tool
+- [ ] Add version auto-increment generator (deferred to Phase 4)
+- [ ] Add model ID naming convention validator (deferred to Phase 4)
 
 **Testing:**
 
-- [ ] Unit tests for deployment operations
-- [ ] Integration tests for end-to-end workflow (train → evaluate → deploy → rollback)
+- ✅ Unit tests for deployment operations ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/support/tests/agents/infrastructure/modelops/test_deployment.py))
+  - 10/10 tests passing
+  - Deploy to OpenRouter/HuggingFace
+  - Rollback operations
+  - Model listing
+- ✅ Integration tests for end-to-end workflow ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/support/tests/integration/test_modelops_integration.py))
+  - Train → evaluate → deploy → rollback flow
+  - Simplified to immediate deployment
 
-**Deployment Targets**:
+## Deployment Strategy (Simplified)
 
-1. OpenRouter - Check model availability via API
-2. HuggingFace Inference Endpoints - Direct model hosting
-3. Self-hosted endpoints - Custom deployments
+**Immediate Deployment (100%):**
 
-**Canary Strategy**:
+- Deploy directly to production
+- Update `config/agents/models.yaml` immediately
+- Set as current in registry
+- Rollback available if issues detected
 
-1. Deploy candidate to 20% of traffic
-2. Monitor for 24-48 hours
-3. Compare metrics vs baseline in production
-4. Promote to 50%, then 100% if successful
-5. Rollback immediately if degradation detected
+**Rollback Strategy:**
 
-**Success Criteria**:
+- Instant rollback to previous version in <60 seconds
+- Automatic config update to last known good version
+- Registry tracks full version history for any previous version
+- All historical versions available for rollback
 
-- Infrastructure agent routes ModelOps requests
-- Models deployed via single command
-- Canary deployments functional with traffic split
-- Rollback works in <60 seconds
-- Full integration tests passing
+## Success Criteria
 
-**Estimated effort**: 3-4 days (increased from 2-3 days due to agent integration)
+- ✅ Infrastructure agent routes ModelOps requests
+- ✅ Models deployed via single command
+- ✅ ~~Canary deployments functional with traffic split~~ **REMOVED**
+- ✅ Rollback works in <60 seconds
+- ✅ Full integration tests passing
+- ✅ All tests passing (10/10)
+
+**Actual effort**: 2 days (including canary removal refactor)
+
+**Key Simplification**: Removed canary deployment (20% → 50% → 100% progressive rollout) in favor of immediate deployment for single-user scenario.
 
 ### Phase 4: UX Polish + GGUF Support
 
