@@ -2,6 +2,7 @@
 """Update ModelOps Linear issues with revised HuggingFace MCP information."""
 
 import os
+
 import requests
 
 LINEAR_API_KEY = os.environ.get("LINEAR_API_KEY")
@@ -25,7 +26,7 @@ def get_issue_id(identifier: str) -> str:
     response = requests.post(
         GRAPHQL_ENDPOINT,
         headers={"Authorization": LINEAR_API_KEY, "Content-Type": "application/json"},
-        json={"query": query, "variables": {"identifier": identifier}}
+        json={"query": query, "variables": {"identifier": identifier}},
     )
     data = response.json()
     return data.get("data", {}).get("issue", {}).get("id")
@@ -44,7 +45,10 @@ def update_issue_description(issue_id: str, description: str) -> bool:
     response = requests.post(
         GRAPHQL_ENDPOINT,
         headers={"Authorization": LINEAR_API_KEY, "Content-Type": "application/json"},
-        json={"query": mutation, "variables": {"issueId": issue_id, "description": description}}
+        json={
+            "query": mutation,
+            "variables": {"issueId": issue_id, "description": description},
+        },
     )
     result = response.json()
     return result.get("data", {}).get("issueUpdate", {}).get("success", False)
@@ -210,14 +214,14 @@ def main():
         ("CHEF-213", CHEF_213_DESC),
         ("CHEF-214", CHEF_214_DESC),
     ]
-    
+
     for identifier, description in updates:
         print(f"\n📝 Updating {identifier}...")
         issue_id = get_issue_id(identifier)
         if not issue_id:
             print(f"  ❌ Could not find issue {identifier}")
             continue
-        
+
         if update_issue_description(issue_id, description):
             print(f"  ✅ Updated {identifier}")
         else:

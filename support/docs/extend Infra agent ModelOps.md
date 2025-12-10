@@ -18,7 +18,7 @@ Extending the code-chef orchestrator's Infrastructure agent to handle fine-tunin
 - **~178 MCP tools** across 20 servers (see `config/mcp-agent-tool-mapping.yaml`)
 - **HuggingFace MCP** - Discovery and inference tools:
   - `model_search` - Find models on HF Hub
-  - `dataset_search` - Find datasets on HF Hub  
+  - `dataset_search` - Find datasets on HF Hub
   - `hub_repo_details` - Get model/dataset metadata
   - `space_search` / `dynamic_space` - Search and invoke Spaces
   - `paper_search` - Search ML papers
@@ -69,7 +69,8 @@ agent_orchestrator/agents/infrastructure/
 
 ### 2. Core Tools to Implement
 
-> **MCP + SDK Hybrid Approach**: 
+> **MCP + SDK Hybrid Approach**:
+>
 > - Use HuggingFace MCP tools for **discovery and validation** (model_search, dataset_search, hub_repo_details)
 > - Use `huggingface_hub` Python SDK for **training operations** (AutoTrain API)
 > - Use `HUGGINGFACE_TOKEN` GitHub secret for authentication
@@ -298,15 +299,15 @@ Integrates with existing evaluation infrastructure in `support/tests/evaluation/
 
 The HuggingFace MCP server provides these tools for model discovery and validation:
 
-| Tool | Purpose | Use in ModelOps |
-|------|---------|-----------------|
-| `model_search` | Search HF Hub for models | Find base models for fine-tuning |
-| `dataset_search` | Search HF Hub for datasets | Discover training datasets |
-| `hub_repo_details` | Get model/dataset metadata | Validate model exists, get config |
-| `space_search` | Find Spaces | Discover AutoTrain or evaluation Spaces |
-| `dynamic_space` | Invoke Spaces | Run inference tests on fine-tuned models |
-| `paper_search` | Search ML papers | Find training methodology references |
-| `hf_doc_search/fetch` | Access documentation | Reference AutoTrain, TRL, PEFT docs |
+| Tool                  | Purpose                    | Use in ModelOps                          |
+| --------------------- | -------------------------- | ---------------------------------------- |
+| `model_search`        | Search HF Hub for models   | Find base models for fine-tuning         |
+| `dataset_search`      | Search HF Hub for datasets | Discover training datasets               |
+| `hub_repo_details`    | Get model/dataset metadata | Validate model exists, get config        |
+| `space_search`        | Find Spaces                | Discover AutoTrain or evaluation Spaces  |
+| `dynamic_space`       | Invoke Spaces              | Run inference tests on fine-tuned models |
+| `paper_search`        | Search ML papers           | Find training methodology references     |
+| `hf_doc_search/fetch` | Access documentation       | Reference AutoTrain, TRL, PEFT docs      |
 
 #### Training via SDK + AutoTrain
 
@@ -390,6 +391,7 @@ cost_estimates:
 #### Environment Configuration
 
 **GitHub Secrets** (already configured):
+
 - `HUGGINGFACE_TOKEN` - HuggingFace Hub authentication
 
 **Local environment** (`config/env/.env.template`):
