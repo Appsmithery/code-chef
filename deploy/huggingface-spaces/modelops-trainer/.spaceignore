@@ -1,0 +1,14 @@
+# .spaceignore - exclude files from HuggingFace Space deployment
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.dylib
+.git/
+.gitignore
+.env
+.venv
+venv/
+ENV/
