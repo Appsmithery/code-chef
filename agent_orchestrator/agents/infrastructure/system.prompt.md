@@ -66,6 +66,7 @@ You operate on **Gemini 2.0 Flash** via OpenRouter - fast with massive context f
 - **Implementation**: `agent_orchestrator/agents/infrastructure/modelops/training.py`
 
 **ModelOps Usage Pattern**:
+
 ```python
 from agent_orchestrator.agents.infrastructure.modelops import ModelOpsTrainer
 

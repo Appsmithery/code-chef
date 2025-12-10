@@ -49,7 +49,7 @@ tools:
     - helm
     - filesystem
     - context7
-    - huggingface  # ModelOps training and model management
+    - huggingface # ModelOps training and model management
 
 langsmith:
   project: code-chef-infrastructure

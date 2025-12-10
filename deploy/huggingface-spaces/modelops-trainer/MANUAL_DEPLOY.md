@@ -42,6 +42,7 @@ python deploy\huggingface-spaces\modelops-trainer\deploy_space.py
 ## After Deployment
 
 Update `config/env/.env` (create if needed):
+
 ```env
 MODELOPS_SPACE_URL=https://alextorelli-code-chef-modelops-trainer.hf.space
 HUGGINGFACE_TOKEN=your_token_here
@@ -50,6 +51,7 @@ HUGGINGFACE_TOKEN=your_token_here
 ## Space URL
 
 Once deployed, your Space will be at:
+
 - **Web UI**: https://huggingface.co/spaces/Alextorelli/code-chef-modelops-trainer
 - **API Endpoint**: https://alextorelli-code-chef-modelops-trainer.hf.space
 - **Health Check**: https://alextorelli-code-chef-modelops-trainer.hf.space/health
