@@ -8,12 +8,12 @@ import asyncio
 import base64
 import json
 import os
-import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import gradio as gr
+import yaml
 from fastapi import FastAPI, HTTPException
 from huggingface_hub import HfApi
 from pydantic import BaseModel
@@ -137,7 +137,7 @@ async def run_training_job(
             "logging_steps": 10,
             "save_total_limit": 1,
         }
-        
+
         config_file = output_dir / "config.yml"
         with open(config_file, "w") as f:
             yaml.dump(config, f)
@@ -151,9 +151,9 @@ async def run_training_job(
             stderr=asyncio.subprocess.PIPE,
             cwd=str(output_dir),
         )
-        
+
         stdout, stderr = await process.communicate()
-        
+
         if process.returncode != 0:
             raise RuntimeError(
                 f"Training failed with code {process.returncode}: {stderr.decode()[-500:]}"
