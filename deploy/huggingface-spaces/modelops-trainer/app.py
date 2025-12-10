@@ -107,7 +107,7 @@ async def run_training_job(
 
         # Create AutoTrain config file (more reliable than CLI args)
         config = {
-            "task": "llm:sft",
+            "task": "lm_training",  # Changed from llm:sft
             "base_model": base_model,
             "project_name": f"codechef-{project_name}",
             "data_path": str(dataset_path),
