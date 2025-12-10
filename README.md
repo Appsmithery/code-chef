@@ -126,15 +126,6 @@ flowchart TB
     Tools --> Metrics
 ```
 
-    Docs --> Tools
-
-    Tools --> GitHub
-    Tools --> Linear
-    Tools --> Docker
-    Tools --> Metrics
-
-```
-
 ---
 
 ## 🚀 Get Started in 2 Minutes
@@ -200,7 +191,7 @@ Chef: I'll create:
 
 [Generates YAML files with best practices]
 
-````
+```
 
 ---
 
@@ -236,7 +227,7 @@ git clone https://github.com/Appsmithery/code-chef.git
 cd code-chef && cp config/env/.env.template config/env/.env
 # Add your API keys to .env
 cd deploy && docker-compose up -d
-````
+```
 
 See [QUICKSTART.md](support/docs/QUICKSTART.md) for detailed setup.
 
