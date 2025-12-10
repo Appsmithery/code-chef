@@ -16,7 +16,15 @@ Extending the code-chef orchestrator's Infrastructure agent to handle fine-tunin
 - **LangGraph StateGraph** with supervisor pattern (`agent_orchestrator/graph.py`)
 - **BaseAgent class** with progressive tool loading (`agents/_shared/base_agent.py`)
 - **~178 MCP tools** across 20 servers (see `config/mcp-agent-tool-mapping.yaml`)
-- **HuggingFace MCP** (9 tools): `generate_code`, `code_completion`, `explain_code`, `analyze_code`, `detect_bugs`, `suggest_improvements` - **inference only, not training**
+- **HuggingFace MCP** - Discovery and inference tools:
+  - `model_search` - Find models on HF Hub
+  - `dataset_search` - Find datasets on HF Hub  
+  - `hub_repo_details` - Get model/dataset metadata
+  - `space_search` / `dynamic_space` - Search and invoke Spaces
+  - `paper_search` - Search ML papers
+  - `hf_doc_search` / `hf_doc_fetch` - Documentation access
+  - Training requires `huggingface_hub` SDK or AutoTrain API
+- **GitHub Secrets**: `HUGGINGFACE_TOKEN` configured for authentication
 - **LangSmith evaluation** infrastructure (`support/tests/evaluation/`)
 - **OpenRouter model routing** (`config/agents/models.yaml`)
 - **Docker-based deployment** (`deploy/docker-compose.yml`)
@@ -61,8 +69,10 @@ agent_orchestrator/agents/infrastructure/
 
 ### 2. Core Tools to Implement
 
-> **IMPORTANT**: HuggingFace MCP currently provides only inference tools, NOT training tools.
-> Training must use the HuggingFace Hub Python SDK (`huggingface_hub`) directly.
+> **MCP + SDK Hybrid Approach**: 
+> - Use HuggingFace MCP tools for **discovery and validation** (model_search, dataset_search, hub_repo_details)
+> - Use `huggingface_hub` Python SDK for **training operations** (AutoTrain API)
+> - Use `HUGGINGFACE_TOKEN` GitHub secret for authentication
 
 #### Tool: `train_subagent_model`
 
@@ -76,18 +86,19 @@ agent_orchestrator/agents/infrastructure/
 - `training_method` (str): `sft`, `dpo`, or `orpo`
 - `training_config` (dict): Optional overrides (learning_rate, epochs, lora_rank, etc.)
 
-**Implementation** (uses `huggingface_hub` SDK, not MCP):
+**Implementation** (MCP for discovery, SDK for training):
 
-1. Validate agent exists in `config/agents/models.yaml`
-2. Pull dataset from LangSmith using existing `Client()` pattern from `support/tests/evaluation/run_evaluation.py`
-3. Convert to HuggingFace datasets format with train/test split
-4. Estimate training cost via HF AutoTrain or Spaces API
-5. Create training job config:
+1. **MCP**: Use `model_search` to validate base model exists on HF Hub
+2. **MCP**: Use `hub_repo_details` to get model config (architecture, size, license)
+3. Pull dataset from LangSmith using existing `Client()` pattern from `support/tests/evaluation/run_evaluation.py`
+4. Convert to HuggingFace datasets format with train/test split
+5. Estimate training cost via HF AutoTrain API
+6. Create training job config:
    - Auto-select GPU based on model size (A10G for <13B, H100 for larger)
    - Configure LoRA (rank=16-32) for parameter efficiency
    - Set up checkpointing to HF Hub under `appsmithery/code-chef-{agent_name}-{timestamp}`
-6. Submit job via `huggingface_hub.HfApi().create_training_job()` or AutoTrain API
-7. Return job ID and tracking URL
+7. **SDK**: Submit job via `huggingface_hub.HfApi()` or AutoTrain API
+8. Return job ID and tracking URL
 
 **Output**: `{ job_id, hub_repo, estimated_cost, status_url }`
 
@@ -281,17 +292,32 @@ Integrates with existing evaluation infrastructure in `support/tests/evaluation/
 
 - **Tracing**: All ModelOps actions use `@traceable` decorator for LangSmith visibility
 
-### 6. HuggingFace Integration (Direct SDK, Not MCP)
+### 6. HuggingFace Integration
 
-> **NOTE**: The HuggingFace MCP server provides only inference tools (`generate_code`, `analyze_code`, etc.).
-> Training requires the `huggingface_hub` Python SDK directly.
+#### MCP Tools Available (Discovery & Inference)
 
-**Required SDK calls** (in `modelops/training.py`):
+The HuggingFace MCP server provides these tools for model discovery and validation:
+
+| Tool | Purpose | Use in ModelOps |
+|------|---------|-----------------|
+| `model_search` | Search HF Hub for models | Find base models for fine-tuning |
+| `dataset_search` | Search HF Hub for datasets | Discover training datasets |
+| `hub_repo_details` | Get model/dataset metadata | Validate model exists, get config |
+| `space_search` | Find Spaces | Discover AutoTrain or evaluation Spaces |
+| `dynamic_space` | Invoke Spaces | Run inference tests on fine-tuned models |
+| `paper_search` | Search ML papers | Find training methodology references |
+| `hf_doc_search/fetch` | Access documentation | Reference AutoTrain, TRL, PEFT docs |
+
+#### Training via SDK + AutoTrain
+
+For actual fine-tuning, use `huggingface_hub` SDK with AutoTrain:
 
 ```python
 from huggingface_hub import HfApi, create_repo, upload_file
+import os
 
-api = HfApi()
+# Auth from GitHub secret
+api = HfApi(token=os.environ.get("HUGGINGFACE_TOKEN"))
 
 # Upload training dataset
 api.upload_file(
@@ -311,14 +337,22 @@ create_repo(
 # For training jobs, use HuggingFace AutoTrain or Spaces:
 # - AutoTrain API: https://huggingface.co/docs/autotrain
 # - Spaces with GPU: Deploy training script as a Space
+# - TRL for RLHF/DPO: https://huggingface.co/docs/trl
 ```
 
-**Available HuggingFace MCP tools** (for inference/validation only):
+#### Using MCP Tools for Model Validation
 
-- `generate_code` - Validate model can generate code
-- `code_completion` - Test completion quality
-- `analyze_code` - Post-training validation
-- `explain_code` - Documentation generation test
+After training, use HF MCP tools to validate the fine-tuned model:
+
+```python
+# Use model_search to find our fine-tuned model
+model_info = await mcp_huggingface_hub_repo_details(
+    repo_ids=["appsmithery/code-chef-feature-dev-v2"]
+)
+
+# Use dynamic_space to run inference tests
+# (deploy model to a testing Space or use existing inference endpoints)
+```
 
 ### 7. Configuration Files
 
@@ -353,7 +387,12 @@ cost_estimates:
   avg_training_hours: 2
 ```
 
-#### Environment additions (`config/env/.env.template`)
+#### Environment Configuration
+
+**GitHub Secrets** (already configured):
+- `HUGGINGFACE_TOKEN` - HuggingFace Hub authentication
+
+**Local environment** (`config/env/.env.template`):
 
 ```bash
 # ModelOps - HuggingFace Training
