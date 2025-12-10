@@ -31,15 +31,20 @@ import yaml
 try:
     from langsmith import Client as LangSmithClient
     from langsmith.utils import traceable
+
     LANGSMITH_AVAILABLE = True
 except ImportError:
     # Fallback for environments without LangSmith
     LANGSMITH_AVAILABLE = False
+
     def traceable(name=None, **kwargs):
         """No-op decorator when LangSmith not available"""
+
         def decorator(func):
             return func
+
         return decorator if name else lambda f: f
+
     LangSmithClient = None
 
 # Logging
@@ -259,9 +264,9 @@ class ModelOpsTrainer:
         self.config = self._load_config()
         self.langsmith_client = LangSmithClient() if LANGSMITH_AVAILABLE else None
         self.trainer_client = ModelOpsTrainerClient()
-        
+
         logger.info(f"ModelOpsTrainer initialized (LangSmith: {LANGSMITH_AVAILABLE})")
-    
+
     def _load_config(self) -> Dict:
         """Load training configuration from YAML."""
         config_path = Path(self.config_path)
@@ -312,8 +317,10 @@ class ModelOpsTrainer:
             DataFrame with text/response columns
         """
         if not LANGSMITH_AVAILABLE or not self.langsmith_client:
-            raise RuntimeError("LangSmith not available. Install: pip install langsmith")
-        
+            raise RuntimeError(
+                "LangSmith not available. Install: pip install langsmith"
+            )
+
         logger.info(f"Exporting data from LangSmith project: {project_name}")
 
         try:
