@@ -1,0 +1,143 @@
+# ModelOps Training Configuration
+# Reference: https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/extend%20Infra%20agent%20ModelOps.md
+
+# Model Presets
+# Maps friendly names to HuggingFace model IDs with recommended hardware
+model_presets:
+  phi-3-mini:
+    model_id: "microsoft/Phi-3-mini-4k-instruct"
+    hardware: "t4-small"  # $0.75/hr
+    parameters: "3.8B"
+    context_length: 4096
+    recommended_for: ["code_review", "documentation", "cicd"]
+    description: "Fast, efficient model for code understanding and generation"
+  
+  codellama-7b:
+    model_id: "codellama/CodeLlama-7b-Instruct-hf"
+    hardware: "a10g-large"  # $2.20/hr
+    parameters: "7B"
+    context_length: 4096
+    recommended_for: ["feature_dev", "infrastructure"]
+    description: "Stronger code generation, requires more compute"
+  
+  codellama-13b:
+    model_id: "codellama/CodeLlama-13b-Instruct-hf"
+    hardware: "a10g-large"
+    parameters: "13B"
+    context_length: 4096
+    recommended_for: ["supervisor", "complex_refactoring"]
+    description: "Best quality, highest cost"
+  
+  llama-3-8b:
+    model_id: "meta-llama/Meta-Llama-3-8B-Instruct"
+    hardware: "a10g-large"
+    parameters: "8B"
+    context_length: 8192
+    recommended_for: ["general_purpose"]
+    description: "General-purpose instruction following"
+
+# Training Mode Defaults
+training_defaults:
+  # Demo mode: Quick test run for validation
+  demo:
+    num_epochs: 1
+    batch_size: 1
+    max_steps: 10
+    learning_rate: 2e-4
+    expected_duration_minutes: 5
+    estimated_cost_usd: 0.50
+    description: "Quick test run to validate dataset and configuration"
+  
+  # Production mode: Full training for deployment
+  production:
+    num_epochs: 3
+    # batch_size: auto-configured by AutoTrain based on GPU
+    # learning_rate: auto-configured by AutoTrain
+    expected_duration_minutes: 90
+    estimated_cost_usd_t4: 3.50
+    estimated_cost_usd_a10g: 10.00
+    description: "Full training run with optimized hyperparameters"
+
+# Hardware Specifications
+hardware:
+  t4-small:
+    gpu: "NVIDIA T4"
+    vram_gb: 16
+    cost_per_hour: 0.75
+    max_model_size: "3B"
+    suitable_for: ["phi-3-mini"]
+  
+  a10g-large:
+    gpu: "NVIDIA A10G"
+    vram_gb: 24
+    cost_per_hour: 2.20
+    max_model_size: "13B"
+    suitable_for: ["codellama-7b", "codellama-13b", "llama-3-8b"]
+
+# AutoTrain Configuration
+autotrain:
+  # AutoTrain auto-configures these, but can be overridden:
+  auto_find_batch_size: true  # Automatically find optimal batch size
+  use_peft: true  # Use LoRA for parameter-efficient fine-tuning
+  quantization: "int4"  # 4-bit quantization for memory efficiency
+  warmup_ratio: 0.1
+  gradient_accumulation_steps: 4
+  
+  # LoRA defaults (auto-tuned by AutoTrain)
+  lora:
+    r: 16
+    lora_alpha: 32
+    lora_dropout: 0.05
+    target_modules: "auto"  # AutoTrain selects optimal modules
+
+# LangSmith Export Configuration
+langsmith:
+  # Filters for selecting training data
+  filters:
+    min_feedback_score: 0.7  # Only include runs with score >= 0.7
+    exclude_errors: true  # Exclude runs that errored
+  
+  # Data quality thresholds
+  quality:
+    min_examples: 10  # Minimum examples required
+    max_examples: 10000  # Maximum to prevent overload
+    min_text_length: 10  # Minimum characters in text field
+    max_text_length: 4096  # Maximum characters (truncate beyond)
+
+# Agent-Specific Overrides
+agent_overrides:
+  feature_dev:
+    recommended_model: "codellama-7b"
+    min_examples: 50
+    demo_mode_enabled: true
+  
+  code_review:
+    recommended_model: "phi-3-mini"
+    min_examples: 30
+    demo_mode_enabled: true
+  
+  infrastructure:
+    recommended_model: "codellama-7b"
+    min_examples: 40
+    demo_mode_enabled: true
+  
+  cicd:
+    recommended_model: "phi-3-mini"
+    min_examples: 25
+    demo_mode_enabled: true
+  
+  documentation:
+    recommended_model: "phi-3-mini"
+    min_examples: 20
+    demo_mode_enabled: true
+  
+  supervisor:
+    recommended_model: "codellama-13b"
+    min_examples: 100
+    demo_mode_enabled: false  # Always production for supervisor
+
+# Safety Limits
+safety:
+  max_training_cost_usd: 50.00  # Abort if estimated cost exceeds this
+  max_training_duration_hours: 6  # Abort if training exceeds this
+  require_approval_above_cost: 15.00  # HITL approval for expensive jobs
