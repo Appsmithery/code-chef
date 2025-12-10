@@ -59,31 +59,104 @@ You operate on **Gemini 2.0 Flash** via OpenRouter - fast with massive context f
   - Submit AutoTrain jobs to HuggingFace Space API
   - Monitor training progress with TensorBoard integration
   - Retrieve and deploy fine-tuned models
+- **Evaluation**: Compare baseline vs candidate models using LangSmith evaluators
+  - Weighted scoring: 30% accuracy, 25% completeness, 20% efficiency, 15% latency, 10% integration
+  - Automatic recommendations: deploy, deploy_canary, reject, needs_review
+  - Comparison reports with improvement percentages
+- **Deployment**: Update agent model configurations and manage rollouts
+  - Immediate deployment (100% traffic)
+  - Canary deployments (20% → 50% → 100% traffic)
+  - Rollback to previous version in <60 seconds
+  - Version tracking and audit trail
 - **Model Presets**: phi-3-mini (3.8B), codellama-7b (7B), codellama-13b (13B)
 - **Hardware**: Auto-select t4-small ($0.75/hr) or a10g-large ($2.20/hr)
 - **Modes**: Demo (5 min, $0.50) or Production (90 min, $3.50-$15)
 - **Configuration**: `config/modelops/training_defaults.yaml`
-- **Implementation**: `agent_orchestrator/agents/infrastructure/modelops/training.py`
+- **Registry**: `config/models/registry.json` - version tracking and metadata
+- **Implementation**: `agent_orchestrator/agents/infrastructure/modelops/`
 
 **ModelOps Usage Pattern**:
 
 ```python
-from agent_orchestrator.agents.infrastructure.modelops import ModelOpsTrainer
-
-trainer = ModelOpsTrainer()
-
-# Train model from LangSmith evaluation data
-job = trainer.train_model(
-    agent_name="feature_dev",
-    langsmith_project="code-chef-feature-dev",
-    base_model_preset="codellama-7b",
-    is_demo=False  # Production mode
+from agent_orchestrator.agents.infrastructure.modelops import (
+    ModelOpsCoordinator,
+    ModelOpsTrainer,
+    ModelEvaluator,
+    ModelOpsDeployment
 )
 
-# Monitor training
-final_status = trainer.monitor_training(job["job_id"])
-# Result: {"status": "completed", "model_id": "alextorelli/codechef-feature-dev-xxx"}
+# Initialize coordinator (handles routing automatically)
+coordinator = ModelOpsCoordinator()
+
+# Train model from LangSmith evaluation data
+train_result = await coordinator.route_request(
+    "Train feature_dev model",
+    {
+        "agent_name": "feature_dev",
+        "langsmith_project": "code-chef-feature-dev",
+        "base_model_preset": "codellama-7b",
+        "is_demo": False  # Production mode
+    }
+)
+# Result: {"job_id": "xxx", "trackio_url": "...", "estimated_cost": "$3.50"}
+
+# Evaluate trained model against baseline
+eval_result = await coordinator.route_request(
+    "Evaluate feature_dev model",
+    {
+        "agent_name": "feature_dev",
+        "candidate_model": "alextorelli/codechef-feature-dev-v2",
+        "eval_dataset_name": "feature-dev-eval"
+    }
+)
+# Result: {"recommendation": "deploy", "improvement_pct": 15.2, "report": "..."}
+
+# Deploy if evaluation passes
+deploy_result = await coordinator.route_request(
+    "Deploy feature_dev model",
+    {
+        "agent_name": "feature_dev",
+        "model_repo": "alextorelli/codechef-feature-dev-v2",
+        "rollout_strategy": "canary_20pct"  # Start with 20% traffic
+    }
+)
+# Result: {"deployed": true, "rollout_pct": 20, "rollback_available": true}
+
+# Monitor and promote canary if successful
+await coordinator.route_request(
+    "Promote canary to 100%",
+    {"agent_name": "feature_dev", "to_percentage": 100}
+)
+
+# Rollback if issues detected
+await coordinator.route_request(
+    "Rollback feature_dev deployment",
+    {"agent_name": "feature_dev"}  # Rolls back to previous version
+)
 ```
+
+**ModelOps Commands You Can Handle**:
+
+1. **Training**: "Train [agent] model using [dataset]", "Monitor training job [job_id]"
+2. **Evaluation**: "Evaluate [agent] model", "Compare candidate vs baseline for [agent]"
+3. **Deployment**: "Deploy [model] to [agent]", "Deploy as 20% canary", "Promote canary to 50%"
+4. **Rollback**: "Rollback [agent] deployment", "Rollback to version [version]"
+5. **Status**: "List models for [agent]", "Show current model for [agent]", "Check [agent] status"
+
+**Canary Deployment Strategy**:
+
+1. **Phase 1: 20% Canary** - Deploy to 20% of traffic, monitor for 24-48 hours
+   - Check error rates, latency, user feedback
+   - Compare metrics: baseline vs canary in production
+2. **Phase 2: 50% Canary** - If stable, promote to 50% traffic
+   - Monitor for another 24-48 hours
+   - Collect more data on performance
+3. **Phase 3: 100% Deployed** - Full rollout if metrics continue to improve
+   - Archive previous version
+   - Update registry with production status
+4. **Rollback Anytime** - If degradation detected at any phase (<60 seconds)
+   - Automatic config update to previous version
+   - Registry tracks full version history
 
 ## Deployment Rules (Universal)
 
