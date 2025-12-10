@@ -3,6 +3,14 @@
 Provides fine-tuning capabilities using HuggingFace AutoTrain via Space API.
 """
 
+from .evaluation import EvaluationComparison, ModelEvaluator
+from .registry import ModelRegistry, ModelVersion
 from .training import ModelOpsTrainer
 
-__all__ = ["ModelOpsTrainer"]
+__all__ = [
+    "ModelOpsTrainer",
+    "ModelRegistry",
+    "ModelVersion",
+    "ModelEvaluator",
+    "EvaluationComparison",
+]

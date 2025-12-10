@@ -1,0 +1,210 @@
+{
+  "created_at": "2025-12-10T00:00:00Z",
+  "updated_at": "2025-12-10T19:53:43.706270",
+  "version": "1.0.0",
+  "description": "Model registry for code-chef agent fine-tuned models",
+  "agents": {
+    "feature_dev": {
+      "agent_name": "feature_dev",
+      "current": null,
+      "canary": {
+        "version": "v2.0.0-demo",
+        "model_id": "alextorelli/codechef-feature-dev-demo",
+        "training_config": {
+          "base_model": "microsoft/Phi-3-mini-4k-instruct",
+          "training_method": "sft",
+          "training_dataset": "ls://demo-train",
+          "eval_dataset": "ls://demo-eval",
+          "learning_rate": null,
+          "num_epochs": 3,
+          "batch_size": null,
+          "lora_rank": null,
+          "max_seq_length": null,
+          "hardware": null,
+          "is_demo": true
+        },
+        "trained_at": "2025-12-10T19:53:43.369543",
+        "trained_by": "modelops-trainer",
+        "job_id": "job_demo_123",
+        "hub_repo": null,
+        "eval_scores": {
+          "accuracy": 0.87,
+          "baseline_improvement_pct": 15.0,
+          "avg_latency_ms": null,
+          "cost_per_1k_tokens": null,
+          "token_efficiency": 0.82,
+          "workflow_completeness": 0.91,
+          "langsmith_experiment_url": null,
+          "latency_threshold": 0.9,
+          "mcp_integration_quality": 0.75
+        },
+        "deployment_status": "canary_20pct",
+        "deployed_at": "2025-12-10T19:53:43.435372",
+        "notes": null
+      },
+      "history": [
+        {
+          "version": "v2.0.0-demo",
+          "model_id": "alextorelli/codechef-feature-dev-demo",
+          "training_config": {
+            "base_model": "microsoft/Phi-3-mini-4k-instruct",
+            "training_method": "sft",
+            "training_dataset": "ls://demo-train",
+            "eval_dataset": "ls://demo-eval",
+            "learning_rate": null,
+            "num_epochs": 3,
+            "batch_size": null,
+            "lora_rank": null,
+            "max_seq_length": null,
+            "hardware": null,
+            "is_demo": true
+          },
+          "trained_at": "2025-12-10T19:53:43.369543",
+          "trained_by": "modelops-trainer",
+          "job_id": "job_demo_123",
+          "hub_repo": null,
+          "eval_scores": {
+            "accuracy": 0.87,
+            "baseline_improvement_pct": 15.0,
+            "avg_latency_ms": null,
+            "cost_per_1k_tokens": null,
+            "token_efficiency": 0.82,
+            "workflow_completeness": 0.91,
+            "langsmith_experiment_url": null,
+            "latency_threshold": 0.9,
+            "mcp_integration_quality": 0.75
+          },
+          "deployment_status": "canary_20pct",
+          "deployed_at": "2025-12-10T19:53:43.435372",
+          "notes": null
+        }
+      ]
+    },
+    "code_review": {
+      "agent_name": "code_review",
+      "current": {
+        "version": "v1.0.0-baseline",
+        "model_id": "microsoft/Phi-3-mini-4k-instruct",
+        "training_config": {
+          "base_model": "microsoft/Phi-3-mini-4k-instruct",
+          "training_method": "sft",
+          "training_dataset": "ls://baseline-train",
+          "eval_dataset": null,
+          "learning_rate": null,
+          "num_epochs": null,
+          "batch_size": null,
+          "lora_rank": null,
+          "max_seq_length": null,
+          "hardware": null,
+          "is_demo": false
+        },
+        "trained_at": "2025-12-10T19:53:43.579331",
+        "trained_by": "modelops-trainer",
+        "job_id": null,
+        "hub_repo": null,
+        "eval_scores": {
+          "accuracy": 0.75,
+          "baseline_improvement_pct": null,
+          "avg_latency_ms": null,
+          "cost_per_1k_tokens": null,
+          "token_efficiency": 0.7,
+          "workflow_completeness": 0.8,
+          "langsmith_experiment_url": null,
+          "latency_threshold": 0.85
+        },
+        "deployment_status": "deployed",
+        "deployed_at": "2025-12-10T19:53:43.653596",
+        "notes": null
+      },
+      "canary": null,
+      "history": [
+        {
+          "version": "v1.0.0-baseline",
+          "model_id": "microsoft/Phi-3-mini-4k-instruct",
+          "training_config": {
+            "base_model": "microsoft/Phi-3-mini-4k-instruct",
+            "training_method": "sft",
+            "training_dataset": "ls://baseline-train",
+            "eval_dataset": null,
+            "learning_rate": null,
+            "num_epochs": null,
+            "batch_size": null,
+            "lora_rank": null,
+            "max_seq_length": null,
+            "hardware": null,
+            "is_demo": false
+          },
+          "trained_at": "2025-12-10T19:53:43.579331",
+          "trained_by": "modelops-trainer",
+          "job_id": null,
+          "hub_repo": null,
+          "eval_scores": {
+            "accuracy": 0.75,
+            "baseline_improvement_pct": null,
+            "avg_latency_ms": null,
+            "cost_per_1k_tokens": null,
+            "token_efficiency": 0.7,
+            "workflow_completeness": 0.8,
+            "langsmith_experiment_url": null,
+            "latency_threshold": 0.85
+          },
+          "deployment_status": "deployed",
+          "deployed_at": "2025-12-10T19:53:43.653596",
+          "notes": null
+        },
+        {
+          "version": "v2.0.0-candidate",
+          "model_id": "alextorelli/codechef-code-review-v2",
+          "training_config": {
+            "base_model": "microsoft/Phi-3-mini-4k-instruct",
+            "training_method": "sft",
+            "training_dataset": "ls://improved-train",
+            "eval_dataset": "ls://eval-dataset",
+            "learning_rate": null,
+            "num_epochs": null,
+            "batch_size": null,
+            "lora_rank": null,
+            "max_seq_length": null,
+            "hardware": null,
+            "is_demo": false
+          },
+          "trained_at": "2025-12-10T19:53:43.681598",
+          "trained_by": "modelops-trainer",
+          "job_id": null,
+          "hub_repo": null,
+          "eval_scores": {
+            "accuracy": 0.87,
+            "baseline_improvement_pct": null,
+            "avg_latency_ms": null,
+            "cost_per_1k_tokens": null,
+            "token_efficiency": 0.82,
+            "workflow_completeness": 0.91,
+            "langsmith_experiment_url": null,
+            "latency_threshold": 0.9
+          },
+          "deployment_status": "not_deployed",
+          "deployed_at": null,
+          "notes": null
+        }
+      ]
+    },
+    "infrastructure": {
+      "agent_name": "infrastructure",
+      "current": null,
+      "canary": null,
+      "history": []
+    },
+    "cicd": {
+      "agent_name": "cicd",
+      "current": null,
+      "canary": null,
+      "history": []
+    },
+    "documentation": {
+      "agent_name": "documentation",
+      "current": null,
+      "canary": null,
+      "history": []
+    }
+  }
+}
