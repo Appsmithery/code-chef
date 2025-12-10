@@ -2,6 +2,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import { CodeChefChatParticipant } from './chatParticipant';
 import { registerCopyPermalinkCommand } from './commands/copyPermalink';
+import * as modelops from './commands/modelops';
 import { AGENT_ICONS, buildLinearIssueUrl, getAgentColor as getAgentColorFn } from './constants';
 import { LinearWatcher } from './linearWatcher';
 import { OrchestratorClient } from './orchestratorClient';
@@ -265,6 +266,42 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand('codechef.openSettings', () => {
             vscode.commands.executeCommand('workbench.action.openSettings', 'codechef');
+        })
+    );
+
+    // Register ModelOps commands
+    const orchestratorClient = new OrchestratorClient(
+        config.get('orchestratorUrl', 'https://codechef.appsmithery.co/api'),
+        config.get('apiKey') || undefined
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.modelops.trainAgent', async () => {
+            await modelops.trainAgentModel(orchestratorClient, context);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.modelops.evaluateAgent', async () => {
+            await modelops.evaluateAgentModel(orchestratorClient);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.modelops.deployModel', async () => {
+            await modelops.deployModel(orchestratorClient);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.modelops.listModels', async () => {
+            await modelops.listAgentModels(orchestratorClient);
+        })
+    );
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codechef.modelops.convertToGGUF', async () => {
+            await modelops.convertToGGUF(orchestratorClient);
         })
     );
 

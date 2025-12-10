@@ -790,20 +790,42 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 
 **Key Simplification**: Removed canary deployment (20% → 50% → 100% progressive rollout) in favor of immediate deployment for single-user scenario.
 
-### Phase 4: UX Polish + GGUF Support
+### Phase 4: UX Polish + GGUF Support ✅ **60% COMPLETE**
 
-**Scope**: VS Code extension commands, notifications, and local deployment
+**Status**: IN PROGRESS (CHEF-214)  
+**GitHub**:
 
-- [ ] Add ModelOps commands to `extensions/vscode-codechef/package.json`
-- [ ] Implement `src/commands/modelops.ts` handlers
-- [ ] Add progress notifications for training jobs with Trackio links
-- [ ] Add cost estimation display (demo vs production)
-- [ ] Add model comparison UI with evaluation results
-- [ ] Implement `convert_model_to_gguf` tool for local deployment
-- [ ] Add usage instructions for llama.cpp, Ollama, LM Studio
-- [ ] Integration tests
+- [modelops.ts](https://github.com/Appsmithery/Dev-Tools/blob/main/extensions/vscode-codechef/src/commands/modelops.ts)
+- [extension.ts](https://github.com/Appsmithery/Dev-Tools/blob/main/extensions/vscode-codechef/src/extension.ts)
+- [package.json](https://github.com/Appsmithery/Dev-Tools/blob/main/extensions/vscode-codechef/package.json)
 
-**Estimated effort**: 3-4 days
+**Completed**:
+
+- ✅ Added 5 ModelOps commands to `extensions/vscode-codechef/package.json`
+  - `codechef.modelops.trainAgent` - Training job submission
+  - `codechef.modelops.evaluateAgent` - Model evaluation
+  - `codechef.modelops.deployModel` - Immediate deployment
+  - `codechef.modelops.listModels` - Model version history
+  - `codechef.modelops.convertToGGUF` - GGUF quantization
+- ✅ Implemented `src/commands/modelops.ts` (900+ lines) with:
+  - Training wizard (demo vs production modes)
+  - Live progress monitoring webview with TensorBoard/Trackio links
+  - Cost estimation UI ($0.50 demo, $3.50-$15 production)
+  - Evaluation results webview with recommendation (deploy/review/reject)
+  - Model comparison visualization
+  - GGUF conversion with quantization options (Q4_K_M, Q5_K_M, Q8_0)
+- ✅ Registered commands in `extension.ts` activation
+- ✅ Integrated OrchestratorClient for backend communication
+
+**Remaining**:
+
+- [ ] Backend API endpoints in InfrastructureAgent to handle ModelOps requests
+- [ ] Integration tests for VS Code commands
+- [ ] End-to-end testing with real training jobs
+- [ ] Documentation updates (README, CHANGELOG)
+- [ ] Version bump to 0.10.0
+
+**Estimated effort**: 3-4 days → 1-2 days remaining
 
 ---
 
