@@ -8,7 +8,6 @@ import asyncio
 import base64
 import json
 import os
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -17,6 +16,8 @@ import gradio as gr
 from fastapi import FastAPI, HTTPException
 from huggingface_hub import HfApi
 from pydantic import BaseModel
+from autotrain.trainers.clm.params import LLMTrainingParams
+from autotrain.trainers.clm import utils as clm_utils
 
 # Environment setup
 HF_TOKEN = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
@@ -90,7 +91,7 @@ async def run_training_job(
     num_epochs: Optional[int] = None,
     batch_size: Optional[int] = None,
 ):
-    """Execute AutoTrain job asynchronously using CLI"""
+    """Execute AutoTrain job asynchronously using Python API"""
     try:
         # Update job status
         metadata = load_job_metadata(job_id)
@@ -105,58 +106,39 @@ async def run_training_job(
         output_dir = JOBS_DIR / f"{job_id}_output"
         output_dir.mkdir(exist_ok=True)
 
-        # Build autotrain-advanced CLI command
-        # Using only stable CLI args
-        cmd = [
-            "autotrain",
-            "llm",
-            "--train",
-            "--model",
-            base_model,
-            "--data-path",
-            dataset_path,
-            "--text-column",
-            text_column,
-            "--rejected-text-column",  # For LLM training
-            response_column,
-            "--project-name",
-            f"codechef-{project_name}",
-            "--push-to-hub",
-            "--token",
-            HF_TOKEN,
-        ]
+        # Configure AutoTrain parameters using Python API
+        params = LLMTrainingParams(
+            model=base_model,
+            data_path=str(dataset_path),
+            text_column=text_column,
+            rejected_text_column=response_column,
+            project_name=f"codechef-{project_name}",
+            push_to_hub=True,
+            repo_id=repo_id,
+            token=HF_TOKEN,
+            # Training configuration
+            num_train_epochs=num_epochs if num_epochs else (1 if is_demo else 3),
+            learning_rate=learning_rate if learning_rate else 2e-4,
+            per_device_train_batch_size=batch_size if batch_size else (1 if is_demo else 2),
+            gradient_accumulation_steps=4,
+            warmup_ratio=0.1,
+            # Memory optimization
+            use_peft=True,
+            quantization="int4",
+            mixed_precision="bf16",
+            # Demo mode optimizations
+            max_seq_length=512 if is_demo else 2048,
+            logging_steps=10,
+            save_total_limit=1,
+        )
 
-        # Demo mode: reduce training
-        if is_demo:
-            cmd.extend(["--epochs", "1"])
-        else:
-            cmd.extend(["--epochs", "3"])
+        # Run training in thread pool to avoid blocking
+        def _run_training():
+            """Synchronous training execution"""
+            return clm_utils.train(params)
 
-        # Apply custom parameters
-        if learning_rate:
-            cmd.extend(["--lr", str(learning_rate)])
-        if num_epochs:
-            cmd.extend(["--epochs", str(num_epochs)])
-        if batch_size:
-            cmd.extend(["--batch-size", str(batch_size)])
-
-        # Execute training subprocess
-        log_file = output_dir / "training.log"
-        with open(log_file, "w") as log:
-            process = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=log,
-                stderr=subprocess.STDOUT,
-                cwd=str(output_dir),
-            )
-            returncode = await process.wait()
-
-        if returncode != 0:
-            with open(log_file) as f:
-                error_log = f.read()
-            raise RuntimeError(
-                f"Training failed with code {returncode}: {error_log[-500:]}"
-            )
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _run_training)
 
         # Update final status
         metadata = load_job_metadata(job_id)
