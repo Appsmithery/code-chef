@@ -23,7 +23,7 @@ Extending the code-chef orchestrator's Infrastructure agent to handle fine-tunin
   - `space_search` / `dynamic_space` - Search and invoke Spaces
   - `paper_search` - Search ML papers
   - `hf_doc_search` / `hf_doc_fetch` - Documentation access
-  - Training requires `huggingface_hub` SDK or AutoTrain API
+  - Training uses **AutoTrain Advanced** for simplified fine-tuning
 - **GitHub Secrets**: `HUGGINGFACE_TOKEN` configured for authentication
 - **LangSmith evaluation** infrastructure (`support/tests/evaluation/`)
 - **OpenRouter model routing** (`config/agents/models.yaml`)
@@ -61,7 +61,7 @@ agent_orchestrator/agents/infrastructure/
   modelops/                # NEW: ModelOps extension module
     __init__.py
     coordinator.py         # Main ModelOps orchestration logic
-    training.py            # HuggingFace Hub API training (direct API, not MCP)
+    training.py            # AutoTrain Advanced integration (simplified training)
     evaluation.py          # LangSmith eval integration (uses existing evaluators.py)
     deployment.py          # Model deployment/routing (update models.yaml)
     registry.py            # Model version tracking (JSON + SQLite)
@@ -69,10 +69,10 @@ agent_orchestrator/agents/infrastructure/
 
 ### 2. Core Tools to Implement
 
-> **MCP + SDK Hybrid Approach**:
+> **MCP + AutoTrain Hybrid Approach**:
 >
 > - Use HuggingFace MCP tools for **discovery and validation** (model_search, dataset_search, hub_repo_details)
-> - Use `huggingface_hub` Python SDK for **training operations** (AutoTrain API)
+> - Use **AutoTrain Advanced** for **training operations** (auto-configured, simplified)
 > - Use `HUGGINGFACE_TOKEN` GitHub secret for authentication
 
 #### Tool: `train_subagent_model`
@@ -87,27 +87,44 @@ agent_orchestrator/agents/infrastructure/
 - `training_method` (str): `sft` (supervised fine-tuning), `dpo` (direct preference optimization), or `grpo` (group relative policy optimization for reasoning tasks)
 - `training_config` (dict): Optional overrides (learning_rate, epochs, lora_rank, etc.)
 
-**Implementation** (MCP for discovery, HuggingFace Jobs API for training):
+**Implementation** (MCP for discovery, AutoTrain for training):
 
 1. **MCP**: Use `model_search` to validate base model exists on HF Hub
 2. **MCP**: Use `hub_repo_details` to get model config (architecture, size, license)
 3. Pull dataset from LangSmith using existing `Client()` pattern from `support/tests/evaluation/run_evaluation.py`
-4. Convert to HuggingFace datasets format with train/test split
-5. **Validate dataset format** using HF dataset validation (CPU-only, low cost)
-   - Check for required columns based on training method (messages for SFT, chosen/rejected for DPO)
-   - Validate data types and format consistency
-6. Estimate training cost using HF Jobs API cost calculator
-7. Create training job config:
-   - **Auto-select GPU** based on model size:
-     - <1B: `t4-small` (~$0.75/hr)
-     - 1-3B: `t4-medium` or `a10g-small` (~$1.10/hr)
-     - 3-7B: `a10g-large` with LoRA (~$2.20/hr)
-     - 7B+: Not suitable for current Jobs API (recommend external training)
-   - Configure LoRA automatically for models >3B (rank=32, alpha=64)
-   - Set up Trackio monitoring for real-time metrics
-   - Configure checkpointing to HF Hub under `appsmithery/code-chef-{agent_name}-{timestamp}`
-8. **Jobs API**: Submit job via HuggingFace Jobs API (`/jobs` endpoint)
-9. Return job ID, tracking URL, Trackio dashboard link, estimated cost/time
+4. Export to CSV format (AutoTrain auto-converts to required format):
+   ```csv
+   text,response
+   "Add JWT auth to Express API","<code implementation>"
+   "Fix memory leak in React","<debugging steps>"
+   ```
+5. **AutoTrain**: Submit training job with simplified config:
+
+   ```python
+   from autotrain.trainers.clm import train
+
+   job = await train(
+       project_name=f"code-chef-{agent_name}-{timestamp}",
+       model=base_model,
+       data_path=f"/tmp/{agent_name}_train.csv",
+       text_column="text",
+       target_column="response",
+       push_to_hub=True,
+       repo_id=f"appsmithery/code-chef-{agent_name}-v2",
+       token=HF_TOKEN,
+       auto_find_batch_size=True,  # Auto GPU/batch optimization
+       use_peft=True,              # Auto LoRA for >3B models
+       quantization="int4"         # Optional 4-bit training
+   )
+   ```
+
+6. AutoTrain automatically:
+   - Validates dataset format and suggests fixes
+   - Selects optimal GPU (t4-small for <1B, a10g-large for 3-7B)
+   - Configures LoRA/QLoRA for models >3B
+   - Sets up TensorBoard monitoring
+   - Handles checkpointing to HF Hub
+7. Return job ID, Hub repo, TensorBoard URL, estimated cost/time
 
 **Output**: `{ job_id, hub_repo, estimated_cost, status_url }`
 
@@ -119,16 +136,16 @@ agent_orchestrator/agents/infrastructure/
 
 - `job_id` (str): HuggingFace training job ID
 
-**Implementation** (uses HuggingFace Jobs API + Trackio):
+**Implementation** (uses AutoTrain API):
 
-1. Poll HF Jobs API via `/jobs/{job_id}` endpoint
-2. Fetch Trackio metrics for real-time training loss, learning rate, validation metrics
+1. Query AutoTrain job status via `autotrain.job.status(job_id)`
+2. Fetch TensorBoard metrics for real-time training loss, learning rate, validation
 3. Parse job status: `pending`, `running`, `completed`, `failed`
-4. Calculate progress percentage from current_step / total_steps
-5. If complete, verify model uploaded to Hub and fetch final metrics from Trackio
-6. If failed, extract error logs and provide diagnostic suggestions (OOM → reduce batch_size, timeout → increase duration)
+4. Calculate progress from logs (AutoTrain provides step/total info)
+5. If complete, verify model uploaded to Hub and get final metrics
+6. If failed, extract AutoTrain error logs with built-in diagnostics
 
-**Output**: `{ status, progress_pct, current_step, total_steps, current_loss, learning_rate, eta_minutes, hub_repo, trackio_url }`
+**Output**: `{ status, progress_pct, current_step, total_steps, current_loss, learning_rate, eta_minutes, hub_repo, tensorboard_url }`
 
 #### Tool: `evaluate_model_vs_baseline`
 
@@ -181,28 +198,6 @@ openrouter:
 5. Trigger container restart via `docker compose restart orchestrator` or hot-reload
 
 **Output**: `{ deployed, endpoint_url, version, rollout_pct }`
-
-#### Tool: `validate_dataset_format`
-
-**Purpose**: Pre-validate dataset format before expensive training runs
-
-**Inputs**:
-
-- `dataset_id` (str): LangSmith or HuggingFace dataset ID
-- `training_method` (str): `sft`, `dpo`, or `grpo`
-
-**Implementation**:
-
-1. Pull dataset sample (first 100 rows) using CPU-only validation
-2. Check required columns based on training method:
-   - **SFT**: Requires `messages` column or `prompt`/`completion` columns
-   - **DPO**: Requires `chosen` and `rejected` columns (or `prompt` with both)
-   - **GRPO**: Requires `problem` and `solution` columns with verifiable rewards
-3. Validate data types, check for nulls, verify format consistency
-4. Estimate dataset size and approximate training time
-5. Suggest fixes if format issues found (e.g., column mapping instructions)
-
-**Output**: `{ valid: bool, issues: list[str], suggestions: list[str], estimated_examples: int }`
 
 #### Tool: `list_agent_models`
 
@@ -388,56 +383,51 @@ The HuggingFace MCP server provides these tools for model discovery and validati
 For actual fine-tuning, use HuggingFace Jobs API with TRL (Transformer Reinforcement Learning):
 
 ```python
-import requests
+from autotrain.trainers.clm import train as train_sft
+from autotrain.trainers.dpo import train as train_dpo
+from autotrain import AutoTrainConfig
 import os
-from huggingface_hub import HfApi, create_repo
 
 # Auth from GitHub secret
 HF_TOKEN = os.environ.get("HUGGINGFACE_TOKEN")
-api = HfApi(token=HF_TOKEN)
 
-# Create model repo for checkpoints
-create_repo(
+# Export LangSmith dataset to CSV
+dataset.to_csv("/tmp/training_data.csv", columns=["text", "response"])
+
+# Configure AutoTrain (much simpler than Jobs API)
+config = AutoTrainConfig(
+    project_name="code-chef-feature-dev-v2",
+    model="Qwen/Qwen2.5-Coder-7B",
+    data_path="/tmp/training_data.csv",
+    text_column="text",
+    target_column="response",
+
+    # AutoTrain handles these automatically:
+    auto_find_batch_size=True,    # Optimal batch size for GPU
+    use_peft=True,                 # LoRA auto-enabled for >3B
+    quantization="int4",           # Optional 4-bit training
+
+    # Output configuration
+    push_to_hub=True,
     repo_id="appsmithery/code-chef-feature-dev-v2",
-    repo_type="model",
-    private=True,
-    token=HF_TOKEN
+    token=HF_TOKEN,
+
+    # Optional overrides (AutoTrain has smart defaults)
+    learning_rate=2e-5,
+    num_train_epochs=3,
+    warmup_ratio=0.1
 )
 
-# Submit training job via HuggingFace Jobs API
-response = requests.post(
-    "https://huggingface.co/api/jobs",
-    headers={"Authorization": f"Bearer {HF_TOKEN}"},
-    json={
-        "base_model": "Qwen/Qwen2.5-Coder-7B",
-        "dataset": "appsmithery/code-chef-feature-dev-training",
-        "method": "sft",  # or "dpo", "grpo"
-        "hardware": "a10g-large",  # auto-selected based on model size
-        "output_repo": "appsmithery/code-chef-feature-dev-v2",
-        "config": {
-            "learning_rate": 2e-5,
-            "num_epochs": 3,
-            "batch_size": 4,
-            "use_lora": True,  # auto-enabled for >3B models
-            "lora_rank": 32,
-            "trackio_enabled": True  # real-time monitoring
-        }
-    }
-)
+# Submit training (works locally OR on HF Spaces)
+job = await train_sft(config)
 
-job_id = response.json()["job_id"]
-trackio_url = f"https://huggingface.co/spaces/{user}/trackio?job={job_id}"
-
-# Monitor job status
-status_response = requests.get(
-    f"https://huggingface.co/api/jobs/{job_id}",
-    headers={"Authorization": f"Bearer {HF_TOKEN}"}
-)
+# Monitor progress
+status = job.status()
+tensorboard_url = job.tensorboard_url
 
 # Reference:
-# - HF Jobs API: https://huggingface.co/docs/huggingface_hub/guides/jobs
-# - TRL Library: https://huggingface.co/docs/trl
-# - Trackio Monitoring: https://huggingface.co/docs/trackio
+# - AutoTrain Advanced: https://github.com/huggingface/autotrain-advanced
+# - AutoTrain Docs: https://huggingface.co/docs/autotrain
 ```
 
 #### Using MCP Tools for Model Validation
@@ -583,21 +573,21 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 
 ### Phase 1: Registry + Training (MVP)
 
-**Scope**: Core infrastructure for model versioning and HuggingFace Jobs API training
+**Scope**: Core infrastructure for model versioning and AutoTrain integration
 
+- [ ] Install AutoTrain Advanced: `pip install autotrain-advanced`
 - [ ] Create `config/models/registry.json` schema
 - [ ] Implement `modelops/registry.py` with CRUD operations
-- [ ] Implement `modelops/training.py` with HuggingFace Jobs API integration
-- [ ] Add `validate_dataset_format` tool (pre-training validation)
+- [ ] Implement `modelops/training.py` with AutoTrain integration
+- [ ] Add LangSmith to CSV export function (AutoTrain input format)
 - [ ] Add `train_subagent_model` tool with demo/production modes
-- [ ] Add `monitor_training_job` tool with Trackio integration
-- [ ] Implement auto GPU selection based on model size (t4-small, t4-medium, a10g-large)
-- [ ] Configure LoRA auto-enable for models >3B parameters
-- [ ] Create `config/modelops/training_defaults.yaml` with hardware pricing
+- [ ] Add `monitor_training_job` tool with AutoTrain API
+- [ ] Create `config/modelops/training_defaults.yaml` (minimal - AutoTrain handles most config)
 - [ ] Add HuggingFace tokens to `config/env/.env.template`
-- [ ] Unit tests for registry, training, and dataset validation
+- [ ] Unit tests for registry and training
+- [ ] Test local training on development machine (optional)
 
-**Estimated effort**: 4-5 days
+**Estimated effort**: 2-3 days (reduced from 4-5 days - AutoTrain simplifies significantly)
 
 ### Phase 2: Evaluation Integration
 
@@ -659,18 +649,18 @@ Orchestrator → Infrastructure Agent → ModelOps Coordinator:
 
 1. Check if LangSmith dataset exists for feature_dev error-handling examples
 2. If not, prompt user: "I need training examples. Run '@chef collect feature-dev failures' first?"
-3. If yes (found 150 examples): Validate dataset format using CPU-only validation
-4. Validation result: "✓ Dataset ready for SFT training. Found 'messages' column with 150 examples."
-5. Estimate costs: "Demo run (100 examples): $0.50, 5 minutes | Production (full dataset): $3.50, 90 minutes"
+3. If yes (found 150 examples): Export to CSV format (text, response columns)
+4. AutoTrain validates: "✓ Dataset ready. 150 examples, CSV format valid."
+5. Estimate costs: "Demo run (100 examples): $0.50, 5 minutes | Production: $3.50, 90 minutes"
 6. Recommend: "Should I run a demo first to verify the pipeline?"
-7. User confirms demo → submit demo job on t4-small
-8. Demo completes: "Demo successful! Loss decreased from 2.41 → 1.23. Ready for production run?"
-9. User confirms production → submit full training job on a10g-large with LoRA
-10. Monitor progress with Trackio: "Training 45% complete (step 850/1200), loss: 1.23, ETA: 20 min"
+7. User confirms demo → AutoTrain submits demo job (auto-selects t4-small, configures LoRA)
+8. Demo completes: "Demo successful! Loss: 2.41 → 1.23. Ready for production?"
+9. User confirms production → AutoTrain submits full training (auto-optimizes everything)
+10. Monitor via TensorBoard: "Training 45% complete (step 850/1200), loss: 1.23, ETA: 20 min"
 11. On completion: "Training done! Model pushed to appsmithery/code-chef-feature-dev-v2. Evaluating..."
 12. Run eval: "New model: 87% accuracy (+12%), 20% faster, $0.003/1k tokens. Deploy?"
 13. User confirms → update config, canary rollout
-14. "Deployed to 20% of feature_dev requests. Trackio monitoring active. Full rollout in 24h?"
+14. "Deployed to 20% of feature_dev requests. Monitor for 24h, then full rollout?"
 ```
 
 ---
@@ -679,17 +669,17 @@ Orchestrator → Infrastructure Agent → ModelOps Coordinator:
 
 **New files**:
 
-| File                                                               | Description                  |
-| ------------------------------------------------------------------ | ---------------------------- |
-| `agent_orchestrator/agents/infrastructure/modelops/__init__.py`    | Module init                  |
-| `agent_orchestrator/agents/infrastructure/modelops/coordinator.py` | Main routing logic           |
-| `agent_orchestrator/agents/infrastructure/modelops/training.py`    | HuggingFace Hub SDK training |
-| `agent_orchestrator/agents/infrastructure/modelops/evaluation.py`  | LangSmith eval integration   |
-| `agent_orchestrator/agents/infrastructure/modelops/deployment.py`  | Model deployment logic       |
-| `agent_orchestrator/agents/infrastructure/modelops/registry.py`    | Model version tracking       |
-| `config/modelops/training_defaults.yaml`                           | Training hyperparameters     |
-| `config/models/registry.json`                                      | Model version registry       |
-| `support/tests/agents/infrastructure/modelops/test_*.py`           | Unit tests                   |
+| File                                                               | Description                    |
+| ------------------------------------------------------------------ | ------------------------------ |
+| `agent_orchestrator/agents/infrastructure/modelops/__init__.py`    | Module init                    |
+| `agent_orchestrator/agents/infrastructure/modelops/coordinator.py` | Main routing logic             |
+| `agent_orchestrator/agents/infrastructure/modelops/training.py`    | AutoTrain Advanced integration |
+| `agent_orchestrator/agents/infrastructure/modelops/evaluation.py`  | LangSmith eval integration     |
+| `agent_orchestrator/agents/infrastructure/modelops/deployment.py`  | Model deployment logic         |
+| `agent_orchestrator/agents/infrastructure/modelops/registry.py`    | Model version tracking         |
+| `config/modelops/training_defaults.yaml`                           | Training hyperparameters       |
+| `config/models/registry.json`                                      | Model version registry         |
+| `support/tests/agents/infrastructure/modelops/test_*.py`           | Unit tests                     |
 
 **Modified files**:
 
@@ -706,9 +696,11 @@ Orchestrator → Infrastructure Agent → ModelOps Coordinator:
 
 ## Implementation Notes
 
-- **HuggingFace MCP Limitation**: HF MCP provides only inference tools. Training requires `huggingface_hub` Python SDK directly
-- **Error Handling**: Training can fail (OOM, timeout, dataset issues) - implement retry logic with ErrorRecoveryEngine
+- **AutoTrain Advantages**: Simplified API, auto dataset validation, auto GPU selection, auto LoRA config, built-in monitoring
+- **HuggingFace MCP**: Use only for model discovery and validation - AutoTrain handles all training
+- **Dataset Format**: AutoTrain accepts CSV with `text`/`response` columns - simpler than HF datasets format
+- **Error Handling**: AutoTrain provides built-in retry logic and diagnostic errors - less custom code needed
+- **Local Development**: Can run AutoTrain locally for testing, then deploy to HF Spaces for production
 - **Cost Controls**: Add budget limits and require HITL approval for jobs > $10
-- **Model Size**: Start with 7B models; larger requires H100 and higher cost
-- **Dataset Quality**: Validate LangSmith datasets have consistent format before training
+- **Model Size**: AutoTrain supports <1B to 70B models (auto-selects appropriate GPU)
 - **Versioning**: Use semantic versioning (v1.0.0, v1.1.0-beta) in registry

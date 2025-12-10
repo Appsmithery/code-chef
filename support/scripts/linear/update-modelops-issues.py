@@ -69,14 +69,14 @@ Add ModelOps capabilities to the Infrastructure agent for fine-tuning subagent m
 
 ### Training Approach
 - **Discovery**: MCP tools for model/dataset validation
-- **Training**: HuggingFace Jobs API with TRL (SFT/DPO/GRPO)
-- **Monitoring**: Trackio real-time metrics
+- **Training**: AutoTrain Advanced (auto-configured, simplified)
+- **Monitoring**: TensorBoard built-in monitoring
 - **Conversion**: GGUF for local deployment
+- **Development**: Can run locally OR on HF Spaces
 
 ### New Tools
-- `validate_dataset_format` - Pre-training validation (CPU, low cost)
-- `train_subagent_model` - Jobs API training with demo/production modes
-- `monitor_training_job` - Trackio integration
+- `train_subagent_model` - AutoTrain integration with demo/production modes
+- `monitor_training_job` - AutoTrain API monitoring
 - `evaluate_model_vs_baseline` - LangSmith comparison
 - `deploy_model_to_agent` - Config updates + canary
 - `convert_model_to_gguf` - Quantization for llama.cpp/Ollama
@@ -85,13 +85,15 @@ Add ModelOps capabilities to the Infrastructure agent for fine-tuning subagent m
 - GitHub Secret: `HUGGINGFACE_TOKEN` ✅ Configured
 
 ### Phases
-1. **Registry + Training MVP** (CHEF-211) - Jobs API, Trackio, dataset validation
+1. **Registry + Training MVP** (CHEF-211) - AutoTrain integration, CSV export, registry
 2. **Evaluation Integration** (CHEF-212) - LangSmith comparison
 3. **Deployment Automation** (CHEF-213) - Config updates, canary
 4. **UX Polish + GGUF** (CHEF-214) - VS Code commands, local deployment
 
 **Spec Document**: [support/docs/extend Infra agent ModelOps.md](https://github.com/Appsmithery/Dev-Tools/blob/main/support/docs/extend%20Infra%20agent%20ModelOps.md)
-**Reference**: [HF Skills Training](https://huggingface.co/blog/hf-skills-training)
+**References**:
+- [AutoTrain Advanced](https://github.com/huggingface/autotrain-advanced)
+- [HF Skills Training](https://huggingface.co/blog/hf-skills-training)
 
 ---
 *Created by 🏗️ Infrastructure [Infrastructure Agent]*
@@ -99,7 +101,7 @@ Add ModelOps capabilities to the Infrastructure agent for fine-tuning subagent m
 
 CHEF_211_DESC = """## Phase 1: Registry + Training MVP
 
-**Scope**: Core infrastructure for model versioning and HuggingFace Jobs API training
+**Scope**: Core infrastructure for model versioning and AutoTrain integration
 
 ### Files to Create
 - `agent_orchestrator/agents/infrastructure/modelops/__init__.py`
@@ -109,60 +111,72 @@ CHEF_211_DESC = """## Phase 1: Registry + Training MVP
 - `config/modelops/training_defaults.yaml`
 
 ### Tasks
+- [ ] Install AutoTrain Advanced: `pip install autotrain-advanced`
 - [ ] Create `config/models/registry.json` schema
 - [ ] Implement `modelops/registry.py` with CRUD operations
-- [ ] Implement `modelops/training.py` with HuggingFace Jobs API integration
-- [ ] Add `validate_dataset_format` tool (pre-training validation)
+- [ ] Implement `modelops/training.py` with AutoTrain integration
+- [ ] Add LangSmith to CSV export function (AutoTrain input format)
 - [ ] Add `train_subagent_model` tool with demo/production modes
-- [ ] Add `monitor_training_job` tool with Trackio integration
-- [ ] Implement auto GPU selection (t4-small, t4-medium, a10g-large)
-- [ ] Configure LoRA auto-enable for models >3B
-- [ ] Create `config/modelops/training_defaults.yaml` with hardware pricing
+- [ ] Add `monitor_training_job` tool with AutoTrain API
+- [ ] Create `config/modelops/training_defaults.yaml` (minimal config)
 - [ ] Add HuggingFace tokens to `config/env/.env.template`
-- [ ] Unit tests for registry, training, dataset validation
+- [ ] Unit tests for registry and training
+- [ ] Test local training on dev machine (optional)
 
-### HuggingFace Jobs API
+### AutoTrain Integration
 ```python
-import requests
-from huggingface_hub import HfApi, create_repo
+from autotrain.trainers.clm import train as train_sft
+from autotrain.trainers.dpo import train as train_dpo
+from autotrain import AutoTrainConfig
 
 HF_TOKEN = os.environ.get("HUGGINGFACE_TOKEN")
-api = HfApi(token=HF_TOKEN)
 
-# Submit training job
-response = requests.post(
-    "https://huggingface.co/api/jobs",
-    headers={"Authorization": f"Bearer {HF_TOKEN}"},
-    json={
-        "base_model": "Qwen/Qwen2.5-Coder-7B",
-        "dataset": "appsmithery/code-chef-training",
-        "method": "sft",  # or "dpo", "grpo"
-        "hardware": "a10g-large",
-        "config": {
-            "use_lora": True,  # auto for >3B
-            "trackio_enabled": True
-        }
-    }
+# Export LangSmith dataset to CSV (AutoTrain format)
+dataset.to_csv("/tmp/training.csv", columns=["text", "response"])
+
+# Configure AutoTrain (handles everything automatically)
+config = AutoTrainConfig(
+    project_name="code-chef-feature-dev-v2",
+    model="Qwen/Qwen2.5-Coder-7B",
+    data_path="/tmp/training.csv",
+    text_column="text",
+    target_column="response",
+    
+    # AutoTrain auto-configures:
+    auto_find_batch_size=True,  # Optimal batch/GPU
+    use_peft=True,               # LoRA auto-enabled
+    quantization="int4",         # 4-bit training
+    
+    push_to_hub=True,
+    repo_id="appsmithery/code-chef-feature-dev-v2",
+    token=HF_TOKEN
 )
+
+# Submit (works locally OR on HF Spaces)
+job = await train_sft(config)
+tensorboard_url = job.tensorboard_url
 ```
 
-### GPU Selection & Cost
-- **<1B**: `t4-small` (~$0.75/hr, demo $0.50)
-- **1-3B**: `t4-medium` (~$1.00/hr)
-- **3-7B**: `a10g-large` + LoRA (~$2.20/hr, prod $3.50-$15)
-- **>7B**: Not supported (use external infra)
+### AutoTrain Benefits
+- **Auto GPU selection**: t4-small for <1B, a10g-large for 3-7B
+- **Auto LoRA config**: Enabled for >3B models automatically
+- **Auto dataset validation**: Checks format, suggests fixes
+- **Built-in monitoring**: TensorBoard auto-configured
+- **Local OR cloud**: Test locally, deploy to Spaces
 
 ### Training Methods
-- **SFT**: Supervised fine-tuning on input-output pairs
-- **DPO**: Direct preference optimization (chosen/rejected pairs)
-- **GRPO**: Group relative policy optimization (reasoning tasks with rewards)
+- **SFT**: CSV with `text`, `response` columns
+- **DPO**: CSV with `prompt`, `chosen`, `rejected` columns
+- **Reward Modeling**: CSV with `text`, `score` columns
 
-### Demo vs Production
-- **Demo**: 100 examples, 5 min, $0.50 - validates pipeline
+### Cost & Time (Same as Jobs API)
+- **Demo**: 100 examples, 5 min, $0.50
 - **Production**: Full dataset, 3 epochs, 90 min, $3.50-$15
 
-**Estimated effort**: 4-5 days
-**Reference**: [HF Skills Training](https://huggingface.co/blog/hf-skills-training)
+**Estimated effort**: 2-3 days (reduced from 4-5 - AutoTrain simplifies)
+**References**:
+- [AutoTrain Advanced](https://github.com/huggingface/autotrain-advanced)
+- [AutoTrain Docs](https://huggingface.co/docs/autotrain)
 
 ---
 *Subtask 1 of 4 for Phase 8: ModelOps Extension for Infrastructure Agent*"""
@@ -266,15 +280,18 @@ conversion_job = requests.post(
 
 ### User Experience Flow
 1. User: "@chef Train feature_dev model using recent traces"
-2. Agent validates dataset, estimates: "Demo: $0.50, 5 min | Prod: $3.50, 90 min"
-3. Run demo first to verify pipeline
-4. Progress with Trackio: "Training 45% (step 850/1200), loss: 1.23, ETA: 20 min"
-5. Evaluation: "New model: +12% accuracy, 20% faster. Deploy?"
-6. Canary deployment + Trackio monitoring
-7. Optional: "Convert to GGUF for local testing?"
+2. Agent exports to CSV, AutoTrain validates format automatically
+3. Estimate: "Demo: $0.50, 5 min | Prod: $3.50, 90 min"
+4. Run demo → AutoTrain auto-selects GPU, configures LoRA
+5. Progress via TensorBoard: "Training 45% (step 850/1200), loss: 1.23, ETA: 20 min"
+6. Evaluation: "New model: +12% accuracy, 20% faster. Deploy?"
+7. Canary deployment + monitoring
+8. Optional: "Convert to GGUF for local testing?"
 
 **Estimated effort**: 3-4 days
-**Reference**: [HF Skills Training - GGUF](https://huggingface.co/blog/hf-skills-training#converting-to-gguf)
+**References**:
+- [AutoTrain Advanced](https://github.com/huggingface/autotrain-advanced)
+- [HF Skills Training - GGUF](https://huggingface.co/blog/hf-skills-training#converting-to-gguf)
 
 ---
 *Subtask 4 of 4 for Phase 8: ModelOps Extension for Infrastructure Agent*"""
