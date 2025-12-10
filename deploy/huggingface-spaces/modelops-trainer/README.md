@@ -3,12 +3,10 @@ title: code-chef ModelOps Trainer
 emoji: 🏗️
 colorFrom: blue
 colorTo: purple
-sdk: gradio
-sdk_version: 4.44.0
-app_file: app.py
+sdk: docker
+app_port: 7860
 pinned: false
 license: apache-2.0
-duplicated_from: appsmithery/code-chef-modelops-trainer
 hardware: t4-small
 ---
 
