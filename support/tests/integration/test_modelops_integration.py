@@ -248,8 +248,8 @@ async def test_end_to_end_workflow():
         registry.add_version("feature_dev", version)
         logger.success(f"✓ Evaluation complete (simulated): 15.2% improvement")
 
-        # Step 3: Deploy as canary
-        logger.info("\n[3/4] Deploying as 20% canary...")
+        # Step 3: Deploy to production
+        logger.info("\n[3/4] Deploying to production...")
 
         # Create temp models.yaml for testing
         models_yaml_path = os.path.join(temp_dir, "models.yaml")
@@ -277,11 +277,10 @@ async def test_end_to_end_workflow():
         deploy_result = await deployment.deploy_model_to_agent(
             agent_name="feature_dev",
             model_repo=model_repo,
-            rollout_strategy="canary_20pct",
             version="v1.0.0",
         )
 
-        logger.success(f"✓ Deployed as canary: {deploy_result.rollout_pct}% traffic")
+        logger.success(f"✓ Deployed to production")
 
         # Step 4: Rollback
         logger.info("\n[4/4] Testing rollback...")

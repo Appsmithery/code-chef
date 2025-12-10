@@ -64,10 +64,6 @@ class ModelOpsCoordinator:
         elif "deploy" in message_lower and "model" in message_lower:
             return await self._handle_deployment(context)
 
-        # Canary promotion
-        elif "promote" in message_lower and "canary" in message_lower:
-            return await self._handle_canary_promotion(context)
-
         # Rollback operations
         elif "rollback" in message_lower:
             return await self._handle_rollback(context)
@@ -94,7 +90,6 @@ class ModelOpsCoordinator:
                     "train model",
                     "evaluate model",
                     "deploy model",
-                    "promote canary",
                     "rollback deployment",
                     "list models",
                     "monitor training",
@@ -228,38 +223,10 @@ class ModelOpsCoordinator:
             "agent_name": result.agent_name,
             "model_repo": result.model_repo,
             "version": result.version,
-            "rollout_pct": result.rollout_pct,
             "deployed_at": result.deployed_at,
             "config_updated": result.config_path,
             "rollback_available": result.rollback_available,
-            "message": f"Deployed {model_repo} to {agent_name} ({result.rollout_pct}% traffic)",
-        }
-
-    @traceable(name="modelops_promote_canary")
-    async def _handle_canary_promotion(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle canary promotion request.
-
-        Expected context:
-            agent_name: Agent with canary deployment
-            to_percentage: Target percentage (50 or 100)
-        """
-        agent_name = context.get("agent_name")
-        to_percentage = context.get("to_percentage", 100)
-
-        if not agent_name:
-            return {"error": "agent_name required", "context": context}
-
-        result = await self.deployment.promote_canary(
-            agent_name=agent_name, to_percentage=to_percentage
-        )
-
-        return {
-            "operation": "promote_canary",
-            "agent_name": result.agent_name,
-            "model_repo": result.model_repo,
-            "version": result.version,
-            "rollout_pct": result.rollout_pct,
-            "message": f"Promoted canary to {result.rollout_pct}% traffic",
+            "message": f"Deployed {model_repo} to {agent_name}",
         }
 
     @traceable(name="modelops_rollback")

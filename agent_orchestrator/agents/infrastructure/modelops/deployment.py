@@ -31,9 +31,6 @@ class DeploymentConfig(BaseModel):
     deployment_target: Literal["openrouter", "huggingface"] = Field(
         default="openrouter", description="Where to deploy the model"
     )
-    rollout_strategy: Literal["immediate", "canary_20pct", "canary_50pct"] = Field(
-        default="immediate", description="Deployment rollout strategy"
-    )
     version: Optional[str] = Field(None, description="Version tag for this deployment")
 
 
@@ -45,7 +42,6 @@ class DeploymentResult(BaseModel):
     model_repo: str
     version: str
     deployment_target: str
-    rollout_pct: int = Field(..., description="Percentage of traffic to new model")
     endpoint_url: Optional[str] = None
     config_path: str
     deployed_at: str
@@ -87,7 +83,6 @@ class ModelOpsDeployment:
         agent_name: str,
         model_repo: str,
         deployment_target: str = "openrouter",
-        rollout_strategy: str = "immediate",
         version: Optional[str] = None,
     ) -> DeploymentResult:
         """Deploy a fine-tuned model to an agent.
@@ -99,7 +94,6 @@ class ModelOpsDeployment:
             agent_name: Agent to deploy to (feature_dev, code_review, etc.)
             model_repo: HuggingFace model repo path
             deployment_target: "openrouter" or "huggingface"
-            rollout_strategy: "immediate", "canary_20pct", or "canary_50pct"
             version: Optional version tag (auto-detected from registry if None)
 
         Returns:
@@ -162,18 +156,6 @@ class ModelOpsDeployment:
         with open(self.models_config_path, "w", encoding="utf-8") as f:
             yaml.safe_dump(models_config, f, default_flow_style=False, sort_keys=False)
 
-        # Determine rollout percentage
-        rollout_pct_map = {"immediate": 100, "canary_20pct": 20, "canary_50pct": 50}
-        rollout_pct = rollout_pct_map.get(rollout_strategy, 100)
-
-        # Map rollout strategy to deployment status
-        status_map = {
-            "immediate": "deployed",
-            "canary_20pct": "canary_20pct",
-            "canary_50pct": "canary_50pct",
-        }
-        deployment_status = status_map.get(rollout_strategy, "deployed")
-
         # Update registry with deployment info
         deployed_at = datetime.utcnow().isoformat() + "Z"
 
@@ -186,18 +168,8 @@ class ModelOpsDeployment:
                 break
 
         if version_found:
-            # Update existing version in history
-            # The registry API doesn't have update_version, so we'll update via set_current or set_canary
-
-            # If immediate deployment, set as current
-            if rollout_strategy == "immediate":
-                self.registry.set_current_model(agent_name, version_found.version)
-            # If canary, set as canary
-            elif "canary" in rollout_strategy:
-                canary_pct = 20 if "20" in rollout_strategy else 50
-                self.registry.set_canary_model(
-                    agent_name, version_found.version, canary_pct
-                )
+            # Set as current model in registry
+            self.registry.set_current_model(agent_name, version_found.version)
 
         return DeploymentResult(
             deployed=True,
@@ -205,59 +177,11 @@ class ModelOpsDeployment:
             model_repo=model_repo,
             version=version,
             deployment_target=deployment_target,
-            rollout_pct=rollout_pct,
             endpoint_url=endpoint_url,
             config_path=str(self.models_config_path),
             deployed_at=deployed_at,
             previous_model=current_model,
             rollback_available=(current_model is not None),
-        )
-
-    @traceable(name="promote_canary")
-    async def promote_canary(
-        self, agent_name: str, to_percentage: int = 100
-    ) -> DeploymentResult:
-        """Promote canary deployment to higher traffic percentage.
-
-        Args:
-            agent_name: Agent with canary deployment
-            to_percentage: Target traffic percentage (50 or 100)
-
-        Returns:
-            DeploymentResult with updated rollout info
-        """
-        # Get canary version from registry
-        canary_version = self.registry.get_canary_model(agent_name)
-        if not canary_version:
-            raise ValueError(f"No canary deployment found for {agent_name}")
-
-        # Map percentage to strategy and status
-        if to_percentage == 50:
-            # Update to 50% canary
-            self.registry.set_canary_model(agent_name, canary_version.version, 50)
-        elif to_percentage == 100:
-            # Promote to current
-            self.registry.promote_canary_to_current(agent_name)
-        else:
-            raise ValueError(f"Invalid percentage: {to_percentage}. Use 50 or 100.")
-
-        # Get updated current model
-        current = self.registry.get_current_model(agent_name)
-
-        return DeploymentResult(
-            deployed=True,
-            agent_name=agent_name,
-            model_repo=canary_version.hub_repo,
-            version=canary_version.version,
-            deployment_target="openrouter",  # Assuming OpenRouter for now
-            rollout_pct=to_percentage,
-            endpoint_url="https://openrouter.ai/api/v1",
-            config_path=str(self.models_config_path),
-            deployed_at=datetime.utcnow().isoformat() + "Z",
-            previous_model=(
-                current.model_id if current and to_percentage == 100 else None
-            ),
-            rollback_available=True,
         )
 
     @traceable(name="rollback_deployment")
@@ -309,7 +233,6 @@ class ModelOpsDeployment:
             agent_name=agent_name,
             model_repo=target_version.hub_repo,
             deployment_target="openrouter",
-            rollout_strategy="immediate",
             version=target_version.version,
         )
 
