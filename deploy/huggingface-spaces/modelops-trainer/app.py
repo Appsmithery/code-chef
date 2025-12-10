@@ -5,16 +5,15 @@ Provides REST API endpoint for AutoTrain-based model fine-tuning
 """
 
 import asyncio
+import base64
 import json
 import os
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 import gradio as gr
-from autotrain import AutoTrainConfig
-from autotrain.trainers.clm import train as train_sft
-from autotrain.trainers.dpo import train as train_dpo
 from fastapi import FastAPI, HTTPException
 from huggingface_hub import HfApi
 from pydantic import BaseModel
@@ -85,7 +84,7 @@ async def run_training_job(
     demo_mode: bool,
     config_overrides: Optional[Dict] = None,
 ):
-    """Execute AutoTrain job asynchronously"""
+    """Execute AutoTrain job asynchronously using CLI"""
     try:
         # Update job status
         metadata = load_job_metadata(job_id)
@@ -93,48 +92,74 @@ async def run_training_job(
         metadata["started_at"] = datetime.utcnow().isoformat()
         save_job_metadata(job_id, metadata)
 
-        # Configure AutoTrain
+        # Configure output directory
         timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-        repo_id = f"appsmithery/code-chef-{agent_name}-{timestamp}"
+        repo_id = f"alextorelli/codechef-{agent_name}-{timestamp}"
+        output_dir = JOBS_DIR / f"{job_id}_output"
+        output_dir.mkdir(exist_ok=True)
 
-        config = AutoTrainConfig(
-            project_name=f"code-chef-{agent_name}-{job_id[:8]}",
-            model=base_model,
-            data_path=dataset_path,
-            text_column="text",
-            target_column="response",
-            # AutoTrain auto-configuration
-            auto_find_batch_size=True,
-            use_peft=True,  # Auto LoRA for >3B models
-            quantization="int4",
-            # Output
-            push_to_hub=True,
-            repo_id=repo_id,
-            token=HF_TOKEN,
-            # Demo mode overrides
-            num_train_epochs=1 if demo_mode else 3,
-            max_target_length=512 if demo_mode else 2048,
-        )
+        # Build autotrain-advanced CLI command
+        cmd = [
+            "autotrain",
+            "llm",
+            "--train",
+            "--model",
+            base_model,
+            "--data-path",
+            dataset_path,
+            "--text-column",
+            "text",
+            "--prompt-text-column",
+            "response",
+            "--project-name",
+            f"codechef-{agent_name}",
+            "--push-to-hub",
+            "--repo-id",
+            repo_id,
+            "--token",
+            HF_TOKEN,
+            # Auto-configuration
+            "--auto-find-batch-size",
+            "--use-peft",
+            "--quantization",
+            "int4",
+        ]
 
-        # Apply user overrides
+        # Demo mode: reduce training
+        if demo_mode:
+            cmd.extend(["--num-train-epochs", "1", "--max-seq-length", "512"])
+        else:
+            cmd.extend(["--num-train-epochs", "3", "--max-seq-length", "2048"])
+
+        # Apply overrides
         if config_overrides:
             for key, value in config_overrides.items():
-                if hasattr(config, key):
-                    setattr(config, key, value)
+                cmd.extend([f"--{key.replace('_', '-')}", str(value)])
 
-        # Execute training
-        if training_method == "sft":
-            job = await train_sft(config)
-        elif training_method == "dpo":
-            job = await train_dpo(config)
-        else:
-            raise ValueError(f"Unsupported training method: {training_method}")
+        # Execute training subprocess
+        log_file = output_dir / "training.log"
+        with open(log_file, "w") as log:
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=log,
+                stderr=subprocess.STDOUT,
+                cwd=str(output_dir),
+            )
+            returncode = await process.wait()
+
+        if returncode != 0:
+            with open(log_file) as f:
+                error_log = f.read()
+            raise RuntimeError(
+                f"Training failed with code {returncode}: {error_log[-500:]}"
+            )
 
         # Update final status
         metadata["status"] = "completed"
         metadata["completed_at"] = datetime.utcnow().isoformat()
         metadata["hub_repo"] = repo_id
-        metadata["tensorboard_url"] = getattr(job, "tensorboard_url", None)
+        metadata["model_id"] = repo_id
+        metadata["tensorboard_url"] = f"https://huggingface.co/{repo_id}/tensorboard"
         save_job_metadata(job_id, metadata)
 
     except Exception as e:
@@ -215,6 +240,7 @@ async def get_job_status(job_id: str):
     return JobStatus(
         job_id=metadata["job_id"],
         status=metadata["status"],
+        model_id=metadata.get("model_id"),
         hub_repo=metadata.get("hub_repo"),
         tensorboard_url=metadata.get("tensorboard_url"),
         error=metadata.get("error"),
