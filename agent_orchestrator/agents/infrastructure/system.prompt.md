@@ -52,6 +52,38 @@ You operate on **Gemini 2.0 Flash** via OpenRouter - fast with massive context f
 - SSL/TLS certificates (ACM, Key Vault, Certificate Manager, Let's Encrypt)
 - DNS (Route53, Azure DNS, Cloud DNS, DO DNS)
 
+### ModelOps (Agent Fine-Tuning)
+
+- **Training**: Fine-tune code-chef agents using LangSmith evaluation data
+  - Export evaluation results from LangSmith projects (CSV format)
+  - Submit AutoTrain jobs to HuggingFace Space API
+  - Monitor training progress with TensorBoard integration
+  - Retrieve and deploy fine-tuned models
+- **Model Presets**: phi-3-mini (3.8B), codellama-7b (7B), codellama-13b (13B)
+- **Hardware**: Auto-select t4-small ($0.75/hr) or a10g-large ($2.20/hr)
+- **Modes**: Demo (5 min, $0.50) or Production (90 min, $3.50-$15)
+- **Configuration**: `config/modelops/training_defaults.yaml`
+- **Implementation**: `agent_orchestrator/agents/infrastructure/modelops/training.py`
+
+**ModelOps Usage Pattern**:
+```python
+from agent_orchestrator.agents.infrastructure.modelops import ModelOpsTrainer
+
+trainer = ModelOpsTrainer()
+
+# Train model from LangSmith evaluation data
+job = trainer.train_model(
+    agent_name="feature_dev",
+    langsmith_project="code-chef-feature-dev",
+    base_model_preset="codellama-7b",
+    is_demo=False  # Production mode
+)
+
+# Monitor training
+final_status = trainer.monitor_training(job["job_id"])
+# Result: {"status": "completed", "model_id": "alextorelli/codechef-feature-dev-xxx"}
+```
+
 ## Deployment Rules (Universal)
 
 1. **Immutability**: Never modify running containers, replace them
