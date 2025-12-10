@@ -258,115 +258,86 @@ async def health_check():
     }
 
 
-# Gradio UI for manual testing
+# Gradio UI for API documentation
 with gr.Blocks(title="code-chef ModelOps Trainer") as demo:
     gr.Markdown(
         """
     # 🏗️ code-chef ModelOps Training Service
     
     AutoTrain-powered fine-tuning for code-chef agents.
-    Use the API endpoints below for programmatic access.
+    
+    ## API Status
+    ✅ Service is running
+    
+    ## Quick Test
+    ```bash
+    curl https://alextorelli-code-chef-modelops-trainer.hf.space/health
+    ```
+    
+    ## REST API Endpoints
+    
+    ### POST /train
+    Submit a new training job
+    
+    ```bash
+    curl -X POST https://alextorelli-code-chef-modelops-trainer.hf.space/train \\
+      -H "Content-Type: application/json" \\
+      -d '{
+        "dataset": "<base64-encoded-csv>",
+        "base_model": "microsoft/Phi-3-mini-4k-instruct",
+        "project_name": "codechef-feature-dev",
+        "is_demo": true,
+        "text_column": "text",
+        "response_column": "response"
+      }'
+    ```
+    
+    ### GET /status/{job_id}
+    Get training job status
+    
+    ```bash
+    curl https://alextorelli-code-chef-modelops-trainer.hf.space/status/job_xxx
+    ```
+    
+    ### GET /health
+    Health check endpoint
+    
+    Returns service status and configuration.
+    
+    ## Python Client
+    
+    ```python
+    from agent_orchestrator.agents.infrastructure.modelops.training import ModelOpsTrainerClient
+    
+    client = ModelOpsTrainerClient()
+    
+    # Submit job
+    job = client.submit_training_job(
+        csv_data="text,response\\ncode,output",
+        base_model="microsoft/Phi-3-mini-4k-instruct",
+        project_name="test-training",
+        is_demo=True
+    )
+    
+    # Check status
+    status = client.get_job_status(job["job_id"])
+    ```
+    
+    ## Model Presets
+    - **phi-3-mini**: 3.8B params, t4-small GPU ($0.75/hr)
+    - **codellama-7b**: 7B params, a10g-large GPU ($2.20/hr)
+    - **codellama-13b**: 13B params, a10g-large GPU ($2.20/hr)
+    
+    ## Training Modes
+    - **Demo**: 1 epoch, ~5 min, ~$0.50
+    - **Production**: 3 epochs, ~90 min, $3.50-$15
     """
     )
 
-    with gr.Tab("Submit Training"):
-        agent_name = gr.Textbox(label="Agent Name", placeholder="feature_dev")
-        base_model = gr.Textbox(label="Base Model", value="Qwen/Qwen2.5-Coder-7B")
-        dataset_file = gr.File(label="Training Dataset (CSV)", file_types=[".csv"])
-        training_method = gr.Dropdown(
-            label="Training Method", choices=["sft", "dpo", "reward"], value="sft"
-        )
-        demo_mode = gr.Checkbox(label="Demo Mode (100 examples, 1 epoch)", value=False)
-
-        submit_btn = gr.Button("Submit Training Job", variant="primary")
-        output_status = gr.JSON(label="Job Submission Result")
-
-    with gr.Tab("Check Status"):
-        job_id_input = gr.Textbox(
-            label="Job ID", placeholder="job_20251210_123456_feature_dev"
-        )
-        check_btn = gr.Button("Check Status")
-        status_output = gr.JSON(label="Job Status")
-
-    with gr.Tab("API Documentation"):
-        gr.Markdown(
-            """
-        ## REST API Endpoints
-        
-        ### POST /train
-        Submit a new training job
-        
-        ```bash
-        curl -X POST https://YOUR-SPACE.hf.space/train \\
-          -H "Content-Type: application/json" \\
-          -d '{
-            "agent_name": "feature_dev",
-            "base_model": "Qwen/Qwen2.5-Coder-7B",
-            "dataset_csv": "<base64-encoded-csv>",
-            "training_method": "sft",
-            "demo_mode": false
-          }'
-        ```
-        
-        ### GET /status/{job_id}
-        Get training job status
-        
-        ```bash
-        curl https://YOUR-SPACE.hf.space/status/job_20251210_123456_feature_dev
-        ```
-        
-        ### GET /health
-        Health check
-        
-        ```bash
-        curl https://YOUR-SPACE.hf.space/health
-        ```
-        """
-        )
-
-    # Event handlers
-    def submit_job(agent, model, dataset, method, demo):
-        if not dataset:
-            return {"error": "Dataset file required"}
-
-        # Read CSV and encode
-        import base64
-
-        csv_content = dataset.read()
-        encoded_csv = base64.b64encode(csv_content).decode()
-
-        request = TrainingRequest(
-            agent_name=agent,
-            base_model=model,
-            dataset_csv=encoded_csv,
-            training_method=method,
-            demo_mode=demo,
-        )
-
-        # Submit via API
-        import requests
-
-        response = requests.post("http://localhost:7860/train", json=request.dict())
-        return response.json()
-
-    def check_status(job_id):
-        import requests
-
-        response = requests.get(f"http://localhost:7860/status/{job_id}")
-        return response.json()
-
-    submit_btn.click(
-        fn=submit_job,
-        inputs=[agent_name, base_model, dataset_file, training_method, demo_mode],
-        outputs=output_status,
-    )
-
-    check_btn.click(fn=check_status, inputs=[job_id_input], outputs=status_output)
-
-# Mount Gradio app to FastAPI
-app = gr.mount_gradio_app(app, demo, path="/")
+# Mount Gradio to root and FastAPI to /api
+demo = gr.mount_gradio_app(app, demo, path="/")
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    uvicorn.run(demo, host="0.0.0.0", port=7860)
