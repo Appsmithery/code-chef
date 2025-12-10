@@ -5,6 +5,7 @@ Fine-tune code-chef agents using LangSmith evaluation data and HuggingFace AutoT
 ## Overview
 
 The ModelOps module enables continuous improvement of code-chef agents by:
+
 1. Exporting high-quality examples from LangSmith evaluations
 2. Submitting fine-tuning jobs to HuggingFace Space (AutoTrain)
 3. Monitoring training progress with TensorBoard
@@ -76,20 +77,22 @@ print(f"Model: {final_status['model_id']}")
 
 ### Model Presets (`config/modelops/training_defaults.yaml`)
 
-| Preset | Model ID | Parameters | Hardware | Cost/hr | Use Case |
-|--------|----------|------------|----------|---------|----------|
-| phi-3-mini | microsoft/Phi-3-mini-4k-instruct | 3.8B | t4-small | $0.75 | Code review, docs, CI/CD |
-| codellama-7b | codellama/CodeLlama-7b-Instruct-hf | 7B | a10g-large | $2.20 | Feature dev, infrastructure |
-| codellama-13b | codellama/CodeLlama-13b-Instruct-hf | 13B | a10g-large | $2.20 | Supervisor, complex refactoring |
+| Preset        | Model ID                            | Parameters | Hardware   | Cost/hr | Use Case                        |
+| ------------- | ----------------------------------- | ---------- | ---------- | ------- | ------------------------------- |
+| phi-3-mini    | microsoft/Phi-3-mini-4k-instruct    | 3.8B       | t4-small   | $0.75   | Code review, docs, CI/CD        |
+| codellama-7b  | codellama/CodeLlama-7b-Instruct-hf  | 7B         | a10g-large | $2.20   | Feature dev, infrastructure     |
+| codellama-13b | codellama/CodeLlama-13b-Instruct-hf | 13B        | a10g-large | $2.20   | Supervisor, complex refactoring |
 
 ### Training Modes
 
 **Demo Mode** (Quick validation):
+
 - 1 epoch, 10 steps max
 - ~5 minutes, ~$0.50 cost
 - Use for testing dataset quality
 
 **Production Mode** (Full training):
+
 - 3 epochs, auto-configured steps
 - ~90 minutes, $3.50-$15 cost
 - Use for deploying to agents
@@ -170,13 +173,13 @@ python support/tests/integration/test_modelops_integration.py --full
 
 ## Cost Estimates
 
-| Model | Mode | Duration | Hardware | Cost |
-|-------|------|----------|----------|------|
-| phi-3-mini | Demo | 5 min | t4-small | $0.50 |
-| phi-3-mini | Production | 90 min | t4-small | $3.50 |
-| codellama-7b | Demo | 8 min | a10g-large | $0.80 |
-| codellama-7b | Production | 120 min | a10g-large | $10.00 |
-| codellama-13b | Production | 180 min | a10g-large | $15.00 |
+| Model         | Mode       | Duration | Hardware   | Cost   |
+| ------------- | ---------- | -------- | ---------- | ------ |
+| phi-3-mini    | Demo       | 5 min    | t4-small   | $0.50  |
+| phi-3-mini    | Production | 90 min   | t4-small   | $3.50  |
+| codellama-7b  | Demo       | 8 min    | a10g-large | $0.80  |
+| codellama-7b  | Production | 120 min  | a10g-large | $10.00 |
+| codellama-13b | Production | 180 min  | a10g-large | $15.00 |
 
 ## Safety Limits
 
