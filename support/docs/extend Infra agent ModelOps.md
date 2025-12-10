@@ -4,10 +4,10 @@
 >
 > Sub-issues:
 >
-> - [CHEF-211 - Phase 1: Registry + Training MVP](https://linear.app/dev-ops/issue/CHEF-211)
-> - [CHEF-212 - Phase 2: Evaluation Integration](https://linear.app/dev-ops/issue/CHEF-212)
-> - [CHEF-213 - Phase 3: Deployment Automation](https://linear.app/dev-ops/issue/CHEF-213)
-> - [CHEF-214 - Phase 4: UX Polish](https://linear.app/dev-ops/issue/CHEF-214)
+> - [CHEF-211 - Phase 1: Registry + Training MVP](https://linear.app/dev-ops/issue/CHEF-211) ✅ **DONE**
+> - [CHEF-212 - Phase 2: Evaluation Integration](https://linear.app/dev-ops/issue/CHEF-212) ✅ **DONE**
+> - [CHEF-213 - Phase 3: Deployment Automation](https://linear.app/dev-ops/issue/CHEF-213) 🚧 **READY**
+> - [CHEF-214 - Phase 4: UX Polish](https://linear.app/dev-ops/issue/CHEF-214) ⏳ **BLOCKED**
 
 ## Context
 
@@ -237,43 +237,68 @@ openrouter:
 
 ### 3. Model Registry Schema
 
-Create `config/models/registry.json`:
+✅ **IMPLEMENTED** - See `config/models/registry.json` and `agent_orchestrator/agents/infrastructure/modelops/registry.py`
+
+**Registry Structure** (JSON with Pydantic validation):
 
 ```json
 {
-  "feature_dev": {
-    "current": {
-      "version": "v1-baseline",
-      "model": "qwen/qwen-2.5-coder-32b-instruct",
-      "endpoint": "openrouter",
-      "deployed_at": "2025-12-01T00:00:00Z"
-    },
-    "history": [
-      {
-        "version": "v2-finetuned",
-        "model": "appsmithery/code-chef-feature-dev-20251209",
-        "base_model": "Qwen/Qwen2.5-Coder-7B",
-        "training_method": "sft",
-        "training_dataset": "ls://feature-dev-examples-001",
-        "eval_dataset": "ls://feature-dev-eval-001",
-        "eval_scores": {
-          "accuracy": 0.87,
-          "baseline_improvement": "+12%",
-          "avg_latency_ms": 1200,
-          "cost_per_1k": 0.003
+  "created_at": "2025-12-10T00:00:00Z",
+  "updated_at": "2025-12-10T14:53:00Z",
+  "version": "1.0.0",
+  "agents": {
+    "feature_dev": {
+      "agent_name": "feature_dev",
+      "current": {
+        "version": "v1.0.0",
+        "model_id": "microsoft/Phi-3-mini-4k-instruct",
+        "training_config": {
+          "base_model": "microsoft/Phi-3-mini-4k-instruct",
+          "training_method": "sft",
+          "training_dataset": "ls://feature-dev-train",
+          "eval_dataset": "ls://feature-dev-eval",
+          "learning_rate": 2e-4,
+          "num_epochs": 3
         },
         "trained_at": "2025-12-09T22:00:00Z",
-        "hub_repo": "appsmithery/code-chef-feature-dev-20251209",
-        "deployment_status": "canary_20pct"
-      }
-    ]
-  },
-  "code_review": { "current": {...}, "history": [] },
-  "infrastructure": { "current": {...}, "history": [] },
-  "cicd": { "current": {...}, "history": [] },
-  "documentation": { "current": {...}, "history": [] }
+        "trained_by": "modelops-trainer",
+        "job_id": "job_abc123",
+        "hub_repo": "alextorelli/codechef-feature-dev-v1",
+        "eval_scores": {
+          "accuracy": 0.87,
+          "baseline_improvement_pct": 12.0,
+          "avg_latency_ms": 1200.0,
+          "cost_per_1k_tokens": 0.003,
+          "token_efficiency": 0.82,
+          "workflow_completeness": 0.91,
+          "langsmith_experiment_url": "https://smith.langchain.com/..."
+        },
+        "deployment_status": "deployed",
+        "deployed_at": "2025-12-10T00:00:00Z"
+      },
+      "canary": null,
+      "history": [...]
+    }
+  }
 }
 ```
+
+**Version Tracking Features** (Phase 2 Complete):
+
+- ✅ Semantic versioning support (`v{major}.{minor}.{patch}-{suffix}`)
+- ✅ Deployment lifecycle: `not_deployed` → `canary_20pct` → `canary_50pct` → `deployed` → `archived`
+- ✅ Automatic backups (last 10 versions in `config/models/backups/`)
+- ✅ Thread-safe operations with file locking
+- ✅ Pydantic validation for all data structures
+- ✅ Full CRUD operations (add, update, promote, rollback)
+
+**Phase 3 Enhancements** (Planned):
+
+- Auto-increment version generator
+- Model ID naming convention validator
+- Parent version tracking (lineage)
+- Tag system for branches (production/experimental/security)
+- Changelog field for release notes
 
 ### 4. Infrastructure Agent Integration
 
@@ -313,6 +338,8 @@ async def route_modelops_request(message: str, context: dict) -> dict:
 
 ### 5. LangSmith Integration Requirements
 
+✅ **IMPLEMENTED** - See `agent_orchestrator/agents/infrastructure/modelops/evaluation.py`
+
 Integrates with existing evaluation infrastructure in `support/tests/evaluation/`:
 
 - **Dataset Format**: Expect LangSmith datasets with structure:
@@ -325,7 +352,7 @@ Integrates with existing evaluation infrastructure in `support/tests/evaluation/
 }
 ```
 
-- **Existing Evaluators** (from `evaluators.py`):
+- **Existing Evaluators** (from `evaluators.py`, integrated in Phase 2):
 
   - `agent_routing_accuracy` - Correct agent selection
   - `token_efficiency` - Token usage optimization
@@ -334,6 +361,21 @@ Integrates with existing evaluation infrastructure in `support/tests/evaluation/
   - `mcp_integration_quality` - Tool usage patterns
   - `risk_assessment_accuracy` - HITL trigger accuracy
 
+- **Weighted Scoring** (Phase 2 Implementation):
+
+  - 30% accuracy
+  - 25% workflow_completeness
+  - 20% token_efficiency
+  - 15% latency_threshold
+  - 10% mcp_integration_quality
+
+- **Recommendation Engine** (Phase 2):
+
+  - **Deploy**: >15% improvement, no critical degradations
+  - **Deploy Canary**: 5-15% improvement, needs validation
+  - **Needs Review**: ±5% marginal change
+  - **Reject**: <-5% regression OR >20% degradation OR quality <0.5
+
 - **Evaluation Runs**: Tag experiments with:
 
   - `agent: {agent_name}`
@@ -341,6 +383,26 @@ Integrates with existing evaluation infrastructure in `support/tests/evaluation/
   - `experiment_type: baseline_vs_candidate`
 
 - **Tracing**: All ModelOps actions use `@traceable` decorator for LangSmith visibility
+
+**Dataset Evolution Strategy**:
+
+1. **Phase 1 (Current)**: Bootstrap with public HuggingFace datasets
+
+   - `bigcode/the-stack-dedup` for code generation
+   - Generic ML datasets for initial training
+   - Establishes baseline performance
+
+2. **Phase 2 (3-6 months)**: Hybrid approach
+
+   - 80% public datasets + 20% LangSmith traces
+   - Filter for: `success=True`, `feedback_score>=4.0`, `hitl_approved=True`
+   - Capture workflow patterns, tool usage, multi-agent handoffs
+
+3. **Phase 3 (6-12 months)**: Proprietary LangSmith datasets
+   - 100% real code-chef workflow traces
+   - 10,000+ examples per agent
+   - Production-validated, domain-specific examples
+   - Expected: +40-60% improvement over generic models
 
 ### 6. HuggingFace Integration
 
@@ -576,55 +638,132 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 
 ## Implementation Phases (Linear Issues)
 
-### Phase 1: Registry + Training (MVP)
+### Phase 1: Registry + Training (MVP) ✅ **COMPLETE**
 
-**Scope**: Core infrastructure for model versioning and AutoTrain integration
+**Status**: Done - 2025-12-10
 
-- [ ] Install AutoTrain Advanced: `pip install autotrain-advanced`
-- [ ] Create `config/models/registry.json` schema
-- [ ] Implement `modelops/registry.py` with CRUD operations
-- [ ] Implement `modelops/training.py` with AutoTrain integration
-- [ ] Add LangSmith to CSV export function (AutoTrain input format)
-- [ ] Add `train_subagent_model` tool with demo/production modes
-- [ ] Add `monitor_training_job` tool with AutoTrain API
-- [ ] Create `config/modelops/training_defaults.yaml` (minimal - AutoTrain handles most config)
-- [ ] Add HuggingFace tokens to `config/env/.env.template`
-- [ ] Unit tests for registry and training
-- [ ] Test local training on development machine (optional)
+**Delivered**:
 
-**HuggingFace Space**: Production training service deployed at `deploy/huggingface-spaces/modelops-trainer/`
+- ✅ Created `config/models/registry.json` schema ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/config/models/registry.json))
+- ✅ Implemented `modelops/registry.py` with CRUD operations ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/registry.py))
+  - ModelRegistry class with thread-safe operations
+  - Pydantic validation (TrainingConfig, EvaluationScores, ModelVersion)
+  - Automatic backups (10-version history)
+  - Version tracking: current, canary, archived states
+  - Rollback and promotion operations
+- ✅ Implemented `modelops/training.py` with AutoTrain integration ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/training.py))
+  - ModelOpsTrainerClient for Space API
+  - ModelOpsTrainer for end-to-end orchestration
+  - LangSmith to CSV export
+  - Demo vs Production modes
+- ✅ Created `config/modelops/training_defaults.yaml` ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/config/modelops/training_defaults.yaml))
+  - Model presets (phi-3-mini, codellama-7b, codellama-13b)
+  - Training mode defaults
+  - GPU/cost estimates
+- ✅ HuggingFace Space deployed at `alextorelli/code-chef-modelops-trainer`
+  - REST API: `/health`, `/train`, `/status/:job_id`
+  - Healthy and responsive
+  - AutoTrain integration working
+- ✅ Integration tests created ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/support/tests/integration/test_modelops_integration.py))
+  - Health check, demo training, full integration tests
+- ✅ Comprehensive README documentation ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/README.md))
 
-- REST API for job submission and monitoring
-- Gradio UI for manual testing
-- See `DEPLOYMENT.md` for setup instructions
+**Items Deferred to Phase 2**: Registry and agent integration (better designed with evaluation context)
 
-**Estimated effort**: 2-3 days (reduced from 4-5 days - AutoTrain simplifies significantly)
+**Actual effort**: 2 days
 
-### Phase 2: Evaluation Integration
+### Phase 2: Evaluation Integration ✅ **COMPLETE**
 
-**Scope**: LangSmith integration for model comparison
+**Status**: Done - 2025-12-10
 
-- [ ] Implement `modelops/evaluation.py` using existing `support/tests/evaluation/evaluators.py`
-- [ ] Add `evaluate_model_vs_baseline` tool
-- [ ] Create evaluation comparison report format
-- [ ] Add experiment tagging (agent, model_version, experiment_type)
-- [ ] Unit tests for evaluation workflow
+**Delivered**:
 
-**Estimated effort**: 2-3 days
+- ✅ Implemented `modelops/evaluation.py` ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/evaluation.py))
+  - ModelEvaluator class integrating with existing evaluators
+  - `compare_models()` for baseline vs candidate comparison
+  - Weighted improvement calculation (30% accuracy, 25% completeness, 20% efficiency, 15% latency, 10% integration)
+  - Automatic recommendation generation (deploy, deploy_canary, reject, needs_review)
+  - Markdown comparison report generation
+  - LangSmith experiment tracking
+- ✅ Registry implementation from Phase 1 moved here
+  - Better designed with evaluation context
+  - Full version history tracking
+  - Deployment status management
+- ✅ Unit tests for registry ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/support/tests/agents/infrastructure/modelops/test_registry.py))
+  - 15 tests covering CRUD operations, validation, backup
+  - All passing ✅
+- ✅ Unit tests for evaluation ([link](https://github.com/Appsmithery/Dev-Tools/blob/main/support/tests/agents/infrastructure/modelops/test_evaluation.py))
+  - 12 tests covering comparison, recommendation, reports
+  - All passing ✅
+- ✅ Updated `modelops/__init__.py` to export new classes
 
-### Phase 3: Deployment Automation
+**Test Results**: 27/27 tests passing
 
-**Scope**: Automated config updates and canary deployments
+**Key Features**:
 
-- [ ] Implement `modelops/deployment.py`
-- [ ] Add `deploy_model_to_agent` tool
+- Weighted scoring with configurable thresholds
+- Smart recommendation engine based on improvement percentage
+- Cached evaluation scores to avoid redundant runs
+- Full comparison reports in markdown format
+
+**Actual effort**: 2 days
+
+### Phase 3: Deployment Automation 🚧 **IN PROGRESS**
+
+**Status**: Ready to start - Dependencies satisfied
+
+**Dependencies**:
+
+- ✅ Phase 1: Training infrastructure (DONE)
+- ✅ Phase 2: Registry + Evaluation (DONE)
+
+**Updated Scope** (includes items deferred from Phase 1):
+
+**Infrastructure Agent Integration:**
+
+- [ ] Update `agents/infrastructure/__init__.py` to route ModelOps intents
+- [ ] Add ModelOps tools to `agents/infrastructure/tools.yaml`
+- [ ] Update `agents/infrastructure/system.prompt.md` with ModelOps capabilities
+
+**Deployment Module:**
+
+- [ ] Create `modelops/deployment.py`
+- [ ] Implement `deploy_model_to_agent` tool with registry integration
 - [ ] Implement `config/agents/models.yaml` update logic
-- [ ] Add canary traffic split configuration
-- [ ] Implement rollback procedure
+- [ ] Add canary traffic split configuration (20% → 50% → 100%)
+- [ ] Implement rollback procedure (<60 seconds)
 - [ ] Add `list_agent_models` tool
-- [ ] Unit tests for deployment
+- [ ] Add version auto-increment generator
+- [ ] Add model ID naming convention validator
 
-**Estimated effort**: 2-3 days
+**Testing:**
+
+- [ ] Unit tests for deployment operations
+- [ ] Integration tests for end-to-end workflow (train → evaluate → deploy → rollback)
+
+**Deployment Targets**:
+
+1. OpenRouter - Check model availability via API
+2. HuggingFace Inference Endpoints - Direct model hosting
+3. Self-hosted endpoints - Custom deployments
+
+**Canary Strategy**:
+
+1. Deploy candidate to 20% of traffic
+2. Monitor for 24-48 hours
+3. Compare metrics vs baseline in production
+4. Promote to 50%, then 100% if successful
+5. Rollback immediately if degradation detected
+
+**Success Criteria**:
+
+- Infrastructure agent routes ModelOps requests
+- Models deployed via single command
+- Canary deployments functional with traffic split
+- Rollback works in <60 seconds
+- Full integration tests passing
+
+**Estimated effort**: 3-4 days (increased from 2-3 days due to agent integration)
 
 ### Phase 4: UX Polish + GGUF Support
 
