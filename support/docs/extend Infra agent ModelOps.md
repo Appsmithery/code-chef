@@ -84,22 +84,30 @@ agent_orchestrator/agents/infrastructure/
 - `agent_name` (str): Which subagent (`feature_dev`, `code_review`, `cicd`, `documentation`, `infrastructure`)
 - `dataset_id` (str): LangSmith dataset ID with training examples
 - `base_model` (str): HF model repo (e.g., `Qwen/Qwen2.5-Coder-7B`)
-- `training_method` (str): `sft`, `dpo`, or `orpo`
+- `training_method` (str): `sft` (supervised fine-tuning), `dpo` (direct preference optimization), or `grpo` (group relative policy optimization for reasoning tasks)
 - `training_config` (dict): Optional overrides (learning_rate, epochs, lora_rank, etc.)
 
-**Implementation** (MCP for discovery, SDK for training):
+**Implementation** (MCP for discovery, HuggingFace Jobs API for training):
 
 1. **MCP**: Use `model_search` to validate base model exists on HF Hub
 2. **MCP**: Use `hub_repo_details` to get model config (architecture, size, license)
 3. Pull dataset from LangSmith using existing `Client()` pattern from `support/tests/evaluation/run_evaluation.py`
 4. Convert to HuggingFace datasets format with train/test split
-5. Estimate training cost via HF AutoTrain API
-6. Create training job config:
-   - Auto-select GPU based on model size (A10G for <13B, H100 for larger)
-   - Configure LoRA (rank=16-32) for parameter efficiency
-   - Set up checkpointing to HF Hub under `appsmithery/code-chef-{agent_name}-{timestamp}`
-7. **SDK**: Submit job via `huggingface_hub.HfApi()` or AutoTrain API
-8. Return job ID and tracking URL
+5. **Validate dataset format** using HF dataset validation (CPU-only, low cost)
+   - Check for required columns based on training method (messages for SFT, chosen/rejected for DPO)
+   - Validate data types and format consistency
+6. Estimate training cost using HF Jobs API cost calculator
+7. Create training job config:
+   - **Auto-select GPU** based on model size:
+     - <1B: `t4-small` (~$0.75/hr)
+     - 1-3B: `t4-medium` or `a10g-small` (~$1.10/hr)
+     - 3-7B: `a10g-large` with LoRA (~$2.20/hr)
+     - 7B+: Not suitable for current Jobs API (recommend external training)
+   - Configure LoRA automatically for models >3B (rank=32, alpha=64)
+   - Set up Trackio monitoring for real-time metrics
+   - Configure checkpointing to HF Hub under `appsmithery/code-chef-{agent_name}-{timestamp}`
+8. **Jobs API**: Submit job via HuggingFace Jobs API (`/jobs` endpoint)
+9. Return job ID, tracking URL, Trackio dashboard link, estimated cost/time
 
 **Output**: `{ job_id, hub_repo, estimated_cost, status_url }`
 
@@ -111,13 +119,16 @@ agent_orchestrator/agents/infrastructure/
 
 - `job_id` (str): HuggingFace training job ID
 
-**Implementation** (uses `huggingface_hub` SDK):
+**Implementation** (uses HuggingFace Jobs API + Trackio):
 
-1. Poll HF training API via `HfApi().get_training_job(job_id)`
-2. Parse logs for training loss, eval metrics, checkpoint progress
-3. If complete, verify model uploaded to Hub and get final metrics
+1. Poll HF Jobs API via `/jobs/{job_id}` endpoint
+2. Fetch Trackio metrics for real-time training loss, learning rate, validation metrics
+3. Parse job status: `pending`, `running`, `completed`, `failed`
+4. Calculate progress percentage from current_step / total_steps
+5. If complete, verify model uploaded to Hub and fetch final metrics from Trackio
+6. If failed, extract error logs and provide diagnostic suggestions (OOM → reduce batch_size, timeout → increase duration)
 
-**Output**: `{ status, progress_pct, current_loss, eta_minutes, hub_repo }`
+**Output**: `{ status, progress_pct, current_step, total_steps, current_loss, learning_rate, eta_minutes, hub_repo, trackio_url }`
 
 #### Tool: `evaluate_model_vs_baseline`
 
@@ -171,6 +182,28 @@ openrouter:
 
 **Output**: `{ deployed, endpoint_url, version, rollout_pct }`
 
+#### Tool: `validate_dataset_format`
+
+**Purpose**: Pre-validate dataset format before expensive training runs
+
+**Inputs**:
+
+- `dataset_id` (str): LangSmith or HuggingFace dataset ID
+- `training_method` (str): `sft`, `dpo`, or `grpo`
+
+**Implementation**:
+
+1. Pull dataset sample (first 100 rows) using CPU-only validation
+2. Check required columns based on training method:
+   - **SFT**: Requires `messages` column or `prompt`/`completion` columns
+   - **DPO**: Requires `chosen` and `rejected` columns (or `prompt` with both)
+   - **GRPO**: Requires `problem` and `solution` columns with verifiable rewards
+3. Validate data types, check for nulls, verify format consistency
+4. Estimate dataset size and approximate training time
+5. Suggest fixes if format issues found (e.g., column mapping instructions)
+
+**Output**: `{ valid: bool, issues: list[str], suggestions: list[str], estimated_examples: int }`
+
 #### Tool: `list_agent_models`
 
 **Purpose**: Show model history and registry for a subagent
@@ -185,6 +218,27 @@ openrouter:
 2. Return list with: version, base_model, training_date, eval_scores, deployment_status
 
 **Output**: List of model versions with metadata
+
+#### Tool: `convert_model_to_gguf`
+
+**Purpose**: Convert fine-tuned model to GGUF format for local deployment
+
+**Inputs**:
+
+- `model_repo` (str): HuggingFace repo path of fine-tuned model
+- `quantization` (str): `Q4_K_M` (default), `Q5_K_M`, `Q8_0`, etc.
+- `output_repo` (str): Target HF repo for GGUF model (e.g., `appsmithery/code-chef-feature-dev-gguf`)
+
+**Implementation**:
+
+1. Submit HF Jobs API conversion job:
+   - Merge LoRA adapters if applicable
+   - Convert to GGUF format using llama.cpp
+   - Apply quantization (Q4_K_M = 4-bit, good balance of size/quality)
+2. Push GGUF files to target repo on Hub
+3. Generate usage instructions for llama.cpp, Ollama, LM Studio
+
+**Output**: `{ job_id, output_repo, quantization, estimated_size_gb, usage_command }`
 
 ### 3. Model Registry Schema
 
@@ -311,34 +365,79 @@ The HuggingFace MCP server provides these tools for model discovery and validati
 
 #### Training via SDK + AutoTrain
 
-For actual fine-tuning, use `huggingface_hub` SDK with AutoTrain:
+#### Training Methods Supported
+
+1. **Supervised Fine-Tuning (SFT)**: Train on input-output demonstration pairs. Use when you have high-quality examples of desired behavior.
+
+   - Dataset format: `messages` column with conversation format, or `prompt`/`completion` columns
+   - Use case: Domain adaptation, style matching, instruction following
+
+2. **Direct Preference Optimization (DPO)**: Train on preference pairs (chosen vs rejected). Use after SFT to align with human preferences.
+
+   - Dataset format: `chosen` and `rejected` columns with preference pairs
+   - Use case: Safety alignment, output quality improvement, tone/style preferences
+   - Note: Sensitive to dataset format - must use exact column names
+
+3. **Group Relative Policy Optimization (GRPO)**: Reinforcement learning for verifiable tasks. Model generates responses and receives rewards based on correctness.
+   - Dataset format: `problem` and `solution` columns with programmatic success criteria
+   - Use case: Math reasoning, code generation, any task with objective correctness metrics
+   - Note: More complex than SFT/DPO, requires reward function implementation
+
+#### Training via Jobs API
+
+For actual fine-tuning, use HuggingFace Jobs API with TRL (Transformer Reinforcement Learning):
 
 ```python
-from huggingface_hub import HfApi, create_repo, upload_file
+import requests
 import os
+from huggingface_hub import HfApi, create_repo
 
 # Auth from GitHub secret
-api = HfApi(token=os.environ.get("HUGGINGFACE_TOKEN"))
-
-# Upload training dataset
-api.upload_file(
-    path_or_fileobj="training_data.jsonl",
-    path_in_repo="data/train.jsonl",
-    repo_id="appsmithery/code-chef-feature-dev-training",
-    repo_type="dataset"
-)
+HF_TOKEN = os.environ.get("HUGGINGFACE_TOKEN")
+api = HfApi(token=HF_TOKEN)
 
 # Create model repo for checkpoints
 create_repo(
     repo_id="appsmithery/code-chef-feature-dev-v2",
     repo_type="model",
-    private=True
+    private=True,
+    token=HF_TOKEN
 )
 
-# For training jobs, use HuggingFace AutoTrain or Spaces:
-# - AutoTrain API: https://huggingface.co/docs/autotrain
-# - Spaces with GPU: Deploy training script as a Space
-# - TRL for RLHF/DPO: https://huggingface.co/docs/trl
+# Submit training job via HuggingFace Jobs API
+response = requests.post(
+    "https://huggingface.co/api/jobs",
+    headers={"Authorization": f"Bearer {HF_TOKEN}"},
+    json={
+        "base_model": "Qwen/Qwen2.5-Coder-7B",
+        "dataset": "appsmithery/code-chef-feature-dev-training",
+        "method": "sft",  # or "dpo", "grpo"
+        "hardware": "a10g-large",  # auto-selected based on model size
+        "output_repo": "appsmithery/code-chef-feature-dev-v2",
+        "config": {
+            "learning_rate": 2e-5,
+            "num_epochs": 3,
+            "batch_size": 4,
+            "use_lora": True,  # auto-enabled for >3B models
+            "lora_rank": 32,
+            "trackio_enabled": True  # real-time monitoring
+        }
+    }
+)
+
+job_id = response.json()["job_id"]
+trackio_url = f"https://huggingface.co/spaces/{user}/trackio?job={job_id}"
+
+# Monitor job status
+status_response = requests.get(
+    f"https://huggingface.co/api/jobs/{job_id}",
+    headers={"Authorization": f"Bearer {HF_TOKEN}"}
+)
+
+# Reference:
+# - HF Jobs API: https://huggingface.co/docs/huggingface_hub/guides/jobs
+# - TRL Library: https://huggingface.co/docs/trl
+# - Trackio Monitoring: https://huggingface.co/docs/trackio
 ```
 
 #### Using MCP Tools for Model Validation
@@ -372,20 +471,33 @@ default_training_config:
   max_seq_length: 8192
 
 gpu_selection:
-  small: # < 3B params
-    gpu_type: "a10g"
-    num_gpus: 1
-  medium: # 3B-13B
-    gpu_type: "a10g"
-    num_gpus: 2
-  large: # > 13B
-    gpu_type: "h100"
-    num_gpus: 1
+  tiny: # < 1B params
+    gpu_type: "t4-small"
+    cost_per_hour: 0.75
+    use_case: "Educational/experimental runs"
+  small: # 1-3B params
+    gpu_type: "t4-medium"
+    cost_per_hour: 1.00
+    use_case: "Small production models"
+  medium: # 3-7B params
+    gpu_type: "a10g-large"
+    cost_per_hour: 2.20
+    use_lora: true
+    use_case: "Production with LoRA"
+  large: # 7B+ params
+    gpu_type: "not_supported"
+    message: "Models >7B not suitable for HF Jobs API - use external training infrastructure"
 
-cost_estimates:
-  a10g_per_hour: 1.10
-  h100_per_hour: 4.50
-  avg_training_hours: 2
+training_estimates:
+  demo_run: # 100 examples for testing
+    time_minutes: 5
+    cost_usd: 0.50
+  production_run: # Full dataset, 3 epochs
+    time_minutes: 90
+    cost_usd: 15.00
+
+validation_costs:
+  dataset_validation_cpu: 0.02 # Pre-training format check
 ```
 
 #### Environment Configuration
@@ -471,18 +583,21 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 
 ### Phase 1: Registry + Training (MVP)
 
-**Scope**: Core infrastructure for model versioning and HuggingFace training
+**Scope**: Core infrastructure for model versioning and HuggingFace Jobs API training
 
 - [ ] Create `config/models/registry.json` schema
 - [ ] Implement `modelops/registry.py` with CRUD operations
-- [ ] Implement `modelops/training.py` with HuggingFace Hub SDK integration
-- [ ] Add `train_subagent_model` tool
-- [ ] Add `monitor_training_job` tool
-- [ ] Create `config/modelops/training_defaults.yaml`
+- [ ] Implement `modelops/training.py` with HuggingFace Jobs API integration
+- [ ] Add `validate_dataset_format` tool (pre-training validation)
+- [ ] Add `train_subagent_model` tool with demo/production modes
+- [ ] Add `monitor_training_job` tool with Trackio integration
+- [ ] Implement auto GPU selection based on model size (t4-small, t4-medium, a10g-large)
+- [ ] Configure LoRA auto-enable for models >3B parameters
+- [ ] Create `config/modelops/training_defaults.yaml` with hardware pricing
 - [ ] Add HuggingFace tokens to `config/env/.env.template`
-- [ ] Unit tests for registry and training
+- [ ] Unit tests for registry, training, and dataset validation
 
-**Estimated effort**: 3-4 days
+**Estimated effort**: 4-5 days
 
 ### Phase 2: Evaluation Integration
 
@@ -510,18 +625,20 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 
 **Estimated effort**: 2-3 days
 
-### Phase 4: UX Polish
+### Phase 4: UX Polish + GGUF Support
 
-**Scope**: VS Code extension commands and notifications
+**Scope**: VS Code extension commands, notifications, and local deployment
 
 - [ ] Add ModelOps commands to `extensions/vscode-codechef/package.json`
 - [ ] Implement `src/commands/modelops.ts` handlers
-- [ ] Add progress notifications for training jobs
-- [ ] Add cost estimation display
-- [ ] Add model comparison UI
+- [ ] Add progress notifications for training jobs with Trackio links
+- [ ] Add cost estimation display (demo vs production)
+- [ ] Add model comparison UI with evaluation results
+- [ ] Implement `convert_model_to_gguf` tool for local deployment
+- [ ] Add usage instructions for llama.cpp, Ollama, LM Studio
 - [ ] Integration tests
 
-**Estimated effort**: 2-3 days
+**Estimated effort**: 3-4 days
 
 ---
 
@@ -542,13 +659,18 @@ Orchestrator → Infrastructure Agent → ModelOps Coordinator:
 
 1. Check if LangSmith dataset exists for feature_dev error-handling examples
 2. If not, prompt user: "I need training examples. Run '@chef collect feature-dev failures' first?"
-3. If yes (found 150 examples): "I can fine-tune Qwen2.5-Coder-7B on 150 examples. Estimated cost: $3.50, time: 1.5 hours. Proceed?"
-4. User confirms → submit HuggingFace training job
-5. Monitor progress: "Training 45% complete, current loss: 0.42..."
-6. On completion: "Training done! Evaluating against baseline..."
-7. Run eval: "New model: 87% accuracy (+12%), 20% faster. Deploy?"
-8. User confirms → update config, canary rollout
-9. "Deployed to 20% of feature_dev requests. Monitor for 24 hours, then full rollout."
+3. If yes (found 150 examples): Validate dataset format using CPU-only validation
+4. Validation result: "✓ Dataset ready for SFT training. Found 'messages' column with 150 examples."
+5. Estimate costs: "Demo run (100 examples): $0.50, 5 minutes | Production (full dataset): $3.50, 90 minutes"
+6. Recommend: "Should I run a demo first to verify the pipeline?"
+7. User confirms demo → submit demo job on t4-small
+8. Demo completes: "Demo successful! Loss decreased from 2.41 → 1.23. Ready for production run?"
+9. User confirms production → submit full training job on a10g-large with LoRA
+10. Monitor progress with Trackio: "Training 45% complete (step 850/1200), loss: 1.23, ETA: 20 min"
+11. On completion: "Training done! Model pushed to appsmithery/code-chef-feature-dev-v2. Evaluating..."
+12. Run eval: "New model: 87% accuracy (+12%), 20% faster, $0.003/1k tokens. Deploy?"
+13. User confirms → update config, canary rollout
+14. "Deployed to 20% of feature_dev requests. Trackio monitoring active. Full rollout in 24h?"
 ```
 
 ---
