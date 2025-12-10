@@ -165,6 +165,31 @@
         "command": "codechef.openSettings",
         "title": "Open Settings",
         "category": "code/chef"
+      },
+      {
+        "command": "codechef.modelops.trainAgent",
+        "title": "Train Agent Model",
+        "category": "code/chef ModelOps"
+      },
+      {
+        "command": "codechef.modelops.evaluateAgent",
+        "title": "Evaluate Agent Model",
+        "category": "code/chef ModelOps"
+      },
+      {
+        "command": "codechef.modelops.deployModel",
+        "title": "Deploy Model to Agent",
+        "category": "code/chef ModelOps"
+      },
+      {
+        "command": "codechef.modelops.listModels",
+        "title": "List Agent Models",
+        "category": "code/chef ModelOps"
+      },
+      {
+        "command": "codechef.modelops.convertToGGUF",
+        "title": "Convert Model to GGUF",
+        "category": "code/chef ModelOps"
       }
     ],
     "menus": {
