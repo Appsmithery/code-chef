@@ -106,6 +106,7 @@ async def run_training_job(
         output_dir.mkdir(exist_ok=True)
 
         # Build autotrain-advanced CLI command
+        # Using only stable CLI args
         cmd = [
             "autotrain",
             "llm",
@@ -116,33 +117,26 @@ async def run_training_job(
             dataset_path,
             "--text-column",
             text_column,
-            "--prompt-text-column",
+            "--rejected-text-column",  # For LLM training
             response_column,
             "--project-name",
             f"codechef-{project_name}",
             "--push-to-hub",
-            "--repo-id",
-            repo_id,
             "--token",
             HF_TOKEN,
-            # Auto-configuration
-            "--auto-find-batch-size",
-            "--use-peft",
-            "--quantization",
-            "int4",
         ]
 
         # Demo mode: reduce training
         if is_demo:
-            cmd.extend(["--num-train-epochs", "1", "--max-seq-length", "512"])
+            cmd.extend(["--epochs", "1"])
         else:
-            cmd.extend(["--num-train-epochs", "3", "--max-seq-length", "2048"])
+            cmd.extend(["--epochs", "3"])
 
         # Apply custom parameters
         if learning_rate:
-            cmd.extend(["--learning-rate", str(learning_rate)])
+            cmd.extend(["--lr", str(learning_rate)])
         if num_epochs:
-            cmd.extend(["--num-train-epochs", str(num_epochs)])
+            cmd.extend(["--epochs", str(num_epochs)])
         if batch_size:
             cmd.extend(["--batch-size", str(batch_size)])
 
@@ -171,7 +165,9 @@ async def run_training_job(
             metadata["completed_at"] = datetime.utcnow().isoformat()
             metadata["hub_repo"] = repo_id
             metadata["model_id"] = repo_id
-            metadata["tensorboard_url"] = f"https://huggingface.co/{repo_id}/tensorboard"
+            metadata["tensorboard_url"] = (
+                f"https://huggingface.co/{repo_id}/tensorboard"
+            )
             save_job_metadata(job_id, metadata)
 
     except Exception as e:
