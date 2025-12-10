@@ -98,7 +98,6 @@ class TestModelOpsDeployment:
             agent_name="feature_dev",
             model_repo="test-user/codechef-feature-dev-v2",
             deployment_target="openrouter",
-            rollout_strategy="immediate",
             version="v2.0.0",
         )
 
@@ -106,7 +105,6 @@ class TestModelOpsDeployment:
         assert result.agent_name == "feature_dev"
         assert result.model_repo == "test-user/codechef-feature-dev-v2"
         assert result.version == "v2.0.0"
-        assert result.rollout_pct == 100
         assert result.deployment_target == "openrouter"
         assert result.endpoint_url == "https://openrouter.ai/api/v1"
         assert result.rollback_available is True
@@ -132,7 +130,6 @@ class TestModelOpsDeployment:
             agent_name="code_review",
             model_repo="test-user/codechef-code-review-v1",
             deployment_target="huggingface",
-            rollout_strategy="immediate",
             version="v1.0.0",
         )
 
@@ -152,154 +149,6 @@ class TestModelOpsDeployment:
             config["huggingface"]["agent_models"]["code_review"]
             == "test-user/codechef-code-review-v1"
         )
-
-    @pytest.mark.asyncio
-    async def test_deploy_canary_20pct(self, deployment):
-        """Test canary deployment with 20% traffic."""
-        # First add a version to deploy
-        training_config_dict = {
-            "base_model": "microsoft/Phi-3-mini-4k-instruct",
-            "training_method": "sft",
-            "training_dataset": "ls://test-train",
-            "eval_dataset": "ls://test-eval",
-        }
-
-        deployment.registry.add_model_version(
-            agent_name="feature_dev",
-            version="v1.1.0",
-            model_id="test-user/codechef-feature-dev-canary",
-            training_config=training_config_dict,
-            hub_repo="test-user/codechef-feature-dev-canary",
-        )
-
-        result = await deployment.deploy_model_to_agent(
-            agent_name="feature_dev",
-            model_repo="test-user/codechef-feature-dev-canary",
-            rollout_strategy="canary_20pct",
-            version="v1.1.0",
-        )
-
-        assert result.rollout_pct == 20
-
-        # Verify registry has canary set
-        canary = deployment.registry.get_canary_model("feature_dev")
-        assert canary is not None
-        assert canary.deployment_status == "canary_20pct"
-
-    @pytest.mark.asyncio
-    async def test_deploy_canary_50pct(self, deployment):
-        """Test canary deployment with 50% traffic."""
-        # Add version first
-        training_config_dict = {
-            "base_model": "microsoft/Phi-3-mini-4k-instruct",
-            "training_method": "sft",
-            "training_dataset": "ls://test-train",
-            "eval_dataset": "ls://test-eval",
-        }
-
-        deployment.registry.add_model_version(
-            agent_name="feature_dev",
-            version="v1.2.0",
-            model_id="test-user/codechef-feature-dev-canary",
-            training_config=training_config_dict,
-            hub_repo="test-user/codechef-feature-dev-canary",
-        )
-
-        result = await deployment.deploy_model_to_agent(
-            agent_name="feature_dev",
-            model_repo="test-user/codechef-feature-dev-canary",
-            rollout_strategy="canary_50pct",
-            version="v1.2.0",
-        )
-
-        assert result.rollout_pct == 50
-
-    @pytest.mark.asyncio
-    async def test_promote_canary_to_50pct(self, deployment, test_registry):
-        """Test promoting canary from 20% to 50%."""
-        # Add version first
-        training_config_dict = {
-            "base_model": "microsoft/Phi-3-mini-4k-instruct",
-            "training_method": "sft",
-            "training_dataset": "ls://test-train",
-            "eval_dataset": "ls://test-eval",
-        }
-
-        test_registry.add_model_version(
-            agent_name="feature_dev",
-            version="v1.1.0",
-            model_id="test-user/codechef-feature-dev-canary",
-            training_config=training_config_dict,
-            hub_repo="test-user/codechef-feature-dev-canary",
-        )
-
-        # First deploy as 20% canary
-        await deployment.deploy_model_to_agent(
-            agent_name="feature_dev",
-            model_repo="test-user/codechef-feature-dev-canary",
-            rollout_strategy="canary_20pct",
-            version="v1.1.0",
-        )
-
-        # Promote to 50%
-        result = await deployment.promote_canary(
-            agent_name="feature_dev", to_percentage=50
-        )
-
-        assert result.rollout_pct == 50
-
-        # Verify registry updated
-        canary = deployment.registry.get_canary_model("feature_dev")
-        assert canary.deployment_status == "canary_50pct"
-
-    @pytest.mark.asyncio
-    async def test_promote_canary_to_100pct(self, deployment):
-        """Test promoting canary to full deployment."""
-        # Add version first
-        training_config_dict = {
-            "base_model": "microsoft/Phi-3-mini-4k-instruct",
-            "training_method": "sft",
-            "training_dataset": "ls://test-train",
-            "eval_dataset": "ls://test-eval",
-        }
-
-        deployment.registry.add_model_version(
-            agent_name="feature_dev",
-            version="v2.0.0",
-            model_id="test-user/codechef-feature-dev-v2",
-            training_config=training_config_dict,
-            hub_repo="test-user/codechef-feature-dev-v2",
-        )
-
-        # First deploy as 20% canary
-        await deployment.deploy_model_to_agent(
-            agent_name="feature_dev",
-            model_repo="test-user/codechef-feature-dev-v2",
-            rollout_strategy="canary_20pct",
-            version="v2.0.0",
-        )
-
-        # Promote to 100%
-        result = await deployment.promote_canary(
-            agent_name="feature_dev", to_percentage=100
-        )
-
-        assert result.rollout_pct == 100
-
-        # Verify promoted to current in registry
-        current = deployment.registry.get_current_model("feature_dev")
-        assert current.version == "v2.0.0"
-        assert current.deployment_status == "deployed"
-        canary = deployment.registry.get_canary_model("feature_dev")
-        assert canary is None  # Canary cleared after promotion
-
-    @pytest.mark.asyncio
-    async def test_promote_canary_no_canary_fails(self, deployment):
-        """Test promoting canary fails when no canary exists."""
-        with pytest.raises(ValueError, match="No canary deployment found"):
-            await deployment.promote_canary(
-                agent_name="code_review", to_percentage=100  # Has no canary
-            )
 
     @pytest.mark.asyncio
     async def test_rollback_to_previous(self, deployment, test_registry):
