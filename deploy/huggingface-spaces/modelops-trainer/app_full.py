@@ -335,9 +335,9 @@ with gr.Blocks(title="code-chef ModelOps Trainer") as demo:
     )
 
 # Mount Gradio to root and FastAPI to /api
-demo = gr.mount_gradio_app(app, demo, path="/")
+app = gr.mount_gradio_app(app, demo, path="/")
 
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(demo, host="0.0.0.0", port=7860)
+    uvicorn.run(app, host="0.0.0.0", port=7860)
