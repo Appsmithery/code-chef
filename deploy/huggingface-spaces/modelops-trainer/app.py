@@ -8,6 +8,7 @@ import asyncio
 import base64
 import json
 import os
+import yaml
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -16,8 +17,6 @@ import gradio as gr
 from fastapi import FastAPI, HTTPException
 from huggingface_hub import HfApi
 from pydantic import BaseModel
-from autotrain.trainers.clm.params import LLMTrainingParams
-from autotrain.trainers.clm import utils as clm_utils
 
 # Environment setup
 HF_TOKEN = os.environ.get("HF_TOKEN") or os.environ.get("HUGGINGFACE_TOKEN")
@@ -91,7 +90,7 @@ async def run_training_job(
     num_epochs: Optional[int] = None,
     batch_size: Optional[int] = None,
 ):
-    """Execute AutoTrain job asynchronously using Python API"""
+    """Execute AutoTrain job asynchronously using config file"""
     try:
         # Update job status
         metadata = load_job_metadata(job_id)
@@ -106,39 +105,58 @@ async def run_training_job(
         output_dir = JOBS_DIR / f"{job_id}_output"
         output_dir.mkdir(exist_ok=True)
 
-        # Configure AutoTrain parameters using Python API
-        params = LLMTrainingParams(
-            model=base_model,
-            data_path=str(dataset_path),
-            text_column=text_column,
-            rejected_text_column=response_column,
-            project_name=f"codechef-{project_name}",
-            push_to_hub=True,
-            repo_id=repo_id,
-            token=HF_TOKEN,
-            # Training configuration
-            num_train_epochs=num_epochs if num_epochs else (1 if is_demo else 3),
-            learning_rate=learning_rate if learning_rate else 2e-4,
-            per_device_train_batch_size=batch_size if batch_size else (1 if is_demo else 2),
-            gradient_accumulation_steps=4,
-            warmup_ratio=0.1,
-            # Memory optimization
-            use_peft=True,
-            quantization="int4",
-            mixed_precision="bf16",
-            # Demo mode optimizations
-            max_seq_length=512 if is_demo else 2048,
-            logging_steps=10,
-            save_total_limit=1,
+        # Create AutoTrain config file (more reliable than CLI args)
+        config = {
+            "task": "llm:sft",
+            "base_model": base_model,
+            "project_name": f"codechef-{project_name}",
+            "data_path": str(dataset_path),
+            "train_split": "train",
+            "valid_split": None,
+            "text_column": text_column,
+            "rejected_text_column": response_column,
+            "add_eos_token": True,
+            "block_size": 512 if is_demo else 2048,
+            "model_max_length": 2048,
+            "epochs": num_epochs if num_epochs else (1 if is_demo else 3),
+            "batch_size": batch_size if batch_size else (1 if is_demo else 2),
+            "lr": learning_rate if learning_rate else 2e-4,
+            "peft": True,
+            "quantization": "int4",
+            "target_modules": "all-linear",
+            "lora_r": 16,
+            "lora_alpha": 32,
+            "lora_dropout": 0.05,
+            "weight_decay": 0.01,
+            "gradient_accumulation": 4,
+            "mixed_precision": "bf16",
+            "push_to_hub": True,
+            "repo_id": repo_id,
+            "token": HF_TOKEN,
+            "logging_steps": 10,
+            "save_total_limit": 1,
+        }
+        
+        config_file = output_dir / "config.yml"
+        with open(config_file, "w") as f:
+            yaml.dump(config, f)
+
+        # Run AutoTrain with config file
+        process = await asyncio.create_subprocess_exec(
+            "autotrain",
+            "--config",
+            str(config_file),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            cwd=str(output_dir),
         )
-
-        # Run training in thread pool to avoid blocking
-        def _run_training():
-            """Synchronous training execution"""
-            return clm_utils.train(params)
-
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, _run_training)
+        
+        stdout, stderr = await process.communicate()
+        
+        if process.returncode != 0:
+            raise RuntimeError(
+                f"Training failed with code {process.returncode}: {stderr.decode()[-500:]}"
+            )
 
         # Update final status
         metadata = load_job_metadata(job_id)
