@@ -20,7 +20,7 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 # HTTP client
 import httpx
@@ -432,15 +432,56 @@ class ModelOpsTrainer:
         logger.info(f"Expected cost: ${job.get('estimated_cost', 'unknown')}")
         logger.info(f"Hardware: {preset['hardware']}")
 
+        # Build Trackio URL
+        trackio_url = f"https://huggingface.co/spaces/alextorelli/code-chef-modelops-trainer?job_id={job['job_id']}"
+
         return {
             "job_id": job["job_id"],
             "project_name": project_name,
             "base_model": preset["model_id"],
+            "hub_repo": f"alextorelli/{project_name}",
             "training_examples": len(df),
             "is_demo": is_demo,
             "hardware": preset["hardware"],
             "status": "submitted",
+            "estimated_duration_minutes": 5 if is_demo else 90,
+            "estimated_cost": 0.50 if is_demo else 3.50,
+            "trackio_url": trackio_url,
+            "tensorboard_url": None,  # Available after job starts
         }
+
+    async def get_training_status(self, job_id: str) -> Dict[str, Any]:
+        """Get current status of a training job (async for VS Code polling).
+
+        Args:
+            job_id: Training job identifier
+
+        Returns:
+            Dict with current status, progress, metrics, and URLs
+        """
+        try:
+            status = self.trainer_client.get_job_status(job_id)
+
+            return {
+                "job_id": job_id,
+                "status": status.get("status", "unknown"),
+                "progress": status.get("progress", 0),
+                "current_step": status.get("current_step", 0),
+                "total_steps": status.get("total_steps", 1000),
+                "current_loss": status.get("current_loss"),
+                "learning_rate": status.get("learning_rate"),
+                "eta_minutes": status.get("eta_minutes"),
+                "hub_repo": status.get("hub_repo"),
+                "tensorboard_url": status.get("tensorboard_url"),
+                "trackio_url": f"https://huggingface.co/spaces/alextorelli/code-chef-modelops-trainer?job_id={job_id}",
+            }
+        except Exception as e:
+            logger.error(f"Failed to get training status: {e}")
+            return {
+                "job_id": job_id,
+                "status": "error",
+                "error": str(e),
+            }
 
     @traceable(name="modelops_monitor_training")
     def monitor_training(self, job_id: str, poll_interval: int = 30) -> Dict:

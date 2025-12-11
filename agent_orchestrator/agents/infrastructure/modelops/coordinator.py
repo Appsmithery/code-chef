@@ -106,6 +106,21 @@ class ModelOpsCoordinator:
             langsmith_project: LangSmith project with training data
             base_model_preset: Model preset (phi-3-mini, codellama-7b, etc.)
             is_demo: Whether to run demo mode
+
+        Returns:
+            {
+                "operation": "train",
+                "success": True,
+                "agent_name": str,
+                "job_id": str,
+                "status": "submitted" | "pending" | "running",
+                "hub_repo": str,  # Target HuggingFace repo
+                "estimated_duration_minutes": float,
+                "estimated_cost_usd": float,
+                "trackio_url": str,  # Monitoring dashboard
+                "tensorboard_url": str | None,
+                "message": str  # Human-readable status
+            }
         """
         agent_name = context.get("agent_name")
         langsmith_project = context.get("langsmith_project")
@@ -113,7 +128,11 @@ class ModelOpsCoordinator:
         is_demo = context.get("is_demo", False)
 
         if not agent_name:
-            return {"error": "agent_name required", "context": context}
+            return {
+                "success": False,
+                "error": "agent_name required",
+                "context": context,
+            }
 
         if not langsmith_project:
             # Auto-detect from agent name
@@ -129,13 +148,16 @@ class ModelOpsCoordinator:
 
         return {
             "operation": "train",
+            "success": True,
             "agent_name": agent_name,
-            "job_id": result.get("job_id"),
-            "status": result.get("status"),
-            "estimated_duration": result.get("estimated_duration_minutes"),
-            "estimated_cost": result.get("estimated_cost"),
+            "job_id": result.get("job_id", "unknown"),
+            "status": result.get("status", "submitted"),
+            "hub_repo": result.get("hub_repo"),
+            "estimated_duration_minutes": result.get("estimated_duration_minutes", 0),
+            "estimated_cost_usd": result.get("estimated_cost", 0.0),
             "trackio_url": result.get("trackio_url"),
-            "message": f"Training job submitted for {agent_name}. Monitor at {result.get('trackio_url')}",
+            "tensorboard_url": result.get("tensorboard_url"),
+            "message": f"Training job {result.get('job_id')} submitted for {agent_name}. Monitor at {result.get('trackio_url')}",
         }
 
     @traceable(name="modelops_evaluate")
@@ -146,16 +168,46 @@ class ModelOpsCoordinator:
             agent_name: Agent to evaluate
             candidate_model: Candidate model to test
             eval_dataset_name: LangSmith eval dataset name
+
+        Returns:
+            {
+                "operation": "evaluate",
+                "success": True,
+                "agent_name": str,
+                "baseline_model": str,
+                "candidate_model": str,
+                "baseline_score": float,
+                "candidate_score": float,
+                "improvement_pct": float,
+                "recommendation": "deploy" | "deploy_canary" | "needs_review" | "reject",
+                "breakdown": {  # Detailed metrics
+                    "accuracy": float,
+                    "completeness": float,
+                    "efficiency": float,
+                    "latency": float
+                },
+                "langsmith_experiment_url": str,
+                "report": str,  # Markdown report
+                "message": str
+            }
         """
         agent_name = context.get("agent_name")
         candidate_model = context.get("candidate_model")
         eval_dataset_name = context.get("eval_dataset_name")
 
         if not agent_name:
-            return {"error": "agent_name required", "context": context}
+            return {
+                "success": False,
+                "error": "agent_name required",
+                "context": context,
+            }
 
         if not candidate_model:
-            return {"error": "candidate_model required", "context": context}
+            return {
+                "success": False,
+                "error": "candidate_model required",
+                "context": context,
+            }
 
         # Get current baseline model
         agent_data = self.registry.get_agent(agent_name)
@@ -180,13 +232,25 @@ class ModelOpsCoordinator:
 
         return {
             "operation": "evaluate",
+            "success": True,
             "agent_name": agent_name,
             "baseline_model": baseline_model,
             "candidate_model": candidate_model,
-            "recommendation": comparison.recommendation,
+            "baseline_score": comparison.baseline_score,
+            "candidate_score": comparison.candidate_score,
             "improvement_pct": comparison.improvement_pct,
+            "recommendation": comparison.recommendation,
+            "breakdown": {
+                "accuracy": comparison.baseline_metrics.get("accuracy", 0.0),
+                "completeness": comparison.baseline_metrics.get(
+                    "workflow_completeness", 0.0
+                ),
+                "efficiency": comparison.baseline_metrics.get("token_efficiency", 0.0),
+                "latency": comparison.baseline_metrics.get("latency_threshold", 0.0),
+            },
+            "langsmith_experiment_url": comparison.langsmith_experiment_url,
             "report": report,
-            "langsmith_url": comparison.langsmith_experiment_url,
+            "message": f"Evaluation complete: {comparison.recommendation.upper()} ({comparison.improvement_pct:+.1f}% improvement)",
         }
 
     @traceable(name="modelops_deploy")
@@ -205,10 +269,18 @@ class ModelOpsCoordinator:
         rollout_strategy = context.get("rollout_strategy", "immediate")
 
         if not agent_name:
-            return {"error": "agent_name required", "context": context}
+            return {
+                "success": False,
+                "error": "agent_name required",
+                "context": context,
+            }
 
         if not model_repo:
-            return {"error": "model_repo required", "context": context}
+            return {
+                "success": False,
+                "error": "model_repo required",
+                "context": context,
+            }
 
         result = await self.deployment.deploy_model_to_agent(
             agent_name=agent_name,
@@ -219,14 +291,17 @@ class ModelOpsCoordinator:
 
         return {
             "operation": "deploy",
+            "success": True,
             "deployed": result.deployed,
             "agent_name": result.agent_name,
             "model_repo": result.model_repo,
             "version": result.version,
-            "deployed_at": result.deployed_at,
+            "deployed_at": (
+                result.deployed_at.isoformat() if result.deployed_at else None
+            ),
             "config_updated": result.config_path,
             "rollback_available": result.rollback_available,
-            "message": f"Deployed {model_repo} to {agent_name}",
+            "message": f"Successfully deployed {model_repo} to {agent_name} ({result.version})",
         }
 
     @traceable(name="modelops_rollback")
@@ -241,7 +316,11 @@ class ModelOpsCoordinator:
         to_version = context.get("to_version")
 
         if not agent_name:
-            return {"error": "agent_name required", "context": context}
+            return {
+                "success": False,
+                "error": "agent_name required",
+                "context": context,
+            }
 
         result = await self.deployment.rollback_deployment(
             agent_name=agent_name, to_version=to_version
@@ -249,11 +328,14 @@ class ModelOpsCoordinator:
 
         return {
             "operation": "rollback",
+            "success": True,
             "agent_name": result.agent_name,
             "rolled_back_to": result.model_repo,
             "version": result.version,
-            "deployed_at": result.deployed_at,
-            "message": f"Rolled back {agent_name} to {result.version}",
+            "deployed_at": (
+                result.deployed_at.isoformat() if result.deployed_at else None
+            ),
+            "message": f"Successfully rolled back {agent_name} to {result.version}",
         }
 
     @traceable(name="modelops_list_models")
@@ -268,7 +350,11 @@ class ModelOpsCoordinator:
         include_archived = context.get("include_archived", False)
 
         if not agent_name:
-            return {"error": "agent_name required", "context": context}
+            return {
+                "success": False,
+                "error": "agent_name required",
+                "context": context,
+            }
 
         models = await self.deployment.list_agent_models(
             agent_name=agent_name, include_archived=include_archived
@@ -276,9 +362,11 @@ class ModelOpsCoordinator:
 
         return {
             "operation": "list_models",
+            "success": True,
             "agent_name": agent_name,
             "count": len(models),
             "models": models,
+            "message": f"Found {len(models)} model version(s) for {agent_name}",
         }
 
     @traceable(name="modelops_monitor")
@@ -287,22 +375,47 @@ class ModelOpsCoordinator:
 
         Expected context:
             job_id: Training job ID to monitor
+
+        Returns:
+            {
+                "operation": "monitor",
+                "success": True,
+                "job_id": str,
+                "status": "pending" | "running" | "completed" | "failed",
+                "progress_pct": float,
+                "current_step": int,
+                "total_steps": int,
+                "current_loss": float | None,
+                "learning_rate": float | None,
+                "eta_minutes": int | None,
+                "hub_repo": str | None,
+                "tensorboard_url": str | None,
+                "trackio_url": str,
+                "message": str
+            }
         """
         job_id = context.get("job_id")
 
         if not job_id:
-            return {"error": "job_id required", "context": context}
+            return {"success": False, "error": "job_id required", "context": context}
 
-        result = await self.trainer.monitor_training(job_id)
+        result = await self.trainer.get_training_status(job_id)
 
         return {
             "operation": "monitor",
+            "success": True,
             "job_id": job_id,
-            "status": result.get("status"),
-            "progress": result.get("progress"),
+            "status": result.get("status", "unknown"),
+            "progress_pct": result.get("progress", 0),
+            "current_step": result.get("current_step", 0),
+            "total_steps": result.get("total_steps", 1000),
             "current_loss": result.get("current_loss"),
+            "learning_rate": result.get("learning_rate"),
             "eta_minutes": result.get("eta_minutes"),
+            "hub_repo": result.get("hub_repo"),
+            "tensorboard_url": result.get("tensorboard_url"),
             "trackio_url": result.get("trackio_url"),
+            "message": f"Training {result.get('status', 'unknown')}: {result.get('progress', 0):.0f}% complete",
         }
 
     @traceable(name="modelops_status")
@@ -315,15 +428,21 @@ class ModelOpsCoordinator:
         agent_name = context.get("agent_name")
 
         if not agent_name:
-            return {"error": "agent_name required", "context": context}
+            return {
+                "success": False,
+                "error": "agent_name required",
+                "context": context,
+            }
 
         current = await self.deployment.get_current_model(agent_name)
         agent_data = self.registry.get_agent(agent_name)
 
         result = {
             "operation": "status",
+            "success": True,
             "agent_name": agent_name,
             "current_model": current,
+            "message": f"Current model for {agent_name}: {current}",
         }
 
         if agent_data and agent_data.canary:
