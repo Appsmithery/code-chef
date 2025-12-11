@@ -1,15 +1,14 @@
 name: Publish VS Code Extension
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "extensions/vscode-codechef/**"
-      - ".github/workflows/publish-extension.yml"
   workflow_dispatch:
     inputs:
+      version:
+        description: "Version to publish (e.g., 1.0.1)"
+        required: true
+        type: string
       version_bump:
-        description: "Version bump type"
+        description: "Version bump type (alternative to manual version)"
         required: false
         default: "none"
         type: choice

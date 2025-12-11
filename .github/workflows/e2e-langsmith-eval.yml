@@ -115,6 +115,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+          cache-dependency-path: |
+            agent_orchestrator/requirements.txt
+            support/tests/requirements.txt
 
       - name: Install dependencies
         run: |
@@ -170,6 +173,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+          cache-dependency-path: |
+            agent_orchestrator/requirements.txt
+            support/tests/requirements.txt
 
       - name: Install dependencies
         run: |
@@ -225,6 +231,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+          cache-dependency-path: |
+            agent_orchestrator/requirements.txt
+            support/tests/requirements.txt
 
       - name: Install dependencies
         run: |
@@ -309,6 +318,9 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: "pip"
+          cache-dependency-path: |
+            agent_orchestrator/requirements.txt
+            support/tests/requirements.txt
 
       - name: Install dependencies
         run: |
