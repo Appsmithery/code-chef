@@ -20,7 +20,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 # Add project paths
 sys.path.insert(0, str(Path(__file__).parent / "../../.."))
@@ -42,15 +42,16 @@ except ImportError:
 
 # Import evaluators
 from support.tests.evaluation.evaluators import (
-    agent_routing_accuracy,
-    token_efficiency,
-    latency_threshold,
-    workflow_completeness,
-    mcp_integration_quality,
-    risk_assessment_accuracy,
     ALL_EVALUATORS,
+    agent_routing_accuracy,
+    latency_threshold,
+    mcp_integration_quality,
+    modelops_deployment_success,
+    modelops_training_quality,
+    risk_assessment_accuracy,
+    token_efficiency,
+    workflow_completeness,
 )
-
 
 # =============================================================================
 # EVALUATION CONFIGURATION

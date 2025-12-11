@@ -11,11 +11,12 @@ Linear Issue: DEV-195
 Test Project: https://github.com/Appsmithery/IB-Agent
 """
 
-from langsmith import Client
-from typing import List, Dict, Any
 import argparse
 import logging
 import os
+from typing import Any, Dict, List
+
+from langsmith import Client
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -157,6 +158,49 @@ IB_AGENT_SCENARIOS: List[Dict[str, Any]] = [
         "ib_agent_step": "4.2",
         "expected_steps": ["feature_dev_node", "code_review_node", "security_scan"],
         "description": "Implement bidirectional Excel integration with WebSocket progress streaming",
+    },
+    # =========================================================================
+    # ModelOps Extension: Model Training and Deployment
+    # =========================================================================
+    {
+        "task": "Train a fine-tuned CodeLlama model using AutoTrain with demo mode for feature_dev agent",
+        "expected_agents": ["infrastructure"],
+        "risk_level": "medium",
+        "ib_agent_step": "modelops.1",
+        "expected_steps": ["infrastructure_check", "modelops_train"],
+        "description": "Initiate model training with cost estimation, progress tracking, and HuggingFace Space integration",
+    },
+    {
+        "task": "Evaluate the newly trained model against the current feature_dev model using LangSmith comparison",
+        "expected_agents": ["infrastructure"],
+        "risk_level": "low",
+        "ib_agent_step": "modelops.2",
+        "expected_steps": ["infrastructure_check", "modelops_evaluate"],
+        "description": "Run evaluation suite with weighted scoring: accuracy, completeness, efficiency, latency, integration",
+    },
+    {
+        "task": "Deploy the evaluated model to production with automatic config update and rollback capability",
+        "expected_agents": ["infrastructure"],
+        "risk_level": "high",
+        "ib_agent_step": "modelops.3",
+        "expected_steps": ["infrastructure_check", "modelops_deploy", "config_backup"],
+        "description": "Update models.yaml, create version backup, ensure thread-safe registry operations",
+    },
+    {
+        "task": "View model deployment history and rollback to previous version due to performance regression",
+        "expected_agents": ["infrastructure"],
+        "risk_level": "medium",
+        "ib_agent_step": "modelops.4",
+        "expected_steps": ["infrastructure_check", "modelops_rollback"],
+        "description": "Access model registry, identify previous version, execute rollback with validation",
+    },
+    {
+        "task": "Convert deployed model to GGUF format for local development and testing",
+        "expected_agents": ["infrastructure"],
+        "risk_level": "low",
+        "ib_agent_step": "modelops.5",
+        "expected_steps": ["infrastructure_check", "modelops_convert"],
+        "description": "Generate GGUF quantized model with download management for local usage",
     },
     # =========================================================================
     # Cross-Cutting Concerns
