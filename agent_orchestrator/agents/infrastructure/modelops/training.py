@@ -51,6 +51,38 @@ except ImportError:
 from loguru import logger
 
 
+def _get_training_trace_metadata() -> Dict[str, Any]:
+    """Get standard metadata for training traces.
+
+    Returns metadata following the schema in config/observability/tracing-schema.yaml
+    """
+    return {
+        "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
+        "environment": os.getenv("TRACE_ENVIRONMENT", "training"),
+        "module": "training",
+        "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
+        "model_version": os.getenv("MODEL_VERSION", "unknown"),
+        "experiment_id": os.getenv("EXPERIMENT_ID"),
+        "agent": os.getenv("AGENT_NAME", "infrastructure"),
+    }
+
+
+def _get_langsmith_project() -> str:
+    """Determine LangSmith project based on environment.
+
+    Returns:
+        Project name for training traces
+    """
+    environment = os.getenv("TRACE_ENVIRONMENT", "training")
+
+    if environment == "training":
+        return os.getenv("LANGSMITH_PROJECT_TRAINING", "code-chef-training")
+    elif environment == "evaluation" and os.getenv("EXPERIMENT_ID"):
+        return os.getenv("LANGSMITH_PROJECT_EXPERIMENTS", "code-chef-experiments")
+    else:
+        return os.getenv("LANGSMITH_PROJECT", "code-chef-infrastructure")
+
+
 @dataclass
 class TrainingConfig:
     """Configuration for model training job."""
@@ -98,7 +130,11 @@ class ModelOpsTrainerClient:
 
         self.client = httpx.Client(timeout=timeout)
 
-    @traceable(name="modelops_health_check")
+    @traceable(
+        name="modelops_health_check",
+        project_name=_get_langsmith_project(),
+        metadata=_get_training_trace_metadata(),
+    )
     def health_check(self) -> Dict:
         """Check if Space is healthy and responsive.
 
@@ -113,7 +149,11 @@ class ModelOpsTrainerClient:
             logger.error(f"Health check failed: {e}")
             return {"status": "unhealthy", "error": str(e)}
 
-    @traceable(name="modelops_submit_training")
+    @traceable(
+        name="modelops_submit_training",
+        project_name=_get_langsmith_project(),
+        metadata=_get_training_trace_metadata(),
+    )
     def submit_training_job(
         self,
         csv_data: str,
@@ -178,7 +218,11 @@ class ModelOpsTrainerClient:
             logger.error(f"Failed to submit training job: {e}")
             raise
 
-    @traceable(name="modelops_get_job_status")
+    @traceable(
+        name="modelops_get_job_status",
+        project_name=_get_langsmith_project(),
+        metadata=_get_training_trace_metadata(),
+    )
     def get_job_status(self, job_id: str) -> Dict:
         """Get status of a training job.
 
@@ -196,7 +240,11 @@ class ModelOpsTrainerClient:
             logger.error(f"Failed to get job status: {e}")
             raise
 
-    @traceable(name="modelops_wait_for_completion")
+    @traceable(
+        name="modelops_wait_for_completion",
+        project_name=_get_langsmith_project(),
+        metadata=_get_training_trace_metadata(),
+    )
     def wait_for_completion(
         self,
         job_id: str,
@@ -299,7 +347,11 @@ class ModelOpsTrainer:
             },
         }
 
-    @traceable(name="modelops_export_langsmith_data")
+    @traceable(
+        name="modelops_export_langsmith_data",
+        project_name=_get_langsmith_project(),
+        metadata=_get_training_trace_metadata(),
+    )
     def export_langsmith_data(
         self,
         project_name: str,
@@ -373,7 +425,11 @@ class ModelOpsTrainer:
                     return value
         return ""
 
-    @traceable(name="modelops_train_model")
+    @traceable(
+        name="modelops_train_model",
+        project_name=_get_langsmith_project(),
+        metadata=_get_training_trace_metadata(),
+    )
     def train_model(
         self,
         agent_name: str,
@@ -483,7 +539,11 @@ class ModelOpsTrainer:
                 "error": str(e),
             }
 
-    @traceable(name="modelops_monitor_training")
+    @traceable(
+        name="modelops_monitor_training",
+        project_name=_get_langsmith_project(),
+        metadata=_get_training_trace_metadata(),
+    )
     def monitor_training(self, job_id: str, poll_interval: int = 30) -> Dict:
         """Monitor training job until completion.
 

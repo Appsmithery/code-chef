@@ -1,0 +1,107 @@
+{
+  "experiment_name": "Feature Development A/B Test",
+  "description": "Compare baseline vs code-chef on feature development tasks",
+  "created_at": "2025-12-10T00:00:00Z",
+  "tasks": [
+    {
+      "task_id": "task-001",
+      "prompt": "Create a Python function to parse JSON configuration files and validate required fields",
+      "expected_output": null,
+      "metadata": {
+        "category": "code_generation",
+        "difficulty": "medium",
+        "language": "python"
+      }
+    },
+    {
+      "task_id": "task-002",
+      "prompt": "Add error handling to the existing API endpoint for user registration",
+      "expected_output": null,
+      "metadata": {
+        "category": "code_modification",
+        "difficulty": "medium",
+        "language": "python"
+      }
+    },
+    {
+      "task_id": "task-003",
+      "prompt": "Write a React component that displays a paginated list of items with search functionality",
+      "expected_output": null,
+      "metadata": {
+        "category": "code_generation",
+        "difficulty": "hard",
+        "language": "typescript"
+      }
+    },
+    {
+      "task_id": "task-004",
+      "prompt": "Refactor this database query to use prepared statements and prevent SQL injection",
+      "expected_output": null,
+      "metadata": {
+        "category": "security_fix",
+        "difficulty": "easy",
+        "language": "python"
+      }
+    },
+    {
+      "task_id": "task-005",
+      "prompt": "Debug why the authentication middleware is not properly validating JWT tokens",
+      "expected_output": null,
+      "metadata": {
+        "category": "debugging",
+        "difficulty": "hard",
+        "language": "typescript"
+      }
+    },
+    {
+      "task_id": "task-006",
+      "prompt": "Implement a caching layer using Redis for frequently accessed data",
+      "expected_output": null,
+      "metadata": {
+        "category": "code_generation",
+        "difficulty": "hard",
+        "language": "python"
+      }
+    },
+    {
+      "task_id": "task-007",
+      "prompt": "Write unit tests for the user authentication service with 90% coverage",
+      "expected_output": null,
+      "metadata": {
+        "category": "testing",
+        "difficulty": "medium",
+        "language": "python"
+      }
+    },
+    {
+      "task_id": "task-008",
+      "prompt": "Optimize this SQL query that's causing performance issues in production",
+      "expected_output": null,
+      "metadata": {
+        "category": "optimization",
+        "difficulty": "medium",
+        "language": "sql"
+      }
+    },
+    {
+      "task_id": "task-009",
+      "prompt": "Create a GitHub Actions workflow for CI/CD with automated testing and deployment",
+      "expected_output": null,
+      "metadata": {
+        "category": "devops",
+        "difficulty": "medium",
+        "language": "yaml"
+      }
+    },
+    {
+      "task_id": "task-010",
+      "prompt": "Document the API endpoints with OpenAPI/Swagger specifications",
+      "expected_output": null,
+      "metadata": {
+        "category": "documentation",
+        "difficulty": "easy",
+        "language": "yaml"
+      }
+    }
+  ]
+}

@@ -43,6 +43,39 @@ except ImportError:
 from loguru import logger
 
 
+def _get_registry_trace_metadata() -> Dict[str, str]:
+    """Get standard metadata for registry traces.
+
+    Returns metadata following the schema in config/observability/tracing-schema.yaml
+    """
+    return {
+        "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
+        "environment": os.getenv("TRACE_ENVIRONMENT", "production"),
+        "module": "registry",
+        "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
+        "model_version": os.getenv("MODEL_VERSION", "unknown"),
+        "agent": os.getenv("AGENT_NAME", "infrastructure"),
+    }
+
+
+def _get_langsmith_project() -> str:
+    """Determine LangSmith project based on environment.
+
+    Returns:
+        Project name for registry traces
+    """
+    environment = os.getenv("TRACE_ENVIRONMENT", "production")
+
+    if environment == "production":
+        return os.getenv("LANGSMITH_PROJECT_PRODUCTION", "code-chef-production")
+    elif environment == "evaluation":
+        return os.getenv("LANGSMITH_PROJECT_EVALUATION", "code-chef-evaluation")
+    elif environment == "training":
+        return os.getenv("LANGSMITH_PROJECT_TRAINING", "code-chef-training")
+    else:
+        return os.getenv("LANGSMITH_PROJECT", "code-chef-infrastructure")
+
+
 # Pydantic Models for validation
 class EvaluationScores(BaseModel):
     """Evaluation metrics for a model."""
@@ -282,7 +315,11 @@ class ModelRegistry:
 
         return new_version
 
-    @traceable(name="registry_update_eval_scores")
+    @traceable(
+        name="registry_update_eval_scores",
+        project_name=_get_langsmith_project(),
+        metadata=_get_registry_trace_metadata(),
+    )
     def update_evaluation_scores(
         self, agent_name: str, version: str, eval_scores: Dict
     ) -> bool:
@@ -315,7 +352,11 @@ class ModelRegistry:
 
         raise ValueError(f"Version {version} not found for {agent_name}")
 
-    @traceable(name="registry_set_current")
+    @traceable(
+        name="registry_set_current",
+        project_name=_get_langsmith_project(),
+        metadata=_get_registry_trace_metadata(),
+    )
     def set_current_model(self, agent_name: str, version: str) -> bool:
         """Set a version as the current deployed model.
 
@@ -370,7 +411,11 @@ class ModelRegistry:
 
         return True
 
-    @traceable(name="registry_rollback")
+    @traceable(
+        name="registry_rollback",
+        project_name=_get_langsmith_project(),
+        metadata=_get_registry_trace_metadata(),
+    )
     def rollback_to_version(self, agent_name: str, version: str) -> bool:
         """Rollback to a previous version.
 
@@ -384,7 +429,11 @@ class ModelRegistry:
         logger.warning(f"Rolling back {agent_name} to {version}")
         return self.set_current_model(agent_name, version)
 
-    @traceable(name="registry_list_versions")
+    @traceable(
+        name="registry_list_versions",
+        project_name=_get_langsmith_project(),
+        metadata=_get_registry_trace_metadata(),
+    )
     def list_versions(
         self, agent_name: str, limit: int = 10, status_filter: Optional[str] = None
     ) -> List[ModelVersion]:
@@ -412,7 +461,11 @@ class ModelRegistry:
         # Limit
         return versions[:limit]
 
-    @traceable(name="registry_get_version")
+    @traceable(
+        name="registry_get_version",
+        project_name=_get_langsmith_project(),
+        metadata=_get_registry_trace_metadata(),
+    )
     def get_version(self, agent_name: str, version: str) -> Optional[ModelVersion]:
         """Get a specific model version.
 
