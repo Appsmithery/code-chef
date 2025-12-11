@@ -9,274 +9,329 @@
 name: E2E LangSmith Evaluation
 
 on:
-    schedule:
-        # Daily at 6 AM UTC
-        - cron: "0 6 * * *"
+  schedule:
+    # Daily at 6 AM UTC
+    - cron: "0 6 * * *"
 
-    push:
-        paths:
-            - "agent_orchestrator/**"
-            - "shared/**"
-            - "support/tests/evaluation/**"
-            - "support/tests/e2e/**"
+  push:
+    paths:
+      - "agent_orchestrator/**"
+      - "shared/**"
+      - "support/tests/evaluation/**"
+      - "support/tests/e2e/**"
 
-    workflow_dispatch:
-        inputs:
-            dataset:
-                description: "LangSmith dataset name"
-                required: false
-                default: "ib-agent-scenarios-v1"
-            evaluators:
-                description: 'Specific evaluators to run (comma-separated, or "all")'
-                required: false
-                default: "all"
-            project:
-                description: "LangSmith project to evaluate"
-                required: false
-                default: "code-chef-testing"
+  workflow_dispatch:
+    inputs:
+      dataset:
+        description: "LangSmith dataset name"
+        required: false
+        default: "ib-agent-scenarios-v1"
+      evaluators:
+        description: 'Specific evaluators to run (comma-separated, or "all")'
+        required: false
+        default: "all"
+      project:
+        description: "LangSmith project to evaluate"
+        required: false
+        default: "code-chef-testing"
 
 env:
-    PYTHON_VERSION: "3.11"
-    LANGCHAIN_TRACING_V2: "true"
-    LANGCHAIN_PROJECT: ${{ github.event.inputs.project || 'code-chef-testing' }}
+  PYTHON_VERSION: "3.11"
+  LANGCHAIN_TRACING_V2: "true"
+  LANGCHAIN_PROJECT: ${{ github.event.inputs.project || 'code-chef-testing' }}
 
 jobs:
-    # ==========================================================================
-    # PHASE 1: Data Layer Tests
-    # MCP servers, Docker infrastructure, Qdrant configuration
-    # ==========================================================================
-    phase1-data-layer:
-        name: Phase 1 - Data Layer Evaluation
-        runs-on: ubuntu-latest
-        if: github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all'
+  # ==========================================================================
+  # PHASE 1: Data Layer Tests
+  # MCP servers, Docker infrastructure, Qdrant configuration
+  # ==========================================================================
+  phase1-data-layer:
+    name: Phase 1 - Data Layer Evaluation
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all'
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  cache: "pip"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
 
-            - name: Install dependencies
-              run: |
-                  pip install --upgrade pip
-                  pip install -r agent_orchestrator/requirements.txt
-                  pip install -r support/tests/requirements.txt
-                  pip install langsmith pytest-langsmith
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r agent_orchestrator/requirements.txt
+          pip install -r support/tests/requirements.txt
+          pip install langsmith pytest-langsmith
 
-            - name: Run Phase 1 tests
-              env:
-                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
-                  LANGCHAIN_PROJECT: "code-chef-testing"
-              run: |
-                  pytest support/tests/e2e/test_ib_agent_phase1.py \
-                    -v \
-                    --tb=short \
-                    -m "phase1" \
-                    --junitxml=reports/phase1-results.xml
-              continue-on-error: true
+      - name: Run Phase 1 tests
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_PROJECT: "code-chef-testing"
+        run: |
+          pytest support/tests/e2e/test_ib_agent_phase1.py \
+            -v \
+            --tb=short \
+            -m "phase1" \
+            --junitxml=reports/phase1-results.xml
+        continue-on-error: true
 
-            - name: Evaluate Phase 1 traces
-              env:
-                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
-              run: |
-                  python support/tests/evaluation/run_evaluation.py \
-                    --dataset ib-agent-scenarios-v1 \
-                    --project code-chef-testing \
-                    --evaluators mcp_integration_quality latency_threshold workflow_completeness \
-                    --output reports/phase1-eval.json
-              continue-on-error: true
+      - name: Evaluate Phase 1 traces
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+        run: |
+          python support/tests/evaluation/run_evaluation.py \
+            --dataset ib-agent-scenarios-v1 \
+            --project code-chef-testing \
+            --evaluators mcp_integration_quality latency_threshold workflow_completeness \
+            --output reports/phase1-eval.json
+        continue-on-error: true
 
-            - name: Upload Phase 1 results
-              uses: actions/upload-artifact@v4
-              with:
-                  name: phase1-results
-                  path: reports/
+      - name: Upload Phase 1 results
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase1-results
+          path: reports/
 
-    # ==========================================================================
-    # PHASE 2: Core Agent Tests
-    # LangGraph workflows, RAG pipeline, agent routing
-    # ==========================================================================
-    phase2-core-agents:
-        name: Phase 2 - Core Agent Evaluation
-        runs-on: ubuntu-latest
-        needs: phase1-data-layer
-        if: always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all')
+  # ==========================================================================
+  # PHASE 2: Core Agent Tests
+  # LangGraph workflows, RAG pipeline, agent routing
+  # ==========================================================================
+  phase2-core-agents:
+    name: Phase 2 - Core Agent Evaluation
+    runs-on: ubuntu-latest
+    needs: phase1-data-layer
+    if: always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all')
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  cache: "pip"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
 
-            - name: Install dependencies
-              run: |
-                  pip install --upgrade pip
-                  pip install -r agent_orchestrator/requirements.txt
-                  pip install -r support/tests/requirements.txt
-                  pip install langsmith pytest-langsmith
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r agent_orchestrator/requirements.txt
+          pip install -r support/tests/requirements.txt
+          pip install langsmith pytest-langsmith
 
-            - name: Run Phase 2 tests
-              env:
-                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
-                  LANGCHAIN_PROJECT: "code-chef-testing"
-              run: |
-                  pytest support/tests/e2e/test_ib_agent_phase2.py \
-                    -v \
-                    --tb=short \
-                    -m "phase2" \
-                    --junitxml=reports/phase2-results.xml
-              continue-on-error: true
+      - name: Run Phase 2 tests
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_PROJECT: "code-chef-testing"
+        run: |
+          pytest support/tests/e2e/test_ib_agent_phase2.py \
+            -v \
+            --tb=short \
+            -m "phase2" \
+            --junitxml=reports/phase2-results.xml
+        continue-on-error: true
 
-            - name: Evaluate Phase 2 traces
-              env:
-                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
-              run: |
-                  python support/tests/evaluation/run_evaluation.py \
-                    --dataset ib-agent-scenarios-v1 \
-                    --project code-chef-testing \
-                    --evaluators agent_routing_accuracy token_efficiency workflow_completeness \
-                    --output reports/phase2-eval.json
-              continue-on-error: true
+      - name: Evaluate Phase 2 traces
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+        run: |
+          python support/tests/evaluation/run_evaluation.py \
+            --dataset ib-agent-scenarios-v1 \
+            --project code-chef-testing \
+            --evaluators agent_routing_accuracy token_efficiency workflow_completeness \
+            --output reports/phase2-eval.json
+        continue-on-error: true
 
-            - name: Upload Phase 2 results
-              uses: actions/upload-artifact@v4
-              with:
-                  name: phase2-results
-                  path: reports/
+      - name: Upload Phase 2 results
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase2-results
+          path: reports/
 
-    # ==========================================================================
-    # FULL EVALUATION: Run all evaluators
-    # ==========================================================================
-    full-evaluation:
-        name: Full Evaluation Suite
-        runs-on: ubuntu-latest
-        needs: [phase1-data-layer, phase2-core-agents]
-        if: always()
+  # ==========================================================================
+  # MODELOPS: Model Training and Deployment Tests
+  # ==========================================================================
+  modelops-evaluation:
+    name: ModelOps Extension Evaluation
+    runs-on: ubuntu-latest
+    needs: phase2-core-agents
+    if: always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all')
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  cache: "pip"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
 
-            - name: Install dependencies
-              run: |
-                  pip install --upgrade pip
-                  pip install -r agent_orchestrator/requirements.txt
-                  pip install -r support/tests/requirements.txt
-                  pip install langsmith pytest-langsmith
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r agent_orchestrator/requirements.txt
+          pip install -r support/tests/requirements.txt
+          pip install langsmith pytest-langsmith
 
-            - name: Download phase artifacts
-              uses: actions/download-artifact@v4
-              with:
-                  path: reports/
-                  merge-multiple: true
+      - name: Run ModelOps integration tests
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_PROJECT: "code-chef-testing"
+        run: |
+          pytest support/tests/integration/test_modelops_integration.py \
+            -v \
+            --tb=short \
+            -m "not full" \
+            --junitxml=reports/modelops-results.xml
+        continue-on-error: true
 
-            - name: Run full evaluation
-              env:
-                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
-              run: |
-                  python support/tests/evaluation/run_evaluation.py \
-                    --dataset ${{ github.event.inputs.dataset || 'ib-agent-scenarios-v1' }} \
-                    --project ${{ github.event.inputs.project || 'code-chef-testing' }} \
-                    --output reports/full-eval.json
+      - name: Evaluate ModelOps traces
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+        run: |
+          python support/tests/evaluation/run_evaluation.py \
+            --dataset ib-agent-scenarios-v1 \
+            --project code-chef-testing \
+            --evaluators modelops_training_quality modelops_deployment_success workflow_completeness \
+            --output reports/modelops-eval.json
+        continue-on-error: true
 
-            - name: Generate summary
-              run: |
-                  echo "## LangSmith Evaluation Summary" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "**Dataset:** ${{ github.event.inputs.dataset || 'ib-agent-scenarios-v1' }}" >> $GITHUB_STEP_SUMMARY
-                  echo "**Project:** ${{ github.event.inputs.project || 'code-chef-testing' }}" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
+      - name: Upload ModelOps results
+        uses: actions/upload-artifact@v4
+        with:
+          name: modelops-results
+          path: reports/
 
-                  if [ -f reports/full-eval.json ]; then
-                    echo "### Results" >> $GITHUB_STEP_SUMMARY
-                    echo '```json' >> $GITHUB_STEP_SUMMARY
-                    cat reports/full-eval.json | jq '.summary' >> $GITHUB_STEP_SUMMARY
-                    echo '```' >> $GITHUB_STEP_SUMMARY
-                  fi
+  # ==========================================================================
+  # FULL EVALUATION: Run all evaluators
+  # ==========================================================================
+  full-evaluation:
+    name: Full Evaluation Suite
+    runs-on: ubuntu-latest
+    needs: [phase1-data-layer, phase2-core-agents, modelops-evaluation]
+    if: always()
 
-            - name: Upload all results
-              uses: actions/upload-artifact@v4
-              with:
-                  name: evaluation-results
-                  path: reports/
-                  retention-days: 30
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            # Create Linear issue for failures
-            - name: Check for failures
-              id: check-failures
-              run: |
-                  if [ -f reports/full-eval.json ]; then
-                    FAILURES=$(cat reports/full-eval.json | jq -r '.summary.failure_count // 0')
-                    echo "failure_count=$FAILURES" >> $GITHUB_OUTPUT
-                  else
-                    echo "failure_count=0" >> $GITHUB_OUTPUT
-                  fi
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
 
-            - name: Post failure to Linear
-              if: steps.check-failures.outputs.failure_count > 0
-              uses: actions/github-script@v7
-              with:
-                  script: |
-                      const failureCount = ${{ steps.check-failures.outputs.failure_count }};
-                      console.log(`Evaluation completed with ${failureCount} failures`);
-                      // TODO: Integrate with Linear API via webhook
-                      // Endpoint: codechef.appsmithery.co/webhooks/linear/evaluation-failure
-              continue-on-error: true
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r agent_orchestrator/requirements.txt
+          pip install -r support/tests/requirements.txt
+          pip install langsmith pytest-langsmith
 
-    # ==========================================================================
-    # MANUAL EVALUATION: Custom evaluator selection
-    # ==========================================================================
-    custom-evaluation:
-        name: Custom Evaluation
-        runs-on: ubuntu-latest
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.evaluators != 'all'
+      - name: Download phase artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+          merge-multiple: true
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+      - name: Run full evaluation
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+        run: |
+          python support/tests/evaluation/run_evaluation.py \
+            --dataset ${{ github.event.inputs.dataset || 'ib-agent-scenarios-v1' }} \
+            --project ${{ github.event.inputs.project || 'code-chef-testing' }} \
+            --output reports/full-eval.json
 
-            - name: Set up Python
-              uses: actions/setup-python@v5
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  cache: "pip"
+      - name: Generate summary
+        run: |
+          echo "## LangSmith Evaluation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Dataset:** ${{ github.event.inputs.dataset || 'ib-agent-scenarios-v1' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** ${{ github.event.inputs.project || 'code-chef-testing' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
 
-            - name: Install dependencies
-              run: |
-                  pip install --upgrade pip
-                  pip install -r agent_orchestrator/requirements.txt
-                  pip install -r support/tests/requirements.txt
-                  pip install langsmith
+          if [ -f reports/full-eval.json ]; then
+            echo "### Results" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat reports/full-eval.json | jq '.summary' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
-            - name: Run custom evaluation
-              env:
-                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
-              run: |
-                  EVALUATORS="${{ github.event.inputs.evaluators }}"
-                  EVALUATORS_ARGS=$(echo $EVALUATORS | tr ',' ' ')
+      - name: Upload all results
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-results
+          path: reports/
+          retention-days: 30
 
-                  python support/tests/evaluation/run_evaluation.py \
-                    --dataset ${{ github.event.inputs.dataset }} \
-                    --project ${{ github.event.inputs.project }} \
-                    --evaluators $EVALUATORS_ARGS \
-                    --output reports/custom-eval.json
+      # Create Linear issue for failures
+      - name: Check for failures
+        id: check-failures
+        run: |
+          if [ -f reports/full-eval.json ]; then
+            FAILURES=$(cat reports/full-eval.json | jq -r '.summary.failure_count // 0')
+            echo "failure_count=$FAILURES" >> $GITHUB_OUTPUT
+          else
+            echo "failure_count=0" >> $GITHUB_OUTPUT
+          fi
 
-            - name: Upload results
-              uses: actions/upload-artifact@v4
-              with:
-                  name: custom-evaluation-results
-                  path: reports/
+      - name: Post failure to Linear
+        if: steps.check-failures.outputs.failure_count > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const failureCount = ${{ steps.check-failures.outputs.failure_count }};
+            console.log(`Evaluation completed with ${failureCount} failures`);
+            // TODO: Integrate with Linear API via webhook
+            // Endpoint: codechef.appsmithery.co/webhooks/linear/evaluation-failure
+        continue-on-error: true
+
+  # ==========================================================================
+  # MANUAL EVALUATION: Custom evaluator selection
+  # ==========================================================================
+  custom-evaluation:
+    name: Custom Evaluation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.evaluators != 'all'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r agent_orchestrator/requirements.txt
+          pip install -r support/tests/requirements.txt
+          pip install langsmith
+
+      - name: Run custom evaluation
+        env:
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+        run: |
+          EVALUATORS="${{ github.event.inputs.evaluators }}"
+          EVALUATORS_ARGS=$(echo $EVALUATORS | tr ',' ' ')
+
+          python support/tests/evaluation/run_evaluation.py \
+            --dataset ${{ github.event.inputs.dataset }} \
+            --project ${{ github.event.inputs.project }} \
+            --evaluators $EVALUATORS_ARGS \
+            --output reports/custom-eval.json
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-evaluation-results
+          path: reports/

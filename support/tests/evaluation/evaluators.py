@@ -23,14 +23,15 @@ Test Project: https://github.com/Appsmithery/IB-Agent
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Any, List, Set, Optional
-from dataclasses import dataclass
 import logging
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set
 
 # Type checking imports (no runtime impact)
 if TYPE_CHECKING:
     from langsmith.evaluation import EvaluationResult as EvalResult
-    from langsmith.schemas import Run as RunType, Example as ExampleType
+    from langsmith.schemas import Example as ExampleType
+    from langsmith.schemas import Run as RunType
 
     Run = RunType
     Example = ExampleType
@@ -39,7 +40,7 @@ if TYPE_CHECKING:
 # Lazy import to avoid errors when langsmith not installed
 try:
     from langsmith.evaluation import EvaluationResult
-    from langsmith.schemas import Run, Example
+    from langsmith.schemas import Example, Run
 
     LANGSMITH_AVAILABLE = True
 except ImportError:
@@ -81,6 +82,19 @@ TOKEN_THRESHOLDS = {
     "security": {
         "keywords": ["security", "owasp", "code_review", "vulnerability", "audit"],
         "threshold": 4000,
+    },
+    # ModelOps training and evaluation workflows
+    "modelops": {
+        "keywords": [
+            "modelops",
+            "training",
+            "evaluation",
+            "deployment",
+            "model_registry",
+            "huggingface",
+            "autotrain",
+        ],
+        "threshold": 4500,
     },
     # UI and frontend tasks
     "ui": {
@@ -401,6 +415,139 @@ def risk_assessment_accuracy(run: Run, example: Example) -> EvaluationResult:
     )
 
 
+def modelops_training_quality(run: Run, example: Example) -> EvaluationResult:
+    """
+    Evaluate ModelOps training workflow quality.
+
+    Checks for proper training configuration, cost estimation,
+    progress tracking, and result handling.
+
+    Args:
+        run: LangSmith run
+        example: Dataset example
+
+    Returns:
+        EvaluationResult for training quality
+    """
+    score = 0.0
+    checks = []
+
+    # Check for training configuration
+    has_config = False
+    has_cost_estimate = False
+    has_job_id = False
+    has_status_tracking = False
+
+    if hasattr(run, "outputs") and run.outputs:
+        outputs = run.outputs
+
+        # Look for training configuration
+        if any(
+            key in str(outputs).lower()
+            for key in ["training", "config", "lora", "samples"]
+        ):
+            has_config = True
+            checks.append("Training config")
+            score += 0.25
+
+        # Look for cost estimation
+        if any(
+            key in str(outputs).lower() for key in ["cost", "price", "$", "estimate"]
+        ):
+            has_cost_estimate = True
+            checks.append("Cost estimate")
+            score += 0.25
+
+        # Look for job tracking
+        if any(
+            key in str(outputs).lower() for key in ["job_id", "trackio", "training_id"]
+        ):
+            has_job_id = True
+            checks.append("Job tracking")
+            score += 0.25
+
+        # Look for status tracking
+        if any(
+            key in str(outputs).lower()
+            for key in ["status", "progress", "completed", "running"]
+        ):
+            has_status_tracking = True
+            checks.append("Status tracking")
+            score += 0.25
+
+    return EvaluationResult(
+        key="modelops_training_quality",
+        score=score,
+        comment=f"Checks passed: {', '.join(checks)}",
+    )
+
+
+def modelops_deployment_success(run: Run, example: Example) -> EvaluationResult:
+    """
+    Evaluate ModelOps deployment workflow success.
+
+    Checks for proper model deployment, config updates,
+    version tracking, and rollback capability.
+
+    Args:
+        run: LangSmith run
+        example: Dataset example
+
+    Returns:
+        EvaluationResult for deployment success
+    """
+    score = 0.0
+    checks = []
+
+    # Check for deployment indicators
+    has_version = False
+    has_config_update = False
+    has_rollback_info = False
+    has_registry_update = False
+
+    if hasattr(run, "outputs") and run.outputs:
+        outputs = run.outputs
+
+        # Look for version tracking
+        if any(
+            key in str(outputs).lower() for key in ["version", "v1.", "v2.", "deployed"]
+        ):
+            has_version = True
+            checks.append("Version tracking")
+            score += 0.25
+
+        # Look for config updates
+        if any(
+            key in str(outputs).lower() for key in ["config", "models.yaml", "updated"]
+        ):
+            has_config_update = True
+            checks.append("Config update")
+            score += 0.25
+
+        # Look for rollback capability
+        if any(
+            key in str(outputs).lower() for key in ["rollback", "backup", "previous"]
+        ):
+            has_rollback_info = True
+            checks.append("Rollback ready")
+            score += 0.25
+
+        # Look for registry updates
+        if any(
+            key in str(outputs).lower()
+            for key in ["registry", "model_id", "deployed_at"]
+        ):
+            has_registry_update = True
+            checks.append("Registry update")
+            score += 0.25
+
+    return EvaluationResult(
+        key="modelops_deployment_success",
+        score=score,
+        comment=f"Checks passed: {', '.join(checks)}",
+    )
+
+
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
@@ -465,6 +612,8 @@ ALL_EVALUATORS = [
     workflow_completeness,
     mcp_integration_quality,
     risk_assessment_accuracy,
+    modelops_training_quality,
+    modelops_deployment_success,
 ]
 
 # Phase 1: Data Layer Foundation evaluators (MCP, Docker, infrastructure)
@@ -482,6 +631,14 @@ PHASE2_EVALUATORS = [
     workflow_completeness,
 ]
 
+# ModelOps: Training and deployment evaluators
+MODELOPS_EVALUATORS = [
+    modelops_training_quality,
+    modelops_deployment_success,
+    latency_threshold,
+    workflow_completeness,
+]
+
 # Quick access mapping
 EVALUATOR_MAP = {
     "agent_routing_accuracy": agent_routing_accuracy,
@@ -490,6 +647,8 @@ EVALUATOR_MAP = {
     "workflow_completeness": workflow_completeness,
     "mcp_integration_quality": mcp_integration_quality,
     "risk_assessment_accuracy": risk_assessment_accuracy,
+    "modelops_training_quality": modelops_training_quality,
+    "modelops_deployment_success": modelops_deployment_success,
 }
 
 
