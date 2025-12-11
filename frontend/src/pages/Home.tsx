@@ -104,7 +104,7 @@ export default function Home() {
             {/* Hero Visual - Terminal */}
             <div className="relative hidden lg:block">
               <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-2xl blur opacity-10"></div>
-              <div className="relative bg-card border border-border rounded-xl overflow-hidden shadow-lg">
+              <div className="relative bg-card rounded-xl overflow-hidden shadow-2xl">
                 <div className="flex items-center px-4 py-3 border-b border-border bg-muted">
                   <div className="flex gap-2">
                     <div className="w-3 h-3 rounded-full bg-red-400"></div>
@@ -148,7 +148,7 @@ export default function Home() {
               </div>
 
               {/* Floating Status Card */}
-              <Card className="absolute -bottom-6 -left-6 w-64 bg-card border-border shadow-lg">
+              <Card className="absolute -bottom-6 -left-6 w-64 bg-card shadow-medium">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Activity className="h-4 w-4 text-primary" />
@@ -170,7 +170,7 @@ export default function Home() {
       {/* Features Grid */}
       <section className="py-24 bg-background relative">
         <div className="container">
-          <div className="flex flex-col items-center text-center mb-16 space-y-4">
+          <div className="flex flex-col mb-16 space-y-4">
             <Badge
               variant="outline"
               className="border-accent/30 text-accent bg-accent/5"
@@ -188,9 +188,9 @@ export default function Home() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(200px,auto)]">
             {/* Large Feature */}
-            <Card className="md:col-span-2 bg-card border-border hover:border-accent/50 transition-all duration-300 group">
-              <CardHeader>
-                <div className="mb-2 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
+            <Card className="md:col-span-2 bg-gradient-to-br from-card to-accent/5 shadow-medium hover:-translate-y-1 hover:shadow-hover transition-all duration-300 group">
+              <CardHeader className="relative">
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
                   <Bot className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-xl">
@@ -202,7 +202,7 @@ export default function Home() {
                   for optimal results.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-8 pb-10">
                 <div className="h-32 w-full bg-gradient-to-br from-accent/5 to-primary/5 rounded-lg border border-border relative overflow-hidden">
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="flex gap-8">
@@ -222,9 +222,9 @@ export default function Home() {
             </Card>
 
             {/* Standard Feature */}
-            <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
-              <CardHeader>
-                <div className="mb-2 w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-300">
+            <Card className="bg-gradient-to-br from-card to-secondary/5 shadow-medium hover:-translate-y-1 hover:shadow-hover transition-all duration-300 group">
+              <CardHeader className="relative p-8 pb-10">
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-300">
                   <Wrench className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-lg">MCP Tool Integration</CardTitle>
@@ -241,14 +241,14 @@ export default function Home() {
           {/* Secondary Features - Evenly Spaced */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
             {/* RAG Semantic Search */}
-            <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
-              <CardHeader>
-                <div className="mb-2 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
+            <Card className="bg-gradient-to-br from-card to-primary/5 shadow-soft hover:-translate-y-1 hover:shadow-hover transition-all duration-300 group">
+              <CardHeader className="relative p-8 pb-6">
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                   <Search className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-lg">RAG Semantic Search</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-8 pt-0">
                 <p className="text-muted-foreground text-sm leading-relaxed mb-3">
                   Qdrant Cloud with 1,200+ vectors across code patterns, Linear
                   issues, and documentation for contextual assistance.
@@ -277,14 +277,14 @@ export default function Home() {
             </Card>
 
             {/* Full Observability */}
-            <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
-              <CardHeader>
-                <div className="mb-2 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
+            <Card className="bg-gradient-to-br from-card to-primary/5 shadow-soft hover:-translate-y-1 hover:shadow-hover transition-all duration-300 group">
+              <CardHeader className="relative p-8 pb-6">
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                   <Activity className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-lg">Full Observability</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-8 pt-0">
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   LangSmith tracing for LLM calls, Grafana Cloud for metrics,
                   and PostgreSQL checkpointing for durable workflows.
@@ -293,14 +293,14 @@ export default function Home() {
             </Card>
 
             {/* Human-in-the-Loop */}
-            <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
-              <CardHeader>
-                <div className="mb-2 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
+            <Card className="bg-gradient-to-br from-card to-primary/5 shadow-soft hover:-translate-y-1 hover:shadow-hover transition-all duration-300 group">
+              <CardHeader className="relative p-8 pb-6">
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
                   <ShieldCheck className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-lg">Human-in-the-Loop</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-8 pt-0">
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   Risk-based approval workflows via Linear integration. Critical
                   changes require human sign-off.
@@ -309,14 +309,14 @@ export default function Home() {
             </Card>
 
             {/* Cloud-Native Agents */}
-            <Card className="bg-card border-border hover:border-accent/50 transition-all duration-300 group">
-              <CardHeader>
-                <div className="mb-2 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
+            <Card className="bg-gradient-to-br from-card to-accent/5 shadow-soft hover:-translate-y-1 hover:shadow-hover transition-all duration-300 group">
+              <CardHeader className="relative p-8 pb-6">
+                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
                   <Cloud className="h-6 w-6" />
                 </div>
                 <CardTitle className="text-lg">Cloud-Native Agents</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-8 pt-0">
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   Running on DigitalOcean with Caddy reverse proxy, automatic
                   HTTPS, and optimized for 2GB memory footprint.
@@ -327,11 +327,11 @@ export default function Home() {
 
           {/* ModelOps Feature */}
           <div className="mt-6">
-            <Card className="bg-gradient-to-br from-secondary/10 to-accent/10 border-secondary hover:border-secondary transition-all duration-300 group">
-              <CardHeader>
+            <Card className="bg-gradient-to-br from-secondary/10 to-accent/10 shadow-medium hover:-translate-y-1 hover:shadow-hover hover:bg-muted/50 transition-all duration-300 group">
+              <CardHeader className="relative">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="mb-2 w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-300">
+                    <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-300">
                       <Sparkles className="h-6 w-6" />
                     </div>
                     <CardTitle className="text-2xl mb-2">
@@ -399,7 +399,7 @@ export default function Home() {
               rel="noreferrer"
               className="group"
             >
-              <Card className="h-full bg-card border-border hover:border-accent transition-all duration-300 hover:shadow-md">
+              <Card className="h-full bg-card shadow-soft hover:-translate-y-1 hover:shadow-hover hover:bg-muted/50 transition-all duration-300">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-2xl font-bold">
                     Orchestrator API
@@ -425,7 +425,7 @@ export default function Home() {
               rel="noreferrer"
               className="group"
             >
-              <Card className="h-full bg-card border-border hover:border-secondary transition-all duration-300 hover:shadow-md">
+              <Card className="h-full bg-card shadow-soft hover:-translate-y-1 hover:shadow-hover hover:bg-muted/50 transition-all duration-300">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-2xl font-bold">Tracing</CardTitle>
                   <Badge className="bg-secondary/20 text-secondary hover:bg-secondary/30 border-none">
@@ -449,7 +449,7 @@ export default function Home() {
               rel="noreferrer"
               className="group"
             >
-              <Card className="h-full bg-card border-border hover:border-primary transition-all duration-300 hover:shadow-md">
+              <Card className="h-full bg-card shadow-soft hover:-translate-y-1 hover:shadow-hover hover:bg-muted/50 transition-all duration-300">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-2xl font-bold">
                     Monitoring
