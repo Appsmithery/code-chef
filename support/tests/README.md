@@ -13,9 +13,8 @@ support/tests/
 │   ├── test_feature_workflow.py
 │   ├── test_review_workflow.py
 │   └── test_deploy_workflow.py
-├── integration/             # Integration tests (DB, MCP gateway)
-│   ├── test_postgres_checkpointing.py
-│   └── test_mcp_gateway.py
+├── integration/             # Integration tests (DB, MCP)
+│   └── test_postgres_checkpointing.py
 ├── workflows/               # Multi-agent workflow tests
 │   └── test_agent_handoff.py
 ├── hitl/                    # HITL approval tests
