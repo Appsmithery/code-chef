@@ -37,6 +37,8 @@ All agents inherit from `BaseAgent` class which provides:
 
 ### ModelOps Extension
 
+> **📘 Complete Guide**: See [LLM Operations Guide](operations/llm-operations.md) for detailed procedures covering model selection, training, evaluation, deployment, A/B testing, and troubleshooting.
+
 The Infrastructure agent includes a comprehensive ModelOps extension for fine-tuning agent models:
 
 **Architecture**:
@@ -52,20 +54,21 @@ InfrastructureAgent
 
 **Workflow**: Training → Evaluation → Deployment → Registry
 
-**Features**:
+**Key Capabilities**:
 
-- **Training**: AutoTrain Advanced via HuggingFace Space API
-- **Evaluation**: Weighted comparison using existing LangSmith evaluators
-- **Deployment**: Immediate deployment with automatic config updates
-- **Registry**: Thread-safe version tracking with rollback support
-- **VS Code Integration**: 5 commands for IDE-native model operations
+- **Training**: AutoTrain via HuggingFace Space API (demo $0.50/5min, production $3.50/60min)
+- **Evaluation**: 5 weighted metrics (accuracy 30%, completeness 25%, efficiency 20%, latency 15%, integration 10%)
+- **Deployment**: Safe deployment with automatic backup and <60s rollback
+- **Registry**: Thread-safe version tracking in JSON with Pydantic validation
+- **VS Code Integration**: 5 commands for IDE-native operations (`codechef.modelops.*`)
+- **Observability**: Full LangSmith tracing with purpose-based projects
 
 **Files**:
 
-- `agents/infrastructure/modelops/` - Core ModelOps modules
-- `config/models/registry.json` - Model version registry
-- `config/modelops/training_defaults.yaml` - Training presets
-- `extensions/vscode-codechef/src/commands/modelops.ts` - VS Code UI
+- `agents/infrastructure/modelops/` - Core ModelOps modules (coordinator, training, evaluation, deployment, registry)
+- `config/models/registry.json` - Model version registry with evaluation scores
+- `config/modelops/training_defaults.yaml` - Training presets (base models, hyperparameters)
+- `extensions/vscode-codechef/src/commands/modelops.ts` - VS Code command handlers
 
 ## Tool Loading Strategy
 

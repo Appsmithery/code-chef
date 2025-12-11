@@ -181,6 +181,8 @@ Task → RiskAssessor → HIGH/CRITICAL?
 
 ## ModelOps Extension
 
+> **📘 Complete Documentation**: See [LLM Operations Guide](../support/docs/operations/llm-operations.md) for comprehensive procedures covering model selection, training, evaluation, deployment, A/B testing, cost management, and troubleshooting.
+
 The Infrastructure agent supports full model training, evaluation, and deployment lifecycle:
 
 **Training**: HuggingFace Space API (`alextorelli/code-chef-modelops-trainer`)
