@@ -33,11 +33,11 @@ jobs:
   prepare-env:
     name: Prepare Environment
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Create .env file
         run: |
           cp config/env/.env.template config/env/.env
@@ -61,7 +61,7 @@ jobs:
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> config/env/.env
           # Database
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> config/env/.env
-      
+
       - name: Upload .env as artifact
         uses: actions/upload-artifact@v4
         with:
@@ -175,7 +175,7 @@ jobs:
         run: |
           echo "🔍 Waiting for services to start (max ${{ env.HEALTH_CHECK_TIMEOUT }}s)..."
           max_attempts=$((${{ env.HEALTH_CHECK_TIMEOUT }} / ${{ env.HEALTH_CHECK_INTERVAL }}))
-          
+
           for i in $(seq 1 $max_attempts); do
             sleep ${{ env.HEALTH_CHECK_INTERVAL }}
             all_healthy=true
@@ -200,7 +200,7 @@ jobs:
             
             echo "⏳ Attempt $i/$max_attempts: Waiting for:$failed_services"
           done
-          
+
           echo "❌ Services failed to become healthy within ${{ env.HEALTH_CHECK_TIMEOUT }}s"
           echo "📋 Checking logs..."
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose logs --tail=50"
@@ -250,7 +250,7 @@ jobs:
         run: |
           echo "🔍 Waiting for services to start (max ${{ env.HEALTH_CHECK_TIMEOUT }}s)..."
           max_attempts=$((${{ env.HEALTH_CHECK_TIMEOUT }} / ${{ env.HEALTH_CHECK_INTERVAL }}))
-          
+
           for i in $(seq 1 $max_attempts); do
             sleep ${{ env.HEALTH_CHECK_INTERVAL }}
             all_healthy=true
@@ -275,7 +275,7 @@ jobs:
             
             echo "⏳ Attempt $i/$max_attempts: Waiting for:$failed_services"
           done
-          
+
           echo "❌ Services failed to become healthy within ${{ env.HEALTH_CHECK_TIMEOUT }}s"
           echo "📋 Checking logs..."
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose logs --tail=50"
@@ -312,7 +312,7 @@ jobs:
         run: |
           echo "🔍 Waiting for services to start (max 60s for quick restart)..."
           max_attempts=12
-          
+
           for i in $(seq 1 $max_attempts); do
             sleep 5
             all_healthy=true
@@ -337,7 +337,7 @@ jobs:
             
             echo "⏳ Attempt $i/$max_attempts: Waiting for:$failed_services"
           done
-          
+
           echo "❌ Services failed to become healthy within 60s"
           echo "📋 Checking logs..."
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose logs --tail=50"
@@ -346,7 +346,8 @@ jobs:
   notify:
     name: Deployment Notification
     runs-on: ubuntu-latest
-    needs: [detect-changes, prepare-env, deploy-config, deploy-full, deploy-quick]
+    needs:
+      [detect-changes, prepare-env, deploy-config, deploy-full, deploy-quick]
     if: always()
 
     steps:
