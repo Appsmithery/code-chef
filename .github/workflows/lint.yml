@@ -30,14 +30,6 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-lint-${{ hashFiles('.github/workflows/lint.yml') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-lint-
-
       - name: Install linters
         run: |
           python -m pip install --upgrade pip
