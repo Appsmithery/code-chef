@@ -11,13 +11,14 @@ Usage:
     pytest support/tests/performance/test_concurrent_workflows.py -v -s
 """
 
-import pytest
 import asyncio
-from datetime import datetime
-import time
-from unittest.mock import AsyncMock, Mock, MagicMock
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, Mock
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent / "../../../agent_orchestrator"))
 sys.path.insert(0, str(Path(__file__).parent / "../../../shared"))
@@ -112,8 +113,9 @@ class TestConcurrentWorkflowExecution:
         self, mock_gradient_client, mock_mcp_client
     ):
         """Test database performance under concurrent checkpoint writes."""
-        import asyncpg
         import os
+
+        import asyncpg
 
         db_url = os.getenv(
             "DATABASE_URL",
@@ -174,7 +176,7 @@ class TestConcurrentWorkflowExecution:
         finally:
             await pool.close()
 
-    async def test_mcp_gateway_throughput(self, mock_mcp_client):
+        # MCP Gateway tests removed - gateway deprecated Dec 2025
         """Test MCP gateway throughput under concurrent tool calls."""
         import httpx
 
@@ -320,10 +322,11 @@ class TestMemoryPersistence:
 
     async def test_service_restart_recovery(self):
         """Test workflow recovery after service restart."""
+        import os
+
+        import asyncpg
         from graph import create_orchestrator_graph
         from workflows import WorkflowState
-        import asyncpg
-        import os
 
         db_url = os.getenv(
             "DATABASE_URL",

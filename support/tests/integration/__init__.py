@@ -2,5 +2,4 @@
 
 __all__ = [
     "test_postgres_checkpointing",
-    "test_mcp_gateway",
 ]

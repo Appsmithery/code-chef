@@ -74,7 +74,7 @@ class EvaluationComparison:
     improvements: Dict[str, float]  # Percentage improvements
     degradations: Dict[str, float]  # Percentage degradations
     overall_improvement_pct: float
-    recommendation: Literal["deploy", "deploy_canary", "reject", "needs_review"]
+    recommendation: Literal["deploy", "reject", "needs_review"]
     reasoning: str
     langsmith_experiment_url: Optional[str] = None
 
@@ -254,8 +254,8 @@ class ModelEvaluator:
                 improvements={},
                 degradations={},
                 overall_improvement_pct=100.0,
-                recommendation="deploy_canary",
-                reasoning="No baseline model exists - recommend canary deployment to validate",
+                recommendation="deploy",
+                reasoning="No baseline model exists - recommend deployment with monitoring",
             )
 
         # Use eval dataset from candidate training config or default
@@ -428,8 +428,8 @@ class ModelEvaluator:
             )
         elif overall_improvement_pct > 5:
             return (
-                "deploy_canary",
-                f"Moderate improvement ({overall_improvement_pct:+.1f}%) - recommend 20% canary for validation",
+                "deploy",
+                f"Moderate improvement ({overall_improvement_pct:+.1f}%) - deploy with monitoring",
             )
         elif overall_improvement_pct > -5:
             return (
@@ -519,13 +519,9 @@ class ModelEvaluator:
         report += "\n## Next Steps\n\n"
 
         if comparison.recommendation == "deploy":
-            report += "1. ✅ Deploy to production immediately\n"
-            report += "2. Monitor for 24 hours\n"
+            report += "1. ✅ Deploy to production"
+            report += "2. Monitor for 24-48 hours\n"
             report += "3. Update baseline in registry\n"
-        elif comparison.recommendation == "deploy_canary":
-            report += "1. 🚦 Deploy to 20% canary\n"
-            report += "2. Monitor for 48 hours\n"
-            report += "3. If stable, promote to 100%\n"
         elif comparison.recommendation == "needs_review":
             report += "1. 🔍 Manual review required\n"
             report += "2. Review degraded metrics\n"

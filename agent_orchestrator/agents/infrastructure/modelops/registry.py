@@ -87,9 +87,7 @@ class ModelVersion(BaseModel):
     job_id: Optional[str] = None  # HF training job ID
     hub_repo: Optional[str] = None  # HF Hub repo path
     eval_scores: Optional[EvaluationScores] = None
-    deployment_status: Literal[
-        "not_deployed", "canary_20pct", "canary_50pct", "deployed", "archived"
-    ] = "not_deployed"
+    deployment_status: Literal["not_deployed", "deployed", "archived"] = "not_deployed"
     deployed_at: Optional[str] = None  # ISO timestamp
     notes: Optional[str] = None
 
@@ -99,7 +97,6 @@ class AgentModelRegistry(BaseModel):
 
     agent_name: str
     current: Optional[ModelVersion] = None
-    canary: Optional[ModelVersion] = None
     history: List[ModelVersion] = Field(default_factory=list)
 
     @field_validator("agent_name")
@@ -158,31 +155,26 @@ class ModelRegistry:
                     "feature_dev": {
                         "agent_name": "feature_dev",
                         "current": None,
-                        "canary": None,
                         "history": [],
                     },
                     "code_review": {
                         "agent_name": "code_review",
                         "current": None,
-                        "canary": None,
                         "history": [],
                     },
                     "infrastructure": {
                         "agent_name": "infrastructure",
                         "current": None,
-                        "canary": None,
                         "history": [],
                     },
                     "cicd": {
                         "agent_name": "cicd",
                         "current": None,
-                        "canary": None,
                         "history": [],
                     },
                     "documentation": {
                         "agent_name": "documentation",
                         "current": None,
-                        "canary": None,
                         "history": [],
                     },
                 },
@@ -231,7 +223,7 @@ class ModelRegistry:
             agent_name: Agent name (e.g., "feature_dev")
 
         Returns:
-            AgentModelRegistry with current/canary/history
+            AgentModelRegistry with current/history
         """
         data = self._read_registry()
 
@@ -378,107 +370,6 @@ class ModelRegistry:
 
         return True
 
-    @traceable(name="registry_set_canary")
-    def set_canary_model(
-        self, agent_name: str, version: str, canary_pct: int = 20
-    ) -> bool:
-        """Set a version as canary deployment.
-
-        Args:
-            agent_name: Agent name
-            version: Version string from history
-            canary_pct: Percentage of traffic (20 or 50)
-
-        Returns:
-            True if updated successfully
-        """
-        if canary_pct not in [20, 50]:
-            raise ValueError("canary_pct must be 20 or 50")
-
-        data = self._read_registry()
-
-        if agent_name not in data["agents"]:
-            raise ValueError(f"Unknown agent: {agent_name}")
-
-        # Find version in history
-        agent_data = data["agents"][agent_name]
-        model_version = None
-        for model in agent_data["history"]:
-            if model["version"] == version:
-                model_version = model.copy()
-                break
-
-        if not model_version:
-            raise ValueError(f"Version {version} not found for {agent_name}")
-
-        # Update deployment info
-        model_version["deployment_status"] = (
-            f"canary_{canary_pct}pct" if canary_pct != 100 else "deployed"
-        )
-        model_version["deployed_at"] = datetime.utcnow().isoformat()
-
-        # Set canary
-        agent_data["canary"] = model_version
-
-        # Update version in history
-        for i, model in enumerate(agent_data["history"]):
-            if model["version"] == version:
-                agent_data["history"][i] = model_version
-                break
-
-        self._write_registry(data)
-        logger.success(f"Set {version} as {canary_pct}% canary for {agent_name}")
-
-        return True
-
-    @traceable(name="registry_promote_canary")
-    def promote_canary_to_current(self, agent_name: str) -> bool:
-        """Promote canary to current (100% traffic).
-
-        Args:
-            agent_name: Agent name
-
-        Returns:
-            True if promoted successfully
-        """
-        data = self._read_registry()
-
-        if agent_name not in data["agents"]:
-            raise ValueError(f"Unknown agent: {agent_name}")
-
-        agent_data = data["agents"][agent_name]
-
-        if not agent_data.get("canary"):
-            raise ValueError(f"No canary deployment for {agent_name}")
-
-        canary = agent_data["canary"]
-
-        # Archive old current
-        if agent_data["current"]:
-            old_current = agent_data["current"].copy()
-            old_current["deployment_status"] = "archived"
-            for i, model in enumerate(agent_data["history"]):
-                if model["version"] == old_current["version"]:
-                    agent_data["history"][i] = old_current
-                    break
-
-        # Promote canary
-        canary["deployment_status"] = "deployed"
-        canary["deployed_at"] = datetime.utcnow().isoformat()
-        agent_data["current"] = canary
-        agent_data["canary"] = None
-
-        # Update in history
-        for i, model in enumerate(agent_data["history"]):
-            if model["version"] == canary["version"]:
-                agent_data["history"][i] = canary
-                break
-
-        self._write_registry(data)
-        logger.success(f"Promoted canary to current for {agent_name}")
-
-        return True
-
     @traceable(name="registry_rollback")
     def rollback_to_version(self, agent_name: str, version: str) -> bool:
         """Rollback to a previous version.
@@ -551,15 +442,3 @@ class ModelRegistry:
         """
         registry = self.get_agent_registry(agent_name)
         return registry.current
-
-    def get_canary_model(self, agent_name: str) -> Optional[ModelVersion]:
-        """Get canary model for an agent.
-
-        Args:
-            agent_name: Agent name
-
-        Returns:
-            ModelVersion if exists, None otherwise
-        """
-        registry = self.get_agent_registry(agent_name)
-        return registry.canary
