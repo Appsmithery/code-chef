@@ -41,6 +41,7 @@ const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const chatParticipant_1 = require("./chatParticipant");
 const copyPermalink_1 = require("./commands/copyPermalink");
+const modelops = __importStar(require("./commands/modelops"));
 const constants_1 = require("./constants");
 const linearWatcher_1 = require("./linearWatcher");
 const orchestratorClient_1 = require("./orchestratorClient");
@@ -245,6 +246,23 @@ function activate(context) {
         // Register open settings command
         context.subscriptions.push(vscode.commands.registerCommand('codechef.openSettings', () => {
             vscode.commands.executeCommand('workbench.action.openSettings', 'codechef');
+        }));
+        // Register ModelOps commands
+        const orchestratorClient = new orchestratorClient_1.OrchestratorClient(config.get('orchestratorUrl', 'https://codechef.appsmithery.co/api'), config.get('apiKey') || undefined);
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.modelops.trainAgent', async () => {
+            await modelops.trainAgentModel(orchestratorClient, context);
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.modelops.evaluateAgent', async () => {
+            await modelops.evaluateAgentModel(orchestratorClient);
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.modelops.deployModel', async () => {
+            await modelops.deployModel(orchestratorClient);
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.modelops.listModels', async () => {
+            await modelops.listAgentModels(orchestratorClient);
+        }));
+        context.subscriptions.push(vscode.commands.registerCommand('codechef.modelops.convertToGGUF', async () => {
+            await modelops.convertToGGUF(orchestratorClient);
         }));
         // Check orchestrator health on startup
         checkOrchestratorHealth(config.get('orchestratorUrl'), config.get('apiKey') || undefined);
