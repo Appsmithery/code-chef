@@ -31,7 +31,8 @@ from lib.gradient_client import get_gradient_client
 from lib.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 from lib.hitl_manager import get_hitl_manager
 from lib.intent_recognizer import IntentType, get_intent_recognizer, intent_to_task
-from lib.langchain_memory import HybridMemory
+
+# HybridMemory removed - deprecated langchain_memory.py replaced by agent_memory.py
 from lib.langgraph_base import (
     BaseAgentState,
     create_workflow_config,
@@ -439,13 +440,8 @@ if qdrant_client.is_enabled():
 else:
     logger.warning("Qdrant Cloud not configured")
 
-# Hybrid memory for conversation context
-try:
-    hybrid_memory = HybridMemory()
-    logger.info("Hybrid memory (buffer + vector) initialized")
-except Exception as e:
-    logger.warning(f"Hybrid memory not available: {e}")
-    hybrid_memory = None
+# Hybrid memory deprecated - agents use AgentMemoryManager from agent_memory.py
+# Memory accessed via RAG service HTTP endpoints for centralized management
 
 
 # Agent types for task routing
