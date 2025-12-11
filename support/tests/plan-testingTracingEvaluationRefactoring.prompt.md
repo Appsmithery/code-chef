@@ -37,14 +37,48 @@
 - Query `evaluation_results` grouped by experiment_id and experiment_group for aggregate metrics
 - Create `experiment_summaries` table for cacheable comparison results (wins/losses/ties, avg improvements)
 
-### 4. Enhance Evaluation Runner with Database Persistence (Longitudinal tracking)
+### 4. Enhance Evaluation Runner with Database Persistence (Longitudinal tracking) ✅ COMPLETED
 
-**Linear**: [CHEF-242](https://linear.app/dev-ops/issue/CHEF-242)
+**Linear**: [CHEF-242](https://linear.app/dev-ops/issue/CHEF-242)  
+**Status**: ✅ Completed (Phase 4)  
+**Completed**: December 11, 2025
 
-- Refactor `run_evaluation.py:106-186` to store results in `evaluation_results` table with timestamps
-- Add proper task_id correlation between LangSmith runs and examples (line 125 currently defaults to example.id)
-- Implement time-series queries: `get_metric_trend(agent, metric, start_date, end_date)`
-- Export to CSV/JSON for charting in Grafana using `config/grafana/dashboards/` patterns
+**Implementation Summary**:
+
+- ✅ Enhanced `run_evaluation.py` with async database persistence via `longitudinal_tracker`
+- ✅ Added proper task_id correlation between LangSmith runs and examples with experiment tracking
+- ✅ Integrated ModelOps `evaluation.py` with database persistence for all evaluation operations
+- ✅ Created `query_evaluation_results.py` with time-series queries, A/B comparison, and CSV export
+- ✅ Added comprehensive integration tests in `test_evaluation_persistence.py`
+
+**Key Files Modified**:
+
+- `support/tests/evaluation/run_evaluation.py` - Added async DB persistence with experiment_id/task_id correlation
+- `agent_orchestrator/agents/infrastructure/modelops/evaluation.py` - Made async, integrated tracker
+- `support/scripts/evaluation/query_evaluation_results.py` - New CLI tool for querying results
+- `support/tests/integration/test_evaluation_persistence.py` - Comprehensive test coverage
+
+**Usage Examples**:
+
+```bash
+# Run evaluation with database persistence
+python support/tests/evaluation/run_evaluation.py \
+  --dataset ib-agent-scenarios-v1 \
+  --experiment-id exp-2025-01-001 \
+  --experiment-group code-chef
+
+# Query metric trends
+python support/scripts/evaluation/query_evaluation_results.py \
+  --trend --agent feature_dev --metric accuracy --days 30
+
+# Compare experiments
+python support/scripts/evaluation/query_evaluation_results.py \
+  --compare --experiment exp-2025-01-001
+
+# Export to CSV for Grafana
+python support/scripts/evaluation/query_evaluation_results.py \
+  --export results.csv --agent feature_dev --days 90
+```
 
 ### 5. Create Comprehensive A/B Test Suite (Validation & regression detection)
 

@@ -59,6 +59,17 @@ except ImportError:
     EVALUATORS_AVAILABLE = False
     logger.warning("Evaluators not available - evaluation will be limited")
 
+# Import longitudinal tracker for database persistence
+try:
+    from shared.lib.longitudinal_tracker import longitudinal_tracker
+
+    TRACKER_AVAILABLE = True
+except ImportError:
+    TRACKER_AVAILABLE = False
+    logger.warning(
+        "Longitudinal tracker not available - results will not be persisted to database"
+    )
+
 
 def _get_evaluation_trace_metadata() -> Dict[str, str]:
     """Get standard metadata for evaluation traces.
@@ -164,7 +175,7 @@ class ModelEvaluator:
         project_name=_get_langsmith_project(),
         metadata=_get_evaluation_trace_metadata(),
     )
-    def evaluate_model(
+    async def evaluate_model(
         self,
         model_endpoint: str,
         dataset_name: str,
@@ -189,6 +200,14 @@ class ModelEvaluator:
             raise RuntimeError("Evaluators not available - cannot run evaluation")
 
         logger.info(f"Evaluating {model_endpoint} on dataset {dataset_name}")
+
+        # Initialize tracker if needed
+        if TRACKER_AVAILABLE and not longitudinal_tracker._initialized:
+            try:
+                await longitudinal_tracker.initialize()
+                logger.info("✓ Longitudinal tracker initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize tracker: {e}")
 
         # Set up experiment
         if not experiment_name:
@@ -240,6 +259,46 @@ class ModelEvaluator:
                     scores[metric_name] = eval_result.score
 
             logger.info(f"Evaluation complete: {scores}")
+
+            # Store in database if tracker available
+            if TRACKER_AVAILABLE and longitudinal_tracker._initialized and metadata:
+                try:
+                    experiment_id = os.getenv("EXPERIMENT_ID", experiment_name)
+                    task_id = metadata.get("task_id", f"eval-{experiment_name}")
+
+                    await longitudinal_tracker.record_result(
+                        experiment_id=experiment_id,
+                        task_id=task_id,
+                        experiment_group=os.getenv("EXPERIMENT_GROUP", "code-chef"),
+                        extension_version=metadata.get(
+                            "extension_version", os.getenv("EXTENSION_VERSION", "1.0.0")
+                        ),
+                        model_version=metadata.get("model_version", "unknown"),
+                        agent_name=metadata.get("agent_name"),
+                        scores={
+                            "accuracy": scores.get("agent_routing_accuracy"),
+                            "completeness": scores.get("workflow_completeness"),
+                            "efficiency": scores.get("token_efficiency"),
+                            "integration_quality": scores.get(
+                                "mcp_integration_quality"
+                            ),
+                        },
+                        metrics={
+                            "latency_ms": metadata.get("latency_ms", 0),
+                            "tokens_used": metadata.get("tokens_used", 0),
+                            "cost_usd": metadata.get("cost_usd", 0),
+                        },
+                        success=True,
+                        metadata={
+                            "model_endpoint": model_endpoint,
+                            "dataset": dataset_name,
+                            "experiment_name": experiment_name,
+                        },
+                    )
+                    logger.info(f"✓ Stored evaluation result in database")
+                except Exception as e:
+                    logger.warning(f"Failed to store evaluation result: {e}")
+
             return scores
 
         except Exception as e:
@@ -251,7 +310,7 @@ class ModelEvaluator:
         project_name=_get_langsmith_project(),
         metadata=_get_evaluation_trace_metadata(),
     )
-    def compare_models(
+    async def compare_models(
         self,
         agent_name: str,
         candidate_version: str,
@@ -310,11 +369,11 @@ class ModelEvaluator:
                 )
 
         # Evaluate both models
-        baseline_scores = self._evaluate_or_get_cached(
+        baseline_scores = await self._evaluate_or_get_cached(
             agent_name, baseline.version, baseline.model_id, eval_dataset
         )
 
-        candidate_scores = self._evaluate_or_get_cached(
+        candidate_scores = await self._evaluate_or_get_cached(
             agent_name, candidate.version, candidate.model_id, eval_dataset
         )
 
@@ -381,7 +440,7 @@ class ModelEvaluator:
 
         return comparison
 
-    def _evaluate_or_get_cached(
+    async def _evaluate_or_get_cached(
         self, agent_name: str, version: str, model_id: str, eval_dataset: str
     ) -> Dict[str, float]:
         """Evaluate model or return cached scores if available."""
@@ -408,7 +467,7 @@ class ModelEvaluator:
         logger.info(f"Running evaluation for {version} on {eval_dataset}")
 
         try:
-            scores = self.evaluate_model(
+            scores = await self.evaluate_model(
                 model_endpoint=model_id,
                 dataset_name=eval_dataset,
                 metadata={"agent_name": agent_name, "model_version": version},
@@ -589,7 +648,7 @@ class ModelEvaluator:
         project_name=_get_langsmith_project(),
         metadata=_get_evaluation_trace_metadata(),
     )
-    def evaluate_and_store_scores(
+    async def evaluate_and_store_scores(
         self, agent_name: str, version: str, eval_dataset: str
     ) -> EvaluationScores:
         """Evaluate a model and store scores in registry.
@@ -608,7 +667,7 @@ class ModelEvaluator:
 
         logger.info(f"Evaluating {agent_name} {version} on {eval_dataset}")
 
-        scores_dict = self.evaluate_model(
+        scores_dict = await self.evaluate_model(
             model_endpoint=model.model_id,
             dataset_name=eval_dataset,
             metadata={"agent_name": agent_name, "model_version": version},
