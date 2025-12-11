@@ -309,12 +309,13 @@ GET /health
 ```json
 {
   "status": "ok",
-  "service": "mcp-gateway",
-  "timestamp": "2025-11-13T22:40:00Z",
-  "servers_running": 17,
-  "total_tools": 150
+  "service": "mcp-docker-toolkit",
+  "timestamp": "2025-12-10T22:00:00Z",
+  "note": "Gateway deprecated Dec 2025. Tools accessed via VS Code extension."
 }
 ```
+
+**Note:** MCP gateway HTTP endpoint deprecated. Tools accessed via VS Code Docker MCP Toolkit extension.
 
 ---
 

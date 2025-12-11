@@ -38,14 +38,9 @@ groups:
           summary: "Agent {{ $labels.job }} is down"
           description: "{{ $labels.job }} has been down for more than 1 minute"
 
-      - alert: MCPGatewayDown
-        expr: up{job="gateway-mcp"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "MCP Gateway is down"
-          description: "MCP Gateway has been down for more than 1 minute - all agent communication affected"
+      # MCPGatewayDown alert deprecated Dec 2025 - gateway service removed
+      # MCP tools accessed via VS Code Docker MCP Toolkit extension
+
 
       - alert: HighMemoryUsage
         expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9

@@ -4,24 +4,23 @@ FastAPI server for LangGraph workflow execution.
 Provides HTTP endpoints for invoking workflows with streaming support.
 """
 
+import json
 import logging
 import os
 from contextlib import asynccontextmanager
 from typing import Any, AsyncIterator, Dict, Optional
 
+import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-import uvicorn
-import json
-
+from services.langgraph.state import AgentState
 from services.langgraph.workflow import (
     build_workflow,
     invoke_workflow,
     stream_workflow,
     stream_workflow_events,
 )
-from services.langgraph.state import AgentState
 
 # Note: Tracing is handled by LangSmith via LangChain's native integration
 # (LANGCHAIN_TRACING_V2=true in environment). No explicit callback handlers needed.
@@ -88,7 +87,9 @@ class HealthResponse(BaseModel):
     postgres_checkpointer: str = Field(
         "unknown", description="PostgreSQL checkpointer status"
     )
-    mcp_gateway: str = Field("unknown", description="MCP gateway connection status")
+    mcp_docker_toolkit: str = Field(
+        "available", description="Docker MCP Toolkit status (gateway deprecated)"
+    )
 
 
 # Initialize compiled workflow at startup
@@ -127,12 +128,13 @@ async def health_check():
     checkpointer = get_postgres_checkpointer()
     postgres_status = "connected" if checkpointer else "disconnected"
 
-    # Check MCP gateway (basic check - expand as needed)
-    mcp_gateway_url = os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
-    mcp_status = "configured" if mcp_gateway_url else "not_configured"
+    # Docker MCP Toolkit (gateway deprecated Dec 2025)
+    mcp_toolkit_status = "available"  # Tools accessed via VS Code extension
 
     return HealthResponse(
-        status="healthy", postgres_checkpointer=postgres_status, mcp_gateway=mcp_status
+        status="healthy",
+        postgres_checkpointer=postgres_status,
+        mcp_docker_toolkit=mcp_toolkit_status,
     )
 
 

@@ -79,13 +79,16 @@ class MCPClient:
         self,
         agent_name: str,
         manifest_path: Optional[str] = None,
-        gateway_url: Optional[str] = None,
+        gateway_url: Optional[
+            str
+        ] = None,  # Deprecated: kept for backward compatibility
         timeout: Optional[int] = None,
     ) -> None:
         self.agent_name = agent_name
         resolved_path = resolve_manifest_path(manifest_path)
         self.manifest_path = str(resolved_path)
-        self.gateway_url = gateway_url or os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
+        # Gateway deprecated Dec 2025 - tools accessed via VS Code Docker MCP Toolkit
+        self.gateway_url = None  # No longer used
         self.timeout = timeout or int(os.getenv("MCP_TIMEOUT", "30"))
 
         self.profile = self._load_agent_profile(agent_name)
@@ -218,7 +221,9 @@ class MCPClient:
             "metadata": metadata,
         }
 
-        result = await self.invoke_tool("memory", "create_entities", {"entities": [entity]})
+        result = await self.invoke_tool(
+            "memory", "create_entities", {"entities": [entity]}
+        )
         return result.get("success", False)
 
     async def get_gateway_health(self) -> Dict[str, Any]:
@@ -256,33 +261,37 @@ class MCPClient:
         return {
             "agent": self.agent_name,
             "gateway_url": self.gateway_url,
-            "recommended_tool_servers": [entry.get("server") for entry in self.recommended_tools],
+            "recommended_tool_servers": [
+                entry.get("server") for entry in self.recommended_tools
+            ],
             "shared_tool_servers": self.shared_tools,
             "capabilities": self.capabilities,
             "profile_source": self.profile_source,
         }
 
-    def to_langchain_tools(self, toolsets: Optional[List[Dict[str, Any]]] = None) -> List[Any]:
+    def to_langchain_tools(
+        self, toolsets: Optional[List[Dict[str, Any]]] = None
+    ) -> List[Any]:
         """Convert MCP tools to LangChain BaseTool instances.
-        
+
         Args:
             toolsets: Optional list of toolset dicts with 'server' and 'tools' keys.
                      If None, uses recommended_tools from agent profile.
-        
+
         Returns:
             List of LangChain BaseTool instances that can be bound to LLMs.
         """
         from langchain_core.tools import StructuredTool
-        
+
         if toolsets is None:
             toolsets = self.recommended_tools
-        
+
         langchain_tools = []
-        
+
         for toolset in toolsets:
             server = toolset.get("server")
             tools = toolset.get("tools", [])
-            
+
             for tool_name in tools:
                 # Create a closure to capture server and tool_name
                 def make_tool_func(srv: str, tname: str):
@@ -292,8 +301,9 @@ class MCPClient:
                         if result.get("success"):
                             return str(result.get("result", ""))
                         return f"Error: {result.get('error', 'Unknown error')}"
+
                     return tool_func
-                
+
                 # Create LangChain tool
                 langchain_tool = StructuredTool.from_function(
                     func=make_tool_func(server, tool_name),
@@ -302,5 +312,5 @@ class MCPClient:
                     coroutine=make_tool_func(server, tool_name),
                 )
                 langchain_tools.append(langchain_tool)
-        
+
         return langchain_tools
