@@ -112,7 +112,9 @@ on:
 
 ---
 
-### Phase 2: Major Optimizations (2 hours)
+### Phase 2: Major Optimizations ✅ COMPLETED (December 11, 2025)
+
+**Status**: Linear Issue [CHEF-255](https://linear.app/dev-ops/issue/CHEF-255) - Done
 
 **Objective**: Consolidate redundant steps and improve caching
 
@@ -261,7 +263,21 @@ on:
 
 ---
 
-### Phase 3: Advanced Optimizations (Future)
+### Phase 3: Advanced Optimizations ⏸️ DEFERRED
+
+**Decision**: Deferred as nice-to-have, not critical for day 0 launch (December 11, 2025)
+
+**Rationale**:
+
+- Matrix strategy: Tests run weekly now, not on critical path
+- Composite actions: Maintainability improvement, not performance
+- Workflow artifacts: No multi-environment deploy pipeline yet
+
+**Revisit When**:
+
+- Setting up staging environment
+- Need to reduce test execution time further
+- Multiple agents require identical setup steps
 
 **Objective**: Strategic workflow improvements for long-term efficiency
 
@@ -376,16 +392,16 @@ jobs:
 - [ ] Change `evaluation-regression.yml` to manual/weekly trigger
 - [ ] Test each changed workflow
 
-### Phase 2: Major Optimizations 🔄
+### Phase 2: Major Optimizations ✅ COMPLETED
 
-- [ ] Simplify `deploy-intelligent.yml` change detection
-- [ ] Add Docker layer caching to `deploy-intelligent.yml`
-- [ ] Create shared setup job in `e2e-langsmith-eval.yml`
-- [ ] Consolidate Postgres services in `e2e-langsmith-eval.yml`
-- [ ] Change `publish-extension.yml` to workflow_dispatch
-- [ ] Add pip/npm caching to all workflows
-- [ ] Test all optimized workflows
-- [ ] Monitor CI time improvements
+- [x] Simplify `deploy-intelligent.yml` change detection
+- [x] Add Docker layer caching to `deploy-intelligent.yml`
+- [x] Create shared setup job in `e2e-langsmith-eval.yml`
+- [x] Consolidate Postgres services in `e2e-langsmith-eval.yml`
+- [x] Change `publish-extension.yml` to workflow_dispatch
+- [x] Add pip/npm caching to all workflows
+- [x] Test all optimized workflows
+- [x] Monitor CI time improvements
 
 ### Phase 3: Advanced (Future) 📋
 
