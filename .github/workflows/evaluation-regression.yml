@@ -1,0 +1,431 @@
+# GitHub Actions Workflow: Evaluation & Regression Testing
+#
+# Runs A/B testing suite and regression detection on PR merge to main.
+# Validates that new code changes don't degrade model performance.
+#
+# Linear Issue: CHEF-245 (Phase 6)
+# Related: CHEF-242 (Evaluation Runner), CHEF-243 (A/B Test Suite)
+
+name: Evaluation & Regression Testing
+
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - "agent_orchestrator/**"
+            - "shared/lib/**"
+            - "support/tests/evaluation/**"
+            - "support/tests/integration/test_evaluation_persistence.py"
+            - "support/tests/integration/test_longitudinal_tracking.py"
+            - "config/agents/models.yaml"
+
+    pull_request:
+        branches:
+            - main
+        paths:
+            - "agent_orchestrator/**"
+            - "shared/lib/**"
+            - "support/tests/evaluation/**"
+            - "config/agents/models.yaml"
+
+    workflow_dispatch:
+        inputs:
+            hypothesis_profile:
+                description: "Hypothesis profile (ci/dev/thorough)"
+                required: false
+                default: "dev"
+            skip_regression:
+                description: "Skip regression detection tests"
+                required: false
+                default: "false"
+            experiment_id:
+                description: "Custom experiment ID (optional)"
+                required: false
+                default: ""
+
+env:
+    PYTHON_VERSION: "3.11"
+    LANGCHAIN_TRACING_V2: "true"
+    LANGCHAIN_PROJECT: "code-chef-evaluation"
+    TRACE_ENVIRONMENT: "evaluation"
+    EXTENSION_VERSION: "1.2.3" # Should match package.json version
+
+jobs:
+    # ==========================================================================
+    # JOB 1: Database Persistence Tests
+    # Validates evaluation results are correctly stored and retrieved
+    # ==========================================================================
+    database-persistence:
+        name: Database Persistence Tests
+        runs-on: ubuntu-latest
+
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: code_chef_test
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    - 5432:5432
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  pip install --upgrade pip
+                  pip install -r agent_orchestrator/requirements.txt
+                  pip install -r support/tests/requirements.txt
+
+            - name: Initialize database schema
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+              run: |
+                  # Run schema initialization
+                  psql $DATABASE_URL -f config/state/evaluation_results.sql
+                  psql $DATABASE_URL -f config/state/langgraph_checkpointing.sql
+
+            - name: Run database persistence tests
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+              run: |
+                  pytest support/tests/integration/test_evaluation_persistence.py \
+                    -v \
+                    --tb=short \
+                    --junitxml=reports/database-persistence-results.xml
+              continue-on-error: false
+
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: database-persistence-results
+                  path: reports/
+
+    # ==========================================================================
+    # JOB 2: A/B Testing Suite
+    # End-to-end workflow, statistical significance, comparison reports
+    # ==========================================================================
+    ab-testing-suite:
+        name: A/B Testing Suite
+        runs-on: ubuntu-latest
+        needs: database-persistence
+
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: code_chef_test
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    - 5432:5432
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  pip install --upgrade pip
+                  pip install -r agent_orchestrator/requirements.txt
+                  pip install -r support/tests/requirements.txt
+
+            - name: Initialize database schema
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+              run: |
+                  psql $DATABASE_URL -f config/state/evaluation_results.sql
+
+            - name: Run A/B workflow tests
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  EXPERIMENT_GROUP: "code-chef"
+              run: |
+                  pytest support/tests/evaluation/test_baseline_comparison.py \
+                    -v \
+                    --tb=short \
+                    --junitxml=reports/ab-workflow-results.xml
+              continue-on-error: false
+
+            - name: Upload A/B test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ab-testing-results
+                  path: reports/
+
+    # ==========================================================================
+    # JOB 3: Property-Based Testing
+    # Hypothesis-driven robustness validation with configurable profiles
+    # ==========================================================================
+    property-based-testing:
+        name: Property-Based Testing
+        runs-on: ubuntu-latest
+
+        strategy:
+            matrix:
+                hypothesis_profile:
+                    - ${{ github.event.inputs.hypothesis_profile || 'ci' }}
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  pip install --upgrade pip
+                  pip install -r support/tests/requirements.txt
+                  pip install hypothesis
+
+            - name: Run property-based tests
+              env:
+                  HYPOTHESIS_PROFILE: ${{ matrix.hypothesis_profile }}
+              run: |
+                  pytest support/tests/evaluation/test_property_based.py \
+                    -v \
+                    --tb=short \
+                    --junitxml=reports/property-based-results.xml
+              continue-on-error: false
+
+            - name: Upload property test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: property-based-results-${{ matrix.hypothesis_profile }}
+                  path: reports/
+
+    # ==========================================================================
+    # JOB 4: Regression Detection
+    # Version-over-version tracking and performance regression alerts
+    # ==========================================================================
+    regression-detection:
+        name: Regression Detection
+        runs-on: ubuntu-latest
+        if: github.event.inputs.skip_regression != 'true'
+        needs: ab-testing-suite
+
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: code_chef_test
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    - 5432:5432
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  pip install --upgrade pip
+                  pip install -r agent_orchestrator/requirements.txt
+                  pip install -r support/tests/requirements.txt
+
+            - name: Initialize database schema
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+              run: |
+                  psql $DATABASE_URL -f config/state/evaluation_results.sql
+
+            - name: Seed historical data (for comparison)
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+              run: |
+                  # Seed baseline data from previous versions
+                  python support/scripts/evaluation/seed_baseline_data.py
+
+            - name: Run regression detection tests
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+              run: |
+                  pytest support/tests/integration/test_longitudinal_tracking.py \
+                    -v \
+                    --tb=short \
+                    --junitxml=reports/regression-detection-results.xml
+              continue-on-error: false
+
+            - name: Analyze regression trends
+              if: always()
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+              run: |
+                  python support/scripts/evaluation/query_evaluation_results.py \
+                    --trend \
+                    --agent feature_dev \
+                    --metric accuracy \
+                    --days 30 \
+                    --output reports/regression-trend.json
+
+            - name: Check for critical regressions
+              env:
+                  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/code_chef_test
+              run: |
+                  # Query recent results and fail if regression > 10%
+                  python support/scripts/evaluation/check_regression_threshold.py \
+                    --threshold 10 \
+                    --exit-on-failure
+
+            - name: Upload regression results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: regression-detection-results
+                  path: reports/
+
+    # ==========================================================================
+    # JOB 5: Generate Summary Report
+    # Consolidate all test results and create comparison report
+    # ==========================================================================
+    generate-summary:
+        name: Generate Summary Report
+        runs-on: ubuntu-latest
+        needs:
+            [
+                database-persistence,
+                ab-testing-suite,
+                property-based-testing,
+                regression-detection,
+            ]
+        if: always()
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Download all artifacts
+              uses: actions/download-artifact@v4
+              with:
+                  path: all-reports/
+
+            - name: Generate consolidated report
+              run: |
+                  python support/scripts/evaluation/generate_consolidated_report.py \
+                    --input all-reports/ \
+                    --output evaluation-summary.md
+
+            - name: Upload summary report
+              uses: actions/upload-artifact@v4
+              with:
+                  name: evaluation-summary
+                  path: evaluation-summary.md
+
+            - name: Comment on PR (if applicable)
+              if: github.event_name == 'pull_request'
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const fs = require('fs');
+                      const summary = fs.readFileSync('evaluation-summary.md', 'utf8');
+
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: summary
+                      });
+
+    # ==========================================================================
+    # JOB 6: Store Results in Production Database (main branch only)
+    # Persist evaluation results for longitudinal tracking
+    # ==========================================================================
+    store-production-results:
+        name: Store Production Results
+        runs-on: ubuntu-latest
+        needs: [ab-testing-suite, regression-detection]
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  pip install --upgrade pip
+                  pip install -r support/tests/requirements.txt
+                  pip install asyncpg
+
+            - name: Store results in production database
+              env:
+                  DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  EXPERIMENT_ID: ${{ github.event.inputs.experiment_id || format('exp-{0}-{1}', github.run_number, github.sha) }}
+              run: |
+                  python support/scripts/evaluation/store_results_production.py \
+                    --experiment-id $EXPERIMENT_ID \
+                    --extension-version $EXTENSION_VERSION \
+                    --git-sha ${{ github.sha }}
+
+            - name: Notify team (if regressions detected)
+              if: failure()
+              uses: slackapi/slack-github-action@v1
+              with:
+                  payload: |
+                      {
+                        "text": "🚨 Evaluation regression detected on main branch",
+                        "blocks": [
+                          {
+                            "type": "section",
+                            "text": {
+                              "type": "mrkdwn",
+                              "text": "*Evaluation Regression Detected*\n\nCommit: ${{ github.sha }}\nWorkflow: ${{ github.workflow }}"
+                            }
+                          }
+                        ]
+                      }
+              env:
+                  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

@@ -150,6 +150,126 @@ def event_loop():
 
 
 # ============================================================================
+# A/B Testing & Evaluation Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+async def longitudinal_tracker_fixture():
+    """
+    Provide a configured longitudinal tracker for evaluation tests.
+
+    Automatically handles database connection, cleanup, and test isolation.
+
+    Usage:
+        async def test_evaluation(longitudinal_tracker_fixture):
+            tracker = longitudinal_tracker_fixture
+            await tracker.record_result(...)
+    """
+    from shared.lib.longitudinal_tracker import LongitudinalTracker
+
+    tracker = LongitudinalTracker()
+    await tracker.initialize()
+
+    yield tracker
+
+    # Cleanup: Close pool
+    if tracker.pool:
+        await tracker.pool.close()
+
+
+@pytest.fixture
+def baseline_llm_client():
+    """
+    Mock baseline LLM client for A/B testing comparison.
+
+    Simulates baseline (untrained) LLM behavior for comparison tests.
+    Returns slightly lower quality responses than code-chef variant.
+
+    Usage:
+        def test_ab_comparison(baseline_llm_client):
+            response = await baseline_llm_client.chat([...])
+            assert response["quality"] < codechef_response["quality"]
+    """
+    mock = MagicMock()
+
+    # Mock baseline chat completion (lower quality scores)
+    async def mock_baseline_chat(messages, **kwargs):
+        return {
+            "id": "baseline-chatcmpl-test",
+            "choices": [
+                {
+                    "message": {
+                        "role": "assistant",
+                        "content": "Baseline response: Task completed.",
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 120,  # Baseline uses more tokens
+                "completion_tokens": 60,
+                "total_tokens": 180,
+            },
+            "metadata": {
+                "experiment_group": "baseline",
+                "quality_score": 0.70,  # Lower than code-chef
+            },
+        }
+
+    mock.chat = mock_baseline_chat
+    mock.is_enabled = lambda: True
+    mock.experiment_group = "baseline"
+
+    return mock
+
+
+@pytest.fixture
+def ab_experiment_id():
+    """
+    Generate unique experiment ID for A/B test isolation.
+
+    Format: exp-YYYY-MM-NNN (e.g., exp-2025-01-042)
+
+    Usage:
+        def test_experiment(ab_experiment_id):
+            tracker.record_result(
+                experiment_id=ab_experiment_id,
+                experiment_group="baseline"
+            )
+    """
+    import uuid
+    from datetime import datetime
+
+    date_str = datetime.now().strftime("%Y-%m")
+    unique_id = str(uuid.uuid4())[:8]
+
+    return f"exp-{date_str}-{unique_id}"
+
+
+@pytest.fixture
+def task_id_generator():
+    """
+    Generate unique task IDs for correlating baseline and code-chef runs.
+
+    Format: task-{uuid}
+
+    Usage:
+        def test_correlation(task_id_generator):
+            task_id = task_id_generator()
+            # Run baseline with task_id
+            # Run code-chef with same task_id
+            # Compare results by task_id
+    """
+    import uuid
+
+    def _generate():
+        return f"task-{uuid.uuid4()}"
+
+    return _generate
+
+
+# ============================================================================
 # Mock Clients
 # ============================================================================
 
