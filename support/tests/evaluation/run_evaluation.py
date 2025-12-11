@@ -53,6 +53,17 @@ from support.tests.evaluation.evaluators import (
     workflow_completeness,
 )
 
+# Import longitudinal tracker for database persistence
+try:
+    from shared.lib.longitudinal_tracker import longitudinal_tracker
+
+    TRACKER_AVAILABLE = True
+except ImportError:
+    TRACKER_AVAILABLE = False
+    logger.warning(
+        "Longitudinal tracker not available - results will not be persisted to database"
+    )
+
 # =============================================================================
 # EVALUATION CONFIGURATION
 # =============================================================================
@@ -111,11 +122,14 @@ def list_recent_runs(client: "Client", project: str, hours: int = 24) -> List[An
     return runs
 
 
-def run_evaluation(
+async def run_evaluation(
     client: "Client",
     dataset_name: str,
     project_name: str,
     evaluators: Optional[List] = None,
+    experiment_id: Optional[str] = None,
+    experiment_group: str = "code-chef",
+    extension_version: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Run evaluation on a dataset using specified evaluators.
@@ -125,12 +139,31 @@ def run_evaluation(
         dataset_name: Name of the dataset to evaluate
         project_name: LangSmith project containing runs
         evaluators: List of evaluator functions (default: all)
+        experiment_id: Experiment ID for correlation (default: auto-generated)
+        experiment_group: 'baseline' or 'code-chef' (default: 'code-chef')
+        extension_version: Extension version for tracking (default: from env)
 
     Returns:
         Evaluation results summary
     """
     if evaluators is None:
         evaluators = ALL_EVALUATORS
+
+    # Generate experiment_id if not provided
+    if not experiment_id:
+        experiment_id = f"eval-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+
+    # Get extension version
+    if not extension_version:
+        extension_version = os.getenv("EXTENSION_VERSION", "1.0.0")
+
+    # Initialize longitudinal tracker if available
+    if TRACKER_AVAILABLE and not longitudinal_tracker._initialized:
+        try:
+            await longitudinal_tracker.initialize()
+            logger.info("✓ Longitudinal tracker initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize tracker: {e}")
 
     # Get dataset
     datasets = list(client.list_datasets(dataset_name=dataset_name))
@@ -171,18 +204,45 @@ def run_evaluation(
     # Evaluate each run against matching examples
     examples = list(client.list_examples(dataset_id=dataset.id))
 
+    # Track all scores per run for database storage
+    run_scores = {}  # run_id -> {metric: score}
+    run_metadata = {}  # run_id -> metadata
+
     for evaluator in evaluators:
         eval_name = evaluator.__name__
         scores = []
 
         for run in runs[: min(len(runs), len(examples))]:
-            # Match run to example (simplified - in production, use proper matching)
+            # Match run to example with proper task_id correlation
             example_idx = runs.index(run) % len(examples)
             example = examples[example_idx]
+
+            # Get task_id from run metadata or example.id
+            task_id = getattr(run, "metadata", {}).get("task_id") or str(example.id)
+
+            # Initialize score tracking for this run
+            run_id_str = str(run.id)
+            if run_id_str not in run_scores:
+                run_scores[run_id_str] = {}
+                run_metadata[run_id_str] = {
+                    "task_id": task_id,
+                    "agent_name": getattr(run, "metadata", {}).get("agent")
+                    or getattr(run, "metadata", {}).get("agent_name"),
+                    "model_version": getattr(run, "metadata", {}).get(
+                        "model_version", "unknown"
+                    ),
+                    "latency_ms": getattr(run, "latency", 0),
+                    "tokens_used": getattr(run, "total_tokens", 0),
+                    "cost_usd": getattr(run, "total_cost", 0),
+                }
 
             try:
                 result = evaluator(run, example)
                 scores.append(result.score)
+
+                # Store score for this run
+                metric_name = eval_name.replace("_", "")
+                run_scores[run_id_str][metric_name] = result.score
 
                 # Track failures
                 threshold = SCORE_THRESHOLDS.get(eval_name, 0.7)
@@ -190,7 +250,8 @@ def run_evaluation(
                     results["failures"].append(
                         {
                             "evaluator": eval_name,
-                            "run_id": str(run.id),
+                            "run_id": run_id_str,
+                            "task_id": task_id,
                             "score": result.score,
                             "threshold": threshold,
                             "comment": result.comment,
@@ -224,6 +285,48 @@ def run_evaluation(
         "total_evaluators": len(evaluators),
         "failure_count": len(results["failures"]),
     }
+
+    # Store results in database
+    if TRACKER_AVAILABLE and longitudinal_tracker._initialized:
+        stored_count = 0
+        for run_id_str, scores_dict in run_scores.items():
+            metadata = run_metadata.get(run_id_str, {})
+            task_id = metadata.get("task_id", run_id_str)
+
+            try:
+                await longitudinal_tracker.record_result(
+                    experiment_id=experiment_id,
+                    task_id=task_id,
+                    experiment_group=experiment_group,
+                    extension_version=extension_version,
+                    model_version=metadata.get("model_version", "unknown"),
+                    agent_name=metadata.get("agent_name"),
+                    scores={
+                        "accuracy": scores_dict.get("agentroutingaccuracy"),
+                        "completeness": scores_dict.get("workflowcompleteness"),
+                        "efficiency": scores_dict.get("tokenefficiency"),
+                        "integration_quality": scores_dict.get("mcpintegrationquality"),
+                    },
+                    metrics={
+                        "latency_ms": metadata.get("latency_ms", 0),
+                        "tokens_used": metadata.get("tokens_used", 0),
+                        "cost_usd": metadata.get("cost_usd", 0),
+                    },
+                    success=True,
+                    metadata={
+                        "project": project_name,
+                        "dataset": dataset_name,
+                        "run_id": run_id_str,
+                    },
+                )
+                stored_count += 1
+            except Exception as e:
+                logger.error(f"Failed to store result for run {run_id_str}: {e}")
+
+        logger.info(
+            f"✓ Stored {stored_count}/{len(run_scores)} evaluation results in database"
+        )
+        results["database_stored"] = stored_count
 
     return results
 
@@ -281,7 +384,7 @@ def save_results(results: Dict[str, Any], output_path: str) -> None:
     logger.info(f"Results saved to: {output_path}")
 
 
-def main():
+async def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Run LangSmith evaluations for IB-Agent Platform scenarios"
@@ -308,6 +411,23 @@ def main():
         nargs="+",
         choices=list(SCORE_THRESHOLDS.keys()),
         help="Specific evaluators to run (default: all)",
+    )
+    parser.add_argument(
+        "--experiment-id",
+        type=str,
+        help="Experiment ID for correlation (default: auto-generated)",
+    )
+    parser.add_argument(
+        "--experiment-group",
+        type=str,
+        choices=["baseline", "code-chef"],
+        default="code-chef",
+        help="Experiment group for A/B testing (default: code-chef)",
+    )
+    parser.add_argument(
+        "--extension-version",
+        type=str,
+        help="Extension version for tracking (default: from EXTENSION_VERSION env)",
     )
 
     args = parser.parse_args()
@@ -336,11 +456,14 @@ def main():
         evaluators = get_evaluators(args.evaluators)
 
     # Run evaluation
-    results = run_evaluation(
+    results = await run_evaluation(
         client=client,
         dataset_name=args.dataset,
         project_name=args.project,
         evaluators=evaluators,
+        experiment_id=args.experiment_id,
+        experiment_group=args.experiment_group,
+        extension_version=args.extension_version,
     )
 
     # Print results
@@ -360,4 +483,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    import asyncio
+
+    asyncio.run(main())
