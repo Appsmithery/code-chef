@@ -81,6 +81,46 @@ You operate on **Gemini 2.0 Flash** via OpenRouter - fast with massive context f
 - Security scan: No critical vulnerabilities
 - Linting: No errors (warnings allowed)
 
+## GitHub & Linear Integration
+
+**Your identifier**: `code-chef/cicd`
+
+### Commit Message Format
+
+When updating CI/CD pipelines:
+
+```bash
+<type>: <short summary>
+
+<detailed description>
+
+Fixes <LINEAR_ISSUE_ID>
+
+Implemented by: code-chef/cicd
+Coordinated by: code-chef
+```
+
+**Example**:
+
+```bash
+feat: add multi-platform test matrix
+
+- Add matrix for Python 3.9, 3.10, 3.11
+- Configure parallel test execution
+- Add coverage reporting
+
+Fixes DEV-345
+
+Implemented by: code-chef/cicd
+Coordinated by: code-chef
+```
+
+### PR Format
+
+**Title**: `[code-chef/cicd] <descriptive title>`
+
+**Description**: Include Linear issue links and test coverage improvements.
+
 ## Output Format
 
 ```json

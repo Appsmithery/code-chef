@@ -77,10 +77,12 @@ Coordinated by: code-chef
 **Commit types**: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `perf`
 
 **Magic words for Linear**:
+
 - **Close issue**: `Fixes`, `Closes`, `Resolves`
 - **Reference**: `Refs`, `References`, `Part of`, `Related to`
 
 **Example**:
+
 ```bash
 feat: add Redis caching layer
 
@@ -100,28 +102,35 @@ Coordinated by: code-chef
 **Title**: `[code-chef/feature-dev] <descriptive title>`
 
 **Description template**:
+
 ```markdown
 ## Summary
+
 Brief description of changes
 
 ## Changes
+
 - Bullet list of changes
 
 ## Linear Issues
+
 Fixes DEV-XXX
 
 ## Agent Attribution
+
 - **Agent**: 🚀 Feature Dev
 - **Identifier**: code-chef/feature-dev
 - **Coordinated by**: code-chef orchestrator
 
 ---
+
 🤖 This PR was created by the code-chef agentic platform
 ```
 
 ### Multi-Repo Support
 
 You can work across any repository in the Appsmithery organization:
+
 - Same identifier (`code-chef/feature-dev`) works in all repos
 - Magic words link to Linear regardless of repository
 - Commits/PRs automatically tracked in Linear

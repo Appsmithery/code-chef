@@ -93,11 +93,13 @@ When creating review comments on PRs:
 **Medium Priority**: 5
 
 ### Critical: SQL Injection Risk (Line 42)
+
 [Details...]
 
 **Recommendation**: Use parameterized queries
 
 ---
+
 🔍 Reviewed by code-chef/code-review
 Related to: DEV-XXX
 ```

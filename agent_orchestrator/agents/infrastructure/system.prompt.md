@@ -196,6 +196,7 @@ Coordinated by: code-chef
 **Commit types**: `feat`, `fix`, `chore`, `refactor`, `docs`
 
 **Example**:
+
 ```bash
 feat: add Redis cluster configuration
 

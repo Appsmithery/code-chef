@@ -12,6 +12,7 @@
 | 📚 Documentation  | `@documentation-agent`  | `code-chef/documentation`  | `code-chef documentation <...>`        |
 
 **GitHub Identifier** is used in:
+
 - Commit messages
 - PR titles and descriptions
 - Linear issue linking via magic words
@@ -35,6 +36,7 @@ Coordinated by: code-chef"
 ```
 
 **Magic Words**:
+
 - **Close issue**: `Fixes`, `Closes`, `Resolves`
 - **Reference issue**: `Refs`, `References`, `Part of`, `Related to`
 
@@ -46,16 +48,20 @@ When creating PRs, use this format:
 Title: [code-chef/feature-dev] Add Redis caching
 
 ## Summary
+
 Implementation details
 
 ## Changes
+
 - Change 1
 - Change 2
 
 ## Linear Issues
+
 Fixes DEV-123
 
 ## Agent Attribution
+
 - **Agent**: 🚀 Feature Dev
 - **Identifier**: code-chef/feature-dev
 - **Coordinated by**: code-chef orchestrator
