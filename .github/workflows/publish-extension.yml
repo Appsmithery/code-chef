@@ -41,10 +41,12 @@ jobs:
           node-version: "20"
           registry-url: "https://npm.pkg.github.com"
           scope: "@appsmithery"
+          cache: "npm"
+          cache-dependency-path: extensions/vscode-codechef/package-lock.json
 
       - name: Install dependencies
         working-directory: ${{ env.EXTENSION_DIR }}
-        run: npm install
+        run: npm ci
 
       - name: Compile TypeScript
         working-directory: ${{ env.EXTENSION_DIR }}
