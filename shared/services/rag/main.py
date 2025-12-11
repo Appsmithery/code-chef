@@ -14,22 +14,23 @@ from pathlib import Path
 # Add shared/lib to path for importing shared types
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "lib"))
 
+import os
+import uuid
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
-    VectorParams,
-    PointStruct,
-    Filter,
     FieldCondition,
+    Filter,
     MatchValue,
+    PointStruct,
+    VectorParams,
 )
-import os
-from datetime import datetime
-import uuid
-import httpx
 
 app = FastAPI(title="RAG Context Manager", version="1.0.0")
 
@@ -46,11 +47,13 @@ QDRANT_DISTANCE = os.getenv("QDRANT_DISTANCE", "cosine")
 # See: https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
 
+import logging
+from typing import Optional
+
+from langchain_community.embeddings import OllamaEmbeddings
+
 # Embedding configuration - Hybrid approach (OpenAI primary, Ollama fallback)
 from langchain_openai import OpenAIEmbeddings
-from langchain_community.embeddings import OllamaEmbeddings
-from typing import Optional
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +128,7 @@ async def invoke_mcp_tool(server: str, tool: str, params: dict) -> dict:
 
     Returns:
         Tool invocation result
-        
+
     Note:
         MCP gateway deprecated Dec 2025. Tools accessed via VS Code Docker MCP Toolkit.
         This function maintained for backward compatibility but may be removed.
@@ -134,9 +137,8 @@ async def invoke_mcp_tool(server: str, tool: str, params: dict) -> dict:
     return {
         "success": False,
         "error": "MCP gateway deprecated. Use VS Code Docker MCP Toolkit extension.",
-        "migration_guide": "https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker"
+        "migration_guide": "https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker",
     }
-        return {"success": False, "error": str(e)}
 
 
 async def get_current_timestamp() -> str:
