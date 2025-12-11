@@ -90,7 +90,6 @@ Thumbs.db
 
 # Node (if using JS tooling)
 node_modules/
-package-lock.json
 yarn.lock
 
 # Reports and generated content
