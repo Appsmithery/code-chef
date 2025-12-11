@@ -522,7 +522,169 @@ docker compose exec postgres psql -U devtools -d devtools -f /docker-entrypoint-
 
 ---
 
-## 📚 Additional Resources
+## � Linear & GitHub Integration
+
+### Overview
+
+code-chef integrates with Linear and GitHub for bidirectional issue tracking. All agents have unique identifiers that show up in commits, PRs, and Linear issues.
+
+### Agent Identifiers
+
+| Agent              | GitHub Identifier          | Commit Author                                   |
+| ------------------ | -------------------------- | ----------------------------------------------- |
+| **Orchestrator**   | `code-chef`                | `code-chef <code-chef@appsmithery.co>`          |
+| **Feature Dev**    | `code-chef/feature-dev`    | `code-chef feature-dev <feature-dev@...>`       |
+| **Code Review**    | `code-chef/code-review`    | `code-chef code-review <code-review@...>`       |
+| **Infrastructure** | `code-chef/infrastructure` | `code-chef infrastructure <infrastructure@...>` |
+| **CI/CD**          | `code-chef/cicd`           | `code-chef cicd <cicd@...>`                     |
+| **Documentation**  | `code-chef/documentation`  | `code-chef documentation <documentation@...>`   |
+
+### Linking Commits to Linear Issues
+
+Use **magic words** in commit messages to link to Linear issues:
+
+```bash
+# Close an issue
+git commit -m "feat: add JWT auth
+
+Implements token-based authentication.
+
+Fixes DEV-123
+Orchestrated by: code-chef"
+
+# Reference an issue
+git commit -m "refactor: optimize database queries
+
+Part of DEV-456
+Implemented by: code-chef/infrastructure"
+
+# Multiple issues
+git commit -m "feat: add user dashboard
+
+Fixes DEV-789
+References DEV-790
+Related to DEV-791
+
+Implemented by: code-chef/feature-dev
+Coordinated by: code-chef"
+```
+
+**Magic words**:
+
+- **Closes issue**: `Fixes`, `Closes`, `Resolves`
+- **References issue**: `Refs`, `References`, `Part of`, `Related to`
+
+### PR Format
+
+PRs created by agents follow this format:
+
+```markdown
+Title: [code-chef/feature-dev] Add user authentication
+
+Description:
+
+## Summary
+
+Implements JWT-based authentication with refresh tokens
+
+## Changes
+
+- Add JWT middleware
+- Implement token refresh endpoint
+- Add authentication tests
+
+## Linear Issues
+
+Fixes DEV-123
+References DEV-45
+
+## Agent Attribution
+
+- **Agent**: 🚀 Feature Dev
+- **Identifier**: code-chef/feature-dev
+- **Coordinated by**: code-chef orchestrator
+
+---
+
+🤖 This PR was created by the code-chef agentic platform
+```
+
+### Multi-Repo Setup
+
+code-chef can work across **any repository** in the Appsmithery organization:
+
+**Organization-Level Webhook** (Recommended):
+
+1. Go to https://github.com/organizations/Appsmithery/settings/hooks
+2. Add webhook with Linear payload URL (see [config/linear/github-webhook-config.yaml](config/linear/github-webhook-config.yaml))
+3. Select recommended events (see below)
+4. **Result**: All repos automatically get Linear integration
+
+**Recommended Events**:
+
+- ✅ **Essential**: `push`, `pull_request`, `pull_request_review`, `issues`, `issue_comment`
+- ✅ **Recommended**: `pull_request_review_comment`, `commit_comment`, `release`, `deployment`, `check_run`, `status`
+- ⚪ **Optional**: `project_card`, `milestone`, `label`
+
+**Benefits**:
+
+- ✅ Single webhook for all repos
+- ✅ Automatic coverage for new repos
+- ✅ Consistent Linear integration
+- ✅ Centralized management
+
+### Using code-chef in Other Repos
+
+When working in a different repo (e.g., `Appsmithery/another-project`):
+
+1. **Linear Project**: Create or use existing Linear project
+2. **Agent Assignment**: Update [config/linear/agent-project-mapping.yaml](config/linear/agent-project-mapping.yaml)
+3. **Commit Format**: Same identifiers work across all repos
+4. **Magic Words**: `Fixes DEV-XXX` works regardless of repo
+
+**Example workflow**:
+
+```bash
+# In another-project repo
+git commit -m "feat: add new feature
+
+Implements feature X for another-project.
+
+Fixes DEV-999
+Implemented by: code-chef/feature-dev"
+
+# Linear issue DEV-999 automatically updated with:
+# - Commit reference
+# - Repo: Appsmithery/another-project
+# - Author: code-chef/feature-dev
+```
+
+### GitHub Issues Sidebar
+
+With Linear GitHub integration enabled:
+
+- ✅ All Linear issues appear in VS Code GitHub Issues sidebar
+- ✅ Issues sync bidirectionally (Linear ↔ GitHub)
+- ✅ Comments sync between platforms
+- ✅ Status changes reflect in both systems
+
+**View issues**:
+
+1. Open GitHub sidebar (Activity Bar)
+2. Expand **Issues** section
+3. See all Linear issues synced to GitHub
+
+### Configuration Files
+
+| File                                                                                 | Purpose                                   |
+| ------------------------------------------------------------------------------------ | ----------------------------------------- |
+| [config/linear/agent-project-mapping.yaml](config/linear/agent-project-mapping.yaml) | Agent identifiers and project assignments |
+| [config/linear/github-webhook-config.yaml](config/linear/github-webhook-config.yaml) | GitHub webhook setup and event config     |
+| [config/linear/linear-config.yaml](config/linear/linear-config.yaml)                 | Linear API configuration                  |
+
+---
+
+## �📚 Additional Resources
 
 - **Architecture**: [support/docs/ARCHITECTURE.md](support/docs/ARCHITECTURE.md)
 - **Deployment**: [support/docs/DEPLOYMENT.md](support/docs/DEPLOYMENT.md)

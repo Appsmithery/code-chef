@@ -17,6 +17,56 @@ default_project: "codechef"
 # Team ID for dev-ops workspace
 team_id: "f5b610be-ac34-4983-918b-2c9d00aa9b7a"
 
+# GitHub Integration
+# These identifiers are used in commit messages and PR descriptions
+# to link work to Linear issues via magic words (Fixes, Closes, etc.)
+github:
+  organization: "Appsmithery"
+  # Repositories where code-chef operates (can work across multiple repos)
+  repositories:
+    - "code-chef" # Primary repo (this repo)
+    - "Dev-Tools" # Legacy name
+    - "*" # Wildcard for any repo in org
+
+  # Agent identifiers for commit attribution
+  # Used in git config and commit messages
+  agent_identifiers:
+    orchestrator:
+      github_username: "code-chef[bot]"
+      commit_identifier: "code-chef"
+      pr_identifier: "code-chef"
+      commit_signature: "code-chef orchestrator <code-chef@appsmithery.co>"
+
+    feature_dev:
+      github_username: "code-chef-feature-dev[bot]"
+      commit_identifier: "code-chef/feature-dev"
+      pr_identifier: "code-chef-feature-dev"
+      commit_signature: "code-chef feature-dev <feature-dev@code-chef.appsmithery.co>"
+
+    code_review:
+      github_username: "code-chef-code-review[bot]"
+      commit_identifier: "code-chef/code-review"
+      pr_identifier: "code-chef-code-review"
+      commit_signature: "code-chef code-review <code-review@code-chef.appsmithery.co>"
+
+    infrastructure:
+      github_username: "code-chef-infrastructure[bot]"
+      commit_identifier: "code-chef/infrastructure"
+      pr_identifier: "code-chef-infrastructure"
+      commit_signature: "code-chef infrastructure <infrastructure@code-chef.appsmithery.co>"
+
+    cicd:
+      github_username: "code-chef-cicd[bot]"
+      commit_identifier: "code-chef/cicd"
+      pr_identifier: "code-chef-cicd"
+      commit_signature: "code-chef cicd <cicd@code-chef.appsmithery.co>"
+
+    documentation:
+      github_username: "code-chef-documentation[bot]"
+      commit_identifier: "code-chef/documentation"
+      pr_identifier: "code-chef-documentation"
+      commit_signature: "code-chef documentation <documentation@code-chef.appsmithery.co>"
+
 # Known projects in workspace
 projects:
   codechef:
@@ -48,6 +98,7 @@ agent_assignments:
     workspace_tag: "@orchestrator-agent"
     display_name: "🎯 Orchestrator"
     signature: "[Orchestrator Agent]"
+    github_identifier: "code-chef" # Used in commit messages and PR titles
     projects:
       - "*" # Can update ANY project
     permissions:
@@ -61,6 +112,7 @@ agent_assignments:
     workspace_tag: "@feature-dev-agent"
     display_name: "🚀 Feature Dev"
     signature: "[Feature-Dev Agent]"
+    github_identifier: "code-chef/feature-dev" # Subagent identifier
     projects:
       - "ai-devops-agent-platform" # Currently assigned to this project
     permissions:
@@ -73,6 +125,7 @@ agent_assignments:
     workspace_tag: "@code-review-agent"
     display_name: "🔍 Code Review"
     signature: "[Code-Review Agent]"
+    github_identifier: "code-chef/code-review" # Subagent identifier
     projects:
       - "ai-devops-agent-platform"
     permissions:
@@ -85,6 +138,7 @@ agent_assignments:
     workspace_tag: "@infrastructure-agent"
     display_name: "🏗️ Infrastructure"
     signature: "[Infrastructure Agent]"
+    github_identifier: "code-chef/infrastructure" # Subagent identifier
     projects:
       - "ai-devops-agent-platform"
     permissions:
@@ -97,6 +151,7 @@ agent_assignments:
     workspace_tag: "@cicd-agent"
     display_name: "⚙️ CI/CD"
     signature: "[CI/CD Agent]"
+    github_identifier: "code-chef/cicd" # Subagent identifier
     projects:
       - "ai-devops-agent-platform"
     permissions:
@@ -109,6 +164,7 @@ agent_assignments:
     workspace_tag: "@documentation-agent"
     display_name: "📚 Documentation"
     signature: "[Documentation Agent]"
+    github_identifier: "code-chef/documentation" # Subagent identifier
     projects:
       - "ai-devops-agent-platform"
     permissions:
