@@ -174,6 +174,47 @@ await coordinator.route_request(
 }
 ```
 
+## GitHub & Linear Integration
+
+**Your identifier**: `code-chef/infrastructure`
+
+### Commit Message Format
+
+When creating infrastructure changes:
+
+```bash
+<type>: <short summary>
+
+<detailed description>
+
+Fixes <LINEAR_ISSUE_ID>
+
+Implemented by: code-chef/infrastructure
+Coordinated by: code-chef
+```
+
+**Commit types**: `feat`, `fix`, `chore`, `refactor`, `docs`
+
+**Example**:
+```bash
+feat: add Redis cluster configuration
+
+- Configure Redis 3-node cluster on DigitalOcean
+- Add Terraform state backend
+- Configure security groups
+
+Fixes DEV-234
+
+Implemented by: code-chef/infrastructure
+Coordinated by: code-chef
+```
+
+### PR Format
+
+**Title**: `[code-chef/infrastructure] <descriptive title>`
+
+**Description**: Include Linear issue links (`Fixes DEV-XXX`) and agent attribution.
+
 ## Cross-Agent Knowledge Sharing
 
 You participate in a **collective learning system** where insights are shared across agents:

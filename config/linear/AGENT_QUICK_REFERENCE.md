@@ -2,14 +2,66 @@
 
 ## Your Agent Identity
 
-| Agent             | Tag                     | When to Pass `--agent-name`   |
-| ----------------- | ----------------------- | ----------------------------- |
-| 🎯 Orchestrator   | `@orchestrator-agent`   | `--agent-name orchestrator`   |
-| 🚀 Feature-Dev    | `@feature-dev-agent`    | `--agent-name feature-dev`    |
-| 🔍 Code-Review    | `@code-review-agent`    | `--agent-name code-review`    |
-| 🏗️ Infrastructure | `@infrastructure-agent` | `--agent-name infrastructure` |
-| ⚙️ CI/CD          | `@cicd-agent`           | `--agent-name cicd`           |
-| 📚 Documentation  | `@documentation-agent`  | `--agent-name documentation`  |
+| Agent             | Tag                     | GitHub Identifier          | Commit Author                          |
+| ----------------- | ----------------------- | -------------------------- | -------------------------------------- |
+| 🎯 Orchestrator   | `@orchestrator-agent`   | `code-chef`                | `code-chef <code-chef@appsmithery.co>` |
+| 🚀 Feature-Dev    | `@feature-dev-agent`    | `code-chef/feature-dev`    | `code-chef feature-dev <...>`          |
+| 🔍 Code-Review    | `@code-review-agent`    | `code-chef/code-review`    | `code-chef code-review <...>`          |
+| 🏗️ Infrastructure | `@infrastructure-agent` | `code-chef/infrastructure` | `code-chef infrastructure <...>`       |
+| ⚙️ CI/CD          | `@cicd-agent`           | `code-chef/cicd`           | `code-chef cicd <...>`                 |
+| 📚 Documentation  | `@documentation-agent`  | `code-chef/documentation`  | `code-chef documentation <...>`        |
+
+**GitHub Identifier** is used in:
+- Commit messages
+- PR titles and descriptions
+- Linear issue linking via magic words
+
+---
+
+## 🔗 GitHub Integration
+
+### Linking Commits to Linear Issues
+
+Use **magic words** in commit messages to automatically link to Linear issues:
+
+```bash
+git commit -m "feat: add Redis caching
+
+Implement Redis for API response caching.
+
+Fixes DEV-123
+Implemented by: code-chef/feature-dev
+Coordinated by: code-chef"
+```
+
+**Magic Words**:
+- **Close issue**: `Fixes`, `Closes`, `Resolves`
+- **Reference issue**: `Refs`, `References`, `Part of`, `Related to`
+
+### PR Format
+
+When creating PRs, use this format:
+
+```markdown
+Title: [code-chef/feature-dev] Add Redis caching
+
+## Summary
+Implementation details
+
+## Changes
+- Change 1
+- Change 2
+
+## Linear Issues
+Fixes DEV-123
+
+## Agent Attribution
+- **Agent**: 🚀 Feature Dev
+- **Identifier**: code-chef/feature-dev
+- **Coordinated by**: code-chef orchestrator
+```
+
+**Result**: Linear issue DEV-123 automatically updates with commit/PR references.
 
 ---
 
@@ -203,12 +255,14 @@ await event_bus.emit("approval_request", {
 
 ## See Also
 
-- `support/docs/LINEAR_USAGE_GUIDELINES.md` - Comprehensive documentation
-- `config/linear/agent-project-mapping.yaml` - Agent assignments and permissions
-- `config/linear/project-registry.yaml` - Project configuration (if exists)
+- [DEVELOPMENT.md#Linear & GitHub Integration](../../DEVELOPMENT.md#-linear--github-integration) - Multi-repo setup
+- [config/linear/github-webhook-config.yaml](github-webhook-config.yaml) - GitHub webhook configuration
+- [config/linear/agent-project-mapping.yaml](agent-project-mapping.yaml) - Agent identifiers and permissions
+- `support/docs/LINEAR_USAGE_GUIDELINES.md` - Comprehensive documentation (if exists)
 
 ---
 
-**Last Updated**: November 19, 2025  
-**Projects**: AI DevOps Agent Platform, TWKR Agentic Resume Workflow  
-**Agents**: 6 (Orchestrator + 5 Sub-Agents)
+**Last Updated**: December 11, 2025  
+**Projects**: AI DevOps Agent Platform (code-chef), TWKR Agentic Resume Workflow  
+**Agents**: 6 (Orchestrator + 5 Sub-Agents)  
+**GitHub Integration**: ✅ Enabled (bidirectional sync)
