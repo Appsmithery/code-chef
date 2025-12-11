@@ -53,6 +53,36 @@ The CI/CD agent builds your pipelines across GitHub Actions, GitLab CI, Jenkins,
 
 The Documentation agent creates README files, API docs, and architecture diagrams.
 
+### 🤖 Train & Deploy Models (ModelOps)
+
+```
+@chef Train a fine-tuned model for the Feature Dev agent
+```
+
+The Infrastructure agent handles the complete model lifecycle:
+
+- **Training**: Fine-tune models on your codebase via HuggingFace AutoTrain
+- **Evaluation**: Compare candidates vs baseline with 5 metrics (accuracy, completeness, efficiency, latency, integration)
+- **Deployment**: Update agent models safely with automatic rollback
+- **A/B Testing**: Measure improvement with comprehensive experiment tracking
+
+**VS Code Commands**:
+
+- `codechef.modelops.train` — Start training wizard with cost estimation
+- `codechef.modelops.evaluate` — Evaluate model performance with LangSmith
+- `codechef.modelops.deploy` — Deploy model to agent (30s process)
+- `codechef.modelops.rollback` — Rollback to previous version (<60s)
+- `codechef.modelops.modelVersions` — View deployment history
+
+**Training Modes**:
+
+| Mode       | Cost  | Duration | Use Case         |
+| ---------- | ----- | -------- | ---------------- |
+| Demo       | $0.50 | 5 min    | Quick validation |
+| Production | $3.50 | 60 min   | Full training    |
+
+See [LLM Operations Guide](support/docs/operations/llm-operations.md) for complete documentation.
+
 ---
 
 ## 🎯 Why code/chef?

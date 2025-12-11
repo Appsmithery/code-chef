@@ -1,5 +1,7 @@
 # LangSmith Tracing Integration
 
+> **📘 Complete LLM Operations Guide**: For model selection, training, evaluation, and deployment, see [LLM Operations Guide](../operations/llm-operations.md). This document focuses on tracing configuration and metadata standards.
+
 **Last Updated**: December 10, 2025  
 **Schema Version**: 1.0.0  
 **Clean Start Date**: December 10, 2025 (all historical traces deleted)

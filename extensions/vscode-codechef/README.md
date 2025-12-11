@@ -160,12 +160,70 @@ Chef: I found 3 issues:
 
 Press `Ctrl+Shift+P` and search for:
 
-| Command                   | Description          |
-| ------------------------- | -------------------- |
-| `code/chef: Submit Task`  | Submit via input box |
-| `code/chef: Health Check` | Test connection      |
-| `code/chef: Configure`    | Open settings        |
-| `code/chef: Clear Cache`  | Reset session        |
+| Command                           | Description                |
+| --------------------------------- | -------------------------- |
+| `code/chef: Submit Task`          | Submit via input box       |
+| `code/chef: Health Check`         | Test connection            |
+| `code/chef: Configure`            | Open settings              |
+| `code/chef: Clear Cache`          | Reset session              |
+| `codechef.modelops.train`         | Train fine-tuned model     |
+| `codechef.modelops.evaluate`      | Evaluate model performance |
+| `codechef.modelops.deploy`        | Deploy model to agent      |
+| `codechef.modelops.rollback`      | Rollback to previous model |
+| `codechef.modelops.modelVersions` | View deployment history    |
+
+---
+
+## 🤖 ModelOps: Train & Deploy Your Own Models
+
+code/chef includes a complete model lifecycle management system. Train fine-tuned models on your codebase, evaluate improvements, and deploy safely—all from VS Code.
+
+### Quick Start
+
+1. **Train**: `Ctrl+Shift+P` → "codechef.modelops.train"
+
+   - Select agent (e.g., Feature Dev)
+   - Choose mode: Demo ($0.50, 5 min) or Production ($3.50, 60 min)
+   - Monitor progress in status bar
+
+2. **Evaluate**: `Ctrl+Shift+P` → "codechef.modelops.evaluate"
+
+   - Compare candidate vs baseline
+   - View metrics: accuracy, completeness, efficiency, latency, integration
+   - Get deployment recommendation
+
+3. **Deploy**: `Ctrl+Shift+P` → "codechef.modelops.deploy"
+   - Select evaluated model
+   - Automatic backup and rollback support
+   - 30-second deployment process
+
+### Training Modes
+
+| Mode       | Cost  | Duration | Dataset Size | Use Case         |
+| ---------- | ----- | -------- | ------------ | ---------------- |
+| Demo       | $0.50 | 5 min    | 100 examples | Quick validation |
+| Production | $3.50 | 60 min   | 1000+        | Full training    |
+
+### Evaluation Metrics
+
+Models are scored across 5 weighted dimensions:
+
+| Metric       | Weight | Measures                  |
+| ------------ | ------ | ------------------------- |
+| Accuracy     | 30%    | Correctness of responses  |
+| Completeness | 25%    | Task completion rate      |
+| Efficiency   | 20%    | Token usage optimization  |
+| Latency      | 15%    | Response time performance |
+| Integration  | 10%    | MCP tool usage quality    |
+
+### Deployment Safety
+
+- ✅ Automatic backups before deployment
+- ✅ Health checks after deployment
+- ✅ One-command rollback (<60 seconds)
+- ✅ Version history tracking
+
+See [LLM Operations Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/operations/llm-operations.md) for complete documentation.
 
 ---
 
