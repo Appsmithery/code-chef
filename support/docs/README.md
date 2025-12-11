@@ -125,9 +125,11 @@ LangGraph workflows with PostgreSQL checkpointing
 ## Production Status
 
 **Domain:** https://codechef.appsmithery.co  
-**Droplet:** mcp-gateway (codechef.appsmithery.co, 45.55.173.72)  
-**Version:** v0.4  
+**Droplet:** orchestrator (codechef.appsmithery.co, 45.55.173.72)  
+**Version:** v0.5  
 **Updated:** December 2025
+
+**Note:** MCP gateway service deprecated Dec 2025. MCP tools accessed via VS Code Docker MCP Toolkit extension.
 
 ### Services
 

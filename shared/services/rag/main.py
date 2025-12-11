@@ -42,8 +42,8 @@ QDRANT_COLLECTION_DEFAULT = os.getenv("QDRANT_COLLECTION", "code_patterns")
 QDRANT_VECTOR_SIZE = int(os.getenv("QDRANT_VECTOR_SIZE", "1536"))
 QDRANT_DISTANCE = os.getenv("QDRANT_DISTANCE", "cosine")
 
-# MCP Gateway configuration
-MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL", "http://gateway-mcp:8000")
+# MCP tools accessed via Docker MCP Toolkit in VS Code (gateway deprecated Dec 2025)
+# See: https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker
 MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
 
 # Embedding configuration - Hybrid approach (OpenAI primary, Ollama fallback)
@@ -125,19 +125,17 @@ async def invoke_mcp_tool(server: str, tool: str, params: dict) -> dict:
 
     Returns:
         Tool invocation result
+        
+    Note:
+        MCP gateway deprecated Dec 2025. Tools accessed via VS Code Docker MCP Toolkit.
+        This function maintained for backward compatibility but may be removed.
     """
-    try:
-        async with httpx.AsyncClient(timeout=MCP_TIMEOUT) as client:
-            response = await client.post(
-                f"{MCP_GATEWAY_URL}/tools/{server}/{tool}", json={"params": params}
-            )
-            response.raise_for_status()
-            return response.json()
-    except httpx.HTTPError as e:
-        print(f"MCP tool invocation failed: {server}/{tool} - {e}")
-        return {"success": False, "error": str(e)}
-    except Exception as e:
-        print(f"Unexpected error invoking MCP tool: {e}")
+    # Gateway functionality deprecated - MCP tools now accessed via VS Code extension
+    return {
+        "success": False,
+        "error": "MCP gateway deprecated. Use VS Code Docker MCP Toolkit extension.",
+        "migration_guide": "https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker"
+    }
         return {"success": False, "error": str(e)}
 
 
@@ -485,14 +483,8 @@ async def health_check():
         except:
             qdrant_status = "error"
 
-    # Check MCP gateway connectivity
-    mcp_status = "unknown"
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{MCP_GATEWAY_URL}/health")
-            mcp_status = "connected" if response.status_code == 200 else "error"
-    except:
-        mcp_status = "disconnected"
+    # Docker MCP Toolkit status (gateway deprecated Dec 2025)
+    mcp_toolkit_status = "available"  # Tools accessed via VS Code extension, not HTTP
 
     timestamp = await get_current_timestamp()
 
@@ -501,8 +493,7 @@ async def health_check():
         "service": "rag-context-manager",
         "version": "1.0.0",
         "qdrant_status": qdrant_status,
-        "mcp_gateway_status": mcp_status,
-        "mcp_gateway_url": MCP_GATEWAY_URL,
+        "mcp_docker_toolkit": mcp_toolkit_status,
         "timestamp": timestamp,
     }
 
