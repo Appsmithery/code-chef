@@ -195,15 +195,30 @@ examples:
       environment: "training"
       module: "training"
 
-  - name: "A/B test comparison"
+  - name: "A/B test comparison - Baseline run"
+    description: "First run of task using baseline (untrained) LLM"
     metadata:
       experiment_id: "exp-2025-01-001"
       task_id: "task-550e8400-e29b-41d4-a716-446655440000"
-      experiment_group: "baseline" # or "code-chef"
+      experiment_group: "baseline"
       extension_version: "1.2.3"
-      model_version: "codellama-13b"
+      model_version: "codellama-13b" # Base model without fine-tuning
       environment: "evaluation"
       module: "evaluation"
+
+  - name: "A/B test comparison - Code-chef run"
+    description: "Second run of SAME task using code-chef (trained) model"
+    metadata:
+      experiment_id: "exp-2025-01-001"
+      task_id: "task-550e8400-e29b-41d4-a716-446655440000" # SAME task_id
+      experiment_group: "code-chef"
+      extension_version: "1.2.3"
+      model_version: "codellama-13b-v2" # Fine-tuned version
+      environment: "evaluation"
+      module: "evaluation"
+    note: |
+      The task_id must match between baseline and code-chef runs to enable
+      direct comparison of the same task. Query by task_id to get both results.
 
   - name: "Test suite run"
     metadata:
@@ -231,10 +246,29 @@ queries:
     - description: "Compare baseline vs code-chef for experiment"
       query: 'experiment_id:"exp-2025-01-001"'
       split_by: "experiment_group"
+      note: "Groups traces into baseline and code-chef buckets for comparison"
 
-    - description: "Same task, different groups"
-      query: 'task_id:"task-550e8400-..."'
+    - description: "Same task, different groups (direct comparison)"
+      query: 'task_id:"task-550e8400-e29b-41d4-a716-446655440000"'
       split_by: "experiment_group"
+      note: "Returns exactly 2 traces (baseline + code-chef) for the same task"
+
+    - description: "All tasks in an experiment"
+      query: 'experiment_id:"exp-2025-01-001"'
+      group_by: "task_id"
+      note: "Groups by task_id to see all baseline+code-chef pairs"
+
+    - description: "Find unpaired tasks (missing baseline or code-chef)"
+      query: 'experiment_id:"exp-2025-01-001"'
+      aggregate: "COUNT(*)"
+      group_by: "task_id, experiment_group"
+      having: "COUNT(*) = 1"
+      note: "Identifies tasks that only have baseline OR code-chef (not both)"
+
+    - description: "Statistical significance: >20 task pairs required"
+      query: 'experiment_id:"exp-2025-01-001"'
+      aggregate: "COUNT(DISTINCT task_id)"
+      note: "Ensure sufficient sample size for valid A/B comparison"
 
   environment_isolation:
     - description: "Production traces only"

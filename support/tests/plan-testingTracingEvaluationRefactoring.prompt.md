@@ -136,17 +136,90 @@ pytest support/tests/evaluation/test_baseline_comparison.py \
 - Assert statistical significance of improvements using comparison_engine
 - Add property-based tests with Hypothesis for evaluator robustness following `conftest.py:110-121` profiles
 
-### 6. Update Testing Infrastructure & Documentation (Enable team usage)
+### 6. Update Testing Infrastructure & Documentation (Enable team usage) ✅ COMPLETED
 
 **Linear**: [CHEF-245](https://linear.app/dev-ops/issue/CHEF-245)  
-**Status**: 🔄 Ready to Start (Phase 6)
+**Status**: ✅ Completed (Phase 6)  
+**Completed**: December 11, 2025
 
-- Add fixtures to `conftest.py`: `longitudinal_tracker_fixture`, `baseline_llm_client`, `ab_experiment_id`
-- Update `tracing-schema.yaml` examples with task_id correlation (lines 195-219)
-- Document new workflow in `support/docs/operations/llm-operations.md` A/B Testing section
-- Add GitHub Actions workflow `.github/workflows/evaluation-regression.yml` to run evaluations on PR merge
+**Implementation Summary**:
+
+- ✅ Added pytest fixtures to `conftest.py`: `longitudinal_tracker_fixture`, `baseline_llm_client`, `ab_experiment_id`, `task_id_generator`
+- ✅ Updated `tracing-schema.yaml` with concrete A/B testing examples showing task_id correlation
+- ✅ Enhanced `llm-operations.md` A/B Testing section with property-based tests, regression detection, and fixture usage
+- ✅ Created `.github/workflows/evaluation-regression.yml` for automated evaluation on PR merge
+
+**Key Files Modified**:
+
+- `support/tests/conftest.py` - Added 4 new fixtures for A/B testing and evaluation
+- `config/observability/tracing-schema.yaml` - Added detailed A/B testing examples with task_id correlation
+- `support/docs/operations/llm-operations.md` - Expanded A/B Testing section with 150+ new lines
+- `.github/workflows/evaluation-regression.yml` - NEW (426 lines) - 6-job CI/CD pipeline
+
+**Fixtures Added** (conftest.py):
+
+```python
+# 1. Database persistence fixture
+async def longitudinal_tracker_fixture():
+    """Configured tracker with automatic cleanup"""
+
+# 2. Baseline LLM client (for A/B comparison)
+def baseline_llm_client():
+    """Mock baseline client with lower quality scores"""
+
+# 3. Experiment ID generator
+def ab_experiment_id():
+    """Generate exp-YYYY-MM-NNN format IDs"""
+
+# 4. Task ID generator
+def task_id_generator():
+    """Generate task-{uuid} for correlation"""
+```
+
+**GitHub Actions Workflow** (evaluation-regression.yml):
+
+- **Job 1**: Database persistence tests
+- **Job 2**: A/B testing suite (end-to-end)
+- **Job 3**: Property-based testing (Hypothesis)
+- **Job 4**: Regression detection (version tracking)
+- **Job 5**: Generate summary report
+- **Job 6**: Store production results (main branch only)
+
+**Tracing Schema Examples**:
+
+- Baseline vs code-chef run with same task_id
+- Query patterns for A/B comparison
+- Statistical significance validation (>20 task pairs)
+- Unpaired task detection
+
+**Documentation Updates** (llm-operations.md):
+
+- Test fixtures usage examples
+- Property-based testing with Hypothesis profiles
+- Regression detection workflow
+- Complete A/B testing example with database persistence
+
+**Usage**:
+
+```bash
+# Run full evaluation suite locally
+pytest support/tests/evaluation/test_baseline_comparison.py \
+       support/tests/evaluation/test_property_based.py \
+       support/tests/integration/test_longitudinal_tracking.py -v
+
+# CI profile (fast, 20 examples)
+HYPOTHESIS_PROFILE=ci pytest support/tests/evaluation/test_property_based.py -v
+
+# Trigger manual workflow run
+gh workflow run evaluation-regression.yml \
+  --ref main \
+  -f hypothesis_profile=thorough \
+  -f skip_regression=false
+```
 
 ---
+
+## Summary
 
 ## Further Considerations
 

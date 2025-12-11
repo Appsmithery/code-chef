@@ -512,10 +512,75 @@ curl http://localhost:8001/metrics/tokens | jq
 
 Measure improvement of fine-tuned models vs baseline:
 
-- **Baseline**: Untrained LLM
-- **Code-chef**: Fine-tuned model
+- **Baseline**: Untrained LLM (e.g., base codellama-13b)
+- **Code-chef**: Fine-tuned model (e.g., codellama-13b-v2 with LoRA)
+
+### Testing Infrastructure
+
+#### Test Fixtures (conftest.py)
+
+Three fixtures support A/B testing workflows:
+
+```python
+# 1. Database persistence
+async def test_with_tracker(longitudinal_tracker_fixture):
+    tracker = longitudinal_tracker_fixture
+    await tracker.record_result(...)
+
+# 2. Baseline LLM client (untrained model)
+def test_baseline_comparison(baseline_llm_client):
+    baseline_response = await baseline_llm_client.chat([...])
+    # Returns lower quality scores than code-chef
+
+# 3. Experiment ID generator
+def test_experiment(ab_experiment_id):
+    # ab_experiment_id = "exp-2025-01-042"
+    await tracker.record_result(experiment_id=ab_experiment_id)
+```
+
+#### Test Suites
+
+| Test File                              | Purpose                   | Test Count |
+| -------------------------------------- | ------------------------- | ---------- |
+| `test_baseline_comparison.py`          | End-to-end A/B workflow   | 25+        |
+| `test_property_based.py`               | Property-based robustness | 15 (1500+) |
+| `test_longitudinal_tracking.py`        | Regression detection      | 20+        |
+| `test_evaluation_persistence.py`\*\*\* | Database integration      | 15+        |
+
+\*\*\* From Phase 4
 
 ### Workflow
+
+**Step 1: Prepare Tasks**
+
+Create a task file with evaluation scenarios:
+
+```json
+{
+  "experiment_name": "Feature Dev Improvement Q1 2025",
+  "experiment_id": "exp-2025-01-001",
+  "tasks": [
+    {
+      "task_id": "task-001",
+      "prompt": "Create JWT authentication middleware",
+      "metadata": {
+        "category": "code_generation",
+        "difficulty": "medium"
+      }
+    },
+    {
+      "task_id": "task-002",
+      "prompt": "Refactor database connection pooling",
+      "metadata": {
+        "category": "refactoring",
+        "difficulty": "hard"
+      }
+    }
+  ]
+}
+```
+
+**Important**: Each task needs a unique `task_id` for correlation.
 
 **Step 1: Prepare Tasks**
 
@@ -537,36 +602,206 @@ Measure improvement of fine-tuned models vs baseline:
 
 **Step 2: Run Baseline**
 
+Execute tasks using the **baseline (untrained)** model:
+
 ```bash
 export EXPERIMENT_ID=exp-2025-01-001
 export TRACE_ENVIRONMENT=evaluation
 export EXPERIMENT_GROUP=baseline
+export MODEL_VERSION=codellama-13b  # Base model
 
 python support/scripts/evaluation/baseline_runner.py \
   --mode baseline \
   --tasks support/scripts/evaluation/sample_tasks.json \
-  --output results-baseline.json
+  --output results-baseline.json \
+  --store-db  # Store results in PostgreSQL
 ```
+
+**Results stored**:
+
+- LangSmith traces with `experiment_group:"baseline"`
+- PostgreSQL evaluation_results table via `longitudinal_tracker`
+- Each task tagged with `task_id` for correlation
 
 **Step 3: Run Code-chef**
 
+Execute **same tasks** using the **code-chef (trained)** model:
+
 ```bash
 export EXPERIMENT_GROUP=code-chef
+export MODEL_VERSION=codellama-13b-v2  # Fine-tuned version
 
 python support/scripts/evaluation/baseline_runner.py \
   --mode code-chef \
   --tasks support/scripts/evaluation/sample_tasks.json \
-  --output results-codechef.json
+  --output results-codechef.json \
+  --store-db
 ```
 
-**Step 4: Analyze Results**
+**Critical**: Use the **same task IDs** to enable direct comparison.
+
+**Step 4: Compare Results**
+
+Use the comparison engine to generate statistical analysis:
+
+```bash
+# Via CLI
+python support/scripts/evaluation/query_evaluation_results.py \
+  --compare \
+  --experiment exp-2025-01-001 \
+  --output comparison-report.json
+
+# Expected output
+{
+  "summary": {
+    "overall_improvement_pct": 18.5,
+    "recommendation": "deploy",
+    "tasks_compared": 10,
+    "baseline_avg_score": 0.72,
+    "codechef_avg_score": 0.89
+  },
+  "per_metric": {
+    "accuracy": {"improvement_pct": 23.6, "winner": "code-chef"},
+    "latency": {"improvement_pct": -18.2, "winner": "code-chef"},
+    "cost": {"improvement_pct": -12.5, "winner": "code-chef"}
+  }
+}
+```
+
+**Via Test Suite**:
 
 ```python
-# LangSmith query
-experiment_id:"exp-2025-01-001"
-# Split by: experiment_group
-# Metrics: accuracy, latency, cost, completeness
+# support/tests/evaluation/test_baseline_comparison.py
+async def test_end_to_end_ab_workflow(
+    longitudinal_tracker_fixture,
+    baseline_llm_client,
+    ab_experiment_id
+):
+    """Test complete A/B workflow with real database."""
+    tracker = longitudinal_tracker_fixture
+
+    # Run baseline
+    baseline_result = await run_evaluation(
+        llm_client=baseline_llm_client,
+        experiment_id=ab_experiment_id,
+        experiment_group="baseline",
+        task_id="task-001"
+    )
+    await tracker.record_result(**baseline_result)
+
+    # Run code-chef
+    codechef_result = await run_evaluation(
+        llm_client=codechef_llm_client,
+        experiment_id=ab_experiment_id,
+        experiment_group="code-chef",
+        task_id="task-001"  # Same task_id!
+    )
+    await tracker.record_result(**codechef_result)
+
+    # Compare
+    report = await comparison_engine.generate_comparison_report(
+        experiment_id=ab_experiment_id
+    )
+
+    assert report["summary"]["recommendation"] in ["deploy", "needs_review", "reject"]
 ```
+
+### Property-Based Testing
+
+Validate evaluator robustness using **Hypothesis** for automatic test case generation:
+
+```bash
+# Default profile (100 examples per property)
+pytest support/tests/evaluation/test_property_based.py -v
+
+# CI profile (fast, 20 examples)
+HYPOTHESIS_PROFILE=ci pytest support/tests/evaluation/test_property_based.py -v
+
+# Thorough profile (500 examples)
+HYPOTHESIS_PROFILE=thorough pytest support/tests/evaluation/test_property_based.py -v
+```
+
+**Properties Validated**:
+
+| Property             | Description                                            | Test Count |
+| -------------------- | ------------------------------------------------------ | ---------- |
+| Score Bounds         | All scores in [0, 1]                                   | 100+       |
+| Improvement Symmetry | If A improves over B, B regresses from A               | 100+       |
+| Reversibility        | Can reconstruct values from improvements               | 100+       |
+| Monotonicity         | Larger improvements → larger percentages               | 100+       |
+| Transitivity         | If A > B > C, then improvement(C→A) > improvement(C→B) | 100+       |
+| Weighted Average     | Result falls between min and max inputs                | 100+       |
+| Recommendation Logic | ≥15% deploy, 5-15% review, <5% reject                  | 100+       |
+
+**Example Property Test**:
+
+```python
+from hypothesis import given, strategies as st
+
+@given(
+    baseline=st.floats(min_value=0.01, max_value=1.0),
+    codechef=st.floats(min_value=0.01, max_value=1.0),
+)
+def test_improvement_symmetry(baseline, codechef):
+    """If A improves over B, then B regresses from A."""
+    improvement_a_to_b = engine.calculate_improvement(baseline, codechef)
+    improvement_b_to_a = engine.calculate_improvement(codechef, baseline)
+
+    if baseline != codechef:
+        assert (improvement_a_to_b > 0) == (improvement_b_to_a < 0)
+```
+
+**Total Coverage**: 1500+ automatically generated test cases across 15 properties.
+
+### Regression Detection
+
+Track performance changes across extension versions:
+
+```bash
+# Run regression detection tests
+pytest support/tests/integration/test_longitudinal_tracking.py -v
+```
+
+**Use Cases**:
+
+1. **Pre-deployment checks**: Verify new version doesn't regress
+2. **Continuous monitoring**: Track performance across releases
+3. **Root cause analysis**: Identify which version introduced regression
+4. **Historical best**: Find best-performing version for rollback
+
+**Example Regression Test**:
+
+```python
+async def test_detect_accuracy_regression(longitudinal_tracker_fixture):
+    """Detect when accuracy drops between versions."""
+    tracker = longitudinal_tracker_fixture
+
+    # Version 1.5.0: Good performance
+    await tracker.record_result(
+        agent="feature_dev",
+        extension_version="1.5.0",
+        scores={"accuracy": 0.90, "latency": 1.8}
+    )
+
+    # Version 1.6.0: Regression detected!
+    await tracker.record_result(
+        agent="feature_dev",
+        extension_version="1.6.0",
+        scores={"accuracy": 0.75, "latency": 1.7}  # Accuracy dropped!
+    )
+
+    # Query trend
+    trend = await tracker.get_metric_trend(
+        agent="feature_dev",
+        metric="accuracy",
+        limit=2
+    )
+
+    # Alert: 16.7% regression from v1.5.0 to v1.6.0
+    assert trend[0]["value"] > trend[1]["value"], "Accuracy regression detected"
+```
+
+**Automated Alerts**: GitHub Actions workflow runs regression tests on every PR merge (see `.github/workflows/evaluation-regression.yml`).
 
 ### Interpreting Results
 
