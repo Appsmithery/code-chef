@@ -334,9 +334,12 @@ export default function Home() {
                     <div className="mb-2 w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-300">
                       <Sparkles className="h-6 w-6" />
                     </div>
-                    <CardTitle className="text-2xl mb-2">Train Your Own AI</CardTitle>
+                    <CardTitle className="text-2xl mb-2">
+                      Train Your Own AI
+                    </CardTitle>
                     <CardDescription className="text-base">
-                      Want code/chef to write code exactly how your team likes it? Teach it your style.
+                      Want code/chef to write code exactly how your team likes
+                      it? Teach it your style.
                     </CardDescription>
                   </div>
                 </div>
@@ -344,18 +347,29 @@ export default function Home() {
               <CardContent>
                 <div className="space-y-4">
                   <p className="text-muted-foreground leading-relaxed">
-                    ModelOps makes it easy to fine-tune AI models on your codebase—no machine learning expertise required. 
-                    Train in about an hour, test the results, and deploy with one click. The AI learns your coding patterns, 
-                    naming conventions, and project structure.
+                    ModelOps makes it easy to fine-tune AI models on your
+                    codebase—no machine learning expertise required. Train in
+                    about an hour, test the results, and deploy with one click.
+                    The AI learns your coding patterns, naming conventions, and
+                    project structure.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground border-secondary/30">
+                    <Badge
+                      variant="secondary"
+                      className="bg-secondary/20 text-secondary-foreground border-secondary/30"
+                    >
                       One-Hour Training
                     </Badge>
-                    <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground border-secondary/30">
+                    <Badge
+                      variant="secondary"
+                      className="bg-secondary/20 text-secondary-foreground border-secondary/30"
+                    >
                       Automatic Testing
                     </Badge>
-                    <Badge variant="secondary" className="bg-secondary/20 text-secondary-foreground border-secondary/30">
+                    <Badge
+                      variant="secondary"
+                      className="bg-secondary/20 text-secondary-foreground border-secondary/30"
+                    >
                       Safe Rollback
                     </Badge>
                   </div>
