@@ -4,6 +4,8 @@ Central orchestration for training, evaluation, and deployment operations.
 Routes ModelOps requests to appropriate handlers.
 """
 
+import hashlib
+import os
 from typing import Any, Dict, Optional
 
 from langsmith import traceable
@@ -12,6 +14,68 @@ from .deployment import ModelOpsDeployment
 from .evaluation import ModelEvaluator
 from .registry import ModelRegistry
 from .training import ModelOpsTrainer
+
+
+def _get_config_hash() -> str:
+    """Generate hash of models.yaml config for tracking.
+
+    Returns:
+        First 8 chars of SHA256 hash of config file
+    """
+    try:
+        from pathlib import Path
+
+        import yaml
+
+        config_path = (
+            Path(__file__).parent.parent.parent.parent.parent
+            / "config"
+            / "agents"
+            / "models.yaml"
+        )
+        if config_path.exists():
+            with open(config_path) as f:
+                content = f.read()
+            return f"sha256:{hashlib.sha256(content.encode()).hexdigest()[:8]}"
+    except Exception:
+        pass
+    return "unknown"
+
+
+def _get_coordinator_trace_metadata() -> Dict[str, str]:
+    """Get standard metadata for coordinator traces.
+
+    Returns metadata following the schema in config/observability/tracing-schema.yaml
+    """
+    return {
+        "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
+        "environment": os.getenv("TRACE_ENVIRONMENT", "production"),
+        "module": "coordinator",
+        "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
+        "model_version": os.getenv("MODEL_VERSION", "unknown"),
+        "config_hash": _get_config_hash(),
+        "agent": os.getenv("AGENT_NAME", "infrastructure"),
+    }
+
+
+def _get_langsmith_project() -> str:
+    """Determine LangSmith project based on environment.
+
+    Returns:
+        Project name for coordinator traces
+    """
+    environment = os.getenv("TRACE_ENVIRONMENT", "production")
+
+    if environment == "production":
+        return os.getenv("LANGSMITH_PROJECT_PRODUCTION", "code-chef-production")
+    elif environment == "evaluation":
+        if os.getenv("EXPERIMENT_ID"):
+            return os.getenv("LANGSMITH_PROJECT_EXPERIMENTS", "code-chef-experiments")
+        return os.getenv("LANGSMITH_PROJECT_EVALUATION", "code-chef-evaluation")
+    elif environment == "training":
+        return os.getenv("LANGSMITH_PROJECT_TRAINING", "code-chef-training")
+    else:
+        return os.getenv("LANGSMITH_PROJECT", "code-chef-infrastructure")
 
 
 class ModelOpsCoordinator:
@@ -37,7 +101,11 @@ class ModelOpsCoordinator:
         self.evaluator = evaluator or ModelEvaluator(registry=self.registry)
         self.deployment = deployment or ModelOpsDeployment(registry=self.registry)
 
-    @traceable(name="modelops_route")
+    @traceable(
+        name="modelops_route",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def route_request(
         self, message: str, context: Dict[str, Any]
     ) -> Dict[str, Any]:
@@ -97,7 +165,11 @@ class ModelOpsCoordinator:
                 ],
             }
 
-    @traceable(name="modelops_train")
+    @traceable(
+        name="modelops_train",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def _handle_training(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle model training request.
 
@@ -160,7 +232,11 @@ class ModelOpsCoordinator:
             "message": f"Training job {result.get('job_id')} submitted for {agent_name}. Monitor at {result.get('trackio_url')}",
         }
 
-    @traceable(name="modelops_evaluate")
+    @traceable(
+        name="modelops_evaluate",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def _handle_evaluation(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle model evaluation request.
 
@@ -253,7 +329,11 @@ class ModelOpsCoordinator:
             "message": f"Evaluation complete: {comparison.recommendation.upper()} ({comparison.improvement_pct:+.1f}% improvement)",
         }
 
-    @traceable(name="modelops_deploy")
+    @traceable(
+        name="modelops_deploy",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def _handle_deployment(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle model deployment request.
 
@@ -304,7 +384,11 @@ class ModelOpsCoordinator:
             "message": f"Successfully deployed {model_repo} to {agent_name} ({result.version})",
         }
 
-    @traceable(name="modelops_rollback")
+    @traceable(
+        name="modelops_rollback",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def _handle_rollback(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle rollback request.
 
@@ -338,7 +422,11 @@ class ModelOpsCoordinator:
             "message": f"Successfully rolled back {agent_name} to {result.version}",
         }
 
-    @traceable(name="modelops_list_models")
+    @traceable(
+        name="modelops_list_models",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def _handle_list_models(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle list models request.
 
@@ -369,7 +457,11 @@ class ModelOpsCoordinator:
             "message": f"Found {len(models)} model version(s) for {agent_name}",
         }
 
-    @traceable(name="modelops_monitor")
+    @traceable(
+        name="modelops_monitor",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def _handle_monitor_training(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle training monitoring request.
 
@@ -418,7 +510,11 @@ class ModelOpsCoordinator:
             "message": f"Training {result.get('status', 'unknown')}: {result.get('progress', 0):.0f}% complete",
         }
 
-    @traceable(name="modelops_status")
+    @traceable(
+        name="modelops_status",
+        project_name=_get_langsmith_project(),
+        metadata=_get_coordinator_trace_metadata(),
+    )
     async def _handle_status(self, context: Dict[str, Any]) -> Dict[str, Any]:
         """Handle status check request.
 

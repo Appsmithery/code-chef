@@ -41,10 +41,25 @@
 
 ### Observability
 
-- **@traceable Decorators**: 33+ across graph.py, workflow_engine.py, base_agent.py
-- **LangSmith Projects**: Per-agent (`code-chef-feature-dev`, `code-chef-code-review`, etc.)
+- **@traceable Decorators**: 33+ across graph.py, workflow_engine.py, base_agent.py, ModelOps modules
+- **LangSmith Projects** (Purpose-Based, Effective Dec 10, 2025):
+  - `code-chef-production` - Live extension usage (`environment:"production"`)
+  - `code-chef-experiments` - A/B testing (`experiment_id IS NOT NULL`)
+  - `code-chef-training` - Model training ops (`module:"training"`)
+  - `code-chef-evaluation` - Model evaluations (`module:"evaluation"`)
+- **Trace Metadata Schema**: `config/observability/tracing-schema.yaml`
+  - `experiment_group`: code-chef | baseline (A/B testing)
+  - `environment`: production | training | evaluation | test
+  - `module`: training | evaluation | deployment | registry | coordinator | {agent}
+  - `extension_version`: Semver (e.g., "1.2.3")
+  - `model_version`: Model identifier (e.g., "codellama-13b-v2")
+  - `experiment_id`: Correlate A/B runs (e.g., "exp-2025-01-001")
+  - `task_id`: Correlate tasks across groups
+  - `config_hash`: Config fingerprint
 - **Prometheus**: `/metrics` endpoint via `Instrumentator`
 - **Grafana**: `appsmithery.grafana.net`
+
+**Note**: Old per-agent projects (code-chef-feature-dev, etc.) deprecated Dec 10, 2025. See `support/docs/procedures/langsmith-project-restructure.md` for migration details.
 
 ---
 

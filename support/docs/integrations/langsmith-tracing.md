@@ -1,25 +1,126 @@
 # LangSmith Tracing Integration
 
+**Last Updated**: December 10, 2025  
+**Schema Version**: 1.0.0  
+**Clean Start Date**: December 10, 2025 (all historical traces deleted)
+
 ## Overview
 
-All Dev-Tools agents are instrumented with **LangSmith** for automatic LLM observability via LangChain's native tracing integration. LangSmith provides:
+All Dev-Tools agents are instrumented with **LangSmith** for comprehensive observability supporting:
 
-- 📊 **Automatic tracing** of all LangChain/LangGraph operations
-- ⏱️ **Latency tracking** for each LLM request
-- 💰 **Token usage and cost** monitoring
-- 🔍 **Prompt/completion visibility** in the LangSmith UI
-- 🏷️ **Metadata tagging** for filtering and analysis
-- 🔄 **Workflow visualization** for LangGraph executions
+- 📊 **Longitudinal Tracking** - Measure improvement over time
+- 🧪 **A/B Testing** - Compare code-chef vs baseline
+- 🏷️ **Environment Isolation** - Separate production/training/evaluation/test traces
+- ⏱️ **Performance Metrics** - Latency, token usage, cost tracking
+- 🔍 **Full Visibility** - Prompts, completions, errors
+- 🔄 **Workflow Graphs** - LangGraph execution visualization
 
 ## Dashboard Access
 
-**Production Dashboard**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046
+**Production**: https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207
+
+---
+
+## New Project Structure (December 10, 2025)
+
+We transitioned from per-agent projects to **purpose-based projects**:
+
+### Projects
+
+| Project                    | Purpose                             | Filter                      |
+| -------------------------- | ----------------------------------- | --------------------------- |
+| `code-chef-production`     | Live extension usage                | `environment:"production"`  |
+| `code-chef-experiments`    | A/B test comparisons                | `experiment_id IS NOT NULL` |
+| `code-chef-training`       | Model training operations           | `module:"training"`         |
+| `code-chef-evaluation`     | Model evaluation runs               | `module:"evaluation"`       |
+| `code-chef-test` (optional | Test suite runs (if tracing enabled | `environment:"test"`        |
+
+### Old Projects (Deprecated)
+
+These were deleted December 10, 2025:
+
+- ~~`code-chef-feature-dev`~~
+- ~~`code-chef-code-review`~~
+- ~~`code-chef-infrastructure`~~
+- ~~`code-chef-cicd`~~
+- ~~`code-chef-documentation`~~
+- ~~`code-chef-supervisor`~~
+
+**Reason for change**: Purpose-based organization better supports longitudinal tracking and A/B testing.
+
+---
+
+## Metadata Schema
+
+All traces now include standardized metadata (see `config/observability/tracing-schema.yaml`):
+
+### Core Fields
+
+```yaml
+experiment_group: code-chef | baseline # For A/B testing
+environment: production | training | evaluation | test
+module: training | evaluation | deployment | registry | coordinator | {agent_name}
+extension_version: "1.2.3" # Semver
+model_version: "codellama-13b-v2" # Model identifier
+```
+
+### Optional Fields
+
+```yaml
+experiment_id: "exp-2025-01-001" # Correlate A/B runs
+task_id: "task-{uuid}" # Correlate same task across groups
+config_hash: "sha256:a1b2c3d4" # Config fingerprint
+agent: "infrastructure" # Agent name
+```
+
+### Example Metadata
+
+**Production trace**:
+
+```python
+{
+    "experiment_group": "code-chef",
+    "environment": "production",
+    "module": "feature_dev",
+    "extension_version": "1.2.3",
+    "model_version": "codellama-13b-v2",
+    "config_hash": "sha256:a1b2c3d4"
+}
+```
+
+**Training operation**:
+
+```python
+{
+    "experiment_group": "code-chef",
+    "environment": "training",
+    "module": "training",
+    "extension_version": "1.2.3",
+    "model_version": "codellama-13b-v3",
+    "agent": "infrastructure"
+}
+```
+
+**A/B test comparison**:
+
+```python
+{
+    "experiment_id": "exp-2025-01-001",
+    "task_id": "task-550e8400-...",
+    "experiment_group": "baseline",  # or "code-chef"
+    "environment": "evaluation",
+    "module": "evaluation",
+    "extension_version": "1.2.3"
+}
+```
+
+---
 
 ## Configuration
 
-### Required Environment Variables
+### Environment Variables
 
-Set these in `config/env/.env`:
+Set in `config/env/.env`:
 
 ```bash
 # Enable LangSmith tracing
@@ -28,75 +129,248 @@ LANGCHAIN_TRACING_V2=true
 
 # LangSmith connection
 LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
-LANGCHAIN_PROJECT=agents
-
-# API Keys (use service key for production)
 LANGCHAIN_API_KEY=lsv2_sk_***
 LANGSMITH_API_KEY=lsv2_sk_***
-
-# Required for org-scoped service keys
 LANGSMITH_WORKSPACE_ID=5029c640-3f73-480c-82f3-58e402ed4207
+
+# Project selection (auto-selected by code based on environment)
+LANGSMITH_PROJECT_PRODUCTION=code-chef-production
+LANGSMITH_PROJECT_EXPERIMENTS=code-chef-experiments
+LANGSMITH_PROJECT_TRAINING=code-chef-training
+LANGSMITH_PROJECT_EVALUATION=code-chef-evaluation
+
+# Metadata for traces
+TRACE_ENVIRONMENT=production             # production | training | evaluation | test
+EXPERIMENT_GROUP=code-chef               # code-chef | baseline
+EXTENSION_VERSION=1.2.3                  # Current extension version
+MODEL_VERSION=codellama-13b-v2           # Current model version
+EXPERIMENT_ID=                           # Set when running A/B tests
+TASK_ID=                                 # Set when correlating tasks
+AGENT_NAME=infrastructure                # Current agent name
 ```
 
 ### Key Types
 
-| Key Type       | Format      | Use Case                        |
-| -------------- | ----------- | ------------------------------- |
-| Service Key    | `lsv2_sk_*` | Production (org-level access)   |
-| Personal Token | `lsv2_pt_*` | Development (user-level access) |
+| Key Type       | Format      | Use Case                      |
+| -------------- | ----------- | ----------------------------- |
+| Service Key    | `lsv2_sk_*` | Production (org-level access) |
+| Personal Token | `lsv2_pt_*` | Development (user-level)      |
 
-**Note**: Service keys require `LANGSMITH_WORKSPACE_ID` to be set.
+**Note**: Service keys require `LANGSMITH_WORKSPACE_ID`.
+
+---
+
+## Usage Patterns
+
+### Longitudinal Tracking
+
+**Goal**: Measure how code-chef improves over time
+
+```python
+# LangSmith query
+module:"feature_dev" AND environment:"production"
+# Group by: extension_version
+# Chart: Accuracy over time
+```
+
+**Example**: Compare accuracy from v1.0.0 → v1.2.3
+
+### A/B Testing
+
+**Goal**: Compare code-chef vs baseline on same tasks
+
+**Step 1**: Run baseline
+
+```bash
+export EXPERIMENT_ID=exp-2025-01-001
+export TRACE_ENVIRONMENT=evaluation
+export EXPERIMENT_GROUP=baseline
+
+python support/scripts/evaluation/baseline_runner.py \
+    --mode baseline \
+    --tasks support/scripts/evaluation/sample_tasks.json
+```
+
+**Step 2**: Run code-chef
+
+```bash
+export EXPERIMENT_GROUP=code-chef
+
+python support/scripts/evaluation/baseline_runner.py \
+    --mode code-chef \
+    --tasks support/scripts/evaluation/sample_tasks.json
+```
+
+**Step 3**: Analyze in LangSmith
+
+```python
+# Query
+experiment_id:"exp-2025-01-001"
+# Split by: experiment_group
+# Compare: accuracy, latency, cost
+```
+
+### Environment Isolation
+
+**Production traces only**:
+
+```python
+environment:"production"
+```
+
+**Exclude test/training from production metrics**:
+
+```python
+environment:"production" NOT (environment:"test" OR environment:"training")
+```
+
+**Training operations**:
+
+```python
+module:"training" AND environment:"training"
+```
+
+---
+
+## Implementation Details
+
+### Decorator Pattern
+
+All ModelOps functions use enhanced `@traceable` decorators:
+
+```python
+from langsmith import traceable
+
+@traceable(
+    name="modelops_train_model",
+    project_name=_get_langsmith_project(),  # Auto-selects based on environment
+    metadata=_get_training_trace_metadata(),  # Includes all schema fields
+)
+def train_model(...):
+    pass
+```
+
+### Project Selection Logic
+
+```python
+def _get_langsmith_project() -> str:
+    """Auto-select project based on TRACE_ENVIRONMENT."""
+    environment = os.getenv("TRACE_ENVIRONMENT", "production")
+
+    if environment == "training":
+        return "code-chef-training"
+    elif environment == "evaluation":
+        if os.getenv("EXPERIMENT_ID"):
+            return "code-chef-experiments"
+        return "code-chef-evaluation"
+    elif environment == "test":
+        return "code-chef-test"
+    else:  # production
+        return "code-chef-production"
+```
+
+### Metadata Helpers
+
+```python
+def _get_trace_metadata() -> Dict[str, str]:
+    """Generate metadata following schema."""
+    return {
+        "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
+        "environment": os.getenv("TRACE_ENVIRONMENT", "production"),
+        "module": "training",  # Or evaluation, deployment, etc.
+        "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
+        "model_version": os.getenv("MODEL_VERSION", "unknown"),
+        "config_hash": _get_config_hash(),
+        "experiment_id": os.getenv("EXPERIMENT_ID"),
+        "task_id": os.getenv("TASK_ID"),
+    }
+```
+
+---
 
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Orchestrator   │────▶│  LangChain       │────▶│  LangSmith      │
-│  (LangGraph)    │     │  Callbacks       │     │  (Cloud)        │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
+┌──────────────────┐     Metadata      ┌──────────────────────┐
+│  ModelOps        │────────────────────▶ LangSmith Projects   │
+│  Training        │     + environment  │ • code-chef-training │
+│  Evaluation      │     + module       │ • code-chef-eval     │
+│  Deployment      │     + exp_group    │ • code-chef-prod     │
+└──────────────────┘                    │ • code-chef-exp      │
+                                        └──────────────────────┘
          │
          ▼
-┌─────────────────┐
-│  Agent Nodes    │
-│  (feature_dev,  │
-│  code_review,   │
-│  etc.)          │
-└─────────────────┘
+┌──────────────────┐
+│  Tests           │     environment:   ┌──────────────────────┐
+│  conftest.py     │────────────────────▶ code-chef-test       │
+│  Sets env vars   │     "test"         │ (optional)           │
+└──────────────────┘                    └──────────────────────┘
 ```
 
-- **Zero code changes**: LangChain automatically sends traces when `LANGCHAIN_TRACING_V2=true`
-- **Environment-based config**: All credentials via environment variables
-- **LangGraph integration**: Workflow graphs are visualized as nested traces
+---
 
-## Automatic Tracking
+## Troubleshooting
 
-LangSmith automatically captures:
+### Traces not appearing
 
-| Metric                | Description                         |
-| --------------------- | ----------------------------------- |
-| Prompts & completions | Full input/output text              |
-| Model parameters      | Temperature, max_tokens, etc.       |
-| Latencies             | Time to first token, total duration |
-| Token usage           | Prompt tokens, completion tokens    |
-| Cost                  | USD based on model pricing          |
-| Errors                | Exception traces and status codes   |
-| Workflow structure    | LangGraph node execution order      |
+1. Check environment variables set: `LANGCHAIN_TRACING_V2=true`
+2. Verify API key: `echo $LANGCHAIN_API_KEY`
+3. Check project exists in LangSmith UI
+4. Look for errors in logs: `grep "langsmith" <log-file>`
 
-## LangGraph Workflow Visualization
+### Traces in wrong project
 
-LangGraph workflows appear as nested trace hierarchies:
+1. Check `TRACE_ENVIRONMENT` matches expected value
+2. Verify project selection logic in `_get_langsmith_project()`
+3. Ensure environment variables set before code execution
 
-```
-Trace: "Process feature request"
-├─ Span: router_node
-├─ Span: supervisor_node (routing decision)
-├─ Span: feature_dev_node
-│   ├─ LLM Call: design solution
-│   └─ LLM Call: generate code
-├─ Span: code_review_node
-│   └─ LLM Call: analyze code
-└─ END
-```
+### Missing metadata
+
+1. Verify metadata helper function called
+2. Check environment variables for metadata fields
+3. Look for None values in trace metadata
+
+---
+
+## Migration from Old Structure
+
+**Date**: December 10, 2025  
+**Actions taken**:
+
+1. ✅ Deleted all traces from old agent-based projects
+2. ✅ Created new purpose-based projects
+3. ✅ Updated all `@traceable` decorators with metadata
+4. ✅ Added helper functions for project selection
+5. ✅ Updated conftest.py for test environment
+
+**Benefits**:
+
+- Clean slate for longitudinal tracking
+- A/B testing infrastructure ready
+- Environment isolation prevents contamination
+- Cost tracking by environment
+- Better query/filter capabilities
+
+---
+
+## Best Practices
+
+1. **Always set TRACE_ENVIRONMENT** before operations
+2. **Use experiment_id** for all A/B tests
+3. **Include task_id** for multi-run correlations
+4. **Update extension_version** on releases
+5. **Set model_version** when training/deploying
+6. **Use baseline_runner.py** for proper A/B testing
+7. **Keep metadata schema current** (`config/observability/tracing-schema.yaml`)
+
+---
+
+## References
+
+- Schema: [`config/observability/tracing-schema.yaml`](../../config/observability/tracing-schema.yaml)
+- Project Restructure: [`support/docs/procedures/langsmith-project-restructure.md`](../procedures/langsmith-project-restructure.md)
+- Baseline Runner: [`support/scripts/evaluation/baseline_runner.py`](../../scripts/evaluation/baseline_runner.py)
+- LangSmith Docs: https://docs.smith.langchain.com/
 
 ## @traceable Decorator Coverage
 

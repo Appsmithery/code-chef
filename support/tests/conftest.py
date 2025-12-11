@@ -14,15 +14,16 @@ Usage:
 
 from __future__ import annotations
 
-import pytest
 import asyncio
 import os
 import sys
-from pathlib import Path
-from typing import Generator, AsyncGenerator
 from datetime import datetime
-from unittest.mock import MagicMock, AsyncMock
+from pathlib import Path
+from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock, MagicMock
+
 import asyncpg
+import pytest
 
 # Add shared and agent paths
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -39,7 +40,8 @@ sys.path.insert(0, str(REPO_ROOT / "agent_orchestrator"))
 
 
 def pytest_configure(config):
-    """Configure pytest with custom markers."""
+    """Configure pytest with custom markers and environment."""
+    # Add custom markers
     config.addinivalue_line("markers", "unit: Unit tests (fast, mocked)")
     config.addinivalue_line("markers", "integration: Integration tests (real services)")
     config.addinivalue_line("markers", "e2e: End-to-end workflow tests")
@@ -47,6 +49,16 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "hitl: Human-in-the-loop approval tests")
     config.addinivalue_line("markers", "slow: Tests that take >10 seconds")
     config.addinivalue_line("markers", "asyncio: Async tests using pytest-asyncio")
+
+    # Set environment variables for test tracing
+    # This ensures all test traces are properly tagged and isolated
+    os.environ["TRACE_ENVIRONMENT"] = "test"
+    os.environ["EXPERIMENT_GROUP"] = "code-chef"
+    os.environ["EXTENSION_VERSION"] = os.getenv("EXTENSION_VERSION", "test")
+
+    # Use test-specific LangSmith project if available
+    if not os.getenv("LANGSMITH_PROJECT"):
+        os.environ["LANGSMITH_PROJECT"] = "code-chef-test"
 
     # IB-Agent Phase markers
     config.addinivalue_line("markers", "phase1: Phase 1 - Data Layer Foundation tests")
@@ -113,7 +125,7 @@ def langsmith_test_metadata(request):
 # Hypothesis Configuration (Property-Based Testing)
 # ============================================================================
 
-from hypothesis import settings, Verbosity
+from hypothesis import Verbosity, settings
 
 # Register profiles for different test scenarios
 settings.register_profile("ci", max_examples=20, verbosity=Verbosity.verbose)

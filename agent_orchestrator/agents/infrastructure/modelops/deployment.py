@@ -7,6 +7,7 @@ Handles:
 """
 
 import json
+import os
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -17,6 +18,39 @@ from langsmith import traceable
 from pydantic import BaseModel, Field
 
 from .registry import ModelRegistry, ModelVersion
+
+
+def _get_deployment_trace_metadata() -> Dict[str, str]:
+    """Get standard metadata for deployment traces.
+
+    Returns metadata following the schema in config/observability/tracing-schema.yaml
+    """
+    return {
+        "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
+        "environment": os.getenv("TRACE_ENVIRONMENT", "production"),
+        "module": "deployment",
+        "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
+        "model_version": os.getenv("MODEL_VERSION", "unknown"),
+        "agent": os.getenv("AGENT_NAME", "infrastructure"),
+    }
+
+
+def _get_langsmith_project() -> str:
+    """Determine LangSmith project based on environment.
+
+    Returns:
+        Project name for deployment traces
+    """
+    environment = os.getenv("TRACE_ENVIRONMENT", "production")
+
+    if environment == "production":
+        return os.getenv("LANGSMITH_PROJECT_PRODUCTION", "code-chef-production")
+    elif environment == "evaluation":
+        return os.getenv("LANGSMITH_PROJECT_EVALUATION", "code-chef-evaluation")
+    elif environment == "training":
+        return os.getenv("LANGSMITH_PROJECT_TRAINING", "code-chef-training")
+    else:
+        return os.getenv("LANGSMITH_PROJECT", "code-chef-infrastructure")
 
 
 class DeploymentConfig(BaseModel):
@@ -76,7 +110,11 @@ class ModelOpsDeployment:
                 f"Models config not found: {self.models_config_path}"
             )
 
-    @traceable(name="deploy_model_to_agent")
+    @traceable(
+        name="deploy_model_to_agent",
+        project_name=_get_langsmith_project(),
+        metadata=_get_deployment_trace_metadata(),
+    )
     async def deploy_model_to_agent(
         self,
         agent_name: str,
@@ -183,7 +221,11 @@ class ModelOpsDeployment:
             rollback_available=(current_model is not None),
         )
 
-    @traceable(name="rollback_deployment")
+    @traceable(
+        name="rollback_deployment",
+        project_name=_get_langsmith_project(),
+        metadata=_get_deployment_trace_metadata(),
+    )
     async def rollback_deployment(
         self, agent_name: str, to_version: Optional[str] = None
     ) -> DeploymentResult:
@@ -235,7 +277,11 @@ class ModelOpsDeployment:
             version=target_version.version,
         )
 
-    @traceable(name="list_agent_models")
+    @traceable(
+        name="list_agent_models",
+        project_name=_get_langsmith_project(),
+        metadata=_get_deployment_trace_metadata(),
+    )
     async def list_agent_models(
         self, agent_name: str, include_archived: bool = False
     ) -> List[Dict[str, Any]]:
@@ -277,7 +323,11 @@ class ModelOpsDeployment:
 
         return result
 
-    @traceable(name="get_current_model")
+    @traceable(
+        name="get_current_model",
+        project_name=_get_langsmith_project(),
+        metadata=_get_deployment_trace_metadata(),
+    )
     async def get_current_model(self, agent_name: str) -> Optional[Dict[str, Any]]:
         """Get currently deployed model for an agent.
 

@@ -1,0 +1,250 @@
+# LangSmith Tracing Metadata Schema
+# Version: 1.0.0
+# Effective Date: December 10, 2025
+#
+# This schema defines the standard metadata structure for all LangSmith traces
+# in the code-chef project. It supports:
+# - Longitudinal tracking (measure improvement over time)
+# - A/B testing (compare code-chef vs baseline)
+# - Environment isolation (separate production from training/evaluation/testing)
+
+# ==============================================================================
+# EXPERIMENT IDENTIFICATION
+# ==============================================================================
+# Used for A/B testing and experiment tracking
+
+experiment_group:
+  type: enum
+  values:
+    - code-chef # Code-chef extension with trained models
+    - baseline # Baseline LLM without code-chef enhancements
+  required: true
+  description: |
+    Identifies which variant of the system generated this trace.
+    Used for A/B test comparisons.
+
+experiment_id:
+  type: string
+  format: "exp-YYYY-MM-NNN" # e.g., "exp-2025-01-001"
+  required: false
+  description: |
+    Unique identifier for a specific experiment run.
+    All traces from the same experiment share this ID.
+    Used to correlate baseline vs code-chef results.
+
+task_id:
+  type: string
+  format: "task-{uuid}" # e.g., "task-550e8400-e29b-41d4-a716-446655440000"
+  required: false
+  description: |
+    Unique identifier for a specific task.
+    Used to correlate multiple traces that belong to the same task
+    (e.g., baseline run + code-chef run of the same prompt).
+
+# ==============================================================================
+# VERSION TRACKING (Longitudinal)
+# ==============================================================================
+# Track performance improvement as the system evolves
+
+extension_version:
+  type: string
+  format: semver # e.g., "1.2.3"
+  required: true
+  description: |
+    Version of the VS Code extension generating this trace.
+    Used for longitudinal tracking of extension improvements.
+    Example query: "How did accuracy improve from v1.0 to v1.5?"
+
+model_version:
+  type: string
+  format: "{model-name}-{version}" # e.g., "codellama-13b-v2"
+  required: true
+  description: |
+    Version of the model being used.
+    Includes both base model name and fine-tuned version.
+    Used to track model improvements over time.
+
+config_hash:
+  type: string
+  format: "sha256:{hash}" # First 8 chars of config file hash
+  required: false
+  description: |
+    Hash of the agent configuration used for this run.
+    Helps identify when config changes affected performance.
+    Generated from config/agents/models.yaml
+
+# ==============================================================================
+# ENVIRONMENT CLASSIFICATION
+# ==============================================================================
+# Separate production traces from training/evaluation/testing
+
+environment:
+  type: enum
+  values:
+    - production # Live extension usage
+    - training # Model training operations
+    - evaluation # Model evaluation/comparison runs
+    - test # Automated test suite runs
+  required: true
+  description: |
+    Execution environment for this trace.
+    CRITICAL for preventing contamination of production metrics
+    with training/evaluation/test data.
+
+# ==============================================================================
+# MODULE CLASSIFICATION
+# ==============================================================================
+# Categorize traces by functional module
+
+module:
+  type: enum
+  values:
+    - training # Model training operations
+    - evaluation # Model evaluation/comparison
+    - deployment # Model deployment operations
+    - registry # Model registry CRUD operations
+    - coordinator # ModelOps workflow coordination
+    - feature_dev # Feature development agent
+    - code_review # Code review agent
+    - infrastructure # Infrastructure agent (non-ModelOps)
+    - cicd # CI/CD agent
+    - documentation # Documentation agent
+    - supervisor # Supervisor agent
+  required: true
+  description: |
+    Functional module generating this trace.
+    Used for filtering and analyzing specific workflows.
+
+# ==============================================================================
+# ADDITIONAL CONTEXT
+# ==============================================================================
+# Optional metadata for enhanced analysis
+
+user_id:
+  type: string
+  required: false
+  description: |
+    Identifier for the user (if applicable).
+    Used for user-specific analysis.
+
+session_id:
+  type: string
+  required: false
+  description: |
+    Session identifier for multi-turn conversations.
+    Used to group related traces together.
+
+cost:
+  type: float
+  required: false
+  description: |
+    Cost in USD for this operation (if applicable).
+    Used for cost tracking and optimization.
+
+duration_ms:
+  type: integer
+  required: false
+  description: |
+    Duration in milliseconds (if not automatically tracked).
+    Used for performance analysis.
+
+# ==============================================================================
+# PROJECT MAPPING
+# ==============================================================================
+# Maps traces to LangSmith projects based on environment and module
+
+project_mapping:
+  production:
+    target_project: "code-chef-production"
+    description: "All live extension usage"
+
+  experiments:
+    target_project: "code-chef-experiments"
+    description: "A/B test comparisons (baseline vs code-chef)"
+    filter: "experiment_id is not null"
+
+  training:
+    target_project: "code-chef-training"
+    description: "Model training runs"
+    filter: "module == 'training'"
+
+  evaluation:
+    target_project: "code-chef-evaluation"
+    description: "Model evaluation runs"
+    filter: "module == 'evaluation'"
+
+# ==============================================================================
+# EXAMPLE USAGE
+# ==============================================================================
+
+examples:
+  - name: "Production trace from feature_dev agent"
+    metadata:
+      experiment_group: "code-chef"
+      extension_version: "1.2.3"
+      model_version: "codellama-13b-v2"
+      environment: "production"
+      module: "feature_dev"
+      config_hash: "sha256:a1b2c3d4"
+
+  - name: "Training operation"
+    metadata:
+      experiment_group: "code-chef"
+      extension_version: "1.2.3"
+      model_version: "codellama-13b-v2"
+      environment: "training"
+      module: "training"
+
+  - name: "A/B test comparison"
+    metadata:
+      experiment_id: "exp-2025-01-001"
+      task_id: "task-550e8400-e29b-41d4-a716-446655440000"
+      experiment_group: "baseline" # or "code-chef"
+      extension_version: "1.2.3"
+      model_version: "codellama-13b"
+      environment: "evaluation"
+      module: "evaluation"
+
+  - name: "Test suite run"
+    metadata:
+      experiment_group: "code-chef"
+      extension_version: "1.2.3"
+      environment: "test"
+      module: "feature_dev"
+
+# ==============================================================================
+# ANALYSIS QUERIES
+# ==============================================================================
+# Example LangSmith filter queries
+
+queries:
+  longitudinal_tracking:
+    - description: "Track feature_dev performance over versions"
+      query: 'module:"feature_dev" AND environment:"production"'
+      group_by: "extension_version"
+
+    - description: "Model improvement comparison"
+      query: 'module:"training" AND environment:"training"'
+      group_by: "model_version"
+
+  ab_testing:
+    - description: "Compare baseline vs code-chef for experiment"
+      query: 'experiment_id:"exp-2025-01-001"'
+      split_by: "experiment_group"
+
+    - description: "Same task, different groups"
+      query: 'task_id:"task-550e8400-..."'
+      split_by: "experiment_group"
+
+  environment_isolation:
+    - description: "Production traces only"
+      query: 'environment:"production"'
+
+    - description: "Exclude test/training from metrics"
+      query: 'NOT (environment:"test" OR environment:"training")'
+
+  cost_analysis:
+    - description: "Training costs by model version"
+      query: 'module:"training"'
+      aggregate: "SUM(cost)"
+      group_by: "model_version"

@@ -59,6 +59,40 @@ except ImportError:
     EVALUATORS_AVAILABLE = False
     logger.warning("Evaluators not available - evaluation will be limited")
 
+
+def _get_evaluation_trace_metadata() -> Dict[str, str]:
+    """Get standard metadata for evaluation traces.
+
+    Returns metadata following the schema in config/observability/tracing-schema.yaml
+    """
+    return {
+        "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
+        "environment": os.getenv("TRACE_ENVIRONMENT", "evaluation"),
+        "module": "evaluation",
+        "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
+        "model_version": os.getenv("MODEL_VERSION", "unknown"),
+        "experiment_id": os.getenv("EXPERIMENT_ID"),
+        "task_id": os.getenv("TASK_ID"),
+        "agent": os.getenv("AGENT_NAME", "infrastructure"),
+    }
+
+
+def _get_langsmith_project() -> str:
+    """Determine LangSmith project based on environment.
+
+    Returns:
+        Project name for evaluation traces
+    """
+    environment = os.getenv("TRACE_ENVIRONMENT", "evaluation")
+
+    if environment == "evaluation" and os.getenv("EXPERIMENT_ID"):
+        return os.getenv("LANGSMITH_PROJECT_EXPERIMENTS", "code-chef-experiments")
+    elif environment == "evaluation":
+        return os.getenv("LANGSMITH_PROJECT_EVALUATION", "code-chef-evaluation")
+    else:
+        return os.getenv("LANGSMITH_PROJECT", "code-chef-infrastructure")
+
+
 # Import registry
 from .registry import EvaluationScores, ModelRegistry
 
@@ -125,7 +159,11 @@ class ModelEvaluator:
             risk_assessment_accuracy,
         ]
 
-    @traceable(name="modelops_evaluate_model")
+    @traceable(
+        name="modelops_evaluate_model",
+        project_name=_get_langsmith_project(),
+        metadata=_get_evaluation_trace_metadata(),
+    )
     def evaluate_model(
         self,
         model_endpoint: str,
@@ -208,7 +246,11 @@ class ModelEvaluator:
             logger.error(f"Evaluation failed: {e}")
             raise
 
-    @traceable(name="modelops_compare_models")
+    @traceable(
+        name="modelops_compare_models",
+        project_name=_get_langsmith_project(),
+        metadata=_get_evaluation_trace_metadata(),
+    )
     def compare_models(
         self,
         agent_name: str,
@@ -442,7 +484,11 @@ class ModelEvaluator:
                 f"Performance regression ({overall_improvement_pct:+.1f}%) - not recommended",
             )
 
-    @traceable(name="modelops_generate_report")
+    @traceable(
+        name="modelops_generate_report",
+        project_name=_get_langsmith_project(),
+        metadata=_get_evaluation_trace_metadata(),
+    )
     def generate_comparison_report(self, comparison: EvaluationComparison) -> str:
         """Generate human-readable comparison report.
 
@@ -538,7 +584,11 @@ class ModelEvaluator:
 
         return report
 
-    @traceable(name="modelops_evaluate_and_store")
+    @traceable(
+        name="modelops_evaluate_and_store",
+        project_name=_get_langsmith_project(),
+        metadata=_get_evaluation_trace_metadata(),
+    )
     def evaluate_and_store_scores(
         self, agent_name: str, version: str, eval_dataset: str
     ) -> EvaluationScores:
