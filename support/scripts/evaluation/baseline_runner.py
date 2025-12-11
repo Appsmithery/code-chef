@@ -38,14 +38,27 @@ sys.path.insert(0, str(project_root))
 
 try:
     from langsmith import Client as LangSmithClient
-    from langsmith.utils import traceable
+    from langsmith import traceable
 
     LANGSMITH_AVAILABLE = True
 except ImportError:
-    print("ERROR: LangSmith not available. Install with: pip install langsmith")
-    sys.exit(1)
+    print("WARNING: LangSmith not available. Tracing will be disabled.")
 
+    # Fallback no-op decorator
+    def traceable(name=None, project_name=None):
+        def decorator(func):
+            return func
+
+        return decorator
+
+    LANGSMITH_AVAILABLE = False
+
+import httpx
 from loguru import logger
+
+# Import longitudinal tracker for database persistence
+sys.path.insert(0, str(project_root / "shared"))
+from lib.longitudinal_tracker import longitudinal_tracker
 
 
 def _get_baseline_trace_metadata(mode: str, task_id: str) -> Dict[str, str]:
@@ -91,7 +104,7 @@ class BaselineRunner:
             raise ValueError(f"Invalid mode: {mode}. Must be 'baseline' or 'code-chef'")
 
         self.mode = mode
-        self.langsmith_client = LangSmithClient()
+        self.langsmith_client = LangSmithClient() if LANGSMITH_AVAILABLE else None
 
         # Set environment variables for tracing
         os.environ["EXPERIMENT_GROUP"] = mode
@@ -145,31 +158,109 @@ class BaselineRunner:
         """Run task through baseline LLM without code-chef enhancements.
 
         This is the null hypothesis - what the LLM produces without fine-tuning.
+        Uses OpenRouter API with untrained base model.
         """
         start_time = datetime.now()
 
-        # TODO: Implement actual baseline LLM invocation
-        # For now, return mock result
-        # In production, this would call:
-        # - OpenRouter with base model (not fine-tuned)
-        # - Or local model without code-chef training
+        # Use OpenRouter for baseline (untrained model)
+        openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+        if not openrouter_api_key:
+            logger.warning("OPENROUTER_API_KEY not set, using mock response")
+            return self._mock_baseline_response(prompt, task_id, metadata, start_time)
 
-        result = {
+        # Choose baseline model (untrained, general purpose)
+        baseline_model = os.getenv("BASELINE_MODEL", "anthropic/claude-3.5-haiku")
+
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {openrouter_api_key}",
+                        "HTTP-Referer": "https://github.com/Appsmithery/Dev-Tools",
+                        "X-Title": "code-chef-baseline-evaluation",
+                    },
+                    json={
+                        "model": baseline_model,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "max_tokens": 2000,
+                        "temperature": 0.7,
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            # Extract metrics from response
+            output = data["choices"][0]["message"]["content"]
+            usage = data.get("usage", {})
+            tokens_used = usage.get("total_tokens", 0)
+            prompt_tokens = usage.get("prompt_tokens", 0)
+            completion_tokens = usage.get("completion_tokens", 0)
+
+            # Calculate latency and cost
+            latency_ms = (datetime.now() - start_time).total_seconds() * 1000
+
+            # Cost calculation (OpenRouter pricing varies by model)
+            # Claude 3.5 Haiku: ~$1.00/1M input, ~$5.00/1M output tokens
+            cost_per_input_token = 1.00 / 1_000_000
+            cost_per_output_token = 5.00 / 1_000_000
+            cost_usd = (prompt_tokens * cost_per_input_token) + (
+                completion_tokens * cost_per_output_token
+            )
+
+            result = {
+                "task_id": task_id,
+                "mode": "baseline",
+                "output": output,
+                "tokens_used": tokens_used,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "latency_ms": latency_ms,
+                "cost_usd": cost_usd,
+                "model": baseline_model,
+                "metadata": metadata,
+                "timestamp": start_time.isoformat(),
+                "success": True,
+            }
+
+            logger.info(
+                f"✓ Baseline task {task_id[:8]}... completed: {tokens_used} tokens, "
+                f"{latency_ms:.0f}ms, ${cost_usd:.6f}"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"✗ Baseline task {task_id[:8]}... failed: {e}")
+            return {
+                "task_id": task_id,
+                "mode": "baseline",
+                "error": str(e),
+                "success": False,
+                "metadata": metadata,
+                "timestamp": start_time.isoformat(),
+            }
+
+    def _mock_baseline_response(
+        self, prompt: str, task_id: str, metadata: Dict[str, str], start_time: datetime
+    ) -> Dict[str, Any]:
+        """Return mock baseline response when OpenRouter API is unavailable."""
+        latency_ms = (datetime.now() - start_time).total_seconds() * 1000
+
+        return {
             "task_id": task_id,
             "mode": "baseline",
-            "output": f"[BASELINE OUTPUT PLACEHOLDER for: {prompt[:50]}...]",
+            "output": f"[MOCK BASELINE: API key not configured. Prompt: {prompt[:50]}...]",
             "tokens_used": 500,
-            "latency_ms": 1500,
+            "prompt_tokens": 350,
+            "completion_tokens": 150,
+            "latency_ms": latency_ms,
             "cost_usd": 0.001,
+            "model": "mock-baseline",
             "metadata": metadata,
             "timestamp": start_time.isoformat(),
+            "success": False,
+            "mock": True,
         }
-
-        duration = (datetime.now() - start_time).total_seconds()
-        result["duration_seconds"] = duration
-
-        logger.info(f"Baseline task {task_id} completed in {duration:.2f}s")
-        return result
 
     @traceable(
         name="codechef_agent_invoke",
@@ -181,31 +272,71 @@ class BaselineRunner:
         """Run task through code-chef extension with trained models.
 
         This is the experimental condition - code-chef with fine-tuned models.
+        Calls the orchestrator API endpoint.
         """
         start_time = datetime.now()
 
-        # TODO: Implement actual code-chef invocation
-        # For now, return mock result
-        # In production, this would call:
-        # - Code-chef VS Code extension API
-        # - Or agent orchestrator directly with trained models
+        # Call code-chef orchestrator
+        orchestrator_url = os.getenv("ORCHESTRATOR_URL", "http://localhost:8001")
 
-        result = {
-            "task_id": task_id,
-            "mode": "code-chef",
-            "output": f"[CODE-CHEF OUTPUT PLACEHOLDER for: {prompt[:50]}...]",
-            "tokens_used": 450,  # Should be lower due to efficiency
-            "latency_ms": 1200,  # Should be faster
-            "cost_usd": 0.0008,  # Should be cheaper
-            "metadata": metadata,
-            "timestamp": start_time.isoformat(),
-        }
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                response = await client.post(
+                    f"{orchestrator_url}/execute",
+                    json={
+                        "message": prompt,
+                        "metadata": {
+                            "experiment_id": metadata.get("experiment_id"),
+                            "task_id": task_id,
+                            "experiment_group": "code-chef",
+                        },
+                    },
+                )
+                response.raise_for_status()
+                data = response.json()
 
-        duration = (datetime.now() - start_time).total_seconds()
-        result["duration_seconds"] = duration
+            # Extract metrics from orchestrator response
+            output = data.get("result", {}).get("output", "")
+            tokens_used = data.get("metrics", {}).get("total_tokens", 0)
+            prompt_tokens = data.get("metrics", {}).get("prompt_tokens", 0)
+            completion_tokens = data.get("metrics", {}).get("completion_tokens", 0)
+            cost_usd = data.get("metrics", {}).get("total_cost", 0)
+            agents_used = data.get("agents_used", [])
 
-        logger.info(f"Code-chef task {task_id} completed in {duration:.2f}s")
-        return result
+            # Calculate latency
+            latency_ms = (datetime.now() - start_time).total_seconds() * 1000
+
+            result = {
+                "task_id": task_id,
+                "mode": "code-chef",
+                "output": output,
+                "tokens_used": tokens_used,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "latency_ms": latency_ms,
+                "cost_usd": cost_usd,
+                "agents_used": agents_used,
+                "metadata": metadata,
+                "timestamp": start_time.isoformat(),
+                "success": True,
+            }
+
+            logger.info(
+                f"✓ Code-chef task {task_id[:8]}... completed: {tokens_used} tokens, "
+                f"{latency_ms:.0f}ms, ${cost_usd:.6f}, agents={agents_used}"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"✗ Code-chef task {task_id[:8]}... failed: {e}")
+            return {
+                "task_id": task_id,
+                "mode": "code-chef",
+                "error": str(e),
+                "success": False,
+                "metadata": metadata,
+                "timestamp": start_time.isoformat(),
+            }
 
     async def run_tasks(self, tasks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Run multiple tasks.
@@ -222,6 +353,11 @@ class BaselineRunner:
             try:
                 result = await self.run_task(task)
                 results.append(result)
+
+                # Store in longitudinal tracker if available
+                if longitudinal_tracker._initialized and result.get("success"):
+                    await self._store_result(result)
+
             except Exception as e:
                 logger.error(f"Task {task.get('task_id')} failed: {e}")
                 results.append(
@@ -233,6 +369,43 @@ class BaselineRunner:
                 )
 
         return results
+
+    async def _store_result(self, result: Dict[str, Any]):
+        """Store result in longitudinal tracker.
+
+        Args:
+            result: Task result with metrics
+        """
+        try:
+            metadata = result.get("metadata", {})
+            experiment_id = metadata.get(
+                "experiment_id", os.getenv("EXPERIMENT_ID", "unknown")
+            )
+
+            # For now, store basic metrics only
+            # Evaluation scores (accuracy, completeness, etc.) will come from evaluators
+            await longitudinal_tracker.record_result(
+                experiment_id=experiment_id,
+                task_id=result["task_id"],
+                experiment_group=result["mode"],
+                extension_version=metadata.get("extension_version", "1.0.0"),
+                model_version=result.get("model", "unknown"),
+                agent_name=metadata.get("agent_name"),
+                scores={},  # Will be filled by evaluators
+                metrics={
+                    "latency_ms": result.get("latency_ms", 0),
+                    "tokens_used": result.get("tokens_used", 0),
+                    "cost_usd": result.get("cost_usd", 0),
+                },
+                success=result.get("success", True),
+                error_message=result.get("error"),
+                metadata=metadata,
+            )
+            logger.debug(
+                f"Stored result for task {result['task_id'][:8]}... in database"
+            )
+        except Exception as e:
+            logger.warning(f"Failed to store result in database: {e}")
 
     def save_results(self, results: List[Dict[str, Any]], output_path: str):
         """Save results to JSON file.
@@ -310,6 +483,13 @@ async def main():
     # Set experiment ID
     if args.experiment_id:
         os.environ["EXPERIMENT_ID"] = args.experiment_id
+
+    # Initialize longitudinal tracker for database persistence
+    try:
+        await longitudinal_tracker.initialize()
+        logger.info("✓ Longitudinal tracker initialized")
+    except Exception as e:
+        logger.warning(f"✗ Longitudinal tracker unavailable: {e}")
 
     # Load tasks
     tasks = load_tasks(args.tasks)
