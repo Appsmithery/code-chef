@@ -80,7 +80,54 @@ python support/scripts/evaluation/query_evaluation_results.py \
   --export results.csv --agent feature_dev --days 90
 ```
 
-### 5. Create Comprehensive A/B Test Suite (Validation & regression detection)
+### 5. Create Comprehensive A/B Test Suite (Validation & regression detection) ✅ COMPLETED
+
+**Linear**: [CHEF-243](https://linear.app/dev-ops/issue/CHEF-243)  
+**Status**: ✅ Completed (Phase 5)  
+**Completed**: December 11, 2025
+
+**Implementation Summary**:
+
+- ✅ Created `test_baseline_comparison.py` for end-to-end A/B workflow validation
+- ✅ Added statistical significance testing using comparison_engine
+- ✅ Implemented property-based tests with Hypothesis for evaluator robustness
+- ✅ Created `test_longitudinal_tracking.py` for version-over-version regression detection
+- ✅ Comprehensive test coverage: 80+ test cases across 4 test files
+
+**Key Files Created**:
+
+- `support/tests/evaluation/test_baseline_comparison.py` (645 lines) - End-to-end A/B workflow
+- `support/tests/evaluation/test_property_based.py` (681 lines) - Property-based tests with Hypothesis
+- `support/tests/integration/test_longitudinal_tracking.py` (575 lines) - Regression detection
+
+**Test Coverage**:
+
+- **A/B Workflow**: Complete workflow from baseline → code-chef → comparison
+- **Statistical Significance**: Improvement calculations, winner determination, recommendation logic
+- **Property-Based**: 15 properties tested with 100+ examples each (Hypothesis)
+- **Regression Detection**: Version-over-version tracking, mixed regressions, time-series queries
+- **Edge Cases**: Missing data, zero values, large improvements, transitive ordering
+
+**Usage Examples**:
+
+```bash
+# Run all A/B tests
+pytest support/tests/evaluation/test_baseline_comparison.py -v
+
+# Run property-based tests (default: 100 examples)
+pytest support/tests/evaluation/test_property_based.py -v
+
+# Run with thorough profile (500 examples)
+HYPOTHESIS_PROFILE=thorough pytest support/tests/evaluation/test_property_based.py -v
+
+# Run regression detection tests
+pytest support/tests/integration/test_longitudinal_tracking.py -v
+
+# Run all Phase 5 tests
+pytest support/tests/evaluation/test_baseline_comparison.py \
+       support/tests/evaluation/test_property_based.py \
+       support/tests/integration/test_longitudinal_tracking.py -v
+```
 
 **Linear**: [CHEF-243](https://linear.app/dev-ops/issue/CHEF-243)
 
@@ -88,11 +135,11 @@ python support/scripts/evaluation/query_evaluation_results.py \
 - Test task execution through both baseline and code-chef with task_id correlation
 - Assert statistical significance of improvements using comparison_engine
 - Add property-based tests with Hypothesis for evaluator robustness following `conftest.py:110-121` profiles
-- Create `support/tests/integration/test_longitudinal_tracking.py` for version-over-version regression detection
 
 ### 6. Update Testing Infrastructure & Documentation (Enable team usage)
 
-**Linear**: [CHEF-245](https://linear.app/dev-ops/issue/CHEF-245)
+**Linear**: [CHEF-245](https://linear.app/dev-ops/issue/CHEF-245)  
+**Status**: 🔄 Ready to Start (Phase 6)
 
 - Add fixtures to `conftest.py`: `longitudinal_tracker_fixture`, `baseline_llm_client`, `ab_experiment_id`
 - Update `tracing-schema.yaml` examples with task_id correlation (lines 195-219)
