@@ -26,7 +26,7 @@ Each agent uses the optimal model for its specialty via OpenRouter:
 
 - `feature-dev`: **Claude 3.5 Sonnet** - Code implementation across ANY language/framework (Python, JS/TS, Go, Java, C#, Rust, Ruby, PHP; FastAPI, Express, Spring, .NET, Django, Rails, React, Vue, Angular)
 - `code-review`: **GPT-4o** - Security/quality analysis with superior reasoning (OWASP Top 10, language-specific vulnerabilities, multi-language SAST)
-- `infrastructure`: **Llama 3.1 70B** - Multi-cloud IaC for ANY provider (AWS, Azure, GCP, DigitalOcean; Terraform, Pulumi, CloudFormation, ARM, Bicep)
+- `infrastructure`: **Llama 3.1 70B** - Multi-cloud IaC + ModelOps for ANY provider (AWS, Azure, GCP, DigitalOcean; Terraform, Pulumi, CloudFormation, ARM, Bicep; Model training/evaluation/deployment)
 - `cicd`: **Llama 3.1 70B** - Multi-platform CI/CD for ANY tool (GitHub Actions, GitLab CI, Jenkins, CircleCI, Azure DevOps, Travis CI, Bitbucket Pipelines)
 - `documentation`: **Claude 3.5 Sonnet** - Polyglot documentation in ANY format (JSDoc, Javadoc, Rustdoc, XML comments, Swagger/OpenAPI, Markdown)
 
@@ -37,8 +37,9 @@ Route based on **what needs to be done**, not **what technology is used**:
 1. **Feature requests/bug fixes** → feature-dev (regardless of language: Python, JavaScript, Java, Go, C#, Rust, Ruby, PHP)
 2. **Security concerns/quality issues** → code-review (regardless of language or framework)
 3. **Infrastructure changes** → infrastructure (regardless of cloud provider: AWS, Azure, GCP, DigitalOcean)
-4. **Pipeline updates/build automation** → cicd (regardless of CI/CD platform: GitHub Actions, GitLab CI, Jenkins, CircleCI, Azure DevOps)
-5. **Documentation needs** → documentation (regardless of format: JSDoc, Javadoc, Rustdoc, Swagger, Markdown)
+4. **ModelOps requests** → infrastructure (model training, evaluation, deployment, rollback, GGUF conversion)
+5. **Pipeline updates/build automation** → cicd (regardless of CI/CD platform: GitHub Actions, GitLab CI, Jenkins, CircleCI, Azure DevOps)
+6. **Documentation needs** → documentation (regardless of format: JSDoc, Javadoc, Rustdoc, Swagger, Markdown)
 
 ## MECE Principle (Mutually Exclusive, Collectively Exhaustive)
 

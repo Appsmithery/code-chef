@@ -164,6 +164,42 @@ Task → RiskAssessor → HIGH/CRITICAL?
 | RAG indexing          | `support/scripts/rag/index_*.py`                                     |
 | Observability         | LangSmith: `smith.langchain.com`, Grafana: `appsmithery.grafana.net` |
 
+## ModelOps Extension
+
+The Infrastructure agent supports full model training, evaluation, and deployment lifecycle:
+
+**Training**: HuggingFace Space API (`alextorelli/code-chef-modelops-trainer`)
+
+- Demo mode: $0.50, 5 minutes (100 examples)
+- Production mode: $3.50-$15, 90 minutes (full dataset)
+- AutoTrain handles GPU selection, LoRA config, monitoring
+
+**Evaluation**: LangSmith-based comparison using existing evaluators
+
+- Weighted scoring: 30% accuracy, 25% completeness, 20% efficiency, 15% latency, 10% integration
+- Automatic recommendations: deploy, deploy_canary, needs_review, reject
+
+**Deployment**: Immediate deployment (100%) with rollback support
+
+- Updates `config/agents/models.yaml` automatically
+- Creates backups before changes, rollback in <60 seconds
+
+**Registry**: Version tracking in `config/models/registry.json` with Pydantic validation
+
+**VS Code Integration**: 5 commands in `codechef.modelops.*` namespace
+
+- Training wizard with cost estimation and live progress monitoring
+- Evaluation results visualization with recommendations
+- Model version history and GGUF conversion
+
+**Key Files**:
+
+- `agent_orchestrator/agents/infrastructure/modelops/coordinator.py` - Main orchestration
+- `agent_orchestrator/agents/infrastructure/modelops/training.py` - AutoTrain integration
+- `agent_orchestrator/agents/infrastructure/modelops/evaluation.py` - LangSmith comparison
+- `agent_orchestrator/agents/infrastructure/modelops/deployment.py` - Config management
+- `extensions/vscode-codechef/src/commands/modelops.ts` - VS Code commands
+
 ## Quality Bar
 
 - Use Pydantic models and type hints on all functions
