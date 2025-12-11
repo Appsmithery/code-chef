@@ -1,9 +1,101 @@
 # Changelog
 
-All notable changes to the "code/chef - AI Agent Orchestrator" extension will be documented in this file.
+All notable changes to the "code/chef - AI DevOps Team" extension will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [1.0.0] - 2025-12-11 - MVP Release 🎉
+
+### Overview
+
+First production release of code/chef featuring comprehensive ModelOps, advanced tracing, and 6 specialized AI agents orchestrated by LangGraph.
+
+### Core Features
+
+#### 🤖 ModelOps: Complete LLM Lifecycle
+
+- **Training**: Fine-tune models on your codebase via HuggingFace AutoTrain
+  - Demo mode: $0.50, 5 minutes (100 examples)
+  - Production mode: $3.50, 60 minutes (1000+ examples)
+- **Evaluation**: 5 weighted metrics (accuracy 30%, completeness 25%, efficiency 20%, latency 15%, integration 10%)
+- **Deployment**: Safe deployment with automatic backup and <60s rollback
+- **VS Code Commands**: `codechef.modelops.train`, `.evaluate`, `.deploy`, `.rollback`, `.modelVersions`
+- **A/B Testing**: Compare baseline vs fine-tuned models with comprehensive experiment tracking
+
+#### 📊 Observability & Tracing
+
+- **LangSmith Integration**: Purpose-based projects (production, training, evaluation, experiments)
+- **Metadata Schema v1.0.0**: 7-category tracing with experiment_group, environment, module, model_version
+- **30+ @traceable Decorators**: Complete visibility across all ModelOps operations
+- **Grafana Dashboards**: Real-time token usage, cost tracking, latency monitoring
+- **Cost Management**: Budget alerts, per-agent tracking, optimization strategies
+
+#### 🤝 6 Specialized Agents
+
+- **Supervisor** (Claude 3.5 Sonnet): Intelligent task routing and orchestration
+- **Feature Dev** (Qwen 2.5 Coder 32B): Purpose-built code generation
+- **Code Review** (DeepSeek V3): Security and quality analysis
+- **Infrastructure** (Gemini 2.0 Flash): IaC, Docker, Terraform, ModelOps
+- **CI/CD** (Gemini 2.0 Flash): Pipeline automation
+- **Documentation** (DeepSeek V3): Technical writing
+
+#### 🔧 Workflow Management
+
+- **Smart Workflow Router**: Heuristic + LLM fallback routing (<10ms for common patterns)
+- **Slash Commands**: `/workflow`, `/workflows`, `/status`, `/approve`
+- **Template System**: Pre-built workflows for feature dev, PR deployment, hotfixes, infrastructure, docs
+- **Context Extraction**: Auto-detect branch type, issue IDs, PR numbers
+- **HITL Approvals**: Risk-based approval requests via Linear webhooks
+
+#### 🛠️ 150+ MCP Tools
+
+- **Progressive Loading**: Minimal (10-30), Progressive (30-60), Full (150+) strategies
+- **GitHub Integration**: PRs, issues, actions
+- **Linear Integration**: Project management, approvals, issue tracking
+- **Docker Management**: Container inspection, logs, health checks
+- **Python Tools**: Environment configuration, package installation, validation
+
+### Technical Architecture
+
+- **LangGraph StateGraph**: Workflow orchestration with PostgreSQL checkpointing
+- **Event Sourcing**: Immutable workflow events with reducer pattern
+- **Cross-Agent Memory**: RAG-powered insight sharing across agent handoffs
+- **Token Optimization**: Up to 95% savings with progressive tool loading
+- **Cost Tracking**: Real-time per-agent monitoring with Prometheus metrics
+
+### Documentation
+
+- **[LLM Operations Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/operations/llm-operations.md)**: Canonical 700+ line reference
+- **[Architecture Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/ARCHITECTURE.md)**: System design and patterns
+- **[Tracing Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/integrations/langsmith-tracing.md)**: Observability setup
+- **[Quick Start](https://github.com/Appsmithery/code-chef/blob/main/support/docs/QUICKSTART.md)**: Installation and setup
+
+### Model Selection Strategy
+
+| Agent          | Model              | Cost/1M | Context | Best For          |
+| -------------- | ------------------ | ------- | ------- | ----------------- |
+| Supervisor     | Claude 3.5 Sonnet  | $3.00   | 200K    | Complex routing   |
+| Feature Dev    | Qwen 2.5 Coder 32B | $0.07   | 128K    | Code generation   |
+| Code Review    | DeepSeek V3        | $0.75   | 64K     | Analysis          |
+| Infrastructure | Gemini 2.0 Flash   | $0.25   | 1M      | IaC configs       |
+| CI/CD          | Gemini 2.0 Flash   | $0.25   | 1M      | YAML pipelines    |
+| Documentation  | DeepSeek V3        | $0.75   | 64K     | Technical writing |
+
+### Configuration
+
+- **Environment Profiles**: Production (full models) vs Development (cheaper 8b models)
+- **Tool Loading**: Configurable strategy (minimal/progressive/full)
+- **Token Budget**: Per-request limits with overflow handling
+- **Streaming**: Real-time token streaming for immediate feedback
+
+---
+
+## Pre-1.0 Development History
+
+For detailed development history prior to MVP release, see [CHANGELOG-ARCHIVE.md](CHANGELOG-ARCHIVE.md).
 
 ## [0.8.1] - 2025-12-07
 
