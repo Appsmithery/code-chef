@@ -34,7 +34,7 @@ The Infrastructure Agent is responsible for Infrastructure as Code (IaC), contai
 
 - **LangSmith-based comparison** using existing evaluators
 - **Weighted scoring**: 30% accuracy, 25% completeness, 20% efficiency, 15% latency, 10% integration
-- **Automatic recommendations**: deploy, deploy_canary, needs_review, reject
+- **Automatic recommendations**: deploy, needs_review, reject
 - Side-by-side model comparison reports
 
 #### Deployment
