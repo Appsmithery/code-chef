@@ -790,7 +790,7 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 
 **Key Simplification**: Removed canary deployment (20% → 50% → 100% progressive rollout) in favor of immediate deployment for single-user scenario.
 
-### Phase 4: UX Polish + GGUF Support ✅ **60% COMPLETE**
+### Phase 4: UX Polish + GGUF Support ✅ **85% COMPLETE**
 
 **Status**: IN PROGRESS (CHEF-214)  
 **GitHub**:
@@ -798,8 +798,13 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 - [modelops.ts](https://github.com/Appsmithery/Dev-Tools/blob/main/extensions/vscode-codechef/src/commands/modelops.ts)
 - [extension.ts](https://github.com/Appsmithery/Dev-Tools/blob/main/extensions/vscode-codechef/src/extension.ts)
 - [package.json](https://github.com/Appsmithery/Dev-Tools/blob/main/extensions/vscode-codechef/package.json)
+- [coordinator.py](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/coordinator.py)
+- [training.py](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/modelops/training.py)
+- [**init**.py](https://github.com/Appsmithery/Dev-Tools/blob/main/agent_orchestrator/agents/infrastructure/__init__.py)
 
 **Completed**:
+
+**VS Code Extension (60%)**:
 
 - ✅ Added 5 ModelOps commands to `extensions/vscode-codechef/package.json`
   - `codechef.modelops.trainAgent` - Training job submission
@@ -817,15 +822,31 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
 - ✅ Registered commands in `extension.ts` activation
 - ✅ Integrated OrchestratorClient for backend communication
 
+**Backend Integration (100%)**:
+
+- ✅ Enhanced `InfrastructureAgent.handle_modelops_request()` with:
+  - Intent detection from natural language
+  - Automatic context extraction (agent names, model repos, job IDs)
+  - Exception handling with JSON-serializable errors
+- ✅ Standardized `ModelOpsCoordinator` responses:
+  - All handlers return `{"success": True/False, ...}` format
+  - Training: `job_id`, `hub_repo`, `trackio_url`, `estimated_cost_usd`, `estimated_duration_minutes`
+  - Evaluation: `baseline_score`, `candidate_score`, `improvement_pct`, `breakdown`, `recommendation`
+  - Deployment: `deployed_at` (ISO), `version`, `rollback_available`
+  - Monitor: `progress_pct`, `current_step`, `total_steps`, `current_loss`, `eta_minutes`
+- ✅ Added `ModelOpsTrainer.get_training_status()` async method for VS Code polling
+- ✅ Test Results:
+  - 10/10 deployment tests passing
+  - 3/3 integration tests passing (end-to-end workflow)
+  - All responses JSON-serializable
+
 **Remaining**:
 
-- [ ] Backend API endpoints in InfrastructureAgent to handle ModelOps requests
-- [ ] Integration tests for VS Code commands
-- [ ] End-to-end testing with real training jobs
+- [ ] End-to-end testing with VS Code extension + live orchestrator
 - [ ] Documentation updates (README, CHANGELOG)
 - [ ] Version bump to 0.10.0
 
-**Estimated effort**: 3-4 days → 1-2 days remaining
+**Estimated effort**: 3-4 days → 0.5 days remaining (E2E testing + docs)
 
 ---
 

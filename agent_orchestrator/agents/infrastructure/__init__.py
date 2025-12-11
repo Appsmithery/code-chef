@@ -31,17 +31,18 @@ class InfrastructureAgent(BaseAgent):
     async def handle_modelops_request(
         self, message: str, context: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
-        """Handle ModelOps-related requests.
+        """Handle ModelOps-related requests from VS Code or chat.
 
         This method routes model training, evaluation, and deployment requests
-        to the ModelOps coordinator.
+        to the ModelOps coordinator. It parses natural language intents and
+        extracts structured context for the coordinator.
 
         Args:
-            message: User message/intent
-            context: Additional context (agent_name, model_id, etc.)
+            message: User message/intent (e.g., "Train feature_dev model using dataset X")
+            context: Additional context (agent_name, model_id, langsmith_project, etc.)
 
         Returns:
-            Result dictionary from ModelOps operation
+            Structured result dictionary with job IDs, status, or error messages
 
         Example:
             >>> agent = InfrastructureAgent()
@@ -49,6 +50,58 @@ class InfrastructureAgent(BaseAgent):
             ...     "Train feature_dev model",
             ...     {"agent_name": "feature_dev", "langsmith_project": "code-chef-feature-dev"}
             ... )
+            >>> print(result["job_id"])  # "job_abc123"
         """
         context = context or {}
-        return await self.modelops.route_request(message, context)
+
+        # Enhanced intent detection for VS Code commands
+        message_lower = message.lower()
+
+        # Extract agent name if not in context
+        if "agent_name" not in context:
+            agent_names = [
+                "feature_dev",
+                "code_review",
+                "infrastructure",
+                "cicd",
+                "documentation",
+            ]
+            for agent in agent_names:
+                if agent in message_lower:
+                    context["agent_name"] = agent
+                    break
+
+        # Extract model repo from message if present
+        if "model_repo" not in context:
+            # Look for HuggingFace repo pattern (username/model-name)
+            import re
+
+            repo_match = re.search(r"([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+)", message)
+            if repo_match:
+                context["model_repo"] = repo_match.group(0)
+
+        # Extract job ID for monitoring
+        if "job_id" not in context:
+            import re
+
+            job_match = re.search(r"job[_\s]?([a-zA-Z0-9-]+)", message_lower)
+            if job_match:
+                context["job_id"] = job_match.group(1)
+
+        # Route to coordinator
+        try:
+            result = await self.modelops.route_request(message, context)
+
+            # Ensure response is JSON-serializable for VS Code
+            if "error" not in result:
+                result["success"] = True
+
+            return result
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "message": message,
+                "context": context,
+            }
