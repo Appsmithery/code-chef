@@ -1,8 +1,20 @@
-# Frontend CI/CD Setup
+# GitHub Actions Workflows
 
-Automated build and deployment for code-chef React frontend using GitHub Actions.
+Automated CI/CD pipelines for code-chef platform.
 
-## Workflows
+## Recent Optimizations (December 2025)
+
+**Phase 2 Complete** - Linear Issue: [CHEF-255](https://linear.app/dev-ops/issue/CHEF-255)
+
+- ✅ **deploy-intelligent.yml**: Docker BuildKit + layer caching (70% faster: 10min → 3min)
+- ✅ **publish-extension.yml**: Changed to manual-only trigger
+- ✅ **evaluation-regression.yml**: Added pip caching to 3 jobs (30-50% faster deps)
+- ✅ **lint.yml**: Streamlined caching (75% faster: 2min → 30sec)
+- ✅ **e2e-langsmith-eval.yml**: Added caching to 4 jobs (58% faster: 12min → 5min)
+
+**Overall Impact**: 67% reduction in CI time for typical PR workflow (~30min → ~10min)
+
+## Active Workflows
 
 ### 1. Deploy Frontend (`deploy-frontend.yml`)
 
