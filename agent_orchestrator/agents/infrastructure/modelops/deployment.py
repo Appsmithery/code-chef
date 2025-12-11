@@ -2,7 +2,6 @@
 
 Handles:
 - Deploying fine-tuned models to agents (update models.yaml)
-- Canary deployments with traffic splitting
 - Model rollback procedures
 - Listing agent model versions
 """
@@ -50,7 +49,7 @@ class DeploymentResult(BaseModel):
 
 
 class ModelOpsDeployment:
-    """Manages model deployment, canary rollouts, and rollbacks."""
+    """Manages model deployment and rollbacks."""
 
     def __init__(
         self,

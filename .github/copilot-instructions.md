@@ -177,7 +177,7 @@ The Infrastructure agent supports full model training, evaluation, and deploymen
 **Evaluation**: LangSmith-based comparison using existing evaluators
 
 - Weighted scoring: 30% accuracy, 25% completeness, 20% efficiency, 15% latency, 10% integration
-- Automatic recommendations: deploy, deploy_canary, needs_review, reject
+- Automatic recommendations: deploy, needs_review, reject
 
 **Deployment**: Immediate deployment (100%) with rollback support
 

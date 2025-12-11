@@ -445,11 +445,4 @@ class ModelOpsCoordinator:
             "message": f"Current model for {agent_name}: {current}",
         }
 
-        if agent_data and agent_data.canary:
-            result["canary_model"] = {
-                "version": agent_data.canary.version,
-                "model_id": agent_data.canary.model_id,
-                "deployment_status": agent_data.canary.deployment_status,
-            }
-
         return result

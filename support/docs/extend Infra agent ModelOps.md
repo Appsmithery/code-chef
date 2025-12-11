@@ -180,7 +180,7 @@ agent_orchestrator/agents/infrastructure/
 - `agent_name` (str)
 - `model_repo` (str): HF repo path
 - `deployment_target` (str): `huggingface` or `openrouter`
-- `rollout_strategy` (str): `immediate` or `canary_20pct`
+- `rollout_strategy` (str): `immediate` (simplified - no canary)
 
 **Implementation**:
 
@@ -194,8 +194,7 @@ openrouter:
 ```
 
 3. Update model registry (`config/models/registry.json`) with deployment record
-4. If canary: Create traffic split config (80% old, 20% new) with LangSmith tagging
-5. Trigger container restart via `docker compose restart orchestrator` or hot-reload
+4. Trigger container restart via `docker compose restart orchestrator` or hot-reload
 
 **Output**: `{ deployed, endpoint_url, version, rollout_pct }`
 
@@ -371,8 +370,7 @@ Integrates with existing evaluation infrastructure in `support/tests/evaluation/
 
 - **Recommendation Engine** (Phase 2):
 
-  - **Deploy**: >15% improvement, no critical degradations
-  - **Deploy Canary**: 5-15% improvement, needs validation
+  - **Deploy**: >5% improvement, no critical degradations
   - **Needs Review**: ±5% marginal change
   - **Reject**: <-5% regression OR >20% degradation OR quality <0.5
 
@@ -611,7 +609,7 @@ Add commands to `extensions/vscode-codechef/package.json`:
 4. Progress notifications: "Training 45% complete, loss: 0.42..."
 5. On completion: "Training done! Evaluating against baseline..."
 6. Run evaluation: "New model: 87% accuracy (+12%), 20% faster"
-7. Prompt: "Deploy to 20% canary?" → User confirms
+7. Prompt: "Deploy model?" → User confirms
 8. Update `config/agents/models.yaml` + registry, restart orchestrator
 
 ### 9. Testing Requirements
@@ -682,7 +680,7 @@ Add ModelOps section to existing `support/docs/ARCHITECTURE.md` or create `suppo
   - ModelEvaluator class integrating with existing evaluators
   - `compare_models()` for baseline vs candidate comparison
   - Weighted improvement calculation (30% accuracy, 25% completeness, 20% efficiency, 15% latency, 10% integration)
-  - Automatic recommendation generation (deploy, deploy_canary, reject, needs_review)
+  - Automatic recommendation generation (deploy, needs_review, reject)
   - Markdown comparison report generation
   - LangSmith experiment tracking
 - ✅ Registry implementation from Phase 1 moved here
@@ -877,8 +875,8 @@ Orchestrator → Infrastructure Agent → ModelOps Coordinator:
 10. Monitor via TensorBoard: "Training 45% complete (step 850/1200), loss: 1.23, ETA: 20 min"
 11. On completion: "Training done! Model pushed to appsmithery/code-chef-feature-dev-v2. Evaluating..."
 12. Run eval: "New model: 87% accuracy (+12%), 20% faster, $0.003/1k tokens. Deploy?"
-13. User confirms → update config, canary rollout
-14. "Deployed to 20% of feature_dev requests. Monitor for 24h, then full rollout?"
+13. User confirms → update config, immediate deployment
+14. "Deployed to feature_dev agent. Model active."
 ```
 
 ---

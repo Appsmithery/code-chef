@@ -75,7 +75,6 @@ class TestModelRegistry:
         assert isinstance(registry, AgentModelRegistry)
         assert registry.agent_name == "feature_dev"
         assert registry.current is None
-        assert registry.canary is None
         assert len(registry.history) == 0
 
     def test_invalid_agent_name(self, temp_registry):
@@ -151,27 +150,7 @@ class TestModelRegistry:
         assert registry.current.deployment_status == "deployed"
         assert registry.current.deployed_at is not None
 
-    def test_set_canary_model(self, temp_registry, sample_training_config):
-        """Test setting canary model."""
-        # Add version
-        temp_registry.add_model_version(
-            agent_name="feature_dev",
-            version="v1.0.0",
-            model_id="test/model",
-            training_config=sample_training_config,
-        )
-
-        # Set as 20% canary
-        success = temp_registry.set_canary_model("feature_dev", "v1.0.0", canary_pct=20)
-        assert success is True
-
-        # Verify canary
-        registry = temp_registry.get_agent_registry("feature_dev")
-        assert registry.canary is not None
-        assert registry.canary.version == "v1.0.0"
-        assert registry.canary.deployment_status == "canary_20pct"
-
-    def test_promote_canary_to_current(self, temp_registry, sample_training_config):
+    def test_rollback_to_version(self, temp_registry, sample_training_config):
         """Test promoting canary to current."""
         # Add two versions
         temp_registry.add_model_version(

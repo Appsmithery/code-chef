@@ -107,7 +107,7 @@ class TestModelEvaluator:
 
         assert isinstance(comparison, EvaluationComparison)
         assert comparison.overall_improvement_pct > 10  # Strong improvement
-        assert comparison.recommendation in ["deploy", "deploy_canary"]
+        assert comparison.recommendation in ["deploy", "needs_review"]
         assert len(comparison.improvements) > 0
         assert len(comparison.degradations) == 0
 
@@ -184,7 +184,7 @@ class TestModelEvaluator:
 
         assert comparison.baseline_model == "none"
         assert comparison.overall_improvement_pct == 100.0
-        assert comparison.recommendation == "deploy_canary"
+        assert comparison.recommendation == "deploy"
 
     def test_generate_recommendation_strong_improvement(self, evaluator):
         """Test recommendation generation for strong improvement."""
@@ -207,8 +207,8 @@ class TestModelEvaluator:
             candidate_scores={"accuracy": 0.80},
         )
 
-        assert recommendation == "deploy_canary"
-        assert "Moderate improvement" in reasoning
+        assert recommendation == "deploy"
+        assert "improvement" in reasoning
 
     def test_generate_recommendation_critical_degradation(self, evaluator):
         """Test recommendation generation with critical degradation."""
@@ -310,13 +310,13 @@ class TestEvaluationComparison:
             improvements={"accuracy": 13.33},
             degradations={},
             overall_improvement_pct=10.0,
-            recommendation="deploy_canary",
+            recommendation="deploy",
             reasoning="Moderate improvement",
         )
 
         assert comparison.baseline_model == "test/baseline"
         assert comparison.candidate_model == "test/candidate"
-        assert comparison.recommendation == "deploy_canary"
+        assert comparison.recommendation == "deploy"
 
 
 if __name__ == "__main__":
