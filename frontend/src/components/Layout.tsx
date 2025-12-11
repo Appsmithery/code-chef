@@ -13,7 +13,7 @@ export default function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground font-sans selection:bg-accent selection:text-accent-foreground">
       {/* Navbar */}
-      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-[#887bb0]/95 dark:bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-[#887bb0]/90 dark:supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           <Link href="/">
             <a className="flex items-center hover:opacity-80 transition-opacity">
@@ -26,22 +26,22 @@ export default function Layout({ children }: LayoutProps) {
           </Link>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium">
             <Link href="/">
-              <a className="text-foreground transition-colors hover:text-accent">
+              <a className="text-white dark:text-foreground transition-colors hover:text-accent">
                 Home
               </a>
             </Link>
             <Link href="/agents">
-              <a className="text-foreground transition-colors hover:text-accent">
+              <a className="text-white dark:text-foreground transition-colors hover:text-accent">
                 Agents
               </a>
             </Link>
             <Link href="/servers">
-              <a className="text-foreground transition-colors hover:text-accent">
+              <a className="text-white dark:text-foreground transition-colors hover:text-accent">
                 Servers
               </a>
             </Link>
             <Link href="/cookbook">
-              <a className="text-foreground transition-colors hover:text-accent">
+              <a className="text-white dark:text-foreground transition-colors hover:text-accent">
                 Cookbook
               </a>
             </Link>
