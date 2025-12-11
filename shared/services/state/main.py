@@ -5,15 +5,16 @@ Manages task state, workflow tracking, and agent logs in PostgreSQL.
 Provides CRUD operations for orchestrator and agent state management.
 """
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
-from datetime import datetime
-import psycopg2
-from psycopg2.extras import RealDictCursor, Json
-import os
 import json
+import os
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import psycopg2
+from fastapi import FastAPI, HTTPException
 from prometheus_fastapi_instrumentator import Instrumentator
+from psycopg2.extras import Json, RealDictCursor
+from pydantic import BaseModel, Field
 
 app = FastAPI(title="State Persistence Layer", version="1.0.0")
 
@@ -21,15 +22,17 @@ app = FastAPI(title="State Persistence Layer", version="1.0.0")
 PG_HOST = os.getenv("POSTGRES_HOST", "postgres")
 PG_PORT = int(os.getenv("POSTGRES_PORT", "5432"))
 PG_DB = os.getenv("POSTGRES_DB", "devtools")
-PG_USER = os.getenv("POSTGRES_USER", "admin")
+PG_USER = os.getenv("POSTGRES_USER", "devtools")
 
 # Read password from file if POSTGRES_PASSWORD_FILE is set (Docker secrets)
 PG_PASSWORD_FILE = os.getenv("POSTGRES_PASSWORD_FILE")
 if PG_PASSWORD_FILE and os.path.exists(PG_PASSWORD_FILE):
     with open(PG_PASSWORD_FILE, "r") as f:
         PG_PASSWORD = f.read().strip()
+        if not PG_PASSWORD:
+            PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "devtools_prod_2024_secure")
 else:
-    PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "changeme")
+    PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "devtools_prod_2024_secure")
 
 
 def get_db_connection():
