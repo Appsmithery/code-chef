@@ -1,0 +1,283 @@
+# GitHub Webhook Configuration for Linear Integration
+#
+# Setup Instructions:
+# 1. Go to GitHub organization settings: https://github.com/organizations/Appsmithery/settings/hooks
+# 2. OR for specific repo: https://github.com/Appsmithery/code-chef/settings/hooks
+# 3. Add webhook with these settings
+
+webhook:
+  # Payload URL from Linear GitHub integration setup
+  payload_url: "https://client-api.linear.app/connect/github/802747b3-6717-4cf3-a18b-6458e6604e44"
+
+  # Content type
+  content_type: "application/json"
+
+  # Secret (from Linear integration setup)
+  # Store actual value in: config/env/secrets/github_webhook_secret.txt
+  secret_env: "GITHUB_WEBHOOK_SECRET"
+
+  # SSL verification
+  ssl_verification: true # Always enabled for security
+
+# Recommended Events
+# These events enable full bidirectional sync between GitHub and Linear
+recommended_events:
+  # ESSENTIAL - Enable these for basic functionality
+  essential:
+    - push # Track commits and link to Linear issues via magic words
+    - pull_request # Sync PR status, link PRs to Linear issues
+    - pull_request_review # Track review status in Linear
+    - issues # Sync GitHub issues with Linear issues
+    - issue_comment # Sync issue comments bidirectionally
+
+  # RECOMMENDED - Enable for enhanced workflow tracking
+  recommended:
+    - pull_request_review_comment # Track PR review comments
+    - commit_comment # Track inline code comments
+    - release # Track releases in Linear
+    - deployment # Track deployment status
+    - deployment_status # Track deployment completion
+    - check_run # Track CI/CD check status
+    - check_suite # Track CI/CD pipeline status
+    - status # Track commit status checks
+
+  # OPTIONAL - Enable if using GitHub Projects or additional features
+  optional:
+    - project_card # Sync GitHub project boards
+    - milestone # Track milestones
+    - label # Sync label changes
+    - repository # Track repo metadata changes
+
+# Event Triggers Explained
+event_details:
+  push:
+    description: "Triggered when commits are pushed"
+    use_case: "Links commits to Linear issues via magic words (Fixes DEV-123, Closes DEV-456)"
+    linear_action: "Updates issue status, adds commit references"
+
+  pull_request:
+    description: "Triggered when PRs are opened, closed, merged, etc."
+    use_case: "Creates/updates Linear issues for PRs, tracks PR status"
+    linear_action: "Creates linked issue, updates status on merge/close"
+    actions:
+      - opened
+      - closed
+      - reopened
+      - edited
+      - assigned
+      - review_requested
+      - ready_for_review
+      - converted_to_draft
+
+  pull_request_review:
+    description: "Triggered when PR reviews are submitted"
+    use_case: "Tracks review approval/changes requested status"
+    linear_action: "Updates Linear issue with review status"
+
+  issues:
+    description: "Triggered when GitHub issues are created/updated"
+    use_case: "Bidirectional sync of issues"
+    linear_action: "Creates/updates corresponding Linear issue"
+    actions:
+      - opened
+      - edited
+      - closed
+      - reopened
+      - assigned
+      - labeled
+
+  issue_comment:
+    description: "Triggered when comments are added to issues/PRs"
+    use_case: "Sync discussion threads between platforms"
+    linear_action: "Adds comments to Linear issues"
+
+# Magic Words for Linear Issue Linking
+# Use these in commit messages and PR descriptions to link to Linear issues
+magic_words:
+  close_issue:
+    - "Fixes" # Fixes DEV-123
+    - "Closes" # Closes DEV-456
+    - "Resolves" # Resolves DEV-789
+
+  reference_issue:
+    - "Refs" # Refs DEV-123
+    - "References" # References DEV-456
+    - "Part of" # Part of DEV-789
+    - "Related to" # Related to DEV-123
+
+# Agent-Specific Commit Message Format
+# Ensures proper attribution and Linear linking
+commit_message_format:
+  orchestrator:
+    template: |
+      {commit_title}
+
+      {commit_body}
+
+      Fixes {linear_issue_id}
+
+      Orchestrated by: code-chef
+    example: |
+      feat: implement JWT authentication
+
+      - Add JWT middleware
+      - Configure token validation
+      - Add auth tests
+
+      Fixes DEV-123
+
+      Orchestrated by: code-chef
+
+  subagent:
+    template: |
+      {commit_title}
+
+      {commit_body}
+
+      Fixes {linear_issue_id}
+
+      Implemented by: {agent_identifier}
+      Coordinated by: code-chef
+    example: |
+      feat: add database migration for users table
+
+      - Create users schema
+      - Add indexes
+      - Seed initial data
+
+      Fixes DEV-124
+
+      Implemented by: code-chef/infrastructure
+      Coordinated by: code-chef
+
+# PR Title and Description Format
+pr_format:
+  title:
+    template: "[{agent_identifier}] {pr_title}"
+    examples:
+      orchestrator: "[code-chef] Add user authentication system"
+      subagent: "[code-chef/feature-dev] Implement login endpoint"
+
+  description:
+    template: |
+      ## Summary
+      {pr_summary}
+
+      ## Changes
+      {change_list}
+
+      ## Linear Issues
+      Fixes {linear_issue_id}
+
+      ## Agent Attribution
+      - **Agent**: {agent_display_name}
+      - **Identifier**: {agent_identifier}
+      - **Coordinated by**: code-chef orchestrator
+
+      ---
+      🤖 This PR was created by the code-chef agentic platform
+
+    example: |
+      ## Summary
+      Implements JWT-based authentication system with refresh tokens
+
+      ## Changes
+      - Add JWT middleware
+      - Implement token refresh endpoint
+      - Add authentication tests
+      - Update documentation
+
+      ## Linear Issues
+      Fixes DEV-123
+      References DEV-45
+
+      ## Agent Attribution
+      - **Agent**: 🚀 Feature Dev
+      - **Identifier**: code-chef/feature-dev
+      - **Coordinated by**: code-chef orchestrator
+
+      ---
+      🤖 This PR was created by the code-chef agentic platform
+
+# Multi-Repo Configuration
+# Apply these settings at the organization level to work across all repos
+multi_repo_setup:
+  scope: "organization" # or "repository" for single-repo
+  organization: "Appsmithery"
+
+  # All repos in org will use same webhook endpoint
+  apply_to:
+    - "code-chef"
+    - "Dev-Tools"
+    - "*" # Any future repos
+
+  # Benefits of org-level webhook:
+  benefits:
+    - "Single webhook endpoint for all repos"
+    - "Consistent Linear integration across projects"
+    - "Automatic coverage for new repositories"
+    - "Centralized webhook management"
+
+  # Setup steps:
+  setup_instructions:
+    - "Go to https://github.com/organizations/Appsmithery/settings/hooks"
+    - "Click 'Add webhook'"
+    - "Paste Linear payload URL"
+    - "Add webhook secret from Linear"
+    - "Select recommended events (see above)"
+    - "Set 'Active' to enabled"
+    - "Click 'Add webhook'"
+
+# Security Considerations
+security:
+  secret_storage:
+    location: "config/env/secrets/github_webhook_secret.txt"
+    permissions: "0600 (read/write for owner only)"
+    rotation: "Rotate every 90 days"
+
+  ssl_verification:
+    enabled: true
+    note: "Always keep SSL verification enabled"
+
+  payload_validation:
+    method: "HMAC SHA-256"
+    header: "X-Hub-Signature-256"
+    validate: "Always validate webhook signatures"
+
+# Monitoring and Debugging
+monitoring:
+  webhook_deliveries:
+    location: "GitHub repo/org settings → Webhooks → Recent Deliveries"
+    check_for:
+      - "Response codes (should be 2xx)"
+      - "Payload content"
+      - "Response time"
+
+  linear_sync_status:
+    location: "Linear → Settings → Integrations → GitHub"
+    indicators:
+      - "Last sync timestamp"
+      - "Sync errors (if any)"
+      - "Connected repositories"
+
+  troubleshooting:
+    - name: "Webhook not triggering"
+      solutions:
+        - "Verify webhook is 'Active'"
+        - "Check event selections"
+        - "Validate payload URL"
+        - "Check Linear integration status"
+
+    - name: "Issues not linking"
+      solutions:
+        - "Verify magic words are correct (Fixes DEV-123)"
+        - "Check Linear issue exists"
+        - "Ensure issue is in correct project"
+        - "Verify Linear GitHub integration is enabled"
+
+    - name: "Commits not showing in Linear"
+      solutions:
+        - "Verify 'push' event is enabled"
+        - "Check commit message format"
+        - "Ensure repo is connected in Linear"
+        - "Verify Linear issue ID is valid"
