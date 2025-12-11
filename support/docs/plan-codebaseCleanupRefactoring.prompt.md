@@ -25,36 +25,43 @@ This research identifies all deprecated code, MCP gateway references, canary dep
 #### A. Fully Deprecated Files (Safe to Delete)
 
 **Packages (Already marked deprecated):**
-- `packages/MCP_GATEWAY_IMPLEMENTATION_GAP.md` - DEPRECATED package 
-- `packages/GITHUB_PACKAGES_INSTALL.md` - DEPRECATED package 
+
+- `packages/MCP_GATEWAY_IMPLEMENTATION_GAP.md` - DEPRECATED package
+- `packages/GITHUB_PACKAGES_INSTALL.md` - DEPRECATED package
 - `packages/mcp-bridge-client/` - Entire NPM package deprecated
 - `packages/mcp-bridge-client-py/` - Entire Python package deprecated
 - `packages/test-packages.ps1` - Documentation explaining why packages deprecated
 
 **Gateway (Archived December 2025):**
+
 - `shared/gateway/` - Entire directory deprecated Dec 3, 2025
 - `_archive/gateway-deprecated-2025-12-03/` - States "Deprecated: December 3, 2025" with archive reference
 
 **Scripts:**
+
 - `support/scripts/fix_deprecated_imports.py` - Tool that itself fixes deprecated imports (meta-deprecated)
 - `support/scripts/analyze_deprecated_paths.py` - Analyzes deprecated path references
 
 **Documentation:**
+
 - 13+ files in `_archive/docs-temp/` marked as DEPRECATED in `support/docs/README.md`
 - `support/docs/_temp/` - Contains deprecated pre-flight checklists and migration docs
 
 **Environment Variables:**
+
 - `DIGITALOCEAN_KNOWLEDGE_BASE_*` - DEPRECATED in `config/env/.env.template`, collection deleted Jan 2025
 - Legacy Qdrant vars - DEPRECATED in `config/env/README.md`
 
 #### B. Active Code with Deprecated References (Needs Refactoring)
 
 **Memory Classes:**
+
 - `shared/lib/langchain_memory.py` - Uses simplified memory because LangChain memory classes deprecated in v0.2+
   - Contains 5 warnings about deprecated memory classes
   - **Recommendation**: Replace with `shared/lib/agent_memory.py` (already implemented replacement)
 
 **Frontend:**
+
 - `support/frontend/deprecated/` - Old static HTML files from frontend-v3
   - Referenced in `support/frontend/README.md`
   - **Status**: Safe to keep archived for reference
@@ -62,6 +69,7 @@ This research identifies all deprecated code, MCP gateway references, canary dep
 #### C. Dependencies with No Downstream Usage (Safe Removal Candidates)
 
 **Test Files Referencing Deprecated Gateway:**
+
 - `support/tests/integration/test_mcp_gateway.py` - File doesn't exist but referenced in:
   - `support/tests/conftest.py`
   - `support/tests/README.md`
@@ -75,12 +83,14 @@ This research identifies all deprecated code, MCP gateway references, canary dep
 #### A. Already-Deprecated Files (Remove During Cleanup)
 
 **Gateway Service Code:**
+
 - `shared/gateway/__init__.py`
 - `shared/gateway/main.py`
 - `shared/gateway/routes.py`
 - Gateway deprecated Dec 3, 2025
 
 **Configuration:**
+
 - `config/rag/indexing.yaml` - `gateway_endpoint: "docker://central-mcp-gateway"`
 
 #### B. Active Code Requiring Terminology Updates
@@ -88,12 +98,14 @@ This research identifies all deprecated code, MCP gateway references, canary dep
 **Service Files (Need MCP_GATEWAY_URL variable updates):**
 
 1. `shared/services/rag/main.py`
+
    - Line 46: `MCP_GATEWAY_URL = os.getenv("MCP_GATEWAY_URL")`
    - Lines 132, 492, 504, 505: Multiple references to `MCP_GATEWAY_URL`
    - **Impact**: RAG service health checks and tool invocation
    - **Recommendation**: Remove or redirect to Docker MCP toolkit
 
 2. `shared/services/langgraph/main.py` + `src/main.py`
+
    - Lines 91, 131-132, 135: Health check includes `mcp_gateway` status field
    - **Impact**: Service health endpoint response format
    - **Recommendation**: Replace with `mcp_docker_toolkit_status`
@@ -116,19 +128,23 @@ All require "mcp-gateway" → "docker-mcp-toolkit" updates:
 - `agent_orchestrator/agents/infrastructure/README.md` - 2 references
 
 **Environment Templates:**
+
 - `config/env/.env.template` - `MCP_GATEWAY_URL=http://localhost:8000`
 - `deploy/.env.template` - Same variable
 
 **Scripts:**
+
 - `support/scripts/validate_environment.py` - Lines 216-235: Checks for `mcp-gateway` in services
 - `support/scripts/env_to_config.py` - Lines 112, 155: Includes `MCP_GATEWAY_URL` in env grep
 - `support/scripts/analyze_deprecated_paths.py` - Lines 7, 18: References `/opt/central-mcp-gateway/servers/`
 
 **Monitoring:**
+
 - `config/prometheus/alerts.yml` - Alert: `MCPGatewayDown`
 - `config/grafana/dashboards/system-health.json` - References alert
 
 **Agent Documentation:**
+
 - `agent_orchestrator/agents/supervisor/system.prompt.md` - Health endpoint example includes `mcp_gateway`
 
 #### C. Correct Replacement Terminology
@@ -138,6 +154,7 @@ All require "mcp-gateway" → "docker-mcp-toolkit" updates:
 Current implementation suggests: **"Docker MCP Toolkit"** or **"mcp-docker-toolkit"**
 
 Evidence:
+
 - `support/docs/integrations/langsmith-tracing.md` - "MCP Gateway (8000) deprecated - tools accessed via Docker MCP Toolkit in VS Code"
 - `support/docs/DEPLOYMENT.md` - Same reference
 - Extensions now use VS Code MCP Docker extension instead of gateway
@@ -151,6 +168,7 @@ Evidence:
 **Registry Module** - `agent_orchestrator/agents/infrastructure/modelops/registry.py`
 
 Lines requiring removal:
+
 - **Line 6**: Doc comment mentions "canary" in deployment status
 - **Line 91**: `"not_deployed", "canary_20pct", "canary_50pct", "deployed", "archived"` - Remove canary statuses
 - **Line 102**: `canary: Optional[AgentModelRef]` - Remove canary field from `AgentData` Pydantic model
@@ -173,6 +191,7 @@ Lines requiring removal:
 **Evaluation Module** - `agent_orchestrator/agents/infrastructure/modelops/evaluation.py`
 
 Lines requiring removal:
+
 - **Line 77**: `Literal["deploy", "deploy_canary", "needs_review", "reject"]` - Remove `"deploy_canary"` from literal
 - **Line 257**: Return value includes `recommendation="deploy_canary"`
 - **Line 258**: Reasoning text mentions "canary deployment"
@@ -185,6 +204,7 @@ Lines requiring removal:
 **Deployment Module** - `agent_orchestrator/agents/infrastructure/modelops/deployment.py`
 
 Lines requiring review:
+
 - **Line 5**: Doc comment: "Canary deployments with traffic splitting"
 - **Line 53**: Class doc: "Manages model deployment, canary rollouts, and rollbacks"
 - Search through entire file for canary-specific deployment logic
@@ -192,9 +212,11 @@ Lines requiring review:
 **Coordinator Module** - `agent_orchestrator/agents/infrastructure/modelops/coordinator.py`
 
 Lines requiring removal:
+
 - **Line 182**: Doc comment mentions `"deploy_canary"` recommendation
 - **Line 264**: Doc mentions rollout strategies: "canary_20pct, or canary_50pct"
 - **Lines 448-452**: Status check includes canary_model field:
+
 ```python
 if agent_data and agent_data.canary:
     result["canary_model"] = {
@@ -208,6 +230,7 @@ if agent_data and agent_data.canary:
 **Registry Tests** - `support/tests/agents/infrastructure/modelops/test_registry.py`
 
 Lines requiring removal:
+
 - **Line 78**: Assert `canary=None`
 - **Lines 154-173**: **ENTIRE TEST** `test_set_canary_model` - 20 lines
   - Tests 20% canary deployment
@@ -221,6 +244,7 @@ Lines requiring removal:
 **Evaluation Tests** - `support/tests/agents/infrastructure/modelops/test_evaluation.py`
 
 Lines requiring removal/update:
+
 - **Line 110**: Assert includes `"deploy_canary"` as valid recommendation
 - **Line 187**: Assert `== "deploy_canary"`
 - **Line 210**: Assert `== "deploy_canary"`
@@ -236,6 +260,7 @@ Lines requiring removal/update:
 **Primary Documentation** - `support/docs/extend Infra agent ModelOps.md`
 
 Critical lines:
+
 - **Line 183**: Tool input mentions `rollout_strategy`: `immediate` or `canary_20pct`
 - **Line 197**: Implementation step 4: "If canary: Create traffic split config"
 - **Line 279**: JSON schema example shows `deployment_status: "canary_20pct"`
@@ -255,12 +280,14 @@ Critical lines:
 **Status**: Partially cleaned, but still contains ~15 canary references that need full removal
 
 **Other Documentation:**
+
 - `.github/copilot-instructions.md` - "Automatic recommendations: deploy, deploy_canary"
 - `agent_orchestrator/agents/infrastructure/README.md` - Deployment strategies include "canary"
 - `support/docs/ARCHITECTURE.md` - Lists "deploy_canary" in recommendations
 - Various READMEs - May reference canary in examples
 
 **Linear Scripts** (10+ files with canary references):
+
 - All scripts in `support/scripts/linear/` mentioning canary deployment workflows
 - Includes demo scripts, phase update scripts, issue update scripts
 - **Recommendation**: Remove canary mentions or mark as historical context
@@ -270,6 +297,7 @@ Critical lines:
 **Registry Data** - `config/models/registry.json`
 
 Lines requiring cleanup:
+
 - **Line 10**: `"canary": null` - Contains actual canary deployment data for feature_dev
 - **Line 41**: `"deployment_status": "canary_20pct"`
 - **Line 77**: History entry with `"deployment_status": "canary_20pct"`
@@ -287,6 +315,7 @@ Lines requiring cleanup:
 
 **Project Separation**:
 Per `.github/copilot-instructions.md`:
+
 - Separate projects per agent: `code-chef-feature-dev`, `code-chef-code-review`, etc.
 - Each agent has dedicated LangSmith project
 - 33+ traceable decorators ensure observability
@@ -296,6 +325,7 @@ Per `.github/copilot-instructions.md`:
 **Training Module** - `agent_orchestrator/agents/infrastructure/modelops/training.py`
 
 Decorators found:
+
 - **Line 101**: `@traceable(name="modelops_health_check")`
 - **Line 116**: `@traceable(name="modelops_space_status")`
 - **Line 181**: `@traceable(name="modelops_train_model")`
@@ -315,6 +345,7 @@ Decorators found:
 **Evaluation Module** - `agent_orchestrator/agents/infrastructure/modelops/evaluation.py`
 
 Decorators found:
+
 - **Line 128**: `@traceable(name="modelops_evaluate_models")`
 - **Line 211**: `@traceable(name="modelops_compare_models")`
 - **Line 445**: `@traceable(name="modelops_run_evaluation_suite")`
@@ -331,6 +362,7 @@ Decorators found:
 **Registry Module** - `agent_orchestrator/agents/infrastructure/modelops/registry.py`
 
 Decorators found (9 total):
+
 - Lines 226, 244, 293, 326, 381, 434, 482, 496, 524
 - All named `registry_*` operations
 - **No tags specified**
@@ -342,6 +374,7 @@ Decorators found (9 total):
 **Coordinator Module** - `agent_orchestrator/agents/infrastructure/modelops/coordinator.py`
 
 Decorators found (8 total):
+
 - **Lines 40, 100, 163, 256, 307, 341, 372, 421**
 - All named `modelops_*` operations
 - **No tags specified**
@@ -353,6 +386,7 @@ Decorators found (8 total):
 **Space Client Example** - `test_modelops_space.py`
 
 Decorators found:
+
 - **Line 32**: `@traceable`
 - **Line 77**: `@traceable`
 - **Line 94**: `@traceable`
@@ -387,7 +421,7 @@ Decorators found:
 
 # Evaluation operations
 @traceable(
-    name="modelops_evaluate_model", 
+    name="modelops_evaluate_model",
     tags=["modelops", "evaluation", "infrastructure"],
     metadata={"environment": "evaluation", "agent": agent_name}
 )
@@ -408,6 +442,7 @@ Decorators found:
 ```
 
 **Benefits**:
+
 - Filter traces by environment in LangSmith
 - Separate training metrics from production
 - Prevent test contamination
@@ -422,22 +457,26 @@ Decorators found:
 **Complete Removal Candidates** (45+ files/directories):
 
 1. **Gateway Infrastructure** (~10 files)
+
    - `shared/gateway/` (entire directory)
    - `_archive/gateway-deprecated-2025-12-03/` (entire directory)
    - `_archive/gateway-deprecated-2025-12-03/` (if exists)
 
 2. **Deprecated Packages** (~50+ files)
+
    - `packages/mcp-bridge-client/` (NPM package)
    - `packages/mcp-bridge-client-py/` (Python package)
    - `packages/MCP_GATEWAY_IMPLEMENTATION_GAP.md`
    - `packages/GITHUB_PACKAGES_INSTALL.md`
 
 3. **Deprecated Documentation** (13+ files)
+
    - All files marked DEPRECATED in `support/docs/README.md`
    - `support/docs/_temp/` directory contents
    - `_archive/docs-temp/` directory contents
 
 4. **Deprecated Scripts** (2 files)
+
    - `support/scripts/fix_deprecated_imports.py`
    - `support/scripts/analyze_deprecated_paths.py`
 
@@ -452,10 +491,11 @@ Decorators found:
 **MCP Gateway Variable Updates** (High Priority):
 
 Dependency Tree:
+
 ```
 MCP_GATEWAY_URL environment variable
   ├── shared/services/rag/main.py (4 references)
-  ├── shared/services/langgraph/main.py (5 references)  
+  ├── shared/services/langgraph/main.py (5 references)
   ├── shared/services/langgraph/src/main.py (5 references)
   ├── shared/lib/mcp_client.py (1 reference)
   ├── config/env/.env.template (1 definition)
@@ -469,6 +509,7 @@ Health Endpoints Returning mcp_gateway Status
 **Impact**: 6 service files, 2 config files, multiple documentation pages
 
 **Refactoring Steps**:
+
 1. Define replacement variable name (e.g., `MCP_DOCKER_TOOLKIT_STATUS`)
 2. Update service health check logic
 3. Update environment templates
@@ -481,6 +522,7 @@ Health Endpoints Returning mcp_gateway Status
 **Memory Module Replacement**:
 
 Dependency Tree:
+
 ```
 shared/lib/langchain_memory.py (DEPRECATED)
   ├── Uses deprecated LangChain v0.2+ memory classes
@@ -492,6 +534,7 @@ Potential Importers (need audit):
 ```
 
 **Refactoring Steps**:
+
 1. Audit all imports of `langchain_memory.py`
 2. Update to use `agent_memory.py`
 3. Test memory functionality in all agents
@@ -502,6 +545,7 @@ Potential Importers (need audit):
 **Canary Deployment Removal**:
 
 Dependency Tree:
+
 ```
 Registry canary field
   ├── agent_orchestrator/agents/infrastructure/modelops/registry.py
@@ -524,6 +568,7 @@ Registry canary field
 ```
 
 **Refactoring Steps** (Priority Order):
+
 1. Update evaluation logic: Remove `"deploy_canary"` from recommendations (becomes just `"deploy"` for moderate improvements)
 2. Remove registry methods: `set_canary_model()`, `promote_canary_to_current()`, `get_canary_model()`
 3. Remove registry field: `canary` from Pydantic model
@@ -541,6 +586,7 @@ Registry canary field
 #### C. Keep As-Is (Clean, No Changes Needed)
 
 **Core Agent Infrastructure**:
+
 - All agents in `agent_orchestrator/agents/` (feature_dev, code_review, infrastructure, cicd, documentation, supervisor)
 - LangGraph workflow engine
 - Progressive MCP loader
@@ -548,11 +594,13 @@ Registry canary field
 - Linear integration
 
 **Services**:
+
 - State persistence service
-- Agent registry service  
+- Agent registry service
 - RAG context service (after MCP_GATEWAY_URL cleanup)
 
 **Configuration**:
+
 - `config/agents/models.yaml` (core model config)
 - `config/routing/task-router.rules.yaml`
 - Most YAML config files in `config/`
@@ -564,9 +612,11 @@ Registry canary field
 ### 6. PRIORITY-ORDERED CLEANUP ROADMAP
 
 #### Phase 1: Zero-Risk Deletions (1-2 hours)
+
 **Priority**: 🟢 **LOW RISK**
 
 1. Delete deprecated packages:
+
    - `packages/mcp-bridge-client/`
    - `packages/mcp-bridge-client-py/`
    - `packages/MCP_GATEWAY_IMPLEMENTATION_GAP.md`
@@ -574,15 +624,18 @@ Registry canary field
    - `packages/test-packages.ps1`
 
 2. Delete gateway directories:
+
    - `shared/gateway/`
    - `_archive/gateway-deprecated-2025-12-03/`
 
 3. Delete deprecated documentation:
+
    - `_archive/docs-temp/` (13 files)
    - `support/docs/_temp/` contents
    - Verified deprecated files from `support/docs/README.md`
 
 4. Delete deprecated scripts:
+
    - `support/scripts/fix_deprecated_imports.py`
    - `support/scripts/analyze_deprecated_paths.py`
 
@@ -596,13 +649,16 @@ Registry canary field
 ---
 
 #### Phase 2: Canary Deployment Removal (4-6 hours)
+
 **Priority**: ⚠️ **MEDIUM RISK** - User-facing feature removal
 
 1. **Update Evaluation Logic** (30 min):
+
    - `evaluation.py`: Change `Literal["deploy", "deploy_canary", ...]` → Remove `"deploy_canary"`
    - Lines 257-258, 431-432, 525-526: Update logic to use `"deploy"` for 5-15% improvements instead of `"deploy_canary"`
 
 2. **Remove Registry Methods** (1 hour):
+
    - `registry.py`: Delete `set_canary_model()` method (52 lines)
    - Lines 434-481: Delete `promote_canary_to_current()` method (48 lines)
    - Lines 555-565: Delete `get_canary_model()` method (11 lines)
@@ -611,20 +667,24 @@ Registry canary field
    - Line 91: Update deployment status Literal to remove `"canary_20pct"`, `"canary_50pct"`
 
 3. **Update Configuration** (15 min):
+
    - `config/models/registry.json`: Remove `canary` field from all agents (lines 10, 119, 194, 200, 206)
    - Remove canary deployment data from feature_dev (lines 10-41)
    - Remove canary entries from history arrays
 
 4. **Remove Test Cases** (30 min):
+
    - `test_registry.py`: Delete 2 complete test methods (51 lines)
    - Line 78: Update assertion (remove canary check)
    - `test_evaluation.py`: Update 5 assertions/test data (lines 110, 187, 210, 313, 319)
 
 5. **Update Coordinator** (30 min):
+
    - `coordinator.py`: Remove canary_model from status response
    - Lines 182, 264: Update doc comments
 
 6. **Update Deployment Module** (45 min):
+
    - `deployment.py`: Audit and remove canary-specific logic
    - Lines 5, 53: Update doc comments
 
@@ -634,7 +694,8 @@ Registry canary field
    - `agent_orchestrator/agents/infrastructure/README.md`: Update recommendations
    - Linear scripts in `support/scripts/linear/`: Remove/update canary references in 10+ files
 
-**Validation**: 
+**Validation**:
+
 - Run ModelOps test suite: `pytest support/tests/agents/infrastructure/modelops/ -v`
 - Verify registry operations work without canary
 - Test evaluation recommendations
@@ -643,28 +704,34 @@ Registry canary field
 ---
 
 #### Phase 3: MCP Gateway Terminology Update (3-4 hours)
+
 **Priority**: ⚠️ **MEDIUM RISK** - Breaking change to health endpoints
 
 **Decision Required**: Choose replacement terminology
+
 - Option A: `mcp_docker_toolkit` (recommended - matches current docs)
 - Option B: `mcp_server`
 - Option C: `mcp_bridge`
 
 1. **Update Service Code** (1.5 hours):
+
    - `shared/services/rag/main.py`: Replace `MCP_GATEWAY_URL` variable (lines 46, 132, 492, 504, 505)
    - `shared/services/langgraph/main.py` + `src/main.py`: Update health check response format (lines 91, 131-135)
    - `shared/lib/mcp_client.py`: Update gateway_url initialization
    - **Decision**: Redirect to Docker MCP toolkit or remove entirely?
 
 2. **Update Environment Templates** (15 min):
+
    - `config/env/.env.template`
    - `deploy/.env.template`
    - Add comment: "# MCP Gateway deprecated Dec 2025 - using Docker MCP Toolkit"
 
 3. **Update Configuration** (15 min):
+
    - `config/rag/indexing.yaml`: Update `gateway_endpoint`
 
 4. **Update Documentation** (1-1.5 hours):
+
    - `support/docs/DEPLOYMENT.md`: Update 9 references
    - `support/docs/ARCHITECTURE.md`: Update 2 references
    - `support/docs/integrations/langsmith-tracing.md`: Already notes deprecation
@@ -681,6 +748,7 @@ Registry canary field
    - `config/prometheus/alerts.yml`: Update or remove `MCPGatewayDown` alert
 
 **Validation**:
+
 - Test health endpoints: `/health` should return updated format
 - Verify services start successfully
 - Check Prometheus alerts still trigger appropriately
@@ -689,19 +757,23 @@ Registry canary field
 ---
 
 #### Phase 4: Memory Module Refactoring (2-3 hours)
+
 **Priority**: ⚠️ **MEDIUM RISK** - May affect agent functionality
 
 1. **Audit Imports** (30 min):
+
    - Search all agent code for imports of `langchain_memory.py`
    - Verify which agents use memory functionality
    - Check `agent_memory.py` implementation
 
 2. **Update Imports** (1 hour):
+
    - Replace with `agent_memory.py`
    - Update method calls to new API
    - Test each agent individually
 
 3. **Testing** (1 hour):
+
    - Run agent test suites
    - Verify memory storage/retrieval works
    - Test conversation history functionality
@@ -710,65 +782,163 @@ Registry canary field
    - Delete `shared/lib/langchain_memory.py`
 
 **Validation**:
+
 - Full agent test suite
 - Manual testing of chat with memory
 - Verify no import errors
 
 ---
 
-#### Phase 5: Tracing Tag Strategy Implementation (3-4 hours)
+#### Phase 5: Tracing Strategy for A/B Testing & Longitudinal Tracking (6-7 hours)
+
 **Priority**: 🔵 **LOW RISK** - Improvement, not fix
 
-1. **Define Tag Strategy** (30 min):
-   - Document tag structure in config or docs
-   - Define environment values: `production`, `training`, `evaluation`, `test`
-   - Define required metadata fields
+**Goals**:
 
-2. **Update ModelOps Training Tracing** (1 hour):
-   - `training.py`: Add `tags` and `metadata` to all 7 decorators
+1. Track improvement of code-chef extension over time (longitudinal)
+2. Measure performance side-by-side against baseline (A/B testing)
+3. Clean start from "Day 0" - no contaminated historical data
 
-3. **Update ModelOps Evaluation Tracing** (30 min):
-   - `evaluation.py`: Add `tags` and `metadata` to all 4 decorators
+---
 
-4. **Update ModelOps Registry/Coordinator Tracing** (45 min):
-   - `registry.py`: Add tags to 9 decorators
-   - `coordinator.py`: Add tags to 8 decorators
+##### Step 0: Clean Trace Start (30 min)
 
-5. **Update Test Tracing** (45 min):
-   - Add `environment="test"` and `test_run=True` to all workflow test files
-   - Update `conftest.py` to set environment tag globally for tests
+- Delete ALL existing traces in LangSmith projects
+- This establishes "Day 0" for clean longitudinal tracking
+- Document the reset date in project descriptions
 
-6. **Update Documentation** (30 min):
-   - Add tracing tag strategy to `support/docs/integrations/langsmith-tracing.md`
-   - Update `.github/copilot-instructions.md` with tag requirements
+##### Step 1: Define Metadata Schema (45 min)
+
+Create `config/observability/tracing-schema.yaml`:
+
+```yaml
+# Experiment Identification
+experiment_group: enum[code-chef, baseline] # A/B group assignment
+experiment_id: string # e.g., "exp-2025-01-001"
+task_id: string # Unique task correlation ID
+
+# Version Tracking (Longitudinal)
+extension_version: string # e.g., "1.2.3"
+model_version: string # e.g., "codellama-13b-v2"
+config_hash: string # Config fingerprint
+
+# Environment
+environment: enum[production, training, evaluation, test]
+
+# Classification
+module: enum[training, evaluation, deployment, registry, coordinator]
+```
+
+##### Step 2: LangSmith Project Restructuring (30 min)
+
+**New Project Structure** (purpose-driven, not per-agent):
+
+- `code-chef-production` - All live extension usage
+- `code-chef-experiments` - A/B test comparisons
+- `code-chef-training` - Model training runs
+- `code-chef-evaluation` - Model evaluation runs
+
+##### Step 3: Update Training Module Tracing (1 hour)
+
+- `training.py`: Update 7 `@traceable` decorators
+- Add: `experiment_group="code-chef"`, `module="training"`, `model_version`
+- Use environment variable for `experiment_id`
+
+##### Step 4: Update Evaluation Module Tracing (45 min)
+
+- `evaluation.py`: Update 4 `@traceable` decorators
+- Add comparison metadata for baseline vs code-chef results
+- Include `task_id` for result correlation
+
+##### Step 5: Update Deployment/Registry Tracing (1 hour)
+
+- `deployment.py`: Update decorators with `model_version` tracking
+- `registry.py`: Update 9 decorators with version metadata
+
+##### Step 6: Update Coordinator Tracing (45 min)
+
+- `coordinator.py`: Update 8 decorators
+- Add `extension_version` and `config_hash` for production traces
+
+##### Step 7: Create Baseline Runner Script (1 hour)
+
+Create `support/scripts/evaluation/baseline_runner.py`:
+
+- Runs same tasks through untrained LLM (null hypothesis)
+- Uses `experiment_group="baseline"` tag
+- Generates comparable traces for A/B analysis
+
+```python
+@traceable(
+    project_name="code-chef-experiments",
+    tags=["baseline", "null-hypothesis"],
+    metadata={
+        "experiment_group": "baseline",
+        "experiment_id": os.getenv("EXPERIMENT_ID"),
+        "task_id": task_id,
+        "model_version": "claude-3.5-sonnet-base",  # Untrained comparison
+    }
+)
+async def run_baseline_task(task: dict) -> dict:
+    """Execute task with baseline LLM for A/B comparison."""
+    pass
+```
+
+##### Step 8: Update Test Tracing (30 min)
+
+- Add `environment="test"` and `test_run=True` to workflow tests
+- Update `conftest.py` to set environment tag globally
+
+##### Step 9: Update Documentation (45 min)
+
+- Create `support/docs/integrations/langsmith-tracing.md` with full schema
+- Update `.github/copilot-instructions.md` with tag requirements
+- Document A/B testing workflow and analysis queries
+
+---
 
 **Validation**:
-- Check LangSmith UI - verify traces properly tagged
-- Verify filtering works by environment
-- Confirm no production trace contamination from training/eval
+
+- Verify traces properly tagged with experiment_group
+- Confirm baseline runner produces comparable traces
+- Test LangSmith filtering by environment, experiment_group
+- Verify no production trace contamination from training/eval
+
+**A/B Analysis Queries**:
+
+```
+# Compare code-chef vs baseline for same experiment
+experiment_id:"exp-2025-01-001" AND experiment_group:code-chef
+experiment_id:"exp-2025-01-001" AND experiment_group:baseline
+
+# Longitudinal: Track improvement over extension versions
+experiment_group:code-chef AND extension_version:1.2.*
+```
 
 ---
 
 ### 7. RISK ASSESSMENT SUMMARY
 
-| Phase | Risk Level | Breaking Changes | Test Impact | User Impact |
-|-------|-----------|------------------|-------------|-------------|
-| 1: Deletions | 🟢 LOW | None | Remove 1 test method | None |
-| 2: Canary Removal | ⚠️ MEDIUM-HIGH | Remove registry methods, change eval logic | Update 2 test files | Lose canary feature (already deprecated) |
-| 3: MCP Gateway | ⚠️ MEDIUM | Health endpoint format change | Update validation scripts | Monitoring may need updates |
-| 4: Memory Module | ⚠️ MEDIUM | Change imports | Agent tests | Potential memory issues |
-| 5: Tracing Tags | 🔵 LOW | None - additive | Add test tags | Better trace organization |
+| Phase                  | Risk Level     | Breaking Changes                           | Test Impact               | User Impact                                 |
+| ---------------------- | -------------- | ------------------------------------------ | ------------------------- | ------------------------------------------- |
+| 1: Deletions           | 🟢 LOW         | None                                       | Remove 1 test method      | None                                        |
+| 2: Canary Removal      | ⚠️ MEDIUM-HIGH | Remove registry methods, change eval logic | Update 2 test files       | Lose canary feature (already deprecated)    |
+| 3: MCP Gateway         | ⚠️ MEDIUM      | Health endpoint format change              | Update validation scripts | Monitoring may need updates                 |
+| 4: Memory Module       | ⚠️ MEDIUM      | Change imports                             | Agent tests               | Potential memory issues                     |
+| 5: Tracing/A/B Testing | 🔵 LOW         | None - additive                            | Add test tags             | Better trace organization, A/B capabilities |
 
-**Overall Estimated Effort**: 15-20 hours
+**Overall Estimated Effort**: 18-22 hours (updated for enhanced Phase 5)
 
-**Recommended Sequence**: 
-1. Phase 1 (safe deletions) → Immediate
-2. Phase 2 (canary removal) → High priority, feature already deprecated
-3. Phase 3 (MCP gateway) → Medium priority, requires coordination
-4. Phase 5 (tracing tags) → Low priority, improvement
-5. Phase 4 (memory module) → Last, most risky
+**Recommended Sequence**:
+
+1. Phase 1 (safe deletions) → Immediate ✅ DONE
+2. Phase 2 (canary removal) → High priority ✅ DONE
+3. Phase 3 (MCP gateway) → Medium priority ✅ DONE
+4. Phase 4 (memory module) → ✅ DONE
+5. Phase 5 (tracing/A/B testing) → In Progress
 
 **Critical Dependencies**:
+
 - Phase 2 must complete before updating any model deployment workflows
 - Phase 3 requires decision on replacement terminology
 - Phase 4 requires thorough testing before deployment
@@ -780,19 +950,23 @@ Registry canary field
 **Potential Issues Not in Original Scope**:
 
 1. **Test File Without Implementation**:
+
    - `test_mcp_gateway.py` referenced but doesn't exist
    - May indicate incomplete test cleanup
 
 2. **Backup Registry Files**:
+
    - `config/models/backups/` may contain canary data
    - Should be cleaned during Phase 2
 
 3. **Environment Variable Cleanup**:
+
    - Several DEPRECATED variables in `.env.template` files
    - DigitalOcean KB sync variables can be removed
    - Legacy Qdrant variables can be removed
 
 4. **Frontend Deprecation**:
+
    - `support/frontend/deprecated/` exists for reference
    - Safe to keep, but consider archive location
 
@@ -801,6 +975,7 @@ Registry canary field
    - Recommend consolidating to single archive location
 
 **Recommendations**:
+
 - Create cleanup Linear issue for each phase
 - Use feature flags during Phase 3 to allow rollback
 - Update `CHANGELOG.md` with all breaking changes
