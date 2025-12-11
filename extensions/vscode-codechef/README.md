@@ -1,13 +1,11 @@
 # code/chef — Your AI Development Team
 
 [![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Orchestrator-purple?logo=langchain)](https://www.langchain.com/langgraph)
-[![OpenRouter](https://img.shields.io/badge/OpenRouter-Multi--Model-orange)](https://openrouter.ai)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 > **Talk to your code. Ship faster.**
 
-code/chef is an AI-powered development team that lives in VS Code. Just type `@chef` in Copilot Chat and describe what you want—feature implementation, code reviews, infrastructure setup, CI/CD pipelines, or documentation. The AI team handles the rest.
+code/chef is like having an experienced development team right in VS Code. Just chat naturally about what you want to build—new features, code reviews, documentation, deployment setups—and the AI handles the heavy lifting while you focus on the creative work.
 
 ---
 
@@ -16,284 +14,242 @@ code/chef is an AI-powered development team that lives in VS Code. Just type `@c
 ### 🚀 Build Features
 
 ```
-@chef Add user authentication with JWT tokens and password reset
+@chef Add user login with email and password reset
 ```
 
-The Feature Dev agent writes production-ready code with tests.
+Get complete, working code for new features—no need to know all the technical details.
 
-### 🔍 Review Code
-
-```
-@chef Review this PR for security vulnerabilities
-```
-
-The Code Review agent analyzes for security issues, performance, and best practices.
-
-### 🏗️ Set Up Infrastructure
+### 🔍 Review Your Code
 
 ```
-@chef Create a Docker Compose setup for my Node.js app with PostgreSQL
+@chef Check this code for issues
 ```
 
-The Infrastructure agent generates Dockerfiles, compose files, and Terraform configs.
+Get instant feedback on security problems, performance issues, or just general improvements.
 
-### ⚡ Automate Pipelines
-
-```
-@chef Create a GitHub Actions workflow for testing and deployment
-```
-
-The CI/CD agent builds your pipelines across GitHub Actions, GitLab CI, Jenkins, and more.
-
-### 📚 Write Documentation
+### 🏗️ Set Up Your Project
 
 ```
-@chef Document the API endpoints in this codebase
+@chef Set up Docker for my app with a database
 ```
 
-The Documentation agent creates README files, API docs, and architecture diagrams.
+Get all the configuration files you need without learning Docker syntax.
+
+### ⚡ Automate Deployments
+
+```
+@chef Create a workflow to test and deploy my app
+```
+
+Automate your testing and deployment without wrestling with YAML files.
+
+### 📚 Generate Documentation
+
+```
+@chef Write documentation for my API
+```
+
+Get professional docs written for you—README files, API guides, whatever you need.
 
 ---
 
 ## 🎯 Why code/chef?
 
-| Traditional Workflow          | With code/chef               |
-| ----------------------------- | ---------------------------- |
-| Switch between 5+ tools       | One chat interface           |
-| Copy-paste context everywhere | AI understands your codebase |
-| Wait for code reviews         | Instant AI analysis          |
-| Manual documentation          | Auto-generated docs          |
-| Complex CI/CD setup           | Plain English commands       |
+| Without code/chef           | With code/chef              |
+| --------------------------- | --------------------------- |
+| Switch between many tools   | Everything in one chat      |
+| Search for solutions        | Just describe what you want |
+| Wait hours for code reviews | Get instant feedback        |
+| Write docs manually         | Generated automatically     |
+| Complex setup processes     | Plain English requests      |
+| Solo development struggles  | AI team always available    |
 
-### 🧠 Smart Model Selection
+### 🧠 Always Uses the Right AI
 
-code/chef automatically picks the right AI model for each task:
-
-| Task            | Model             | Why                        |
-| --------------- | ----------------- | -------------------------- |
-| Code Generation | Claude 3.5 Sonnet | Best-in-class coding       |
-| Code Review     | GPT-4o            | Strong reasoning           |
-| Infrastructure  | Llama 3.1 70B     | Cost-effective for configs |
-| Documentation   | Claude 3.5 Sonnet | Excellent writing          |
+code/chef automatically picks the best AI for each task—you don't need to worry about which model to use. Different tasks get different specialists, just like a real team.
 
 ---
 
 ## 🚀 Get Started in 2 Minutes
 
-### Step 1: Install
+### Step 1: Install the Extension
 
-**From GitHub Releases** (recommended):
-
-1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
-2. Download `vscode-codechef-*.vsix`
-3. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
-4. Select the file and reload
-
-**From VS Code Marketplace**:
-
-1. Open Extensions (`Ctrl+Shift+X`)
-2. Search "code/chef"
+1. Open VS Code Extensions (`Ctrl+Shift+X`)
+2. Search for "code/chef"
 3. Click Install
+4. Reload VS Code if prompted
 
-### Step 2: Configure
+### Step 2: Set Up Your API Key
 
-Press `Ctrl+Shift+P` → "code/chef: Configure"
+1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+2. Type "code/chef: Configure" and press Enter
+3. Enter your API key (ask your team admin, or [contact us](https://github.com/Appsmithery/code-chef) to get one)
 
-Enter your API key (get from your administrator).
+### Step 3: Start Building
 
-### Step 3: Start Cooking
-
-Open Copilot Chat and type:
+Open GitHub Copilot Chat and type:
 
 ```
-@chef Build a REST API for user management with JWT auth
+@chef Build a user login page
 ```
 
-That's it! The AI team handles the rest.
+That's it! Watch as code/chef creates the files, writes the code, and explains what it did.
 
 ---
 
-## 💬 Example Conversations
+## 💬 Real Conversations
 
-### Feature Development
-
-```
-You: @chef Build a REST API for managing blog posts with CRUD operations
-
-Chef: I'll create a complete blog API with:
-- Express routes for posts (GET, POST, PUT, DELETE)
-- PostgreSQL database schema
-- Input validation
-- Error handling
-- Unit tests
-
-[Creates files, runs tests, opens PR]
-```
-
-### Code Review
+### "I need to add a feature"
 
 ```
-You: @chef Check my authentication code for security issues
+You: @chef I need users to be able to reset their passwords
 
-Chef: I found 3 issues:
-🔴 Critical: Password stored in plain text (line 45)
-🟡 Warning: Missing rate limiting on login endpoint
-🟢 Suggestion: Consider adding CSRF protection
+Chef: I'll set up password reset for you. This will include:
+- Email verification
+- Secure reset tokens
+- New password form
+- All the security best practices
 
-[Links to specific lines with fix suggestions]
+Creating the files now...
+```
+
+### "Is my code okay?"
+
+```
+You: @chef Can you check my login code?
+
+Chef: I found a few things:
+🔴 Important: Passwords aren't being encrypted (line 45)
+🟡 Heads up: Login page needs rate limiting to prevent attacks
+🟢 Nice to have: Add "remember me" functionality
+
+Want me to fix these?
+```
+
+### "I'm stuck on deployment"
+
+```
+You: @chef How do I deploy this to production?
+
+Chef: I'll create a deployment setup for you with:
+- Automated testing before deploy
+- Staging environment
+- Easy rollback if something breaks
+- Step-by-step deployment guide
+
+Setting this up now...
 ```
 
 ---
 
-## 🔧 Commands
+## 🔧 Quick Commands
 
-### Chat Commands
+### In Chat
 
-| Command                  | What it does                 |
-| ------------------------ | ---------------------------- |
-| `@chef <task>`           | Execute any development task |
-| `@chef /status`          | Check current task progress  |
-| `@chef /workflow <name>` | Run a specific workflow      |
-| `@chef /tools`           | See available integrations   |
+Just talk naturally! Here are some examples:
 
-### Command Palette
+- `@chef <describe what you want>` — The main way to use code/chef
+- `@chef /status` — See what code/chef is working on
+- `@chef /tools` — See what integrations are available
 
-Press `Ctrl+Shift+P` and search for:
+### From the Command Menu
 
-| Command                           | Description                |
-| --------------------------------- | -------------------------- |
-| `code/chef: Submit Task`          | Submit via input box       |
-| `code/chef: Health Check`         | Test connection            |
-| `code/chef: Configure`            | Open settings              |
-| `code/chef: Clear Cache`          | Reset session              |
-| `codechef.modelops.train`         | Train fine-tuned model     |
-| `codechef.modelops.evaluate`      | Evaluate model performance |
-| `codechef.modelops.deploy`        | Deploy model to agent      |
-| `codechef.modelops.rollback`      | Rollback to previous model |
-| `codechef.modelops.modelVersions` | View deployment history    |
+Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac) and search:
+
+| Command                   | What it does                     |
+| ------------------------- | -------------------------------- |
+| `code/chef: Submit Task`  | Send a task without using chat   |
+| `code/chef: Health Check` | Make sure everything's working   |
+| `code/chef: Configure`    | Change your settings             |
+| `code/chef: Clear Cache`  | Start fresh if something's stuck |
 
 ---
 
-## 🤖 ModelOps: Train & Deploy Your Own Models
+## 🎓 Advanced: Teach code/chef Your Style
 
-code/chef includes a complete model lifecycle management system. Train fine-tuned models on your codebase, evaluate improvements, and deploy safely—all from VS Code.
+Want code/chef to write code exactly how your team likes it? You can train custom models on your codebase. This is completely optional—code/chef works great out of the box.
 
-### Quick Start
+### How It Works
 
-1. **Train**: `Ctrl+Shift+P` → "codechef.modelops.train"
+1. **Train**: Press `Ctrl+Shift+P` → "codechef.modelops.train"
 
-   - Select agent (e.g., Feature Dev)
-   - Choose mode: Demo ($0.50, 5 min) or Production ($3.50, 60 min)
-   - Monitor progress in status bar
+   - Takes about an hour
+   - Learns from your existing code
+   - Costs a few dollars
 
-2. **Evaluate**: `Ctrl+Shift+P` → "codechef.modelops.evaluate"
+2. **Test**: Press `Ctrl+Shift+P` → "codechef.modelops.evaluate"
 
-   - Compare candidate vs baseline
-   - View metrics: accuracy, completeness, efficiency, latency, integration
-   - Get deployment recommendation
+   - See if the new model is better
+   - Get a clear recommendation
 
-3. **Deploy**: `Ctrl+Shift+P` → "codechef.modelops.deploy"
-   - Select evaluated model
-   - Automatic backup and rollback support
-   - 30-second deployment process
+3. **Deploy**: Press `Ctrl+Shift+P` → "codechef.modelops.deploy"
+   - Switch to your custom model
+   - Can always switch back
 
-### Training Modes
-
-| Mode       | Cost  | Duration | Dataset Size | Use Case         |
-| ---------- | ----- | -------- | ------------ | ---------------- |
-| Demo       | $0.50 | 5 min    | 100 examples | Quick validation |
-| Production | $3.50 | 60 min   | 1000+        | Full training    |
-
-### Evaluation Metrics
-
-Models are scored across 5 weighted dimensions:
-
-| Metric       | Weight | Measures                  |
-| ------------ | ------ | ------------------------- |
-| Accuracy     | 30%    | Correctness of responses  |
-| Completeness | 25%    | Task completion rate      |
-| Efficiency   | 20%    | Token usage optimization  |
-| Latency      | 15%    | Response time performance |
-| Integration  | 10%    | MCP tool usage quality    |
-
-### Deployment Safety
-
-- ✅ Automatic backups before deployment
-- ✅ Health checks after deployment
-- ✅ One-command rollback (<60 seconds)
-- ✅ Version history tracking
-
-See [LLM Operations Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/operations/llm-operations.md) for complete documentation.
+**Most users don't need this.** The default models are excellent. Custom training is for teams that want code/chef to match their specific coding style perfectly.
 
 ---
 
 ## ⚙️ Settings
 
-### Essential Settings
+You probably won't need to change these, but here they are:
 
-| Setting                    | Description                          |
-| -------------------------- | ------------------------------------ |
-| `codechef.orchestratorUrl` | Server URL (default: hosted service) |
-| `codechef.apiKey`          | Your API key                         |
+| Setting                        | What it does                                |
+| ------------------------------ | ------------------------------------------- |
+| `codechef.apiKey`              | Your API key (required)                     |
+| `codechef.orchestratorUrl`     | Server location (leave as default)          |
+| `codechef.showWorkflowPreview` | Show what code/chef will do before doing it |
+| `codechef.useStreaming`        | Show responses as they're being written     |
 
-### Workflow Settings
-
-| Setting                        | Default | Description                  |
-| ------------------------------ | ------- | ---------------------------- |
-| `codechef.defaultWorkflow`     | `auto`  | Automatic workflow selection |
-| `codechef.showWorkflowPreview` | `true`  | Preview before execution     |
-
-### Streaming (Real-time Responses)
-
-| Setting                 | Default | Description                      |
-| ----------------------- | ------- | -------------------------------- |
-| `codechef.useStreaming` | `true`  | Enable real-time token streaming |
+Access settings: `Ctrl+Shift+P` → "code/chef: Configure"
 
 ---
 
-## 🔌 Integrations
+## 🔌 Works With Your Tools
 
-code/chef connects to your existing tools:
+code/chef integrates with the tools you already use:
 
-- **GitHub** — PRs, issues, actions
-- **Linear** — Project management, approvals
-- **Docker** — Container management
-- **Databases** — PostgreSQL, Redis
+- **GitHub** — Creates pull requests, manages issues
+- **Linear** — Updates project tasks
+- **Docker** — Manages containers
+- **Databases** — PostgreSQL, Redis, and more
 
----
-
-## ❓ Troubleshooting
-
-### Cannot connect to orchestrator
-
-1. Check URL: `Ctrl+Shift+P` → "code/chef: Configure"
-2. Verify API key is set
-3. Run health check: `Ctrl+Shift+P` → "code/chef: Health Check"
-
-### No response from @chef
-
-1. Clear cache: `Ctrl+Shift+P` → "code/chef: Clear Cache"
-2. Restart VS Code
-3. Check Output panel (`Ctrl+Shift+U`) for errors
+No extra setup needed—code/chef figures out what you're using and works with it.
 
 ---
 
-## 🏢 Self-Hosting
+## ❓ Something Not Working?
 
-Want full control? Run your own code/chef instance. See the [main repository](https://github.com/Appsmithery/code-chef) for setup instructions.
+### code/chef isn't responding
+
+1. Make sure you typed `@chef` at the start of your message
+2. Try: `Ctrl+Shift+P` → "code/chef: Health Check"
+3. Still stuck? Try: `Ctrl+Shift+P` → "code/chef: Clear Cache" and reload VS Code
+
+### Connection issues
+
+1. Check your API key: `Ctrl+Shift+P` → "code/chef: Configure"
+2. Make sure you're connected to the internet
+3. Try the health check: `Ctrl+Shift+P` → "code/chef: Health Check"
+
+### Still having trouble?
+
+Open an issue on [GitHub](https://github.com/Appsmithery/code-chef/issues) and we'll help you out!
+
+---
+
+## 📞 Get Help or Get Started
+
+- **GitHub**: [github.com/Appsmithery/code-chef](https://github.com/Appsmithery/code-chef)
+- **Issues**: Found a bug? [Open an issue](https://github.com/Appsmithery/code-chef/issues)
+- **Questions**: Need help? Start a [discussion](https://github.com/Appsmithery/code-chef/discussions)
 
 ---
 
 ## 📄 License
 
-MIT License — see [LICENSE](LICENSE)
+MIT License — Free for personal and commercial use. See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🔗 Links
-
-- [GitHub Repository](https://github.com/Appsmithery/code-chef)
-- [Quick Start Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/QUICKSTART.md)
-- [Linear Project](https://linear.app/dev-ops/project/codechef-78b3b839d36b)
-- [LangSmith Traces](https://smith.langchain.com)
-- [Grafana Metrics](https://appsmithery.grafana.net)
+**Made with ❤️ for developers who want to focus on building, not fighting with tools.**
