@@ -1,34 +1,15 @@
 # GitHub Actions Workflow: Evaluation & Regression Testing
 #
-# Runs A/B testing suite and regression detection on PR merge to main.
+# Runs A/B testing suite and regression detection weekly or on-demand.
 # Validates that new code changes don't degrade model performance.
 #
-# Linear Issue: CHEF-245 (Phase 6)
+# Linear Issue: CHEF-245 (Phase 6), CHEF-253 (Optimization)
 # Related: CHEF-242 (Evaluation Runner), CHEF-243 (A/B Test Suite)
 
 name: Evaluation & Regression Testing
 
 on:
-    push:
-        branches:
-            - main
-        paths:
-            - "agent_orchestrator/**"
-            - "shared/lib/**"
-            - "support/tests/evaluation/**"
-            - "support/tests/integration/test_evaluation_persistence.py"
-            - "support/tests/integration/test_longitudinal_tracking.py"
-            - "config/agents/models.yaml"
-
-    pull_request:
-        branches:
-            - main
-        paths:
-            - "agent_orchestrator/**"
-            - "shared/lib/**"
-            - "support/tests/evaluation/**"
-            - "config/agents/models.yaml"
-
+    # Manual trigger for on-demand evaluation runs
     workflow_dispatch:
         inputs:
             hypothesis_profile:
@@ -43,6 +24,10 @@ on:
                 description: "Custom experiment ID (optional)"
                 required: false
                 default: ""
+
+    # Weekly scheduled run (Sunday at 2 AM UTC)
+    schedule:
+        - cron: '0 2 * * 0'
 
 env:
     PYTHON_VERSION: "3.11"
