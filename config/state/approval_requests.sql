@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS approval_requests (
     rejection_reason TEXT,
     approval_justification TEXT,
     
+    -- Workflow resumption
+    resumed_at TIMESTAMP,
+    
     -- Timeout handling
     expires_at TIMESTAMP,
     
