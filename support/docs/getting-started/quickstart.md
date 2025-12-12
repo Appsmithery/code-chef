@@ -20,8 +20,16 @@ Use the hosted code/chef service—no server setup required.
 
 Download and install the latest version in one command:
 
+**Bash/Linux/macOS:**
+
 ```bash
 curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+```
+
+**PowerShell/Windows:**
+
+```powershell
+curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix; code --install-extension codechef.vsix
 ```
 
 **Manual Install from GitHub Releases**:
@@ -33,12 +41,16 @@ curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode
 
 **Update Existing Installation**:
 
-```bash
-# Uninstall old version
-code --uninstall-extension appsmithery.vscode-codechef
+**Bash/Linux/macOS:**
 
-# Install latest
-curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+```bash
+code --uninstall-extension appsmithery.vscode-codechef && curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+```
+
+**PowerShell/Windows:**
+
+```powershell
+code --uninstall-extension appsmithery.vscode-codechef; curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix; code --install-extension codechef.vsix
 ```
 
 **From VS Code Marketplace** (Coming Soon):

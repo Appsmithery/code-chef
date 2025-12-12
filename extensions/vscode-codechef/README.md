@@ -76,9 +76,16 @@ code/chef automatically picks the best AI for each task—you don't need to worr
 
 **From GitHub Releases** (Recommended):
 
+**Bash/Linux/macOS:**
+
 ```bash
-# Download and install in one command
 curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+```
+
+**PowerShell/Windows:**
+
+```powershell
+curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix; code --install-extension codechef.vsix
 ```
 
 Or manually:
