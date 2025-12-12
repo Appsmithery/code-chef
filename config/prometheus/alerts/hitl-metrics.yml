@@ -1,0 +1,196 @@
+# Prometheus Alerting Rules for HITL Approval Workflow
+# Phase 4: Observability
+
+groups:
+  - name: hitl_approvals
+    interval: 30s
+    rules:
+      # High-Priority Alerts (PagerDuty/Slack critical channel)
+
+      - alert: CriticalApprovalStuck
+        expr: |
+          max_over_time(hitl_approval_backlog_total{risk_level="critical"}[5m]) > 0
+          and
+          max_over_time(hitl_approval_backlog_total{risk_level="critical"}[5m]) == 
+          max_over_time(hitl_approval_backlog_total{risk_level="critical"}[30m])
+        for: 30m
+        labels:
+          severity: critical
+          component: hitl
+          team: platform
+        annotations:
+          summary: "Critical approval request stuck for 30+ minutes"
+          description: |
+            A critical risk approval has been pending for over 30 minutes without resolution.
+            Current critical backlog: {{ $value }}
+            This blocks critical production operations.
+
+            Action: Check Linear approval hub immediately
+            Dashboard: https://appsmithery.grafana.net/d/hitl-approvals
+
+      - alert: HighApprovalBacklog
+        expr: sum(hitl_approval_backlog_total) > 10
+        for: 15m
+        labels:
+          severity: warning
+          component: hitl
+          team: platform
+        annotations:
+          summary: "High approval backlog ({{ $value }} pending)"
+          description: |
+            The approval queue has {{ $value }} pending requests for over 15 minutes.
+            This may indicate approval process bottleneck or notification issues.
+
+            Breakdown by risk level:
+            - Critical: {{ printf "hitl_approval_backlog_total{risk_level=\"critical\"}" | query | first | value }}
+            - High: {{ printf "hitl_approval_backlog_total{risk_level=\"high\"}" | query | first | value }}
+            - Medium: {{ printf "hitl_approval_backlog_total{risk_level=\"medium\"}" | query | first | value }}
+
+      - alert: ApprovalTimeoutRateHigh
+        expr: |
+          rate(hitl_approval_timeouts_total[1h]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: hitl
+          team: platform
+        annotations:
+          summary: "High approval timeout rate ({{ $value | humanizePercentage }})"
+          description: |
+            More than 10% of approval requests are expiring without action.
+            This indicates:
+            - Notifications not reaching approvers
+            - Insufficient approver coverage
+            - Timeout durations too short
+
+            Recent timeouts: {{ $value }}
+            Check notification channels and approver availability.
+
+      # Medium-Priority Alerts (Slack monitoring channel)
+
+      - alert: ApprovalLatencyHigh
+        expr: |
+          histogram_quantile(0.95, 
+            rate(hitl_approval_latency_seconds_bucket{status="approved"}[1h])
+          ) > 3600
+        for: 15m
+        labels:
+          severity: warning
+          component: hitl
+          team: platform
+        annotations:
+          summary: "P95 approval latency > 1 hour"
+          description: |
+            95th percentile approval latency is {{ $value | humanizeDuration }}.
+            Target SLA is under 30 minutes for routine approvals.
+
+            Recent latency by risk level:
+            - Critical: {{ printf "histogram_quantile(0.95, rate(hitl_approval_latency_seconds_bucket{risk_level=\"critical\"}[1h]))" | query | first | value | humanizeDuration }}
+            - High: {{ printf "histogram_quantile(0.95, rate(hitl_approval_latency_seconds_bucket{risk_level=\"high\"}[1h]))" | query | first | value | humanizeDuration }}
+
+      - alert: ApprovalRejectionRateHigh
+        expr: |
+          rate(hitl_approval_requests_resolved_total{status="rejected"}[4h]) / 
+          rate(hitl_approval_requests_resolved_total[4h]) > 0.3
+        for: 30m
+        labels:
+          severity: info
+          component: hitl
+          team: platform
+        annotations:
+          summary: "High approval rejection rate ({{ $value | humanizePercentage }})"
+          description: |
+            More than 30% of approvals are being rejected over the past 4 hours.
+            This may indicate:
+            - Agents requesting inappropriate operations
+            - Risk assessment calibration issues
+            - Communication gaps between agents and approvers
+
+            Review recent rejections to identify patterns.
+
+      - alert: NoApprovalsResolved
+        expr: |
+          rate(hitl_approval_requests_resolved_total[2h]) == 0
+          and
+          hitl_approval_backlog_total > 0
+        for: 2h
+        labels:
+          severity: warning
+          component: hitl
+          team: platform
+        annotations:
+          summary: "No approval resolutions in 2 hours ({{ $value }} pending)"
+          description: |
+            Approval requests are being created but none are being resolved.
+            Current backlog: {{ printf "sum(hitl_approval_backlog_total)" | query | first | value }}
+
+            Possible causes:
+            - Linear webhook failures
+            - Database connection issues
+            - Approval workflow pipeline broken
+
+            Check webhook logs and Linear integration health.
+
+      # Low-Priority Alerts (Info/Dashboard only)
+
+      - alert: ApprovalBacklogByAgent
+        expr: |
+          sum by (agent) (
+            increase(hitl_approval_requests_created_total[1h])
+          ) > 5
+        for: 1h
+        labels:
+          severity: info
+          component: hitl
+          team: platform
+        annotations:
+          summary: "High approval requests from {{ $labels.agent }} ({{ $value }})"
+          description: |
+            Agent {{ $labels.agent }} has created {{ $value }} approval requests in the past hour.
+            This may indicate increased activity or overly conservative risk assessment.
+
+  - name: hitl_sla
+    interval: 5m
+    rules:
+      # SLA Tracking (Recording Rules for dashboard queries)
+
+      - record: hitl:approval_sla:p50_latency
+        expr: |
+          histogram_quantile(0.50, 
+            sum by (le, risk_level) (
+              rate(hitl_approval_latency_seconds_bucket[1h])
+            )
+          )
+
+      - record: hitl:approval_sla:p95_latency
+        expr: |
+          histogram_quantile(0.95, 
+            sum by (le, risk_level) (
+              rate(hitl_approval_latency_seconds_bucket[1h])
+            )
+          )
+
+      - record: hitl:approval_sla:p99_latency
+        expr: |
+          histogram_quantile(0.99, 
+            sum by (le, risk_level) (
+              rate(hitl_approval_latency_seconds_bucket[1h])
+            )
+          )
+
+      - record: hitl:approval_rate:by_status
+        expr: |
+          sum by (status) (
+            rate(hitl_approval_requests_resolved_total[5m])
+          )
+
+      - record: hitl:approval_rate:by_agent
+        expr: |
+          sum by (agent) (
+            rate(hitl_approval_requests_created_total[5m])
+          )
+
+      - record: hitl:timeout_rate
+        expr: |
+          sum(rate(hitl_approval_timeouts_total[1h])) / 
+          sum(rate(hitl_approval_requests_created_total[1h]))

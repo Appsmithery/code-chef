@@ -1,0 +1,466 @@
+{
+  "dashboard": {
+    "title": "HITL Approval Workflow",
+    "tags": ["hitl", "approval", "workflows", "phase4"],
+    "timezone": "browser",
+    "schemaVersion": 30,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Approval Queue Overview",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(hitl_approval_backlog_total)",
+            "legendFormat": "Total Pending",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value",
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 5, "color": "yellow" },
+                { "value": 10, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Critical Risk Backlog",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+        "targets": [
+          {
+            "expr": "hitl_approval_backlog_total{risk_level=\"critical\"}",
+            "legendFormat": "Critical",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 3,
+        "title": "Approval Rate (Last Hour)",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+        "targets": [
+          {
+            "expr": "sum(rate(hitl_approval_requests_resolved_total{status=\"approved\"}[1h])) * 3600",
+            "legendFormat": "Approvals/Hour",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 4,
+        "title": "P95 Latency",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(hitl_approval_latency_seconds_bucket[1h])) by (le))",
+            "legendFormat": "P95 Latency",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 1800, "color": "yellow" },
+                { "value": 3600, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Approval Backlog by Risk Level",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+        "targets": [
+          {
+            "expr": "hitl_approval_backlog_total",
+            "legendFormat": "{{risk_level}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": { "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "multi" }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 20,
+              "stacking": { "mode": "normal" }
+            }
+          },
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "critical" },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": { "mode": "fixed", "fixedColor": "red" }
+                }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "high" },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": { "mode": "fixed", "fixedColor": "orange" }
+                }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "medium" },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": { "mode": "fixed", "fixedColor": "yellow" }
+                }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "low" },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": { "mode": "fixed", "fixedColor": "blue" }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 6,
+        "title": "Approval Latency Percentiles",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+        "targets": [
+          {
+            "expr": "hitl:approval_sla:p50_latency",
+            "legendFormat": "P50 - {{risk_level}}",
+            "refId": "A"
+          },
+          {
+            "expr": "hitl:approval_sla:p95_latency",
+            "legendFormat": "P95 - {{risk_level}}",
+            "refId": "B"
+          },
+          {
+            "expr": "hitl:approval_sla:p99_latency",
+            "legendFormat": "P99 - {{risk_level}}",
+            "refId": "C"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "bottom",
+            "calcs": ["mean", "max"]
+          },
+          "tooltip": { "mode": "multi" }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2
+            }
+          }
+        }
+      },
+      {
+        "id": 7,
+        "title": "Approval Outcomes (Last 6 Hours)",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum by (status) (increase(hitl_approval_requests_resolved_total[6h]))",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          },
+          "pieType": "donut"
+        },
+        "fieldConfig": {
+          "overrides": [
+            {
+              "matcher": { "id": "byName", "options": "approved" },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": { "mode": "fixed", "fixedColor": "green" }
+                }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "rejected" },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": { "mode": "fixed", "fixedColor": "red" }
+                }
+              ]
+            },
+            {
+              "matcher": { "id": "byName", "options": "expired" },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": { "mode": "fixed", "fixedColor": "orange" }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 8,
+        "title": "Approval Requests by Agent",
+        "type": "bargauge",
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+        "targets": [
+          {
+            "expr": "sum by (agent) (increase(hitl_approval_requests_created_total[6h]))",
+            "legendFormat": "{{agent}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "orientation": "horizontal",
+          "displayMode": "gradient",
+          "showUnfilled": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 10, "color": "yellow" },
+                { "value": 20, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Timeout Rate",
+        "type": "gauge",
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 12 },
+        "targets": [
+          {
+            "expr": "hitl:timeout_rate",
+            "legendFormat": "Timeout Rate",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "value": 0, "color": "green" },
+                { "value": 0.05, "color": "yellow" },
+                { "value": 0.1, "color": "red" }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 10,
+        "title": "Approval Request Creation Rate",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(rate(hitl_approval_requests_created_total[5m])) by (agent) * 60",
+            "legendFormat": "{{agent}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["mean", "max"]
+          },
+          "tooltip": { "mode": "multi" }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqpm",
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 10
+            }
+          }
+        }
+      },
+      {
+        "id": 11,
+        "title": "Approval Resolution Rate",
+        "type": "timeseries",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+        "targets": [
+          {
+            "expr": "sum(rate(hitl_approval_requests_resolved_total[5m])) by (status) * 60",
+            "legendFormat": "{{status}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "calcs": ["mean", "max"]
+          },
+          "tooltip": { "mode": "multi" }
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqpm",
+            "custom": {
+              "drawStyle": "line",
+              "lineWidth": 2,
+              "fillOpacity": 10
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "title": "Active Approvals List (Database Query)",
+        "type": "table",
+        "gridPos": { "h": 10, "w": 24, "x": 0, "y": 28 },
+        "targets": [
+          {
+            "expr": "hitl_approval_backlog_total > 0",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showHeader": true,
+          "sortBy": [{ "displayName": "risk_level", "desc": true }]
+        },
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": []
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": { "Time": true, "__name__": true },
+              "indexByName": { "risk_level": 0, "Value": 1 },
+              "renameByName": { "Value": "Count", "risk_level": "Risk Level" }
+            }
+          }
+        ]
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "agent",
+          "type": "query",
+          "label": "Agent",
+          "query": "label_values(hitl_approval_requests_created_total, agent)",
+          "current": { "text": "All", "value": "$__all" },
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "risk_level",
+          "type": "query",
+          "label": "Risk Level",
+          "query": "label_values(hitl_approval_backlog_total, risk_level)",
+          "current": { "text": "All", "value": "$__all" },
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "enable": true,
+          "iconColor": "blue",
+          "expr": "changes(hitl_approval_requests_created_total[1m]) > 0"
+        }
+      ]
+    }
+  }
+}
