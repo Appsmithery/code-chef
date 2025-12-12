@@ -11,17 +11,32 @@ This document defines the brand palette, typography, layout principles, and the 
 ### Color palette (official)
 
 - **Frosted Grape (gray-blue):** `#4c5270`
+- **Lavender:** `#887bb0`
 - **Mint:** `#bcece0`
 - **Butter:** `#fff4bd`
-- **Salmon:** `#f4b9b8`
-- **Lavender:** `#887bb0`
 - **Flour:** `#fffdf2`
+- **Salmon:** `#f4b9b8` (use sparingly)
 
-**Rule of thumb**
+**Theming guidelines**
 
-- Use **Lavender/Mint** as calm accents.
-- Use **Salmon** as the “heat” accent (calls-to-action, emphasis).
-- Avoid pure black/white contrast; prefer brand-tinted neutrals.
+**Light mode:**
+
+- Emphasize **Lavender** as the primary accent
+- Use **Mint** for secondary highlights
+- Keep **Salmon** minimal (only for critical CTAs)
+- Background tints of **Flour/Lavender**
+
+**Dark mode:**
+
+- Emphasize **Butter, Mint, Flour** for warmth and calm
+- **Lavender** for key UI elements
+- Avoid **Salmon** unless absolutely necessary
+- Keep backgrounds deep with subtle tints
+
+**General principles:**
+
+- Avoid pure black/white contrast; prefer brand-tinted neutrals
+- Red/aggressive colors should be minimal
 
 ### Typography
 
@@ -43,11 +58,15 @@ The “AI-generated” feel often comes from rigid symmetry, uniform card templa
 - Prefer **asymmetry**: varied padding, offsets, and rhythm.
 - Use **editorial composition**: alternating alignment, sticky visuals, and narrative sections.
 - Add **depth**: layered shadows + subtle gradients.
+- **Use tags/badges sparingly**: Only when they provide clear categorical value.
+- **Breathe**: Generous whitespace, clear visual hierarchy.
 
-### Don’t
+### Don't
 
-- Don’t stack identical cards in a perfect grid unless there’s a strong reason.
-- Don’t center every icon/title/paragraph.
+- Don't stack identical cards in a perfect grid unless there's a strong reason.
+- Don't center every icon/title/paragraph.
+- **Don't over-badge**: Avoid decorative tags on every section/card.
+- **Don't clutter**: Every visual element should serve a purpose.
 
 ---
 

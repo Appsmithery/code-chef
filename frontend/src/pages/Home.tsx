@@ -19,7 +19,6 @@ export default function Home() {
     {
       id: "multi-agent",
       title: "Multi-Agent Orchestration",
-      eyebrow: "Routing · Delegation · Coordination",
       description:
         "LangGraph StateGraph workflow with intelligent task routing. The Head Chef (Orchestrator) coordinates specialized agents for optimal results.",
       Icon: Bot,
@@ -33,7 +32,6 @@ export default function Home() {
     {
       id: "mcp-tools",
       title: "MCP Tool Integration",
-      eyebrow: "Progressive disclosure · Lower token burn",
       description:
         "Docker MCP Toolkit with 20 servers and 178+ tools. Progressive disclosure saves 80–90% on token costs.",
       Icon: Wrench,
@@ -43,7 +41,6 @@ export default function Home() {
     {
       id: "rag",
       title: "RAG Semantic Search",
-      eyebrow: "Vectors · Patterns · Docs",
       description:
         "Qdrant-backed retrieval across code patterns, Linear issues, and documentation for contextual assistance.",
       Icon: Search,
@@ -53,7 +50,6 @@ export default function Home() {
     {
       id: "observability",
       title: "Full Observability",
-      eyebrow: "Tracing · Metrics · Durability",
       description:
         "LangSmith tracing for LLM calls, Grafana Cloud for metrics, and PostgreSQL checkpointing for durable workflows.",
       Icon: Activity,
@@ -67,7 +63,6 @@ export default function Home() {
     {
       id: "hitl",
       title: "Human-in-the-Loop",
-      eyebrow: "Risk gates · Approvals · Webhooks",
       description:
         "Risk-based approval workflows via Linear integration. Critical changes require human sign-off.",
       Icon: ShieldCheck,
@@ -77,7 +72,6 @@ export default function Home() {
     {
       id: "cloud",
       title: "Cloud-Native Agents",
-      eyebrow: "Deployable · Health-checked · Lean",
       description:
         "Running on DigitalOcean with Caddy reverse proxy, automatic HTTPS, and optimized for a small memory footprint.",
       Icon: Cloud,
@@ -87,7 +81,6 @@ export default function Home() {
     {
       id: "modelops",
       title: "Train Your Own AI",
-      eyebrow: "Fine-tune · Evaluate · Deploy",
       description:
         "ModelOps makes it easy to fine-tune on your codebase—train in about an hour, test results, and deploy with one click.",
       Icon: Sparkles,
@@ -245,12 +238,6 @@ export default function Home() {
       <section className="py-24 bg-background relative">
         <div className="container">
           <div className="flex flex-col mb-16 space-y-4">
-            <Badge
-              variant="outline"
-              className="border-accent/30 text-accent bg-accent/5"
-            >
-              Capabilities
-            </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
               <span className="cc-shimmer-text">What's Cookin'?</span>
             </h2>
@@ -289,28 +276,12 @@ export default function Home() {
                       (alignRight ? "lg:order-2" : "")
                     }
                   >
-                    <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-secondary/60" />
-                      {rail.eyebrow}
-                    </div>
                     <h3 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight">
                       {rail.title}
                     </h3>
                     <p className="text-muted-foreground leading-relaxed">
                       {rail.description}
                     </p>
-
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {rail.bullets.map((b) => (
-                        <Badge
-                          key={b}
-                          variant="secondary"
-                          className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
-                        >
-                          {b}
-                        </Badge>
-                      ))}
-                    </div>
                   </div>
 
                   <div
