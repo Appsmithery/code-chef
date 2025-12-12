@@ -2,6 +2,7 @@
 Coordinates approval requests, policy enforcement, and state persistence.
 
 Issue: CHEF-200 - Added @traceable decorators for LangSmith visibility.
+Phase 4: Added Prometheus metrics for observability.
 """
 
 import asyncio
@@ -15,6 +16,7 @@ from typing import Dict, List, Literal, Optional
 import psycopg
 import yaml
 from langsmith import traceable
+from prometheus_client import Counter, Gauge, Histogram
 
 from .checkpoint_connection import get_async_connection
 from .risk_assessor import RiskLevel, get_risk_assessor
@@ -22,6 +24,38 @@ from .risk_assessor import RiskLevel, get_risk_assessor
 logger = logging.getLogger(__name__)
 
 ApprovalStatus = Literal["pending", "approved", "rejected", "expired", "cancelled"]
+
+# Phase 4: Prometheus Metrics for HITL Observability
+approval_requests_created = Counter(
+    "hitl_approval_requests_created_total",
+    "Total number of HITL approval requests created",
+    ["agent", "risk_level", "environment"],
+)
+
+approval_requests_resolved = Counter(
+    "hitl_approval_requests_resolved_total",
+    "Total number of HITL approval requests resolved",
+    ["agent", "risk_level", "status"],
+)
+
+approval_latency_seconds = Histogram(
+    "hitl_approval_latency_seconds",
+    "Time from approval request creation to resolution",
+    ["agent", "risk_level", "status"],
+    buckets=[30, 60, 300, 600, 1800, 3600, 7200, 14400, 28800, 86400],  # 30s to 24h
+)
+
+approval_backlog = Gauge(
+    "hitl_approval_backlog_total",
+    "Current number of pending approval requests",
+    ["risk_level"],
+)
+
+approval_timeouts = Counter(
+    "hitl_approval_timeouts_total",
+    "Total number of approval requests that expired",
+    ["agent", "risk_level"],
+)
 
 
 class HITLManager:
@@ -203,6 +237,15 @@ class HITLManager:
             f"[HITLManager] Created approval request {request_id} "
             f"(risk={risk_level}, expires={expires_at.isoformat()})"
         )
+
+        # Phase 4: Emit Prometheus metrics
+        environment = task.get("environment", "unknown")
+        approval_requests_created.labels(
+            agent=agent_name, risk_level=risk_level, environment=environment
+        ).inc()
+
+        # Update backlog gauge
+        await self._update_backlog_metrics()
 
         # Trigger notifications (async, non-blocking)
         await self._send_notifications(request_id, risk_level, task)
@@ -541,6 +584,80 @@ class HITLManager:
             f"channels={channels}, task={task.get('operation')}"
         )
         # TODO: Implement actual notification sending (Slack, email, etc.)
+
+    async def _update_backlog_metrics(self):
+        """Update Prometheus backlog gauge with current pending approvals by risk level.
+
+        Phase 4: Observability enhancement for monitoring approval queue health.
+        """
+        try:
+            async with await self._get_connection() as conn:
+                async with conn.cursor() as cursor:
+                    # Get count of pending approvals by risk level
+                    await cursor.execute(
+                        """
+                        SELECT risk_level, COUNT(*) 
+                        FROM approval_requests 
+                        WHERE status = 'pending' AND expires_at > NOW()
+                        GROUP BY risk_level
+                        """
+                    )
+                    rows = await cursor.fetchall()
+
+                    # Reset all gauges first
+                    for risk_level in ["low", "medium", "high", "critical"]:
+                        approval_backlog.labels(risk_level=risk_level).set(0)
+
+                    # Update with actual counts
+                    for risk_level, count in rows:
+                        approval_backlog.labels(risk_level=risk_level).set(count)
+
+        except Exception as e:
+            logger.error(f"[HITLManager] Failed to update backlog metrics: {e}")
+
+    async def record_approval_resolution(
+        self,
+        request_id: str,
+        status: ApprovalStatus,
+        agent_name: str,
+        risk_level: str,
+        created_at: datetime,
+    ):
+        """Record metrics when approval request is resolved.
+
+        Phase 4: Tracks approval latency and resolution outcomes.
+
+        Args:
+            request_id: Approval request UUID
+            status: Final status (approved, rejected, expired, cancelled)
+            agent_name: Agent that created the request
+            risk_level: Risk level of the operation
+            created_at: When the approval request was created
+        """
+        # Calculate latency
+        resolved_at = datetime.utcnow()
+        latency_seconds = (resolved_at - created_at).total_seconds()
+
+        # Emit metrics
+        approval_requests_resolved.labels(
+            agent=agent_name, risk_level=risk_level, status=status
+        ).inc()
+
+        approval_latency_seconds.labels(
+            agent=agent_name, risk_level=risk_level, status=status
+        ).observe(latency_seconds)
+
+        # Track timeouts specifically
+        if status == "expired":
+            approval_timeouts.labels(agent=agent_name, risk_level=risk_level).inc()
+
+        # Update backlog
+        await self._update_backlog_metrics()
+
+        logger.info(
+            f"[HITLManager] Approval {request_id} resolved: "
+            f"status={status}, latency={latency_seconds:.1f}s"
+        )
 
 
 # Singleton instance

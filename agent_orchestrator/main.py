@@ -3974,6 +3974,30 @@ Workflow resumed after human approval.
                             f"[HITL] Failed to post GitHub PR comment: {pr_err}"
                         )
 
+                # Phase 4: Record approval resolution metrics
+                try:
+                    # Parse created_at from row (assuming it's in the query results)
+                    # We'll need to query it if not already in row
+                    async with conn.cursor() as cursor:
+                        await cursor.execute(
+                            "SELECT agent_name, created_at FROM approval_requests WHERE id = %s",
+                            (approval_request_id,),
+                        )
+                        metric_row = await cursor.fetchone()
+                        if metric_row:
+                            agent_name_metric, created_at = metric_row
+                            await hitl_manager.record_approval_resolution(
+                                request_id=approval_request_id,
+                                status=action,
+                                agent_name=agent_name_metric,
+                                risk_level=risk_level,
+                                created_at=created_at,
+                            )
+                except Exception as metric_err:
+                    logger.warning(
+                        f"[HITL] Failed to record approval metrics: {metric_err}"
+                    )
+
                 # Resume the workflow with insight injection (CHEF-207)
                 if thread_id:
                     from graph import app as workflow_app
