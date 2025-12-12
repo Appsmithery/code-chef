@@ -19,16 +19,16 @@ This directory contains shared infrastructure used across all code-chef agents a
 
 ---
 
-## MCP Integration (v2.0)
+## MCP Integration
 
-Direct MCP server access via Docker MCP Toolkit (gateway deprecated Dec 2025).
+Direct MCP server access via Docker MCP Toolkit.
 
-| File                                                     | Purpose                                                 | Status                                |
-| -------------------------------------------------------- | ------------------------------------------------------- | ------------------------------------- |
-| [`mcp_tool_client.py`](mcp_tool_client.py)               | **Direct stdio tool invocation**                        | ✅ Active                             |
-| [`mcp_discovery.py`](mcp_discovery.py)                   | **Server/tool enumeration**                             | ✅ Active                             |
-| [`progressive_mcp_loader.py`](progressive_mcp_loader.py) | **Context-optimized tool loading** (10-30 tools vs 178) | ✅ Active                             |
-| [`mcp_client.py`](mcp_client.py)                         | Legacy gateway client                                   | ⚠️ Deprecated (v1.x back-compat only) |
+| File                                                     | Purpose                                                 | Status    |
+| -------------------------------------------------------- | ------------------------------------------------------- | --------- |
+| [`mcp_tool_client.py`](mcp_tool_client.py)               | **Direct stdio tool invocation**                        | ✅ Active |
+| [`mcp_discovery.py`](mcp_discovery.py)                   | **Server/tool enumeration**                             | ✅ Active |
+| [`progressive_mcp_loader.py`](progressive_mcp_loader.py) | **Context-optimized tool loading** (10-30 tools vs 178) | ✅ Active |
+| [`mcp_client.py`](mcp_client.py)                         | Agent manifest and profile loading                      | ✅ Active |
 
 ### Quick Examples
 
@@ -268,37 +268,6 @@ Common helpers used across agents.
 | [`logger.py`](logger.py)               | Structured logging setup            |
 | [`retry.py`](retry.py)                 | Exponential backoff retry decorator |
 | [`env_utils.py`](env_utils.py)         | Environment variable helpers        |
-
----
-
-## Migration Guide
-
-### From Gateway (v1.x) to Docker MCP Toolkit (v2.0)
-
-**Old Code** (deprecated):
-
-```python
-from shared.lib.mcp_client import MCPClient
-
-mcp = MCPClient("feature_dev", gateway_url="http://gateway:8000")
-result = await mcp.invoke_tool("memory", "create_entities", {...})
-```
-
-**New Code** (recommended):
-
-```python
-from shared.lib.mcp_tool_client import get_mcp_tool_client
-
-client = get_mcp_tool_client("feature_dev")
-result = await client.invoke_tool_simple("memory", "create_entities", {...})
-```
-
-**Benefits**:
-
-- ✅ Direct stdio (no HTTP overhead)
-- ✅ Progressive tool loading (10-30 tools vs 178)
-- ✅ Better error handling
-- ✅ VS Code native integration
 
 ---
 

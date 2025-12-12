@@ -1,14 +1,14 @@
 # MCP Python SDK Architecture
 
-**Version**: 2.0 (Docker MCP Toolkit)  
-**Updated**: December 2025  
-**Status**: Active
+**Version**: 2.0  
+**Updated**: December 12, 2025  
+**Status**: Production
 
 ---
 
 ## Overview
 
-Direct MCP server access via [Docker MCP Toolkit](https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker) (gateway deprecated Dec 2025).
+Direct MCP server access via [Docker MCP Toolkit](https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker).
 
 ### Architecture
 
@@ -125,40 +125,12 @@ tools = await loader.get_tools_for_task(
 
 ## Key Files Reference
 
-| File                                                                       | Purpose                          | Status                             |
-| -------------------------------------------------------------------------- | -------------------------------- | ---------------------------------- |
-| [`shared/lib/mcp_tool_client.py`](../lib/mcp_tool_client.py)               | **Direct stdio tool invocation** | ✅ Active                          |
-| [`shared/lib/mcp_discovery.py`](../lib/mcp_discovery.py)                   | **Server/tool enumeration**      | ✅ Active                          |
-| [`shared/lib/progressive_mcp_loader.py`](../lib/progressive_mcp_loader.py) | **Context-optimized loading**    | ✅ Active                          |
-| [`shared/lib/mcp_client.py`](../lib/mcp_client.py)                         | Legacy gateway client            | ⚠️ Deprecated (v1.x compatibility) |
-
----
-
-## Migration from Gateway (v1.x)
-
-### Old Approach (Deprecated)
-
-```python
-# Via HTTP gateway (removed Dec 2025)
-result = await httpx.post(
-    f"{GATEWAY_URL}/tools/memory/create_entities",
-    json={"entities": [...]}
-)
-```
-
-### New Approach (Recommended)
-
-```python
-# Direct stdio access
-from shared.lib.mcp_tool_client import get_mcp_tool_client
-
-client = get_mcp_tool_client("agent_name")
-result = await client.invoke_tool_simple(
-    server="memory",
-    tool="create_entities",
-    params={"entities": [...]}
-)
-```
+| File                                                                       | Purpose                            | Status    |
+| -------------------------------------------------------------------------- | ---------------------------------- | --------- |
+| [`shared/lib/mcp_tool_client.py`](../lib/mcp_tool_client.py)               | **Direct stdio tool invocation**   | ✅ Active |
+| [`shared/lib/mcp_discovery.py`](../lib/mcp_discovery.py)                   | **Server/tool enumeration**        | ✅ Active |
+| [`shared/lib/progressive_mcp_loader.py`](../lib/progressive_mcp_loader.py) | **Context-optimized loading**      | ✅ Active |
+| [`shared/lib/mcp_client.py`](../lib/mcp_client.py)                         | Agent manifest and profile loading | ✅ Active |
 
 ---
 
@@ -225,20 +197,6 @@ docker mcp invoke memory create_entities \
 loader = ProgressiveMCPLoader(
     default_strategy=ToolLoadingStrategy.PROGRESSIVE
 )
-```
-
-### ImportError: mcp_tool_client
-
-**Cause**: Old code importing deprecated `MCPClient` from `mcp_client.py`.
-
-**Solution**: Update imports:
-
-```python
-# Old (deprecated)
-from shared.lib.mcp_client import MCPClient
-
-# New (recommended)
-from shared.lib.mcp_tool_client import get_mcp_tool_client
 ```
 
 ---

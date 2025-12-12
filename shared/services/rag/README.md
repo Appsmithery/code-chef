@@ -60,8 +60,6 @@ OPENAI_API_KEY=sk-...
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small  # 1536 dimensions, $0.02/1M tokens
 ```
 
-> **Note**: MCP Gateway deprecated Dec 2025. Tools accessed via [Docker MCP Toolkit](https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker) in VS Code or direct Python SDK (`shared/lib/mcp_tool_client.py`).
-
 ### Fallback Configuration (Development)
 
 If `OPENAI_API_KEY` is not set, the service falls back to Ollama:
@@ -75,7 +73,7 @@ OLLAMA_EMBEDDING_MODEL=nomic-embed-text
 
 ### `GET /health`
 
-Health check with Qdrant and MCP Gateway connectivity status.
+Health check with Qdrant connectivity status.
 
 **Response:**
 
@@ -84,8 +82,7 @@ Health check with Qdrant and MCP Gateway connectivity status.
   "status": "ok",
   "service": "rag-context-manager",
   "version": "1.0.0",
-  "qdrant_status": "connected",
-  "mcp_gateway_status": "connected"
+  "qdrant_status": "connected"
 }
 ```
 
