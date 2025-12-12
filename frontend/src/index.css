@@ -240,4 +240,59 @@
   .brand-gradient {
     @apply bg-gradient-to-r from-accent via-primary to-secondary;
   }
+
+  /*
+    Motion & reactive visuals (site standard)
+    - Keep subtle and editorial.
+    - Always respect prefers-reduced-motion.
+  */
+  @keyframes cc-shimmer {
+    0% {
+      background-position: 0% 50%;
+    }
+
+    100% {
+      background-position: 100% 50%;
+    }
+  }
+
+  @keyframes cc-float {
+    0% {
+      transform: translateY(0);
+    }
+
+    50% {
+      transform: translateY(-4px);
+    }
+
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  .cc-shimmer-text {
+    background-image: linear-gradient(90deg, hsl(var(--foreground)), hsl(var(--accent)), hsl(var(--foreground)));
+    background-size: 220% 220%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: cc-shimmer 10s ease-in-out infinite;
+  }
+
+  .cc-float {
+    animation: cc-float 6s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cc-shimmer-text {
+      animation: none;
+      background-image: none;
+      color: inherit;
+    }
+
+    .cc-float {
+      animation: none;
+    }
+  }
 }

@@ -1,13 +1,7 @@
 import Layout from "@/components/Layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Activity,
   ArrowRight,
@@ -17,11 +11,91 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
-  Terminal,
   Wrench,
 } from "lucide-react";
 
 export default function Home() {
+  const capabilityRails = [
+    {
+      id: "multi-agent",
+      title: "Multi-Agent Orchestration",
+      eyebrow: "Routing · Delegation · Coordination",
+      description:
+        "LangGraph StateGraph workflow with intelligent task routing. The Head Chef (Orchestrator) coordinates specialized agents for optimal results.",
+      Icon: Bot,
+      accent: "accent" as const,
+      bullets: [
+        "LangGraph StateGraph",
+        "Deterministic handoffs",
+        "Context-aware routing",
+      ],
+    },
+    {
+      id: "mcp-tools",
+      title: "MCP Tool Integration",
+      eyebrow: "Progressive disclosure · Lower token burn",
+      description:
+        "Docker MCP Toolkit with 20 servers and 178+ tools. Progressive disclosure saves 80–90% on token costs.",
+      Icon: Wrench,
+      accent: "secondary" as const,
+      bullets: ["20 MCP servers", "178+ tools", "Invoke-time tool binding"],
+    },
+    {
+      id: "rag",
+      title: "RAG Semantic Search",
+      eyebrow: "Vectors · Patterns · Docs",
+      description:
+        "Qdrant-backed retrieval across code patterns, Linear issues, and documentation for contextual assistance.",
+      Icon: Search,
+      accent: "primary" as const,
+      bullets: ["Code patterns", "Linear issues", "Documentation"],
+    },
+    {
+      id: "observability",
+      title: "Full Observability",
+      eyebrow: "Tracing · Metrics · Durability",
+      description:
+        "LangSmith tracing for LLM calls, Grafana Cloud for metrics, and PostgreSQL checkpointing for durable workflows.",
+      Icon: Activity,
+      accent: "primary" as const,
+      bullets: [
+        "LangSmith traces",
+        "Grafana dashboards",
+        "Postgres checkpoints",
+      ],
+    },
+    {
+      id: "hitl",
+      title: "Human-in-the-Loop",
+      eyebrow: "Risk gates · Approvals · Webhooks",
+      description:
+        "Risk-based approval workflows via Linear integration. Critical changes require human sign-off.",
+      Icon: ShieldCheck,
+      accent: "primary" as const,
+      bullets: ["Risk assessment", "Approval policies", "Audit trail"],
+    },
+    {
+      id: "cloud",
+      title: "Cloud-Native Agents",
+      eyebrow: "Deployable · Health-checked · Lean",
+      description:
+        "Running on DigitalOcean with Caddy reverse proxy, automatic HTTPS, and optimized for a small memory footprint.",
+      Icon: Cloud,
+      accent: "accent" as const,
+      bullets: ["Caddy + HTTPS", "Compose deploy", "Health endpoints"],
+    },
+    {
+      id: "modelops",
+      title: "Train Your Own AI",
+      eyebrow: "Fine-tune · Evaluate · Deploy",
+      description:
+        "ModelOps makes it easy to fine-tune on your codebase—train in about an hour, test results, and deploy with one click.",
+      Icon: Sparkles,
+      accent: "secondary" as const,
+      bullets: ["One-hour training", "Automatic testing", "Safe rollback"],
+    },
+  ];
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -178,7 +252,7 @@ export default function Home() {
               Capabilities
             </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              What's Cookin'?
+              <span className="cc-shimmer-text">What's Cookin'?</span>
             </h2>
             <p className="text-muted-foreground max-w-[700px]">
               A complete menu of DevOps automation tools, served hot and ready
@@ -186,196 +260,339 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[minmax(200px,auto)]">
-            {/* Large Feature */}
-            <Card className="md:col-span-2 bg-gradient-to-br from-card to-accent/5 shadow-medium hover:-translate-y-1 hover:shadow-hover dark:shadow-medium-dark dark:hover:shadow-hover-dark transition-all duration-300 group">
-              <CardHeader className="relative">
-                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
-                  <Bot className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-xl">
-                  Multi-Agent Orchestration
-                </CardTitle>
-                <CardDescription className="text-base">
-                  LangGraph StateGraph workflow with intelligent task routing.
-                  The Head Chef (Orchestrator) coordinates specialized agents
-                  for optimal results.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-8 pb-10">
-                <div className="h-32 w-full bg-gradient-to-br from-accent/5 to-primary/5 rounded-lg border border-border relative overflow-hidden">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex gap-8">
-                      <div className="w-12 h-12 rounded-full bg-accent/20 flex items-center justify-center border border-accent/30">
-                        <Bot className="h-6 w-6 text-accent" />
-                      </div>
-                      <div className="flex items-center text-muted-foreground">
-                        <ArrowRight className="h-4 w-4 animate-pulse" />
-                      </div>
-                      <div className="w-12 h-12 rounded-full bg-secondary/20 flex items-center justify-center border border-secondary/30">
-                        <Terminal className="h-6 w-6 text-secondary" />
+          {/* Scrollytelling Rails */}
+          <div className="space-y-20">
+            {capabilityRails.map((rail, idx) => {
+              const alignRight = idx % 2 === 1;
+              const Icon = rail.Icon;
+              const accentTone =
+                rail.accent === "primary"
+                  ? "from-primary/10 to-primary/5"
+                  : rail.accent === "secondary"
+                  ? "from-secondary/10 to-secondary/5"
+                  : "from-accent/10 to-accent/5";
+              const accentIcon =
+                rail.accent === "primary"
+                  ? "text-primary bg-primary/10 border-primary/20"
+                  : rail.accent === "secondary"
+                  ? "text-secondary bg-secondary/10 border-secondary/20"
+                  : "text-accent bg-accent/10 border-accent/20";
+
+              return (
+                <div
+                  key={rail.id}
+                  className="grid lg:grid-cols-12 gap-8 items-center"
+                >
+                  <div
+                    className={
+                      "lg:col-span-5 space-y-5 " +
+                      (alignRight ? "lg:order-2" : "")
+                    }
+                  >
+                    <div className="inline-flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-secondary/60" />
+                      {rail.eyebrow}
+                    </div>
+                    <h3 className="text-3xl md:text-4xl font-bold tracking-tight leading-tight">
+                      {rail.title}
+                    </h3>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {rail.description}
+                    </p>
+
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {rail.bullets.map((b) => (
+                        <Badge
+                          key={b}
+                          variant="secondary"
+                          className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
+                        >
+                          {b}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div
+                    className={
+                      "lg:col-span-7 " + (alignRight ? "lg:order-1" : "")
+                    }
+                  >
+                    <div className="relative">
+                      <div
+                        className={
+                          "absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-2xl blur opacity-10"
+                        }
+                      />
+                      <div
+                        className={
+                          "relative rounded-xl border border-border bg-gradient-to-br " +
+                          accentTone +
+                          " shadow-medium dark:shadow-medium-dark overflow-hidden"
+                        }
+                      >
+                        <div className="p-8">
+                          <div className="flex items-start justify-between gap-6">
+                            <div className="space-y-2">
+                              <div className="text-sm text-muted-foreground">
+                                Kitchen Note
+                              </div>
+                              <div className="text-lg font-semibold leading-snug">
+                                {rail.id === "multi-agent" && (
+                                  <>
+                                    Route tasks like a head chef—fast, calm, and
+                                    consistent.
+                                  </>
+                                )}
+                                {rail.id === "mcp-tools" && (
+                                  <>
+                                    Tools appear only when needed. Less noise.
+                                    More signal.
+                                  </>
+                                )}
+                                {rail.id === "rag" && (
+                                  <>
+                                    Find the right pattern, instantly—without
+                                    losing context.
+                                  </>
+                                )}
+                                {rail.id === "observability" && (
+                                  <>
+                                    Every call traceable. Every workflow
+                                    durable.
+                                  </>
+                                )}
+                                {rail.id === "hitl" && (
+                                  <>
+                                    Let humans sign off where it matters.
+                                    Automate the rest.
+                                  </>
+                                )}
+                                {rail.id === "cloud" && (
+                                  <>
+                                    Ship it with confidence: health checks,
+                                    HTTPS, and clean deploys.
+                                  </>
+                                )}
+                                {rail.id === "modelops" && (
+                                  <>
+                                    Teach the kitchen your recipes—then deploy
+                                    the new taste.
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div
+                              className={
+                                "shrink-0 w-12 h-12 rounded-lg border flex items-center justify-center " +
+                                accentIcon +
+                                " cc-float"
+                              }
+                            >
+                              <Icon className="h-6 w-6" />
+                            </div>
+                          </div>
+
+                          {/* Free-form visual area */}
+                          <div className="mt-6 rounded-lg border border-border/60 bg-background/40 backdrop-blur-sm overflow-hidden">
+                            <div className="px-4 py-3 border-b border-border/60 text-xs text-muted-foreground flex items-center justify-between">
+                              <span className="font-medium">chef console</span>
+                              <span className="opacity-70">{rail.id}</span>
+                            </div>
+                            <div className="p-4 space-y-3 text-sm">
+                              {rail.id === "multi-agent" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-primary">➜</span>
+                                    <span className="text-foreground">
+                                      route task
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      /api/auth
+                                    </span>
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-3">
+                                    <div className="rounded-md bg-primary/10 border border-primary/20 p-3">
+                                      <div className="text-xs text-muted-foreground">
+                                        dispatch
+                                      </div>
+                                      <div className="font-semibold">
+                                        feature-dev
+                                      </div>
+                                    </div>
+                                    <div className="rounded-md bg-secondary/10 border border-secondary/20 p-3">
+                                      <div className="text-xs text-muted-foreground">
+                                        guardrails
+                                      </div>
+                                      <div className="font-semibold">
+                                        code-review
+                                      </div>
+                                    </div>
+                                    <div className="rounded-md bg-accent/10 border border-accent/20 p-3">
+                                      <div className="text-xs text-muted-foreground">
+                                        ship
+                                      </div>
+                                      <div className="font-semibold">cicd</div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {rail.id === "mcp-tools" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-primary">➜</span>
+                                    <span className="text-foreground">
+                                      tools
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                      bound at invoke-time
+                                    </span>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {[
+                                      "docker",
+                                      "github",
+                                      "linear",
+                                      "git",
+                                      "postgres",
+                                    ].map((t) => (
+                                      <Badge
+                                        key={t}
+                                        variant="secondary"
+                                        className="bg-secondary/10 text-secondary border-none text-xs"
+                                      >
+                                        {t}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {rail.id === "rag" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Search className="h-4 w-4 text-primary" />
+                                    <span className="text-muted-foreground">
+                                      Search:
+                                    </span>
+                                    <span className="font-medium">
+                                      "retry with exponential backoff"
+                                    </span>
+                                  </div>
+                                  <div className="rounded-md bg-card/60 border border-border p-3 text-xs text-muted-foreground">
+                                    Top hits:{" "}
+                                    <span className="text-foreground">
+                                      workflow_engine.py
+                                    </span>
+                                    ,{" "}
+                                    <span className="text-foreground">
+                                      self_healing.py
+                                    </span>
+                                    ,{" "}
+                                    <span className="text-foreground">
+                                      DEPLOYMENT.md
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {rail.id === "observability" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>llm_latency_seconds (p95)</span>
+                                    <span className="text-primary">1.8s</span>
+                                  </div>
+                                  <div className="h-10 rounded-md bg-card/60 border border-border p-2 flex items-end gap-1">
+                                    {[3, 6, 4, 8, 5, 7, 6, 9].map((h, i) => (
+                                      <div
+                                        key={i}
+                                        className="flex-1 rounded-sm bg-primary/25"
+                                        style={{ height: `${h * 4}px` }}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {rail.id === "hitl" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <ShieldCheck className="h-4 w-4 text-accent" />
+                                    <span className="text-muted-foreground">
+                                      Pending operation:
+                                    </span>
+                                    <span className="font-medium">
+                                      deploy to production
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs">
+                                    <Badge className="bg-secondary/20 text-secondary-foreground border-none">
+                                      requires approval
+                                    </Badge>
+                                    <span className="text-muted-foreground">
+                                      via Linear webhook
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {rail.id === "cloud" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Droplet</span>
+                                    <span className="text-primary">
+                                      healthy
+                                    </span>
+                                  </div>
+                                  <div className="rounded-md bg-card/60 border border-border p-3 text-xs text-muted-foreground">
+                                    Caddy:{" "}
+                                    <span className="text-foreground">
+                                      HTTPS
+                                    </span>{" "}
+                                    · Compose:{" "}
+                                    <span className="text-foreground">
+                                      up -d
+                                    </span>{" "}
+                                    · Health:{" "}
+                                    <span className="text-foreground">
+                                      /health
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+
+                              {rail.id === "modelops" && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Sparkles className="h-4 w-4 text-secondary" />
+                                    <span className="text-muted-foreground">
+                                      Pipeline:
+                                    </span>
+                                    <span className="font-medium">
+                                      train → evaluate → deploy
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="px-2 py-1 rounded bg-secondary/10 border border-secondary/20">
+                                      demo
+                                    </span>
+                                    <ArrowRight className="h-3 w-3" />
+                                    <span className="px-2 py-1 rounded bg-secondary/10 border border-secondary/20">
+                                      production
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-
-            {/* Standard Feature */}
-            <Card className="bg-gradient-to-br from-card to-secondary/5 shadow-medium hover:-translate-y-1 hover:shadow-hover dark:shadow-medium-dark dark:hover:shadow-hover-dark transition-all duration-300 group">
-              <CardHeader className="relative p-8 pb-10">
-                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-300">
-                  <Wrench className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-lg">MCP Tool Integration</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Docker MCP Toolkit with 20 servers and 178+ tools. Progressive
-                  disclosure saves 80-90% on token costs.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Secondary Features - Evenly Spaced */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
-            {/* RAG Semantic Search */}
-            <Card className="bg-gradient-to-br from-card to-primary/5 shadow-soft hover:-translate-y-1 hover:shadow-hover dark:shadow-soft-dark dark:hover:shadow-hover-dark transition-all duration-300 group">
-              <CardHeader className="relative p-8 pb-6">
-                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
-                  <Search className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-lg">RAG Semantic Search</CardTitle>
-              </CardHeader>
-              <CardContent className="p-8 pt-0">
-                <p className="text-muted-foreground text-sm leading-relaxed mb-3">
-                  Qdrant Cloud with 1,200+ vectors across code patterns, Linear
-                  issues, and documentation for contextual assistance.
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  <Badge
-                    variant="secondary"
-                    className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
-                  >
-                    Code Patterns
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
-                  >
-                    Linear Issues
-                  </Badge>
-                  <Badge
-                    variant="secondary"
-                    className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
-                  >
-                    Documentation
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Full Observability */}
-            <Card className="bg-gradient-to-br from-card to-primary/5 shadow-soft hover:-translate-y-1 hover:shadow-hover dark:shadow-soft-dark dark:hover:shadow-hover-dark transition-all duration-300 group">
-              <CardHeader className="relative p-8 pb-6">
-                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
-                  <Activity className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-lg">Full Observability</CardTitle>
-              </CardHeader>
-              <CardContent className="p-8 pt-0">
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  LangSmith tracing for LLM calls, Grafana Cloud for metrics,
-                  and PostgreSQL checkpointing for durable workflows.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Human-in-the-Loop */}
-            <Card className="bg-gradient-to-br from-card to-primary/5 shadow-soft hover:-translate-y-1 hover:shadow-hover dark:shadow-soft-dark dark:hover:shadow-hover-dark transition-all duration-300 group">
-              <CardHeader className="relative p-8 pb-6">
-                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-300">
-                  <ShieldCheck className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-lg">Human-in-the-Loop</CardTitle>
-              </CardHeader>
-              <CardContent className="p-8 pt-0">
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Risk-based approval workflows via Linear integration. Critical
-                  changes require human sign-off.
-                </p>
-              </CardContent>
-            </Card>
-
-            {/* Cloud-Native Agents */}
-            <Card className="bg-gradient-to-br from-card to-accent/5 shadow-soft hover:-translate-y-1 hover:shadow-hover dark:shadow-soft-dark dark:hover:shadow-hover-dark transition-all duration-300 group">
-              <CardHeader className="relative p-8 pb-6">
-                <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
-                  <Cloud className="h-6 w-6" />
-                </div>
-                <CardTitle className="text-lg">Cloud-Native Agents</CardTitle>
-              </CardHeader>
-              <CardContent className="p-8 pt-0">
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Running on DigitalOcean with Caddy reverse proxy, automatic
-                  HTTPS, and optimized for 2GB memory footprint.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* ModelOps Feature */}
-          <div className="mt-6">
-            <Card className="bg-gradient-to-br from-secondary/10 to-accent/10 shadow-medium hover:-translate-y-1 hover:shadow-hover hover:bg-muted/50 dark:shadow-medium-dark dark:hover:shadow-hover-dark transition-all duration-300 group">
-              <CardHeader className="relative">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="absolute top-4 right-4 w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center text-secondary group-hover:scale-110 transition-transform duration-300">
-                      <Sparkles className="h-6 w-6" />
-                    </div>
-                    <CardTitle className="text-2xl mb-2">
-                      Train Your Own AI
-                    </CardTitle>
-                    <CardDescription className="text-base">
-                      Want code/chef to write code exactly how your team likes
-                      it? Teach it your style.
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <p className="text-muted-foreground leading-relaxed">
-                    ModelOps makes it easy to fine-tune AI models on your
-                    codebase—no machine learning expertise required. Train in
-                    about an hour, test the results, and deploy with one click.
-                    The AI learns your coding patterns, naming conventions, and
-                    project structure.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge
-                      variant="secondary"
-                      className="bg-secondary/20 text-secondary-foreground border-secondary/30"
-                    >
-                      One-Hour Training
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="bg-secondary/20 text-secondary-foreground border-secondary/30"
-                    >
-                      Automatic Testing
-                    </Badge>
-                    <Badge
-                      variant="secondary"
-                      className="bg-secondary/20 text-secondary-foreground border-secondary/30"
-                    >
-                      Safe Rollback
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              );
+            })}
           </div>
         </div>
       </section>
