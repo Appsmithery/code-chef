@@ -96,6 +96,12 @@ class WorkflowState(TypedDict):
         workflow_template: Name of YAML template to execute (e.g., "pr-deployment.workflow.yaml")
         workflow_context: Initial context variables for template rendering
         use_template_engine: Whether to use WorkflowEngine instead of supervisor routing
+
+    Project Context Fields (RAG Isolation):
+        project_context: Project identification for RAG query isolation
+            - project_id: Linear project ID or GitHub repo URL
+            - repository_url: GitHub repository URL
+            - workspace_name: VS Code workspace name
     """
 
     messages: Annotated[List[BaseMessage], "append"]  # Append-only message history
@@ -116,6 +122,10 @@ class WorkflowState(TypedDict):
     ]  # YAML template name (e.g., "pr-deployment.workflow.yaml")
     workflow_context: Optional[Dict[str, Any]]  # Template context variables
     use_template_engine: bool  # If True, use WorkflowEngine instead of supervisor
+    # Project context for RAG isolation
+    project_context: Optional[
+        Dict[str, Any]
+    ]  # project_id, repository_url, workspace_name
 
 
 # Agent cache with bound LLM instances
@@ -162,7 +172,7 @@ def get_router() -> WorkflowRouter:
     return _workflow_router
 
 
-def get_agent(agent_name: str):
+def get_agent(agent_name: str, project_context: Optional[Dict[str, Any]] = None):
     """Get or create agent instance using real BaseAgent implementations.
 
     Uses the agent registry from agents/__init__.py which provides:
@@ -171,19 +181,30 @@ def get_agent(agent_name: str):
 
     Args:
         agent_name: Name of agent (supervisor, feature-dev, code-review, etc.)
+        project_context: Project context dict with project_id, repository_url, workspace_name
 
     Returns:
         BaseAgent instance with invoke() method
     """
-    if agent_name not in _agent_cache:
+    # Create cache key including project context for isolation
+    cache_key = agent_name
+    if project_context:
+        project_id = project_context.get("project_id", "")
+        cache_key = f"{agent_name}:{project_id}"
+
+    if cache_key not in _agent_cache:
         try:
-            _agent_cache[agent_name] = get_real_agent(agent_name)
-            logger.info(f"[LangGraph] Initialized agent: {agent_name}")
+            _agent_cache[cache_key] = get_real_agent(
+                agent_name, project_context=project_context
+            )
+            logger.info(
+                f"[LangGraph] Initialized agent: {agent_name} (project: {project_context.get('project_id') if project_context else 'none'})"
+            )
         except Exception as e:
             logger.error(f"[LangGraph] Failed to initialize agent {agent_name}: {e}")
             raise
 
-    return _agent_cache[agent_name]
+    return _agent_cache[cache_key]
 
 
 def _collect_agent_insights(
@@ -246,7 +267,8 @@ async def supervisor_node(state: WorkflowState) -> WorkflowState:
     1. Which specialized agent should handle it
     2. Whether it requires HITL approval (high-risk operations)
     """
-    supervisor = get_agent("supervisor")
+    project_context = state.get("project_context")
+    supervisor = get_agent("supervisor", project_context=project_context)
 
     # Add routing instruction to messages
     routing_prompt = """Analyze this task and determine:
@@ -326,7 +348,8 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     CHEF-208: Captures insights to state for checkpoint persistence.
     Phase 3: Performs risk assessment for code changes and routes to approval if needed.
     """
-    agent = get_agent("feature-dev")
+    project_context = state.get("project_context")
+    agent = get_agent("feature-dev", project_context=project_context)
 
     try:
         response = await agent.invoke(state["messages"])
@@ -420,7 +443,8 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
 
     CHEF-208: Captures insights to state for checkpoint persistence.
     """
-    agent = get_agent("code-review")
+    project_context = state.get("project_context")
+    agent = get_agent("code-review", project_context=project_context)
 
     try:
         response = await agent.invoke(state["messages"])
@@ -477,7 +501,8 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     CHEF-208: Captures insights to state for checkpoint persistence.
     Phase 3: Performs risk assessment for infrastructure changes and routes to approval if needed.
     """
-    agent = get_agent("infrastructure")
+    project_context = state.get("project_context")
+    agent = get_agent("infrastructure", project_context=project_context)
 
     try:
         response = await agent.invoke(state["messages"])
@@ -569,7 +594,8 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
     CHEF-208: Captures insights to state for checkpoint persistence.
     Phase 3: Performs risk assessment for deployments and extracts PR context from state.
     """
-    agent = get_agent("cicd")
+    project_context = state.get("project_context")
+    agent = get_agent("cicd", project_context=project_context)
 
     try:
         response = await agent.invoke(state["messages"])
@@ -658,7 +684,8 @@ async def documentation_node(state: WorkflowState) -> WorkflowState:
 
     CHEF-208: Captures insights to state for checkpoint persistence.
     """
-    agent = get_agent("documentation")
+    project_context = state.get("project_context")
+    agent = get_agent("documentation", project_context=project_context)
 
     try:
         response = await agent.invoke(state["messages"])

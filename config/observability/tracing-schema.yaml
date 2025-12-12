@@ -46,6 +46,35 @@ task_id:
 # ==============================================================================
 # Track performance improvement as the system evolves
 
+# ==============================================================================
+# PROJECT CONTEXT (RAG Isolation)
+# ==============================================================================
+# Used to prevent cross-contamination between repositories
+
+project_id:
+  type: string
+  format: "Linear project ID or GitHub repo URL" # e.g., "CODE-CHEF" or "Appsmithery/code-chef"
+  required: false
+  description: |
+    Unique identifier for the project/repository being worked on.
+    Used to isolate RAG queries and prevent cross-contamination.
+    Priority: Linear project ID > GitHub repo URL > workspace name.
+
+repository_url:
+  type: string
+  format: "https://github.com/{owner}/{repo}"
+  required: false
+  description: |
+    GitHub repository URL for this trace.
+    Used as fallback project identifier when Linear project ID unavailable.
+
+workspace_name:
+  type: string
+  required: false
+  description: |
+    VS Code workspace name.
+    Used as last-resort project identifier.
+
 extension_version:
   type: string
   format: semver # e.g., "1.2.3"

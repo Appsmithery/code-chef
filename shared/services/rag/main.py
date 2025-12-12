@@ -249,11 +249,35 @@ def ensure_collection(collection_name: str) -> None:
     COLLECTION_CACHE.add(collection_name)
 
 
-def build_metadata_filter(metadata: Optional[Dict[str, Any]]) -> Optional[Filter]:
-    if not metadata:
+def build_metadata_filter(
+    metadata: Optional[Dict[str, Any]], project_id: Optional[str] = None
+) -> Optional[Filter]:
+    """Build Qdrant filter from metadata dict.
+
+    Args:
+        metadata: Generic metadata filters
+        project_id: Project ID for RAG isolation (takes precedence)
+
+    Returns:
+        Qdrant Filter with combined conditions
+    """
+    if not metadata and not project_id:
         return None
+
     must_conditions = []
     should_conditions = []
+
+    # Add project_id filter first (highest priority for isolation)
+    if project_id:
+        must_conditions.append(
+            FieldCondition(
+                key="metadata.project_id", match=MatchValue(value=project_id)
+            )
+        )
+
+    if not metadata:
+        return Filter(must=must_conditions) if must_conditions else None
+
     for key, value in metadata.items():
         if value is None:
             continue

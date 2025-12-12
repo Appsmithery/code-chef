@@ -47,7 +47,7 @@ def _get_coordinator_trace_metadata() -> Dict[str, str]:
 
     Returns metadata following the schema in config/observability/tracing-schema.yaml
     """
-    return {
+    metadata = {
         "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
         "environment": os.getenv("TRACE_ENVIRONMENT", "production"),
         "module": "coordinator",
@@ -56,6 +56,16 @@ def _get_coordinator_trace_metadata() -> Dict[str, str]:
         "config_hash": _get_config_hash(),
         "agent": os.getenv("AGENT_NAME", "infrastructure"),
     }
+
+    # Add project context for RAG isolation
+    if project_id := os.getenv("PROJECT_ID"):
+        metadata["project_id"] = project_id
+    if repository_url := os.getenv("REPOSITORY_URL"):
+        metadata["repository_url"] = repository_url
+    if workspace_name := os.getenv("WORKSPACE_NAME"):
+        metadata["workspace_name"] = workspace_name
+
+    return metadata
 
 
 def _get_langsmith_project() -> str:

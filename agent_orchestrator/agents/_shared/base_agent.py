@@ -97,15 +97,30 @@ class BaseAgent:
     - Bound LLM instances are cached by tool configuration hash
     """
 
-    def __init__(self, config_path: str, agent_name: str):
+    def __init__(
+        self,
+        config_path: str,
+        agent_name: str,
+        project_context: Optional[Dict[str, Any]] = None,
+    ):
         """Initialize agent from configuration file.
 
         Args:
             config_path: Path to agent YAML configuration file
             agent_name: Name of the agent (for MCP client and tracing)
+            project_context: Project context dict containing project_id, repository_url, workspace_name
         """
         self.agent_name = agent_name
         self.config = self._load_config(config_path)
+
+        # Store project context for RAG isolation and tracing
+        self.project_id = project_context.get("project_id") if project_context else None
+        self.repository_url = (
+            project_context.get("repository_url") if project_context else None
+        )
+        self.workspace_name = (
+            project_context.get("workspace_name") if project_context else None
+        )
 
         # Initialize MCP client for tool access
         self.mcp_client = MCPClient(agent_name=agent_name)
@@ -127,10 +142,12 @@ class BaseAgent:
             try:
                 memory_config = self.config.get("memory", {})
                 if memory_config.get("enabled", True):
-                    self.memory_manager = AgentMemoryManager(agent_id=agent_name)
+                    self.memory_manager = AgentMemoryManager(
+                        agent_id=agent_name, project_id=self.project_id
+                    )
                     self._memory_enabled = True
                     logger.info(
-                        f"[{agent_name}] Agent memory enabled for cross-agent knowledge sharing"
+                        f"[{agent_name}] Agent memory enabled for cross-agent knowledge sharing (project: {self.project_id})"
                     )
             except Exception as e:
                 logger.warning(
