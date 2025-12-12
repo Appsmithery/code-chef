@@ -74,6 +74,22 @@ code/chef automatically picks the best AI for each task—you don't need to worr
 
 ### Step 1: Install the Extension
 
+**From GitHub Releases** (Recommended):
+
+```bash
+# Download and install in one command
+curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+```
+
+Or manually:
+
+1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
+2. Download the latest `vscode-codechef-*.vsix` file
+3. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
+4. Select the downloaded file and reload VS Code
+
+**From VS Code Marketplace** (Coming Soon):
+
 1. Open VS Code Extensions (`Ctrl+Shift+X`)
 2. Search for "code/chef"
 3. Click Install

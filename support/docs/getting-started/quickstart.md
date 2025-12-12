@@ -16,14 +16,32 @@ Use the hosted code/chef service—no server setup required.
 
 ### Step 1: Install the Extension
 
-**From GitHub Releases** (recommended):
+**Quick Install (Recommended)**:
+
+Download and install the latest version in one command:
+
+```bash
+curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+```
+
+**Manual Install from GitHub Releases**:
 
 1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
-2. Download `vscode-codechef-*.vsix`
-3. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
-4. Select the file and reload VS Code
+2. Download the latest `vscode-codechef-*.vsix` file
+3. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
+4. Select the downloaded file and reload VS Code
 
-**From VS Code Marketplace**:
+**Update Existing Installation**:
+
+```bash
+# Uninstall old version
+code --uninstall-extension appsmithery.vscode-codechef
+
+# Install latest
+curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+```
+
+**From VS Code Marketplace** (Coming Soon):
 
 1. Open Extensions (`Ctrl+Shift+X`)
 2. Search "code/chef"
