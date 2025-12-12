@@ -19,17 +19,17 @@ Features:
 Issues: CHEF-198 (shared types), CHEF-199 (RAG refactor), CHEF-200 (@traceable)
 """
 
-import os
 import logging
+import os
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from dataclasses import dataclass, field
 
 import httpx
 from langsmith import traceable
 
 # Import canonical types from shared location
-from .core_types import InsightType, CapturedInsight
+from .core_types import CapturedInsight, InsightType
 
 logger = logging.getLogger(__name__)
 
@@ -117,6 +117,7 @@ class AgentMemoryManager:
         agent_id: str,
         rag_service_url: Optional[str] = None,
         timeout: float = 30.0,
+        project_id: Optional[str] = None,
     ):
         """
         Initialize AgentMemoryManager with RAG service connection.
@@ -125,8 +126,10 @@ class AgentMemoryManager:
             agent_id: ID of the agent using this memory manager
             rag_service_url: URL of RAG service (default from env)
             timeout: HTTP request timeout in seconds
+            project_id: Project ID for RAG isolation (Linear project ID or repo URL)
         """
         self.agent_id = agent_id
+        self.project_id = project_id
         self.rag_url = rag_service_url or os.getenv(
             "RAG_SERVICE_URL", "http://rag-context:8007"
         )
@@ -137,7 +140,7 @@ class AgentMemoryManager:
         self.last_extracted_insights: List[Dict[str, Any]] = []
 
         logger.info(
-            f"[AgentMemory] Initialized for agent={agent_id}, rag_url={self.rag_url}"
+            f"[AgentMemory] Initialized for agent={agent_id}, project={project_id}, rag_url={self.rag_url}"
         )
 
     async def _get_client(self) -> httpx.AsyncClient:
@@ -176,6 +179,11 @@ class AgentMemoryManager:
         """
         client = await self._get_client()
 
+        # Auto-inject project_id into metadata for RAG isolation
+        enriched_metadata = metadata or {}
+        if self.project_id:
+            enriched_metadata["project_id"] = self.project_id
+
         payload = {
             "agent_id": self.agent_id,
             "insight_type": (
@@ -186,7 +194,7 @@ class AgentMemoryManager:
             "content": content,
             "source_workflow_id": source_workflow_id,
             "source_task": source_task,
-            "metadata": metadata or {},
+            "metadata": enriched_metadata,
         }
 
         try:
@@ -236,6 +244,8 @@ class AgentMemoryManager:
         insight_types: Optional[List[str]] = None,
         limit: int = 5,
         min_confidence: float = 0.0,
+        project_id: Optional[str] = None,
+        cross_project: bool = False,
     ) -> List[Insight]:
         """
         Retrieve semantically similar insights via RAG service.
@@ -246,11 +256,18 @@ class AgentMemoryManager:
             insight_types: Filter by insight types
             limit: Maximum results to return
             min_confidence: Minimum similarity score threshold
+            project_id: Filter by project ID (defaults to agent's project)
+            cross_project: Allow cross-project results (ignores project_id filter)
 
         Returns:
             List of relevant insights sorted by similarity
         """
         client = await self._get_client()
+
+        # Default to agent's project unless cross-project enabled
+        effective_project_id = (
+            None if cross_project else (project_id or self.project_id)
+        )
 
         payload = {
             "query": query,
@@ -258,6 +275,7 @@ class AgentMemoryManager:
             "insight_types": insight_types,
             "limit": limit,
             "min_confidence": min_confidence,
+            "project_id": effective_project_id,
         }
 
         try:

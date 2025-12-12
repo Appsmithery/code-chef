@@ -3328,6 +3328,16 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                 yield f"data: {json.dumps({'type': 'error', 'error': 'Graph not available'})}\n\n"
                 return
 
+            # Extract project context from request
+            project_context = None
+            if request.project_context:
+                project_context = {
+                    "project_id": request.project_context.get("linear_project_id")
+                    or request.project_context.get("github_repo_url"),
+                    "repository_url": request.project_context.get("github_repo_url"),
+                    "workspace_name": request.project_context.get("workspace_name"),
+                }
+
             # Build initial state
             initial_state: WorkflowState = {
                 "messages": [HumanMessage(content=request.message)],
@@ -3339,6 +3349,7 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                 "workflow_id": session_id,
                 "thread_id": session_id,
                 "pending_operation": None,
+                "project_context": project_context,
             }
 
             config = {"configurable": {"thread_id": session_id}}
@@ -3570,6 +3581,16 @@ async def orchestrate_langgraph(request: TaskRequest):
         f"[LangGraph] Starting workflow for task {task_id}: {request.description[:100]}"
     )
 
+    # Extract project context from request
+    project_context = None
+    if request.project_context:
+        project_context = {
+            "project_id": request.project_context.get("linear_project_id")
+            or request.project_context.get("github_repo_url"),
+            "repository_url": request.project_context.get("github_repo_url"),
+            "workspace_name": request.project_context.get("workspace_name"),
+        }
+
     # Build initial workflow state
     initial_state: WorkflowState = {
         "messages": [HumanMessage(content=request.description)],
@@ -3578,6 +3599,7 @@ async def orchestrate_langgraph(request: TaskRequest):
         "task_result": {},
         "approvals": [],
         "requires_approval": False,
+        "project_context": project_context,
     }
 
     # Execute workflow

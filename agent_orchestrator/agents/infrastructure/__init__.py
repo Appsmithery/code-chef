@@ -14,16 +14,21 @@ class InfrastructureAgent(BaseAgent):
     Has access to Terraform, Kubernetes, Docker, and ModelOps tools.
     """
 
-    def __init__(self, config_path: str = None):
+    def __init__(self, config_path: str = None, project_context: dict = None):
         """Initialize infrastructure agent.
 
         Args:
             config_path: Path to infrastructure config (defaults to tools/infrastructure_tools.yaml)
+            project_context: Project context dict with project_id, repository_url, workspace_name
         """
         if config_path is None:
             config_path = Path(__file__).parent / "tools.yaml"
 
-        super().__init__(str(config_path), agent_name="infrastructure")
+        super().__init__(
+            str(config_path),
+            agent_name="infrastructure",
+            project_context=project_context,
+        )
 
         # Initialize ModelOps coordinator for model training/deployment
         self.modelops = ModelOpsCoordinator()

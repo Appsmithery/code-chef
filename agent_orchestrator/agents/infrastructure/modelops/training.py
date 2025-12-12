@@ -165,6 +165,7 @@ class ModelOpsTrainerClient:
         batch_size: Optional[int] = None,
         text_column: str = "text",
         response_column: str = "response",
+        project_context: Optional[Dict[str, Any]] = None,
     ) -> Dict:
         """Submit a training job to the Space.
 
@@ -178,6 +179,7 @@ class ModelOpsTrainerClient:
             batch_size: Override batch size (optional)
             text_column: Name of input text column in CSV
             response_column: Name of target response column in CSV
+            project_context: Project identification for tracking (project_id, repository_url)
 
         Returns:
             Dict with job_id and status
@@ -192,6 +194,10 @@ class ModelOpsTrainerClient:
             "text_column": text_column,
             "response_column": response_column,
         }
+
+        # Add project context metadata if provided
+        if project_context:
+            payload["project_context"] = project_context
 
         if learning_rate:
             payload["learning_rate"] = learning_rate

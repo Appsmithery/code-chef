@@ -21,17 +21,14 @@ Inter-Agent Communication (Phase 6 - CHEF-110):
 """
 
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Any, Dict, List, Optional
+
 from langsmith import traceable
 
-from .._shared.base_agent import BaseAgent
-
 # Import agent event types for inter-agent communication
-from lib.agent_events import (
-    AgentRequestType,
-    AgentResponseStatus,
-    AgentRequestPriority,
-)
+from lib.agent_events import AgentRequestPriority, AgentRequestType, AgentResponseStatus
+
+from .._shared.base_agent import BaseAgent
 
 
 class SupervisorAgent(BaseAgent):
@@ -46,22 +43,32 @@ class SupervisorAgent(BaseAgent):
     - Status broadcasting to agent network
     """
 
-    def __init__(self, config_path: Optional[str] = None):
+    def __init__(
+        self,
+        config_path: Optional[str] = None,
+        project_context: Optional[Dict[str, Any]] = None,
+    ):
         """Initialize supervisor agent.
 
         Args:
             config_path: Path to supervisor config (defaults to tools.yaml in agent directory)
+            project_context: Project context dict with project_id, repository_url, workspace_name
         """
         if config_path is None:
             config_path = str(Path(__file__).parent / "tools.yaml")
 
-        super().__init__(str(config_path), agent_name="supervisor")
+        super().__init__(
+            str(config_path), agent_name="supervisor", project_context=project_context
+        )
 
     # =========================================================================
     # INTER-AGENT DELEGATION (Phase 6 - CHEF-110)
     # =========================================================================
 
-    @traceable(name="supervisor_delegate_to_agent", tags=["supervisor", "delegation", "inter-agent"])
+    @traceable(
+        name="supervisor_delegate_to_agent",
+        tags=["supervisor", "delegation", "inter-agent"],
+    )
     async def delegate_to_agent(
         self,
         target_agent: str,
@@ -127,7 +134,10 @@ class SupervisorAgent(BaseAgent):
             "request_id": response.request_id,
         }
 
-    @traceable(name="supervisor_delegate_parallel", tags=["supervisor", "delegation", "parallel"])
+    @traceable(
+        name="supervisor_delegate_parallel",
+        tags=["supervisor", "delegation", "parallel"],
+    )
     async def delegate_parallel(
         self,
         tasks: List[Dict[str, Any]],
@@ -187,19 +197,24 @@ class SupervisorAgent(BaseAgent):
         processed_results = []
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                processed_results.append({
-                    "status": "error",
-                    "error": str(result),
-                    "agent": tasks[i]["target_agent"],
-                    "result": None,
-                    "processing_time_ms": None,
-                })
+                processed_results.append(
+                    {
+                        "status": "error",
+                        "error": str(result),
+                        "agent": tasks[i]["target_agent"],
+                        "result": None,
+                        "processing_time_ms": None,
+                    }
+                )
             else:
                 processed_results.append(result)
 
         return processed_results
 
-    @traceable(name="supervisor_broadcast_workflow_status", tags=["supervisor", "broadcast", "workflow"])
+    @traceable(
+        name="supervisor_broadcast_workflow_status",
+        tags=["supervisor", "broadcast", "workflow"],
+    )
     async def broadcast_workflow_status(
         self,
         workflow_id: str,
