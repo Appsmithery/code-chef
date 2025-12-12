@@ -65,8 +65,8 @@ jobs:
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> config/env/.env
           # Database
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> config/env/.env
-          # OAuth Configuration
-          echo "GITHUB_OAUTH_CLIENT_SECRET=${{ secrets.GITHUB_OAUTH_CLIENT_SECRET }}" >> config/env/.env
+          # OAuth Configuration (GH_OAUTH_CLIENT_SECRET renamed to avoid GITHUB_ prefix restriction)
+          echo "GITHUB_OAUTH_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}" >> config/env/.env
           echo "OAUTH2_PROXY_CLIENT_SECRET=${{ secrets.OAUTH2_PROXY_CLIENT_SECRET }}" >> config/env/.env
           echo "OAUTH2_PROXY_COOKIE_SECRET=${{ secrets.OAUTH2_PROXY_COOKIE_SECRET }}" >> config/env/.env
           # Grafana Cloud
