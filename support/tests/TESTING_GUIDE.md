@@ -1,6 +1,6 @@
 # Testing Guide: Dev-Tools Test Suite
 
-**Last Updated**: December 5, 2025
+**Last Updated**: December 12, 2025
 
 ## Quick Start
 
@@ -15,12 +15,60 @@ pytest support/tests -v
 pytest support/tests/unit -v                    # Unit tests (fast, mocked)
 pytest support/tests/integration -v             # Integration (requires services)
 pytest support/tests/e2e -v                     # End-to-end workflows
+pytest support/tests -m modelops -v             # ModelOps tests
+pytest support/tests -m hitl -v                 # HITL tests
+pytest support/tests -m evaluation -v           # Evaluation/A/B testing
 
 # Run with coverage
 pytest support/tests -v --cov=agent_orchestrator --cov=shared --cov-report=html
 
 # Run property-based tests with more examples
 $env:HYPOTHESIS_PROFILE="thorough"; pytest support/tests/unit/test_workflow_reducer.py -v
+```
+
+## Test Categories
+
+| Category        | Purpose                    | Service Dependencies           | Run Time  |
+| --------------- | -------------------------- | ------------------------------ | --------- |
+| **Unit**        | Fast, isolated logic tests | None (mocked)                  | <5 min    |
+| **Integration** | Service integration tests  | PostgreSQL, Prometheus         | 10-15 min |
+| **E2E**         | Full workflow tests        | All services + Linear + GitHub | 20-30 min |
+| **ModelOps**    | Training, eval, deployment | HuggingFace Space, LangSmith   | 5-90 min  |
+| **HITL**        | Approval workflow tests    | PostgreSQL, Linear API         | 5-10 min  |
+| **Evaluation**  | A/B testing & benchmarks   | PostgreSQL, LangSmith          | 10-20 min |
+| **Performance** | Load & concurrency tests   | All services                   | 15-20 min |
+
+## Environment Variables
+
+### Required for Tests
+
+```powershell
+# Core Services
+$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5432/devtools"
+$env:TEST_DATABASE_URL="postgresql://postgres:postgres@localhost:5432/devtools_test"
+
+# ModelOps
+$env:AUTOTRAIN_SPACE_URL="https://alextorelli-code-chef-modelops-trainer.hf.space"
+$env:HUGGINGFACE_TOKEN="hf_***"
+
+# LangSmith (with new project structure)
+$env:LANGCHAIN_TRACING_V2="true"
+$env:LANGCHAIN_API_KEY="lsv2_sk_***"
+$env:LANGCHAIN_PROJECT="code-chef-production"  # or training, evaluation, experiments
+$env:TRACE_ENVIRONMENT="production"  # or training, evaluation, test
+$env:EXPERIMENT_GROUP="code-chef"  # or baseline
+
+# HITL
+$env:LINEAR_API_KEY="lin_api_***"
+$env:LINEAR_TEAM_ID="dev-ops"
+$env:LINEAR_PROJECT_ID="codechef-78b3b839d36b"
+
+# GitHub (for Phase 2 HITL)
+$env:GITHUB_TOKEN="ghp_***"
+
+# Gradient AI
+$env:GRADIENT_API_KEY="***"
+$env:GRADIENT_WORKSPACE_ID="***"
 ```
 
 ## VS Code Integration
@@ -278,6 +326,72 @@ async def test_full_workflow(workflow_engine):
     events = await workflow_engine._load_events(result["workflow_id"])
     assert len(events) > 0
 ```
+
+## Test Coverage Gaps
+
+The following gaps have been identified and prioritized for implementation:
+
+### Critical Priority (15 gaps)
+
+- ModelOps training job lifecycle tests (submission, monitoring, cancellation)
+- LangSmith schema compliance tests (required metadata fields)
+- Tool loading strategy tests (MINIMAL/PROGRESSIVE/FULL)
+- HITL Phase 1 dedicated tests (core approval workflow)
+- Deployment rollback procedures
+- A/B test baseline/code-chef separation
+- Config hash generation and validation
+- Training data export from LangSmith
+- Evaluation comparison engine edge cases
+- Model registry CRUD validation
+- Webhook signature validation
+- Cost tracking per experiment group
+- Agent tool binding at invoke time
+- Progressive tool loader keyword matching
+- Multi-agent workflow recovery
+
+### High Priority (15 gaps)
+
+- Phase 2 GitHub PR enrichment tests
+- Webhook retry logic
+- LangSmith project routing validation
+- Training job concurrent execution
+- Evaluation dataset integration
+- Approval timeout handling
+- Risk assessor logic validation
+- Cost attribution per task_id
+- Agent state isolation tests
+- Tool loading cache validation
+- Training failure scenarios
+- Deployment health check validation
+- Multi-PR approval handling
+- GitHub API failure graceful degradation
+- Longitudinal tracking regression detection
+
+### Medium Priority (13 gaps)
+
+- Cost tracking dashboard integration
+- Approval metrics accuracy
+- Model version history queries
+- Training TensorBoard accessibility
+- Evaluation statistical significance
+- Config backup restoration
+- Agent initialization performance
+- Tool discovery debugging
+- Trace metadata completeness
+- Project selection logic
+- Experiment ID correlation
+- Task ID uniqueness validation
+- Database index performance
+
+### Low Priority (5 gaps)
+
+- Linear API rate limiting
+- Trace sampling strategy
+- Alert notification delivery
+- Dashboard refresh latency
+- Log rotation validation
+
+**Next Steps**: Prioritize Critical gaps for Week 1-2 implementation. See [CODE_CHEF_VALIDATION_SCENARIOS.md](CODE_CHEF_VALIDATION_SCENARIOS.md) for comprehensive validation scenarios.
 
 ## Troubleshooting
 
