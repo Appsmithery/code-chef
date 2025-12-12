@@ -291,10 +291,10 @@ export default function Agents() {
                               Model
                             </div>
                             <div className="text-sm font-medium mt-1">
-                              {agent.provider} · {agent.model}
+                              {agent.model}
                             </div>
                             <div className="text-xs text-muted-foreground mt-2">
-                              :{agent.port} · {agent.status}
+                              via {agent.provider}
                             </div>
                           </div>
                         </div>
