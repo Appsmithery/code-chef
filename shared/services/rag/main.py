@@ -47,10 +47,6 @@ QDRANT_COLLECTION_DEFAULT = os.getenv("QDRANT_COLLECTION", "code_patterns")
 QDRANT_VECTOR_SIZE = int(os.getenv("QDRANT_VECTOR_SIZE", "1536"))
 QDRANT_DISTANCE = os.getenv("QDRANT_DISTANCE", "cosine")
 
-# MCP tools accessed via Docker MCP Toolkit in VS Code (gateway deprecated Dec 2025)
-# See: https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker
-MCP_TIMEOUT = int(os.getenv("MCP_TIMEOUT", "30"))
-
 import logging
 from typing import Optional
 
@@ -118,105 +114,6 @@ DISTANCE_MAP = {
     "DOT": Distance.DOT,
     "MANHATTAN": Distance.MANHATTAN,
 }
-
-
-# MCP Tool Invocation Helpers
-# DEPRECATED: Gateway functionality removed Dec 2025
-# For new implementations, use:
-#   from shared.lib.mcp_tool_client import get_mcp_tool_client
-#   client = get_mcp_tool_client("rag-context")
-#   result = await client.invoke_tool_simple(server, tool, params)
-
-async def invoke_mcp_tool(server: str, tool: str, params: dict) -> dict:
-    """
-    Invoke MCP tool via gateway [DEPRECATED]
-
-    Args:
-        server: MCP server name (e.g., 'memory', 'time')
-        tool: Tool name (e.g., 'create_entities', 'get_current_time')
-        params: Tool parameters
-
-    Returns:
-        Tool invocation result
-
-    Deprecated:
-        Gateway removed Dec 2025. Use MCPToolClient from shared.lib.mcp_tool_client instead.
-        
-        Example:
-            from shared.lib.mcp_tool_client import get_mcp_tool_client
-            client = get_mcp_tool_client("rag-context")
-            result = await client.invoke_tool_simple("memory", "create_entities", params)
-    """
-    # Gateway functionality deprecated - MCP tools now accessed via VS Code extension or Python SDK
-    return {
-        "success": False,
-        "error": "MCP gateway deprecated. Use MCPToolClient from shared.lib.mcp_tool_client",
-        "migration_guide": "See shared/mcp/README.md for migration instructions",
-    }
-
-
-async def get_current_timestamp() -> str:
-    """
-    Get current timestamp from MCP time server [DEPRECATED]
-    
-    Deprecated:
-        Use datetime.utcnow().isoformat() directly instead.
-    """
-    # MCP gateway deprecated - use standard library
-    return datetime.utcnow().isoformat()
-
-
-async def log_query_to_memory(query: str, collection: str, results_count: int) -> bool:
-    """
-    Log query to MCP memory server for analytics and pattern tracking [DEPRECATED]
-
-    Args:
-        query: Search query text
-        collection: Collection name
-        results_count: Number of results returned
-
-    Returns:
-        Success status (always False - gateway deprecated)
-        
-    Deprecated:
-        MCP gateway removed Dec 2025. For memory logging, use MCPToolClient:
-        
-        from shared.lib.mcp_tool_client import get_mcp_tool_client
-        client = get_mcp_tool_client("rag-context")
-        await client.invoke_tool_simple("memory", "create_entities", {...})
-    """
-    # Gateway deprecated - return False to indicate no logging occurred
-    return False
-
-
-async def log_indexing_to_memory(collection: str, doc_count: int) -> bool:
-    """
-    Log indexing operation to MCP memory server [DEPRECATED]
-
-    Args:
-        collection: Collection name
-        doc_count: Number of documents indexed
-
-    Returns:
-        Success status (always False - gateway deprecated)
-        
-    Deprecated:
-        MCP gateway removed Dec 2025. For memory logging, use MCPToolClient:
-        
-        from shared.lib.mcp_tool_client import get_mcp_tool_client
-        client = get_mcp_tool_client("rag-context")
-        await client.invoke_tool_simple("memory", "create_entities", {...})
-    """
-    # Gateway deprecated - return False to indicate no logging occurred
-    return False
-                        "service": "rag-context-manager",
-                    },
-                }
-            ]
-        },
-    )
-
-    return result.get("success", False)
 
 
 def get_distance_metric() -> Distance:
@@ -507,10 +404,7 @@ async def health_check():
         except:
             qdrant_status = "error"
 
-    # Docker MCP Toolkit status (gateway deprecated Dec 2025)
-    mcp_toolkit_status = "available"  # Tools accessed via VS Code extension, not HTTP
-
-    timestamp = await get_current_timestamp()
+    timestamp = datetime.utcnow().isoformat()
 
     return {
         "status": "ok",
@@ -588,13 +482,6 @@ async def query_context(request: QueryRequest):
         end_time = datetime.utcnow()
         retrieval_time = (end_time - start_time).total_seconds() * 1000
 
-        try:
-            await log_query_to_memory(
-                request.query, request.collection, len(context_items)
-            )
-        except Exception as e:
-            print(f"Failed to log query to memory server: {e}")
-
         return QueryResponse(
             query=request.query,
             results=context_items,
@@ -661,11 +548,6 @@ async def index_documents(request: IndexRequest):
             points.append(PointStruct(id=ids[idx], vector=vector, payload=payload))
 
         qdrant_client.upsert(collection_name=request.collection, points=points)
-
-        try:
-            await log_indexing_to_memory(request.collection, len(points))
-        except Exception as e:
-            print(f"Failed to log indexing to memory server: {e}")
 
         embedding_model_name = (
             OPENAI_EMBEDDING_MODEL if OPENAI_API_KEY else OLLAMA_EMBEDDING_MODEL
@@ -1270,12 +1152,6 @@ async def mock_query(request: QueryRequest):
                 relevance_score=0.77,
             )
         )
-
-    # Log mock query to memory server for analytics (non-blocking)
-    try:
-        await log_query_to_memory(request.query, request.collection, len(mock_results))
-    except Exception as e:
-        print(f"Failed to log mock query to memory server: {e}")
 
     return QueryResponse(
         query=request.query,
