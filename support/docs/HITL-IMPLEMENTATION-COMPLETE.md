@@ -13,9 +13,11 @@
 All Phase 1 tasks from the implementation checklist have been completed:
 
 #### 1. ✅ Database Schema Updates
+
 **File**: [`config/state/approval_requests.sql`](../../config/state/approval_requests.sql)
 
 Added two new columns to `approval_requests` table:
+
 - `linear_issue_id VARCHAR(100)` - Stores Linear issue UUID
 - `linear_issue_url TEXT` - Stores full Linear issue URL for quick access
 
@@ -26,24 +28,28 @@ linear_issue_url TEXT
 ```
 
 #### 2. ✅ HITLManager Linear Integration
+
 **File**: [`shared/lib/hitl_manager.py`](../../shared/lib/hitl_manager.py)
 
 **Changes Made**:
 
 a) **Updated `create_approval_request()` method** (Lines 117-204):
-   - After creating approval request in database, automatically creates Linear issue
-   - Uses `LinearWorkspaceClient.create_issue_with_document()`
-   - Stores Linear issue ID and URL back to database
-   - Falls back gracefully if Linear creation fails
+
+- After creating approval request in database, automatically creates Linear issue
+- Uses `LinearWorkspaceClient.create_issue_with_document()`
+- Stores Linear issue ID and URL back to database
+- Falls back gracefully if Linear creation fails
 
 b) **Added `_format_approval_description()` helper method** (Lines 454-512):
-   - Formats consistent approval request descriptions for Linear issues
-   - Includes risk emoji indicators (🔴 critical, 🟠 high, 🟡 medium, 🟢 low)
-   - Embeds approval request ID for webhook correlation
-   - Provides clear approval/rejection instructions with emoji reactions
-   - Lists risk factors and task details
+
+- Formats consistent approval request descriptions for Linear issues
+- Includes risk emoji indicators (🔴 critical, 🟠 high, 🟡 medium, 🟢 low)
+- Embeds approval request ID for webhook correlation
+- Provides clear approval/rejection instructions with emoji reactions
+- Lists risk factors and task details
 
 **Key Code Additions**:
+
 ```python
 # NEW: Create Linear issue for tracking
 try:
@@ -71,6 +77,7 @@ except Exception as e:
 ```
 
 #### 3. ✅ Webhook Resume Logic
+
 **File**: [`agent_orchestrator/main.py`](../../agent_orchestrator/main.py)
 
 **Changes Made** (Lines 1080-1127):
@@ -82,6 +89,7 @@ except Exception as e:
 - Returns comprehensive result with approval status
 
 **Key Code**:
+
 ```python
 # NEW: Resume workflow by matching linear_issue_id
 try:
@@ -101,7 +109,7 @@ try:
                     approval_request_id, action="approved"
                 )
                 logger.info(f"✅ Workflow resumed for approval_request_id={approval_request_id}")
-                
+
                 # Update Linear comment with resume status
                 if approval_result and approval_result.get("resumed"):
                     await linear_client.add_comment(
@@ -114,11 +122,14 @@ try:
 ```
 
 #### 4. ✅ Test Infrastructure
+
 **Files Created**:
+
 - [`support/tests/integration/test_hitl_linear_integration.py`](../tests/integration/test_hitl_linear_integration.py) - Comprehensive unit/integration tests
 - [`support/tests/integration/manual_hitl_test.py`](../tests/integration/manual_hitl_test.py) - Manual E2E test script
 
 **Test Coverage**:
+
 - Approval request creation with Linear issue
 - Linear issue formatting verification
 - Webhook processing and workflow resume
@@ -131,16 +142,19 @@ try:
 ### Step-by-Step Flow
 
 1. **High-Risk Operation Detected**
+
    - Agent performs risk assessment using `RiskAssessor`
    - Operations like `deploy` to `production` trigger high/critical risk
    - Example: `{"operation": "deploy", "environment": "production"}`
 
 2. **Approval Request Created**
+
    - `HITLManager.create_approval_request()` called
    - Record inserted into `approval_requests` table with status = `pending`
    - LangGraph workflow paused via `interrupt()`
 
 3. **Linear Issue Created Automatically**
+
    - `LinearWorkspaceClient` creates issue in configured project
    - Issue title: `[HITL] {operation name}`
    - Issue includes formatted description with:
@@ -151,16 +165,19 @@ try:
    - Linear issue ID stored in `approval_requests.linear_issue_id`
 
 4. **Human Reviews in Linear**
+
    - Approver views issue in Linear workspace
    - Reviews operation details, risk factors, impact
    - Adds 👍 emoji reaction to approve (or 👎 to reject)
 
 5. **Webhook Fires**
+
    - Linear sends webhook to `/webhooks/linear` endpoint
    - `LinearWebhookProcessor` validates signature
    - Extracts approval metadata (issue ID, approver, reaction)
 
 6. **Workflow Resumes**
+
    - Webhook handler queries database by `linear_issue_id`
    - Finds matching `approval_request_id`
    - Calls `resume_workflow_from_approval(approval_request_id, action="approved")`
@@ -185,32 +202,32 @@ CREATE TABLE IF NOT EXISTS approval_requests (
     workflow_id VARCHAR(255) NOT NULL,
     thread_id VARCHAR(255),
     checkpoint_id VARCHAR(255),
-    
+
     task_type VARCHAR(100),
     task_description TEXT NOT NULL,
     agent_name VARCHAR(100) NOT NULL,
-    
+
     risk_level VARCHAR(20) NOT NULL CHECK (risk_level IN ('low', 'medium', 'high', 'critical')),
     risk_score FLOAT,
     risk_factors JSONB DEFAULT '{}',
-    
+
     action_type VARCHAR(100),
     action_details JSONB DEFAULT '{}',
     action_impact TEXT,
-    
+
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
-    
+
     approver_id VARCHAR(100),
     approver_role VARCHAR(50),
     approved_at TIMESTAMP,
     rejected_at TIMESTAMP,
     rejection_reason TEXT,
     approval_justification TEXT,
-    
+
     expires_at TIMESTAMP,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    
+
     -- NEW: Linear integration columns
     linear_issue_id VARCHAR(100),
     linear_issue_url TEXT
@@ -293,6 +310,7 @@ LINEAR_WEBHOOK_SIGNING_SECRET=***
 ### Webhook Configuration
 
 **Linear Settings** → **API** → **Webhooks** → **Create webhook**:
+
 - URL: `https://codechef.appsmithery.co/webhooks/linear`
 - Events: `Reaction.create`, `Comment.create`
 - Signing secret: Store in `LINEAR_WEBHOOK_SIGNING_SECRET`
@@ -314,16 +332,19 @@ When fully operational, the integration provides:
 ## 🚀 Next Steps (Phase 2+)
 
 ### Phase 2: GitHub Enrichment
+
 - [ ] Add GitHub PR comment posting in resume flow
 - [ ] Store `pr_number` in approval request context
 - [ ] Link Linear issue to GitHub PR automatically
 
 ### Phase 3: Agent Integration
+
 - [ ] Add risk assessment to each agent node
 - [ ] Implement `requires_approval` flag in agent responses
 - [ ] Test routing to approval_node from each agent
 
 ### Phase 4: Observability
+
 - [ ] Add LangSmith traces for webhook events
 - [ ] Prometheus metrics for approval latency
 - [ ] Grafana dashboard for HITL stats
@@ -332,13 +353,13 @@ When fully operational, the integration provides:
 
 ## 📝 Files Modified
 
-| File | Changes | Lines |
-|------|---------|-------|
-| `config/state/approval_requests.sql` | Added `linear_issue_id`, `linear_issue_url` columns | 2 lines |
-| `shared/lib/hitl_manager.py` | Linear integration + `_format_approval_description()` | ~100 lines |
-| `agent_orchestrator/main.py` | Webhook resume logic implementation | ~50 lines |
-| `support/tests/integration/test_hitl_linear_integration.py` | Comprehensive test suite | 288 lines (new) |
-| `support/tests/integration/manual_hitl_test.py` | Manual E2E test script | 113 lines (new) |
+| File                                                        | Changes                                               | Lines           |
+| ----------------------------------------------------------- | ----------------------------------------------------- | --------------- |
+| `config/state/approval_requests.sql`                        | Added `linear_issue_id`, `linear_issue_url` columns   | 2 lines         |
+| `shared/lib/hitl_manager.py`                                | Linear integration + `_format_approval_description()` | ~100 lines      |
+| `agent_orchestrator/main.py`                                | Webhook resume logic implementation                   | ~50 lines       |
+| `support/tests/integration/test_hitl_linear_integration.py` | Comprehensive test suite                              | 288 lines (new) |
+| `support/tests/integration/manual_hitl_test.py`             | Manual E2E test script                                | 113 lines (new) |
 
 **Total**: ~550 lines of production code + tests
 
@@ -365,6 +386,7 @@ When fully operational, the integration provides:
 **Phase 1 of the HITL Linear webhook integration is complete!**
 
 The integration enables:
+
 - Automatic Linear issue creation for high-risk operations
 - Human approval via Linear emoji reactions
 - Automatic workflow resume on approval

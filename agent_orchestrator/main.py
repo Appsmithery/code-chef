@@ -1087,22 +1087,27 @@ async def linear_webhook(request: Request):
                         logger.info(
                             f"✅ Workflow resumed for approval_request_id={approval_request_id}, result={approval_result}"
                         )
-                        
+
                         # Update Linear comment with resume status
                         if approval_result and approval_result.get("resumed"):
                             try:
-                                from lib.linear_workspace_client import LinearWorkspaceClient
+                                from lib.linear_workspace_client import (
+                                    LinearWorkspaceClient,
+                                )
+
                                 linear_client = LinearWorkspaceClient()
                                 await linear_client.add_comment(
                                     metadata["issue_id"],
                                     f"✅ **Workflow Resumed Successfully**\n\n"
                                     f"- Thread ID: `{approval_result.get('thread_id')}`\n"
                                     f"- Status: {approval_result.get('final_status')}\n"
-                                    f"- Approved by: @{metadata['approved_by_name']}"
+                                    f"- Approved by: @{metadata['approved_by_name']}",
                                 )
                             except Exception as comment_err:
-                                logger.error(f"Failed to update Linear with resume status: {comment_err}")
-                        
+                                logger.error(
+                                    f"Failed to update Linear with resume status: {comment_err}"
+                                )
+
                         return {
                             "status": "workflow_resumed",
                             "metadata": metadata,
@@ -1110,14 +1115,18 @@ async def linear_webhook(request: Request):
                             "message": "Workflow approved and resumed",
                         }
                     else:
-                        logger.warning(f"No pending approval found for linear_issue_id={metadata['issue_id']}")
+                        logger.warning(
+                            f"No pending approval found for linear_issue_id={metadata['issue_id']}"
+                        )
                         return {
                             "status": "no_pending_approval",
                             "metadata": metadata,
                             "message": "No pending approval request found for this issue",
                         }
         except Exception as e:
-            logger.error(f"Failed to resume workflow from Linear approval: {e}", exc_info=True)
+            logger.error(
+                f"Failed to resume workflow from Linear approval: {e}", exc_info=True
+            )
             return {
                 "status": "error",
                 "metadata": metadata,
