@@ -74,12 +74,6 @@ services:
       - "8007:8007"
     environment:
       - SERVICE_NAME=rag-context
-      - QDRANT_COLLECTION=${QDRANT_COLLECTION:-code_patterns}
-      - QDRANT_VECTOR_SIZE=${QDRANT_VECTOR_SIZE:-1536}
-      - QDRANT_DISTANCE=${QDRANT_DISTANCE:-cosine}
-      - GRADIENT_BASE_URL=${GRADIENT_BASE_URL:-https://inference.do-ai.run/v1}
-      - GRADIENT_EMBEDDING_MODEL=${GRADIENT_EMBEDDING_MODEL:-text-embedding-ada-002}
-      - EMBEDDING_TIMEOUT=${EMBEDDING_TIMEOUT:-60}
     env_file:
       - ../config/env/.env
     networks:
@@ -246,14 +240,12 @@ services:
       - "8010:8010"
     environment:
       - PORT=8010
-      - LOG_LEVEL=${LOG_LEVEL:-info}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=devtools
       - DB_USER=devtools
       - DB_PASSWORD=devtools_prod_2024_secure
       - DB_PASSWORD_FILE=/run/secrets/db_password
-      - GRADIENT_MODEL=${GRADIENT_MODEL:-meta-llama-3.1-8b-instruct}
     env_file:
       - ../config/env/.env
     networks:
@@ -317,12 +309,6 @@ services:
   oauth2-proxy:
     image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
     environment:
-      - OAUTH2_PROXY_PROVIDER=${OAUTH2_PROXY_PROVIDER:-github}
-      - OAUTH2_PROXY_CLIENT_ID=${OAUTH2_PROXY_CLIENT_ID:-placeholder-client-id}
-      - OAUTH2_PROXY_CLIENT_SECRET=${OAUTH2_PROXY_CLIENT_SECRET:-placeholder-client-secret}
-      - OAUTH2_PROXY_REDIRECT_URL=${OAUTH2_PROXY_REDIRECT_URL:-http://localhost/oauth2/callback}
-      - OAUTH2_PROXY_EMAIL_DOMAINS=${OAUTH2_PROXY_ALLOWED_EMAILS:-*}
-      - OAUTH2_PROXY_GITHUB_ORG=${OAUTH2_PROXY_GITHUB_ORG:-}
       - OAUTH2_PROXY_UPSTREAMS=http://prometheus:9090
       - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
       - OAUTH2_PROXY_COOKIE_SECURE=false
@@ -358,14 +344,13 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    environment:
-      - CADDY_DOMAIN=${CADDY_DOMAIN:-codechef.appsmithery.co}
-      - CADDY_ACME_EMAIL=${CADDY_ACME_EMAIL:-alex@appsmithery.co}
     volumes:
       - ../config/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ../support/frontend/dist:/srv/frontend:ro
       - caddy-data:/data
       - caddy-config:/config
+    env_file:
+      - ../config/env/.env
     networks:
       - devtools-network
     depends_on:
@@ -403,18 +388,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_AUTH_GITHUB_ENABLED=${GRAFANA_GITHUB_AUTH_ENABLED:-false}
-      - GF_AUTH_GITHUB_CLIENT_ID=${GRAFANA_GITHUB_CLIENT_ID:-}
-      - GF_AUTH_GITHUB_CLIENT_SECRET=${GRAFANA_GITHUB_CLIENT_SECRET:-}
       - GF_AUTH_GITHUB_SCOPES=user:email,read:org
       - GF_AUTH_GITHUB_AUTH_URL=https://github.com/login/oauth/authorize
       - GF_AUTH_GITHUB_TOKEN_URL=https://github.com/login/oauth/access_token
       - GF_AUTH_GITHUB_API_URL=https://api.github.com/user
       - GF_AUTH_GITHUB_ALLOW_SIGN_UP=true
-      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3000}
       - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    env_file:
+      - ../config/env/.env
     volumes:
       - grafana-data:/var/lib/grafana
       - ../config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
