@@ -6,7 +6,6 @@ export interface Agent {
   description: string;
   model: string;
   provider: string;
-  port: number;
   capabilities: string[];
   status: "online" | "offline" | "maintenance";
 }
@@ -25,9 +24,8 @@ export const agents: Agent[] = [
     id: "orchestrator",
     name: "Orchestrator (Head Chef)",
     description: "Task routing and workflow coordination. Routes tasks to specialized agents using LangGraph StateGraph with intelligent decision-making.",
-    model: "llama3.3-70b-instruct",
-    provider: "Gradient",
-    port: 8001,
+    model: "Claude 3.5 Sonnet",
+    provider: "OpenRouter",
     capabilities: ["Task Routing", "Workflow Coordination", "HITL Management", "Multi-Agent Orchestration"],
     status: "online"
   },
@@ -35,9 +33,8 @@ export const agents: Agent[] = [
     id: "feature-dev",
     name: "Feature Development (Sous Chef)",
     description: "Code implementation and feature development. Handles code generation, refactoring, and implementation of new features with best practices.",
-    model: "codellama-13b",
-    provider: "Gradient",
-    port: 8002,
+    model: "Qwen 2.5 Coder 32B",
+    provider: "OpenRouter",
     capabilities: ["Code Generation", "Feature Implementation", "Refactoring", "Bug Fixes"],
     status: "online"
   },
@@ -45,9 +42,8 @@ export const agents: Agent[] = [
     id: "code-review",
     name: "Code Review",
     description: "Security audits and quality reviews. Performs comprehensive code analysis, security scanning, and ensures adherence to coding standards.",
-    model: "llama3.3-70b-instruct",
-    provider: "Gradient",
-    port: 8003,
+    model: "DeepSeek V3",
+    provider: "OpenRouter",
     capabilities: ["Security Audits", "Quality Review", "Best Practices", "Vulnerability Scanning"],
     status: "online"
   },
@@ -55,9 +51,8 @@ export const agents: Agent[] = [
     id: "infrastructure",
     name: "Infrastructure",
     description: "IaC, Terraform, and Docker Compose management. Handles infrastructure provisioning, configuration, and deployment automation.",
-    model: "llama3-8b-instruct",
-    provider: "Gradient",
-    port: 8004,
+    model: "Gemini 2.0 Flash",
+    provider: "OpenRouter",
     capabilities: ["Terraform", "Docker Compose", "Infrastructure as Code", "Cloud Provisioning"],
     status: "online"
   },
@@ -65,9 +60,8 @@ export const agents: Agent[] = [
     id: "cicd",
     name: "CI/CD Pipeline",
     description: "GitHub Actions and pipeline automation. Manages continuous integration and deployment workflows with automated testing and deployment.",
-    model: "llama3.3-70b-instruct",
-    provider: "Gradient",
-    port: 8005,
+    model: "Gemini 2.0 Flash",
+    provider: "OpenRouter",
     capabilities: ["GitHub Actions", "Pipeline Automation", "Automated Testing", "Deployment"],
     status: "online"
   },
@@ -75,9 +69,8 @@ export const agents: Agent[] = [
     id: "documentation",
     name: "Documentation",
     description: "Technical writing and documentation generation. Creates comprehensive documentation, READMEs, API references, and guides.",
-    model: "llama3.3-70b-instruct",
-    provider: "Gradient",
-    port: 8006,
+    model: "DeepSeek V3",
+    provider: "OpenRouter",
     capabilities: ["Technical Writing", "API Documentation", "README Generation", "Guides"],
     status: "online"
   }
