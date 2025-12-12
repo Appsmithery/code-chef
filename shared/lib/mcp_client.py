@@ -88,6 +88,7 @@ class MCPClient:
         resolved_path = resolve_manifest_path(manifest_path)
         self.manifest_path = str(resolved_path)
         # Gateway deprecated Dec 2025 - tools accessed via VS Code Docker MCP Toolkit
+        # Use get_mcp_tool_client() from mcp_tool_client.py for direct stdio access
         self.gateway_url = None  # No longer used
         self.timeout = timeout or int(os.getenv("MCP_TIMEOUT", "30"))
 

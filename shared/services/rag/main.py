@@ -121,9 +121,15 @@ DISTANCE_MAP = {
 
 
 # MCP Tool Invocation Helpers
+# DEPRECATED: Gateway functionality removed Dec 2025
+# For new implementations, use:
+#   from shared.lib.mcp_tool_client import get_mcp_tool_client
+#   client = get_mcp_tool_client("rag-context")
+#   result = await client.invoke_tool_simple(server, tool, params)
+
 async def invoke_mcp_tool(server: str, tool: str, params: dict) -> dict:
     """
-    Invoke MCP tool via gateway
+    Invoke MCP tool via gateway [DEPRECATED]
 
     Args:
         server: MCP server name (e.g., 'memory', 'time')
@@ -133,29 +139,36 @@ async def invoke_mcp_tool(server: str, tool: str, params: dict) -> dict:
     Returns:
         Tool invocation result
 
-    Note:
-        MCP gateway deprecated Dec 2025. Tools accessed via VS Code Docker MCP Toolkit.
-        This function maintained for backward compatibility but may be removed.
+    Deprecated:
+        Gateway removed Dec 2025. Use MCPToolClient from shared.lib.mcp_tool_client instead.
+        
+        Example:
+            from shared.lib.mcp_tool_client import get_mcp_tool_client
+            client = get_mcp_tool_client("rag-context")
+            result = await client.invoke_tool_simple("memory", "create_entities", params)
     """
-    # Gateway functionality deprecated - MCP tools now accessed via VS Code extension
+    # Gateway functionality deprecated - MCP tools now accessed via VS Code extension or Python SDK
     return {
         "success": False,
-        "error": "MCP gateway deprecated. Use VS Code Docker MCP Toolkit extension.",
-        "migration_guide": "https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker",
+        "error": "MCP gateway deprecated. Use MCPToolClient from shared.lib.mcp_tool_client",
+        "migration_guide": "See shared/mcp/README.md for migration instructions",
     }
 
 
 async def get_current_timestamp() -> str:
-    """Get current timestamp from MCP time server"""
-    result = await invoke_mcp_tool("time", "get_current_time", {})
-    if result.get("success"):
-        return result.get("result", datetime.utcnow().isoformat())
+    """
+    Get current timestamp from MCP time server [DEPRECATED]
+    
+    Deprecated:
+        Use datetime.utcnow().isoformat() directly instead.
+    """
+    # MCP gateway deprecated - use standard library
     return datetime.utcnow().isoformat()
 
 
 async def log_query_to_memory(query: str, collection: str, results_count: int) -> bool:
     """
-    Log query to MCP memory server for analytics and pattern tracking
+    Log query to MCP memory server for analytics and pattern tracking [DEPRECATED]
 
     Args:
         query: Search query text
@@ -163,58 +176,39 @@ async def log_query_to_memory(query: str, collection: str, results_count: int) -
         results_count: Number of results returned
 
     Returns:
-        Success status
+        Success status (always False - gateway deprecated)
+        
+    Deprecated:
+        MCP gateway removed Dec 2025. For memory logging, use MCPToolClient:
+        
+        from shared.lib.mcp_tool_client import get_mcp_tool_client
+        client = get_mcp_tool_client("rag-context")
+        await client.invoke_tool_simple("memory", "create_entities", {...})
     """
-    timestamp = await get_current_timestamp()
-
-    result = await invoke_mcp_tool(
-        server="memory",
-        tool="create_entities",
-        params={
-            "entities": [
-                {
-                    "name": f"rag-query-{uuid.uuid4().hex[:8]}",
-                    "type": "rag_query",
-                    "metadata": {
-                        "query": query,
-                        "collection": collection,
-                        "results_count": results_count,
-                        "timestamp": timestamp,
-                        "service": "rag-context-manager",
-                    },
-                }
-            ]
-        },
-    )
-
-    return result.get("success", False)
+    # Gateway deprecated - return False to indicate no logging occurred
+    return False
 
 
 async def log_indexing_to_memory(collection: str, doc_count: int) -> bool:
     """
-    Log indexing operation to MCP memory server
+    Log indexing operation to MCP memory server [DEPRECATED]
 
     Args:
         collection: Collection name
         doc_count: Number of documents indexed
 
     Returns:
-        Success status
+        Success status (always False - gateway deprecated)
+        
+    Deprecated:
+        MCP gateway removed Dec 2025. For memory logging, use MCPToolClient:
+        
+        from shared.lib.mcp_tool_client import get_mcp_tool_client
+        client = get_mcp_tool_client("rag-context")
+        await client.invoke_tool_simple("memory", "create_entities", {...})
     """
-    timestamp = await get_current_timestamp()
-
-    result = await invoke_mcp_tool(
-        server="memory",
-        tool="create_entities",
-        params={
-            "entities": [
-                {
-                    "name": f"rag-index-{uuid.uuid4().hex[:8]}",
-                    "type": "rag_indexing",
-                    "metadata": {
-                        "collection": collection,
-                        "document_count": doc_count,
-                        "timestamp": timestamp,
+    # Gateway deprecated - return False to indicate no logging occurred
+    return False
                         "service": "rag-context-manager",
                     },
                 }

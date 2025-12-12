@@ -58,10 +58,9 @@ QDRANT_COLLECTION=code_patterns  # Default collection
 # OpenAI Embeddings
 OPENAI_API_KEY=sk-...
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small  # 1536 dimensions, $0.02/1M tokens
-
-# Optional: MCP Gateway integration
-MCP_GATEWAY_URL=http://gateway-mcp:8000
 ```
+
+> **Note**: MCP Gateway deprecated Dec 2025. Tools accessed via [Docker MCP Toolkit](https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker) in VS Code or direct Python SDK (`shared/lib/mcp_tool_client.py`).
 
 ### Fallback Configuration (Development)
 

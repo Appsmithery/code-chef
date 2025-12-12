@@ -1,11 +1,18 @@
 # MCP Gateway (Linear OAuth Service)
 
+> **⚠️ IMPORTANT: This is NOT an MCP tool router**
+>
+> This service handles **Linear OAuth authentication ONLY**. MCP tools are accessed via:
+>
+> - **VS Code**: [Docker MCP Toolkit extension](https://marketplace.visualstudio.com/items?itemName=ModelContextProtocol.mcp-docker)
+> - **Python agents**: `shared/lib/mcp_tool_client.py` with direct stdio transport
+> - **Discovery**: `shared/lib/mcp_discovery.py` for server enumeration
+>
+> See [Architecture Guide](../../support/docs/architecture-and-platform/ARCHITECTURE.md) for details.
+
 **Purpose:** Linear OAuth integration for Dev-Tools agents
 
 Node.js service that provides OAuth 2.0 authentication and API access for Linear.
-
-**Note:** This gateway handles **Linear integration only**. MCP tool routing has been
-moved to direct Python MCP SDK access in agents. See `support/docs/ARCHITECTURE.md` for details.
 
 ## Features
 
