@@ -8,51 +8,52 @@ Provides:
 
 Inter-Agent Communication:
     Agents can request work from other agents using the EventBus pub/sub pattern:
-    
+
     # Request help from code-review agent
     response = await self.request_agent(
         target_agent="code-review",
         request_type=AgentRequestType.REVIEW_CODE,
         payload={"file_path": "main.py"}
     )
-    
+
     # Broadcast status to all agents
     await self.broadcast_status("task_completed", {"task_id": "123"})
 """
 
-import os
-import sys
-import yaml
 import hashlib
 import logging
+import os
+import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TYPE_CHECKING
-from langchain_core.messages import BaseMessage, SystemMessage, HumanMessage, AIMessage
-from langchain_core.runnables import RunnableConfig
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+import yaml
 from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 from langsmith import traceable
 
 # Add shared modules to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared"))
 
-from lib.mcp_client import MCPClient
-from lib.gradient_client import get_gradient_client
-from lib.progressive_mcp_loader import ProgressiveMCPLoader, ToolLoadingStrategy
+from lib.agent_events import (
+    AgentBroadcastEvent,
+    AgentRequestEvent,
+    AgentRequestPriority,
+    AgentRequestType,
+    AgentResponseEvent,
+    AgentResponseStatus,
+)
 
 # Inter-agent communication (Phase 6 - CHEF-110)
-from lib.event_bus import EventBus, Event
-from lib.agent_events import (
-    AgentRequestEvent,
-    AgentResponseEvent,
-    AgentRequestType,
-    AgentResponseStatus,
-    AgentRequestPriority,
-    AgentBroadcastEvent,
-)
+from lib.event_bus import Event, EventBus
+from lib.gradient_client import get_gradient_client
+from lib.mcp_client import MCPClient
+from lib.progressive_mcp_loader import ProgressiveMCPLoader, ToolLoadingStrategy
 
 # Agent memory for cross-agent knowledge sharing
 try:
-    from lib.agent_memory import AgentMemoryManager, InsightType, Insight
+    from lib.agent_memory import AgentMemoryManager, Insight, InsightType
 
     MEMORY_ENABLED = True
 except ImportError:
@@ -66,7 +67,7 @@ try:
         get_error_recovery_engine,
         with_recovery,
     )
-    
+
     ERROR_RECOVERY_ENABLED = True
 except ImportError:
     ERROR_RECOVERY_ENABLED = False
@@ -139,8 +140,7 @@ class BaseAgent:
         # Initialize error recovery configuration from tools.yaml
         self._error_recovery_config = self._load_error_recovery_config()
         self._error_recovery_enabled = (
-            ERROR_RECOVERY_ENABLED and 
-            self._error_recovery_config.get("enabled", True)
+            ERROR_RECOVERY_ENABLED and self._error_recovery_config.get("enabled", True)
         )
         if self._error_recovery_enabled:
             logger.info(
@@ -164,10 +164,10 @@ class BaseAgent:
 
     def _load_error_recovery_config(self) -> Dict[str, Any]:
         """Load error recovery configuration from tools.yaml.
-        
+
         Returns:
             Error recovery configuration dict with defaults applied.
-            
+
         Expected YAML structure in tools.yaml:
         ```yaml
         error_recovery:
@@ -196,33 +196,30 @@ class BaseAgent:
                 "use_defaults": True,
             },
         }
-        
+
         error_recovery_config = self.config.get("error_recovery", {})
-        
+
         # Merge with defaults
         merged = {**defaults, **error_recovery_config}
-        
+
         # Ensure circuit_breaker has defaults
         if "circuit_breaker" in error_recovery_config:
             merged["circuit_breaker"] = {
                 **defaults["circuit_breaker"],
                 **error_recovery_config.get("circuit_breaker", {}),
             }
-        
+
         return merged
 
-    def get_recovery_settings(
-        self, 
-        category: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def get_recovery_settings(self, category: Optional[str] = None) -> Dict[str, Any]:
         """Get error recovery settings for this agent.
-        
+
         Used by @with_recovery decorator to apply agent-specific recovery settings.
-        
+
         Args:
             category: Optional error category for category-specific overrides
                      (e.g., 'llm', 'mcp', 'network', 'docker', 'auth')
-        
+
         Returns:
             Dict with recovery settings:
             - max_tier: RecoveryTier enum value or string
@@ -231,14 +228,14 @@ class BaseAgent:
             - circuit_breaker: dict with circuit breaker settings
         """
         config = self._error_recovery_config.copy()
-        
+
         # Apply category-specific overrides if provided
         if category and category in config.get("category_overrides", {}):
             category_config = config["category_overrides"][category]
             for key in ["max_tier", "max_retries", "fail_fast"]:
                 if key in category_config:
                     config[key] = category_config[key]
-        
+
         # Convert tier string to enum if error recovery is available
         if ERROR_RECOVERY_ENABLED and RecoveryTier:
             tier_str = config.get("max_tier", "TIER_2")
@@ -250,7 +247,7 @@ class BaseAgent:
                         f"[{self.agent_name}] Invalid tier '{tier_str}', defaulting to TIER_2"
                     )
                     config["max_tier_enum"] = RecoveryTier.TIER_2
-        
+
         return config
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
@@ -863,7 +860,9 @@ class BaseAgent:
 
         return response
 
-    @traceable(name="agent_respond_to_request", tags=["agent", "inter-agent", "response"])
+    @traceable(
+        name="agent_respond_to_request", tags=["agent", "inter-agent", "response"]
+    )
     async def respond_to_request(
         self,
         request: AgentRequestEvent,
@@ -906,7 +905,9 @@ class BaseAgent:
             f"(request_id: {request.request_id}, status: {status.value})"
         )
 
-    @traceable(name="agent_broadcast_status", tags=["agent", "inter-agent", "broadcast"])
+    @traceable(
+        name="agent_broadcast_status", tags=["agent", "inter-agent", "broadcast"]
+    )
     async def broadcast_status(
         self,
         event_type: str,
@@ -963,7 +964,9 @@ class BaseAgent:
             f"(broadcast_id: {broadcast.broadcast_id})"
         )
 
-    @traceable(name="agent_subscribe_to_events", tags=["agent", "inter-agent", "subscribe"])
+    @traceable(
+        name="agent_subscribe_to_events", tags=["agent", "inter-agent", "subscribe"]
+    )
     async def subscribe_to_events(
         self,
         event_types: List[str],
@@ -994,9 +997,99 @@ class BaseAgent:
             event_bus.subscribe(event_type, handler)
             logger.debug(f"[{self.agent_name}] Subscribed to {event_type}")
 
-        logger.info(
-            f"[{self.agent_name}] Subscribed to {len(event_types)} event types"
-        )
+        logger.info(f"[{self.agent_name}] Subscribed to {len(event_types)} event types")
+
+    async def _assess_operation_risk(
+        self,
+        operation: str,
+        context: Dict[str, Any],
+    ) -> tuple[str, bool, Optional[Dict[str, Any]]]:
+        """Assess risk level of an operation and determine if HITL approval needed.
+
+        Integrates with RiskAssessor to evaluate operation risk based on:
+        - Operation type (deploy, delete, modify, etc.)
+        - Environment (production, staging, dev)
+        - Resource criticality (database, infrastructure, code)
+        - Impact scope (number of files, users affected, etc.)
+
+        Args:
+            operation: Operation being performed (e.g., "deploy", "modify_code")
+            context: Operation context including environment, resources, impact
+
+        Returns:
+            Tuple of (risk_level, requires_approval, pr_context):
+            - risk_level: "low", "medium", "high", or "critical"
+            - requires_approval: True if HITL approval needed
+            - pr_context: Dict with pr_number, pr_url, github_repo if available
+
+        Example:
+            risk_level, needs_approval, pr_ctx = await self._assess_operation_risk(
+                operation="deploy",
+                context={
+                    "environment": "production",
+                    "service": "orchestrator",
+                    "files_changed": 5,
+                    "pr_number": 42,
+                    "pr_url": "https://github.com/owner/repo/pull/42",
+                    "github_repo": "owner/repo"
+                }
+            )
+
+            if needs_approval:
+                return {
+                    "requires_approval": True,
+                    "pending_operation": f"Deploy to production",
+                    "pr_context": pr_ctx
+                }
+        """
+        try:
+            from shared.lib.risk_assessor import RiskAssessor
+
+            risk_assessor = RiskAssessor()
+
+            # Extract environment and additional context
+            environment = context.get("environment", "unknown")
+            additional_context = {
+                "agent_name": self.agent_name,
+                "operation": operation,
+                **context,
+            }
+
+            # Assess risk level
+            risk_level, risk_reasons = risk_assessor.assess_risk(
+                operation=operation,
+                environment=environment,
+                additional_context=additional_context,
+            )
+
+            # Determine if approval needed (high or critical risk)
+            requires_approval = risk_level in ["high", "critical"]
+
+            # Extract PR context if available
+            pr_context = None
+            if any(key in context for key in ["pr_number", "pr_url", "github_repo"]):
+                pr_context = {
+                    "pr_number": context.get("pr_number"),
+                    "pr_url": context.get("pr_url"),
+                    "github_repo": context.get("github_repo"),
+                }
+
+            logger.info(
+                f"[{self.agent_name}] Risk assessment: {operation} in {environment} "
+                f"= {risk_level} (approval={'required' if requires_approval else 'not needed'})"
+            )
+
+            if risk_reasons:
+                logger.debug(
+                    f"[{self.agent_name}] Risk factors: {', '.join(risk_reasons)}"
+                )
+
+            return risk_level, requires_approval, pr_context
+
+        except Exception as e:
+            logger.error(f"[{self.agent_name}] Risk assessment failed: {e}")
+            # Fail-safe: treat as high-risk if assessment fails
+            return "high", True, None
 
     def __repr__(self) -> str:
         """String representation of agent."""

@@ -56,6 +56,11 @@ steps:
   - id: "approval_gate"
     type: "hitl_approval"
     deterministic: true
+    # Phase 3: Include PR context for GitHub comment integration
+    pr_context:
+      pr_number: "{{ context.pr_number }}"
+      pr_url: "{{ context.pr_url }}"
+      github_repo: "{{ context.github_repo }}"
     risk_assessment:
       type: "llm_assessment"
       prompt: |
@@ -63,13 +68,15 @@ steps:
         - Review score: {{ outputs.code_review.quality_score }}
         - Tests passed: {{ outputs.run_tests.passed }}/{{ outputs.run_tests.total }}
         - Staging URL: {{ outputs.deploy_staging.url }}
+        - PR: {{ context.pr_url }}
 
         Assess risk level (low/medium/high) and required approver role.
 
         Response format:
         {"risk_level": "medium", "approver_role": "tech_lead", "reasoning": "..."}
 
-    # Pause workflow, await approval
+    # Pause workflow, await approval via Linear webhook
+    # On approval, GitHub PR will receive confirmation comment
     on_approved: "deploy_production"
     on_rejected: "notify_failure"
 
