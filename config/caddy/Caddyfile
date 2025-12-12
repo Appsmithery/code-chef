@@ -4,8 +4,6 @@
 }
 
 {$CADDY_DOMAIN:codechef.appsmithery.co} {
-	encode gzip zstd
-
 	# API endpoints proxy to orchestrator (MUST come before file_server)
 	handle_path /api/* {
 		reverse_proxy orchestrator:8001
