@@ -80,7 +80,13 @@ services:
       - devtools-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')",
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -117,7 +123,13 @@ services:
       - db_password
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8008/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8008/health')",
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
@@ -256,7 +268,13 @@ services:
       - db_password
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')",
+        ]
       interval: 15s
       timeout: 10s
       retries: 5
