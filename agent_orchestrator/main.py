@@ -3861,10 +3861,12 @@ async def resume_workflow_from_approval(
     try:
         async with await hitl_manager._get_connection() as conn:
             async with conn.cursor() as cursor:
-                # Get approval request details
+                # Get approval request details including GitHub PR info
                 await cursor.execute(
                     """
-                    SELECT thread_id, checkpoint_id, workflow_id, status
+                    SELECT thread_id, checkpoint_id, workflow_id, status,
+                           pr_number, pr_url, github_repo, risk_level,
+                           task_description, linear_issue_id, linear_issue_url
                     FROM approval_requests 
                     WHERE id = %s
                     """,
@@ -3875,7 +3877,19 @@ async def resume_workflow_from_approval(
                 if not row:
                     return {"error": "Approval request not found"}
 
-                thread_id, checkpoint_id, workflow_id, status = row
+                (
+                    thread_id,
+                    checkpoint_id,
+                    workflow_id,
+                    status,
+                    pr_number,
+                    pr_url,
+                    github_repo,
+                    risk_level,
+                    task_description,
+                    linear_issue_id,
+                    linear_issue_url,
+                ) = row
 
                 if status != "pending":
                     return {"error": f"Approval request already {status}"}
@@ -3892,6 +3906,73 @@ async def resume_workflow_from_approval(
                 await conn.commit()
 
                 logger.info(f"[HITL] Approval {approval_request_id} -> {action}")
+
+                # Phase 2: Post GitHub PR comment if PR is linked
+                if pr_number and github_repo:
+                    try:
+                        # Extract owner and repo from github_repo (format: owner/repo)
+                        owner, repo = (
+                            github_repo.split("/")
+                            if "/" in github_repo
+                            else (None, None)
+                        )
+
+                        if owner and repo:
+                            # Use activate_pull_request_management_tools to get GitHub PR tools
+                            github_token = os.environ.get("GITHUB_TOKEN")
+                            if github_token:
+                                import requests
+
+                                comment_body = f"""✅ **HITL Approval Granted**
+
+Workflow resumed after human approval.
+
+**Details:**
+- **Approval ID**: `{approval_request_id}`
+- **Risk Level**: {risk_level}
+- **Operation**: {task_description}
+- **Status**: Resuming workflow execution
+
+**Linear Tracking**: [{linear_issue_id}]({linear_issue_url})
+
+*This approval was processed automatically via Linear webhook integration.*
+"""
+
+                                # Post comment to GitHub PR
+                                api_url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
+                                headers = {
+                                    "Authorization": f"Bearer {github_token}",
+                                    "Accept": "application/vnd.github.v3+json",
+                                    "Content-Type": "application/json",
+                                }
+
+                                response = requests.post(
+                                    api_url,
+                                    headers=headers,
+                                    json={"body": comment_body},
+                                    timeout=10,
+                                )
+
+                                if response.status_code == 201:
+                                    logger.info(
+                                        f"[HITL] Posted approval comment to PR #{pr_number} in {github_repo}"
+                                    )
+                                else:
+                                    logger.warning(
+                                        f"[HITL] Failed to post PR comment: {response.status_code} - {response.text}"
+                                    )
+                            else:
+                                logger.warning(
+                                    "[HITL] GITHUB_TOKEN not set, skipping PR comment"
+                                )
+                        else:
+                            logger.warning(
+                                f"[HITL] Invalid github_repo format: {github_repo}"
+                            )
+                    except Exception as pr_err:
+                        logger.error(
+                            f"[HITL] Failed to post GitHub PR comment: {pr_err}"
+                        )
 
                 # Resume the workflow with insight injection (CHEF-207)
                 if thread_id:

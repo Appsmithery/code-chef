@@ -42,9 +42,15 @@ CREATE TABLE IF NOT EXISTS approval_requests (
     -- Audit trail
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    
     -- Linear integration
     linear_issue_id VARCHAR(100),
-    linear_issue_url TEXT
+    linear_issue_url TEXT,
+    
+    -- GitHub integration (Phase 2)
+    pr_number INTEGER,
+    pr_url TEXT,
+    github_repo VARCHAR(255)
 );
 
 -- Indexes for common queries
