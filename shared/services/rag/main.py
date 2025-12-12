@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel, Field
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
@@ -33,6 +34,9 @@ from qdrant_client.models import (
 )
 
 app = FastAPI(title="RAG Context Manager", version="1.0.0")
+
+# Initialize Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # Qdrant client configuration
 QDRANT_HOST = os.getenv("QDRANT_HOST", "qdrant")
