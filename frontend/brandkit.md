@@ -1,14 +1,7 @@
-# **CODE/CHEF Brand Kit**
+# code/chef Brand Kit (Moved)
 
-### **Color Palette**
+This content has been merged into the canonical standard:
 
-frosted-grape: #4c5270
-mint: #bcece0
-butter: #fff4bd
-salmon: #f4b9b8
-lavender: #887bb0
-flour: #fffdf2
+- `frontend/brand-standards.md`
 
-### **Font Family**
-
-Google Sans Code
+Please update any references to point to the canonical document.

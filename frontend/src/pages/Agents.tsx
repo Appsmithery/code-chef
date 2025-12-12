@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { agents } from "@/data/platform";
+import { useActiveSection } from "@/lib/scroll";
 import {
   Activity,
   Bot,
@@ -16,15 +17,80 @@ import {
   GitPullRequest,
   Server,
   Shield,
+  type LucideIcon,
 } from "lucide-react";
 
-const iconMap: Record<string, React.ReactNode> = {
-  orchestrator: <Bot className="h-6 w-6" />,
-  "feature-dev": <FileCode className="h-6 w-6" />,
-  "code-review": <Shield className="h-6 w-6" />,
-  infrastructure: <Server className="h-6 w-6" />,
-  cicd: <GitPullRequest className="h-6 w-6" />,
-  documentation: <Activity className="h-6 w-6" />,
+const iconMap: Record<string, LucideIcon> = {
+  orchestrator: Bot,
+  "feature-dev": FileCode,
+  "code-review": Shield,
+  infrastructure: Server,
+  cicd: GitPullRequest,
+  documentation: Activity,
+};
+
+const agentPlaybooks: Record<
+  string,
+  {
+    title: string;
+    bullets: string[];
+    accent: "primary" | "secondary" | "accent";
+  }
+> = {
+  orchestrator: {
+    title: "Direct the kitchen",
+    bullets: [
+      "Choose the right agent for the task",
+      "Maintain state across multi-step workflows",
+      "Gate risky operations for approval",
+    ],
+    accent: "accent",
+  },
+  "feature-dev": {
+    title: "Ship features",
+    bullets: [
+      "Generate code and refactors",
+      "Implement new endpoints and UI changes",
+      "Wire tools + tests into the workflow",
+    ],
+    accent: "secondary",
+  },
+  "code-review": {
+    title: "Raise quality",
+    bullets: [
+      "Find security issues early",
+      "Enforce style and architecture norms",
+      "Recommend safe fixes + edge-case tests",
+    ],
+    accent: "primary",
+  },
+  infrastructure: {
+    title: "Operate reliably",
+    bullets: [
+      "Compose/Terraform changes",
+      "Secrets and environment management",
+      "Health checks + rollbacks",
+    ],
+    accent: "accent",
+  },
+  cicd: {
+    title: "Automate delivery",
+    bullets: [
+      "GitHub Actions workflows",
+      "Release + deploy pipelines",
+      "Test gates and artifacts",
+    ],
+    accent: "secondary",
+  },
+  documentation: {
+    title: "Explain the system",
+    bullets: [
+      "Docs that match the code",
+      "Runbooks and operator guidance",
+      "Architecture diagrams and examples",
+    ],
+    accent: "primary",
+  },
 };
 
 const architectureDiagram = `flowchart TB
@@ -89,6 +155,15 @@ const architectureDiagram = `flowchart TB
     style Metrics fill:transparent,stroke:#f4b9b8`;
 
 export default function Agents() {
+  const { activeId, register } = useActiveSection({
+    initialActiveId: agents[0]?.id,
+    rootMargin: "-45% 0px -50% 0px",
+  });
+
+  const activeAgent =
+    agents.find((a) => a.id === activeId) ?? agents[0] ?? null;
+  const ActiveIcon = activeAgent ? iconMap[activeAgent.id] ?? Bot : Bot;
+
   return (
     <Layout>
       {/* Hero Section */}
@@ -135,58 +210,235 @@ export default function Agents() {
         </div>
       </section>
 
-      {/* Agents Grid */}
+      {/* Agents: Sticky Console + Long Scroll */}
       <section className="py-24 bg-background">
         <div className="container">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {agents.map((agent) => (
-              <Card
-                key={agent.id}
-                className="bg-card border-border hover:border-accent/50 transition-all duration-300 group"
-              >
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform duration-300">
-                      {iconMap[agent.id]}
+          <div className="flex flex-col mb-12 space-y-4">
+            <Badge
+              variant="outline"
+              className="border-accent/30 text-accent bg-accent/5"
+            >
+              Team
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
+              A brigade that ships.
+            </h2>
+            <p className="text-muted-foreground max-w-[750px] leading-relaxed">
+              Scroll to meet each agent in detail. The console stays pinned so
+              you can feel the handoff—routing, execution, review, and delivery.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-12 gap-10 items-start">
+            {/* Sticky agent console */}
+            <div className="lg:col-span-4 lg:sticky lg:top-24 space-y-6">
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-2xl blur opacity-10" />
+                <div className="relative rounded-xl border border-border bg-card shadow-medium dark:shadow-medium-dark overflow-hidden">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      agent-console
                     </div>
-                    <Badge
-                      variant={
-                        agent.status === "online" ? "default" : "secondary"
-                      }
-                      className={
-                        agent.status === "online"
-                          ? "bg-primary/20 text-primary hover:bg-primary/30 border-none"
-                          : ""
-                      }
-                    >
-                      {agent.status}
+                    <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">
+                      live
                     </Badge>
                   </div>
-                  <CardTitle className="text-xl">{agent.name}</CardTitle>
-                  <CardDescription className="text-base mt-2">
-                    {agent.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <div className="text-sm font-medium text-muted-foreground mb-2">
-                      Capabilities:
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-6">
+                      <div>
+                        <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                          Active
+                        </div>
+                        <div className="text-2xl font-bold tracking-tight mt-1">
+                          {activeAgent?.name ?? "Agents"}
+                        </div>
+                        <div className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                          {activeAgent?.description ??
+                            "A specialist crew that handles routing, implementation, review, infrastructure, and docs."}
+                        </div>
+                      </div>
+                      <div className="shrink-0 w-14 h-14 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent cc-float">
+                        <ActiveIcon className="h-7 w-7" />
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {agent.capabilities.map((capability) => (
-                        <Badge
-                          key={capability}
-                          variant="secondary"
-                          className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
-                        >
-                          {capability}
-                        </Badge>
-                      ))}
+
+                    <div className="mt-6 grid grid-cols-3 gap-3">
+                      {agents.map((a) => {
+                        const Icon = iconMap[a.id] ?? Bot;
+                        const isActive = a.id === (activeAgent?.id ?? "");
+                        return (
+                          <div
+                            key={a.id}
+                            className={
+                              "rounded-lg border p-3 transition-all duration-300 " +
+                              (isActive
+                                ? "bg-secondary/10 border-secondary/30"
+                                : "bg-card/60 border-border hover:border-accent/40")
+                            }
+                          >
+                            <div className="flex items-center justify-between">
+                              <div
+                                className={
+                                  "w-9 h-9 rounded-md flex items-center justify-center " +
+                                  (isActive
+                                    ? "bg-secondary/15 text-secondary"
+                                    : "bg-accent/10 text-accent")
+                                }
+                              >
+                                <Icon className="h-5 w-5" />
+                              </div>
+                              <div
+                                className={
+                                  "text-[10px] uppercase tracking-wider " +
+                                  (isActive
+                                    ? "text-secondary"
+                                    : "text-muted-foreground")
+                                }
+                              >
+                                {a.status}
+                              </div>
+                            </div>
+                            <div className="mt-2 text-xs font-medium truncate">
+                              {a.id}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Scroll narrative */}
+            <div className="lg:col-span-8 space-y-10">
+              {agents.map((agent) => {
+                const Icon = iconMap[agent.id] ?? Bot;
+                const playbook = agentPlaybooks[agent.id];
+                const accentBadge =
+                  playbook?.accent === "secondary"
+                    ? "bg-secondary/20 text-secondary-foreground border-none"
+                    : playbook?.accent === "primary"
+                    ? "bg-primary/20 text-primary border-none"
+                    : "bg-accent/20 text-accent-foreground border-none";
+
+                return (
+                  <section
+                    key={agent.id}
+                    id={agent.id}
+                    ref={register(agent.id)}
+                    className="scroll-mt-28"
+                  >
+                    <Card className="bg-gradient-to-br from-card to-muted/30 shadow-soft dark:shadow-soft-dark border-border">
+                      <CardHeader className="p-8 pb-6">
+                        <div className="flex items-start justify-between gap-6">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <div className="w-12 h-12 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
+                                <Icon className="h-6 w-6" />
+                              </div>
+                              <Badge className={accentBadge}>
+                                {playbook?.title ?? "Agent"}
+                              </Badge>
+                              <Badge
+                                variant={
+                                  agent.status === "online"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className={
+                                  agent.status === "online"
+                                    ? "bg-primary/20 text-primary hover:bg-primary/30 border-none"
+                                    : ""
+                                }
+                              >
+                                {agent.status}
+                              </Badge>
+                              <Badge
+                                variant="secondary"
+                                className="bg-secondary/10 text-secondary border-none"
+                              >
+                                :{agent.port}
+                              </Badge>
+                            </div>
+                            <CardTitle className="text-2xl md:text-3xl">
+                              {agent.name}
+                            </CardTitle>
+                            <CardDescription className="text-base leading-relaxed">
+                              {agent.description}
+                            </CardDescription>
+                          </div>
+                          <div className="hidden md:block text-right">
+                            <div className="text-xs text-muted-foreground uppercase tracking-wider">
+                              Model
+                            </div>
+                            <div className="text-sm font-medium mt-1">
+                              {agent.provider} · {agent.model}
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-8 pt-0 space-y-6">
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground mb-2">
+                              Capabilities
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {agent.capabilities.map((capability) => (
+                                <Badge
+                                  key={capability}
+                                  variant="secondary"
+                                  className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
+                                >
+                                  {capability}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground mb-2">
+                              Typical tasks
+                            </div>
+                            <ul className="space-y-2 text-sm text-muted-foreground leading-relaxed">
+                              {(playbook?.bullets ?? []).map((b) => (
+                                <li key={b} className="flex gap-2">
+                                  <span className="text-primary">•</span>
+                                  <span>{b}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="rounded-lg border border-border bg-background/50 p-4">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="text-primary">➜</span>
+                            <span className="font-medium text-foreground">
+                              @chef
+                            </span>
+                            <span>
+                              {agent.id === "orchestrator"
+                                ? "route a deployment with approval gates"
+                                : agent.id === "feature-dev"
+                                ? "implement JWT middleware and tests"
+                                : agent.id === "code-review"
+                                ? "audit for auth bypass and injection"
+                                : agent.id === "infrastructure"
+                                ? "update compose + verify health"
+                                : agent.id === "cicd"
+                                ? "add CI workflow with caching"
+                                : "draft docs for the new endpoint"}
+                            </span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </section>
+                );
+              })}
+            </div>
           </div>
         </div>
       </section>
