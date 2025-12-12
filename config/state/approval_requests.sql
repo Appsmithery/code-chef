@@ -41,7 +41,10 @@ CREATE TABLE IF NOT EXISTS approval_requests (
     
     -- Audit trail
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    -- Linear integration
+    linear_issue_id VARCHAR(100),
+    linear_issue_url TEXT
 );
 
 -- Indexes for common queries
