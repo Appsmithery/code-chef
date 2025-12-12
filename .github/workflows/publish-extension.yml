@@ -79,29 +79,70 @@ jobs:
         with:
           name: vscode-codechef-${{ env.VERSION }}
           path: ${{ env.EXTENSION_DIR }}/*.vsix
-          retention-days: 90
+          retention-days: 30
+
+      - name: Clean up old VSIX files
+        if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          # Remove old VSIX files from repository
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # List all VSIX files except the current version
+          for file in *.vsix; do
+            if [[ "$file" != "vscode-codechef-${{ env.VERSION }}.vsix" ]]; then
+              echo "Removing old file: $file"
+              git rm -f "$file" || echo "File already removed: $file"
+            fi
+          done
+          git commit -m "chore(extension): remove old VSIX files" || echo "No old files to remove"
+          git push || echo "Nothing to push"
 
       - name: Create GitHub Release
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version_bump != 'none'
+        if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: extension-v${{ env.VERSION }}
+          tag_name: v${{ env.VERSION }}
           name: VS Code Extension v${{ env.VERSION }}
           body: |
-            ## Installation
+            ![Version](https://img.shields.io/badge/version-${{ env.VERSION }}-blue)
 
-            ### Option 1: Download and Install Manually
-            1. Download the `.vsix` file from this release
-            2. In VS Code: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
+            ## 🚀 Quick Install (Recommended)
+
+            Download and install in one command:
+
+            ```bash
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
+            ```
+
+            ## 📦 Manual Installation
+
+            ### Option 1: Download and Install
+            1. Download `vscode-codechef-${{ env.VERSION }}.vsix` below
+            2. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
             3. Select the downloaded file
             4. Reload VS Code
 
-            ### Option 2: Install via Command Line
+            ### Option 2: Command Line
             ```bash
-            code --install-extension vscode-codechef-${{ env.VERSION }}.vsix
+            # Download first
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix
+
+            # Then install
+            code --install-extension codechef.vsix
             ```
 
-            ## Changes
+            ## 🔄 Update Existing Installation
+
+            If you already have the extension installed:
+
+            ```bash
+            code --uninstall-extension appsmithery.vscode-codechef
+            code --install-extension codechef.vsix
+            ```
+
+            ## 📝 Changes
+
             See [CHANGELOG.md](https://github.com/Appsmithery/code-chef/blob/main/extensions/vscode-codechef/CHANGELOG.md)
           files: ${{ env.EXTENSION_DIR }}/*.vsix
           draft: false
@@ -110,7 +151,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages (npm)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.version_bump != 'none'
+        if: github.event_name == 'workflow_dispatch'
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
           # Update package.json for GitHub Packages
