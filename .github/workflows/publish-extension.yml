@@ -111,8 +111,14 @@ jobs:
 
             Download and install in one command:
 
+            **Bash/Linux/macOS:**
             ```bash
             curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
+            ```
+
+            **PowerShell/Windows:**
+            ```powershell
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
             ```
 
             ## 📦 Manual Installation
@@ -124,21 +130,30 @@ jobs:
             4. Reload VS Code
 
             ### Option 2: Command Line
-            ```bash
-            # Download first
-            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix
 
-            # Then install
-            code --install-extension codechef.vsix
+            **Bash/Linux/macOS:**
+            ```bash
+            # Download and install
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
             ```
+
+            **PowerShell/Windows:**
+            ```powershell
+            # Download and install
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
 
             ## 🔄 Update Existing Installation
 
             If you already have the extension installed:
 
+            **Bash/Linux/macOS:**
             ```bash
-            code --uninstall-extension appsmithery.vscode-codechef
-            code --install-extension codechef.vsix
+            code --uninstall-extension appsmithery.vscode-codechef && curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
+            ```
+
+            **PowerShell/Windows:**
+            ```powershell
+            code --uninstall-extension appsmithery.vscode-codechef; curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
             ```
 
             ## 📝 Changes
