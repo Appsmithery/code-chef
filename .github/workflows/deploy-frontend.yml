@@ -31,9 +31,9 @@ jobs:
           # Create SSH key file
           echo "${{ secrets.DROPLET_SSH_KEY }}" > /tmp/deploy_key
           chmod 600 /tmp/deploy_key
-          # Sync dist folder to server
+          # Sync dist folder to server (correct path that Caddy mounts)
           rsync -avz --delete -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no" \
-            frontend/dist/ ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/opt/Dev-Tools/frontend/dist/
+            frontend/dist/ ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/opt/Dev-Tools/support/frontend/dist/
           # Cleanup
           rm /tmp/deploy_key
 
