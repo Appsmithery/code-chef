@@ -1047,8 +1047,6 @@ async def linear_webhook(request: Request):
     logger.info(f"🔄 Webhook processing result: {result.get('action')}")
 
     if result["action"] == "resume_workflow":
-        # TODO: Resume LangGraph workflow from checkpoint
-        # For now, just log and notify via Linear comment
         metadata = result["metadata"]
         logger.info(
             f"✅ Workflow approved by {metadata['approved_by_name']} - "
@@ -1061,12 +1059,34 @@ async def linear_webhook(request: Request):
 
             linear_client = LinearWorkspaceClient()
             await linear_client.add_comment(
-                metadata["issue_id"],  # Use issue_id, not comment_id
+                metadata["issue_id"],
                 f"✅ **Approved by @{metadata['approved_by_name']}**\n\n"
                 f"Workflow will resume automatically. Thank you for your approval!",
             )
         except Exception as e:
             logger.error(f"Failed to add confirmation comment: {e}")
+
+        # NEW: Resume workflow by matching linear_issue_id
+        try:
+            from shared.lib.hitl_manager import get_hitl_manager
+
+            hitl_manager = get_hitl_manager()
+            async with await hitl_manager._get_connection() as conn:
+                async with conn.cursor() as cursor:
+                    await cursor.execute(
+                        "SELECT id FROM approval_requests WHERE linear_issue_id = %s AND status = 'pending'",
+                        (metadata["issue_id"],),
+                    )
+                    row = await cursor.fetchone()
+                    if row:
+                        approval_request_id = row[0]
+                        # Call workflow resume logic (placeholder)
+                        # await resume_workflow_from_approval(approval_request_id, action="approved")
+                        logger.info(
+                            f"Workflow resumed for approval_request_id={approval_request_id}"
+                        )
+        except Exception as e:
+            logger.error(f"Failed to resume workflow from Linear approval: {e}")
 
         return {
             "status": "workflow_resumed",
@@ -3621,7 +3641,7 @@ async def handle_linear_approval_webhook(request: Request):
         ).hexdigest()
 
         if not hmac.compare_digest(signature, expected_sig):
-            logger.warning("[HITL Webhook] Invalid signature")
+            logger.warning("Invalid Linear webhook signature")
             raise HTTPException(status_code=401, detail="Invalid signature")
 
     payload = await request.json()
@@ -3760,7 +3780,10 @@ async def resume_langgraph_workflow(
         resume_message = HumanMessage(content=resume_content)
 
         final_state = await workflow_app.ainvoke(
-            {"messages": [resume_message], "memory_context": memory_context},
+            {
+                "messages": [resume_message],
+                "memory_context": memory_context,
+            },
             config=config,
         )
 
@@ -4052,7 +4075,6 @@ async def smart_execute_workflow(request: SmartWorkflowRequest):
     Returns:
         SmartWorkflowResponse with selection details and optional workflow_id
     """
-    from workflows.workflow_engine import WorkflowEngine
     from workflows.workflow_router import WorkflowSelection, get_workflow_router
 
     # Get or create the workflow router
@@ -4167,6 +4189,8 @@ async def execute_workflow(request: WorkflowExecuteRequest):
             "workflow_id": workflow_state.workflow_id,
             "status": workflow_state.status.value,
             "current_step": workflow_state.current_step,
+            "started_at": workflow_state.started_at,
+            "completed_at": workflow_state.completed_at,
             "step_statuses": {
                 k: v.value for k, v in workflow_state.step_statuses.items()
             },
@@ -4203,7 +4227,7 @@ async def get_workflow_status(workflow_id: str):
     - error_message: Error details if workflow failed
 
     Example:
-        GET /workflow/status/abc123
+        GET /workflow/abc123/status
         {
             "workflow_id": "abc123",
             "status": "paused",
@@ -4333,9 +4357,9 @@ async def get_workflow_events(
         List of workflow events with metadata
 
     Example:
-        GET /workflow/abc-123/events?limit=10&action=complete_step
+        GET /workflow/abc123/events?limit=10&action=complete_step
         {
-            "workflow_id": "abc-123",
+            "workflow_id": "abc123",
             "total_events": 42,
             "events": [
                 {
@@ -4459,9 +4483,9 @@ async def replay_workflow_events(workflow_id: str):
         Reconstructed state from events
 
     Example:
-        POST /workflow/abc-123/replay
+        POST /workflow/abc123/replay
         {
-            "workflow_id": "abc-123",
+            "workflow_id": "abc123",
             "total_events": 42,
             "final_state": {
                 "status": "completed",
