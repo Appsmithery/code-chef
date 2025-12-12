@@ -214,12 +214,6 @@ export default function Agents() {
       <section className="py-24 bg-background">
         <div className="container">
           <div className="flex flex-col mb-12 space-y-4">
-            <Badge
-              variant="outline"
-              className="border-accent/30 text-accent bg-accent/5"
-            >
-              Team
-            </Badge>
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
               A brigade that ships.
             </h2>
@@ -243,67 +237,20 @@ export default function Agents() {
                       live
                     </Badge>
                   </div>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-6">
+                  <div className="p-8">
+                    <div className="flex flex-col items-center text-center gap-6">
+                      <div className="shrink-0 w-20 h-20 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent cc-float">
+                        <ActiveIcon className="h-10 w-10" />
+                      </div>
                       <div>
-                        <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Active
-                        </div>
-                        <div className="text-2xl font-bold tracking-tight mt-1">
+                        <div className="text-3xl font-bold tracking-tight">
                           {activeAgent?.name ?? "Agents"}
                         </div>
-                        <div className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                        <div className="text-base text-muted-foreground mt-3 leading-relaxed">
                           {activeAgent?.description ??
                             "A specialist crew that handles routing, implementation, review, infrastructure, and docs."}
                         </div>
                       </div>
-                      <div className="shrink-0 w-14 h-14 rounded-xl bg-accent/10 border border-accent/20 flex items-center justify-center text-accent cc-float">
-                        <ActiveIcon className="h-7 w-7" />
-                      </div>
-                    </div>
-
-                    <div className="mt-6 grid grid-cols-3 gap-3">
-                      {agents.map((a) => {
-                        const Icon = iconMap[a.id] ?? Bot;
-                        const isActive = a.id === (activeAgent?.id ?? "");
-                        return (
-                          <div
-                            key={a.id}
-                            className={
-                              "rounded-lg border p-3 transition-all duration-300 " +
-                              (isActive
-                                ? "bg-secondary/10 border-secondary/30"
-                                : "bg-card/60 border-border hover:border-accent/40")
-                            }
-                          >
-                            <div className="flex items-center justify-between">
-                              <div
-                                className={
-                                  "w-9 h-9 rounded-md flex items-center justify-center " +
-                                  (isActive
-                                    ? "bg-secondary/15 text-secondary"
-                                    : "bg-accent/10 text-accent")
-                                }
-                              >
-                                <Icon className="h-5 w-5" />
-                              </div>
-                              <div
-                                className={
-                                  "text-[10px] uppercase tracking-wider " +
-                                  (isActive
-                                    ? "text-secondary"
-                                    : "text-muted-foreground")
-                                }
-                              >
-                                {a.status}
-                              </div>
-                            </div>
-                            <div className="mt-2 text-xs font-medium truncate">
-                              {a.id}
-                            </div>
-                          </div>
-                        );
-                      })}
                     </div>
                   </div>
                 </div>
@@ -332,48 +279,28 @@ export default function Agents() {
                     <Card className="bg-gradient-to-br from-card to-muted/30 shadow-soft dark:shadow-soft-dark border-border">
                       <CardHeader className="p-8 pb-6">
                         <div className="flex items-start justify-between gap-6">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-3 flex-wrap">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
                               <div className="w-12 h-12 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center text-accent">
                                 <Icon className="h-6 w-6" />
                               </div>
-                              <Badge className={accentBadge}>
-                                {playbook?.title ?? "Agent"}
-                              </Badge>
-                              <Badge
-                                variant={
-                                  agent.status === "online"
-                                    ? "default"
-                                    : "secondary"
-                                }
-                                className={
-                                  agent.status === "online"
-                                    ? "bg-primary/20 text-primary hover:bg-primary/30 border-none"
-                                    : ""
-                                }
-                              >
-                                {agent.status}
-                              </Badge>
-                              <Badge
-                                variant="secondary"
-                                className="bg-secondary/10 text-secondary border-none"
-                              >
-                                :{agent.port}
-                              </Badge>
+                              <CardTitle className="text-2xl md:text-3xl">
+                                {agent.name}
+                              </CardTitle>
                             </div>
-                            <CardTitle className="text-2xl md:text-3xl">
-                              {agent.name}
-                            </CardTitle>
                             <CardDescription className="text-base leading-relaxed">
                               {agent.description}
                             </CardDescription>
                           </div>
-                          <div className="hidden md:block text-right">
+                          <div className="hidden md:block text-right shrink-0">
                             <div className="text-xs text-muted-foreground uppercase tracking-wider">
                               Model
                             </div>
                             <div className="text-sm font-medium mt-1">
                               {agent.provider} · {agent.model}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-2">
+                              :{agent.port} · {agent.status}
                             </div>
                           </div>
                         </div>
@@ -381,30 +308,27 @@ export default function Agents() {
                       <CardContent className="p-8 pt-0 space-y-6">
                         <div className="grid md:grid-cols-2 gap-6">
                           <div>
-                            <div className="text-sm font-medium text-muted-foreground mb-2">
+                            <div className="text-sm font-medium text-muted-foreground mb-3">
                               Capabilities
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <ul className="space-y-2 text-sm text-muted-foreground leading-relaxed">
                               {agent.capabilities.map((capability) => (
-                                <Badge
-                                  key={capability}
-                                  variant="secondary"
-                                  className="bg-secondary/10 text-secondary hover:bg-secondary/20 border-none text-xs"
-                                >
-                                  {capability}
-                                </Badge>
+                                <li key={capability} className="flex gap-2">
+                                  <span className="text-primary">•</span>
+                                  <span>{capability}</span>
+                                </li>
                               ))}
-                            </div>
+                            </ul>
                           </div>
 
                           <div>
-                            <div className="text-sm font-medium text-muted-foreground mb-2">
+                            <div className="text-sm font-medium text-muted-foreground mb-3">
                               Typical tasks
                             </div>
                             <ul className="space-y-2 text-sm text-muted-foreground leading-relaxed">
                               {(playbook?.bullets ?? []).map((b) => (
                                 <li key={b} className="flex gap-2">
-                                  <span className="text-primary">•</span>
+                                  <span className="text-accent">•</span>
                                   <span>{b}</span>
                                 </li>
                               ))}
