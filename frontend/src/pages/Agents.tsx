@@ -262,12 +262,6 @@ export default function Agents() {
               {agents.map((agent) => {
                 const Icon = iconMap[agent.id] ?? Bot;
                 const playbook = agentPlaybooks[agent.id];
-                const accentBadge =
-                  playbook?.accent === "secondary"
-                    ? "bg-secondary/20 text-secondary-foreground border-none"
-                    : playbook?.accent === "primary"
-                    ? "bg-primary/20 text-primary border-none"
-                    : "bg-accent/20 text-accent-foreground border-none";
 
                 return (
                   <section
