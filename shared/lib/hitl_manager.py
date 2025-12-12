@@ -455,6 +455,70 @@ class HITLManager:
                 )
                 await conn.commit()
 
+    def _format_approval_description(
+        self, request_id: str, task: Dict, risk_level: str
+    ) -> str:
+        """Format approval request description for Linear issue.
+
+        Args:
+            request_id: Approval request UUID
+            task: Task dictionary with operation details
+            risk_level: Risk level (low, medium, high, critical)
+
+        Returns:
+            Formatted markdown description
+        """
+        risk_emoji = {
+            "critical": "🔴",
+            "high": "🟠",
+            "medium": "🟡",
+            "low": "🟢",
+        }
+
+        description = f"""{risk_emoji.get(risk_level, "⚪")} **{risk_level.upper()} Risk Operation**
+
+**Approval Request ID**: `{request_id}`
+
+**Operation**: {task.get('operation', 'Unknown operation')}
+
+**Description**: {task.get('description', 'No description provided')}
+
+**Details**:
+"""
+
+        # Add task details
+        if task.get("environment"):
+            description += f"\n- **Environment**: {task.get('environment')}"
+        if task.get("resource_type"):
+            description += f"\n- **Resource Type**: {task.get('resource_type')}"
+        if task.get("impact"):
+            description += f"\n- **Impact**: {task.get('impact')}"
+
+        # Add risk factors
+        risk_factors = task.get("risk_factors", [])
+        if risk_factors:
+            description += "\n\n**Risk Factors**:\n"
+            for factor in risk_factors:
+                description += f"- {factor}\n"
+
+        # Add action instructions
+        description += f"""
+
+---
+
+**Actions Required**:
+
+✅ **To Approve**: Add 👍 reaction to this issue or comment `approve REQUEST_ID={request_id}`
+
+❌ **To Reject**: Add 👎 reaction to this issue or comment `reject REQUEST_ID={request_id} REASON="<reason>"`
+
+💬 **Need More Info**: Comment with your questions
+
+**This approval request will expire automatically if not acted upon.**
+"""
+
+        return description
+
     @traceable(name="hitl_send_notifications", tags=["hitl", "notification"])
     async def _send_notifications(
         self, request_id: str, risk_level: RiskLevel, task: Dict
