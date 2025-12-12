@@ -21,17 +21,18 @@ The template-driven mode enables:
 - Resource locking for concurrent operation prevention
 """
 
-import sys
-import uuid
 import hashlib
 import logging
+import sys
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import TypedDict, List, Literal, Annotated, Dict, Any, Optional
-from langgraph.graph import StateGraph, END
+from typing import Annotated, Any, Dict, List, Literal, Optional, TypedDict
+
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage, AIMessage
 from langsmith import traceable
 
 logger = logging.getLogger(__name__)
@@ -43,25 +44,32 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "shared"))
 from agents import get_agent as get_real_agent
 
 # Import WorkflowEngine for template-driven execution (Phase 6 - CHEF-110)
-from workflows.workflow_engine import WorkflowEngine, WorkflowStatus as WFStatus
+from workflows.workflow_engine import WorkflowEngine
+from workflows.workflow_engine import WorkflowStatus as WFStatus
 from workflows.workflow_router import WorkflowRouter, get_workflow_router
 
 # Import error recovery decorator for agent-level resilience (CHEF-Error-Handling)
 try:
-    from shared.lib.error_recovery_engine import with_recovery, RecoveryTier
+    from shared.lib.error_recovery_engine import RecoveryTier, with_recovery
+
     ERROR_RECOVERY_ENABLED = True
     logger.info("[LangGraph] Error recovery decorator available for agent nodes")
 except ImportError:
     ERROR_RECOVERY_ENABLED = False
+
     # Fallback no-op decorator
     def with_recovery(*args, **kwargs):
         def decorator(func):
             return func
+
         return decorator
+
     from enum import IntEnum
+
     class RecoveryTier(IntEnum):
         TIER_0 = 0
         TIER_1 = 1
+
     logger.warning("[LangGraph] Error recovery decorator not available")
 
 
@@ -103,7 +111,9 @@ class WorkflowState(TypedDict):
     captured_insights: List[Dict[str, Any]]  # Insights from agents during workflow
     memory_context: Optional[str]  # Retrieved context on resume
     # Template-driven workflow fields (CHEF-110)
-    workflow_template: Optional[str]  # YAML template name (e.g., "pr-deployment.workflow.yaml")
+    workflow_template: Optional[
+        str
+    ]  # YAML template name (e.g., "pr-deployment.workflow.yaml")
     workflow_context: Optional[Dict[str, Any]]  # Template context variables
     use_template_engine: bool  # If True, use WorkflowEngine instead of supervisor
 
@@ -130,7 +140,9 @@ def get_workflow_engine() -> WorkflowEngine:
         _workflow_engine = WorkflowEngine(
             templates_dir="agent_orchestrator/workflows/templates"
         )
-        logger.info("[LangGraph] Initialized WorkflowEngine for template-driven execution")
+        logger.info(
+            "[LangGraph] Initialized WorkflowEngine for template-driven execution"
+        )
     return _workflow_engine
 
 
@@ -221,7 +233,12 @@ def _collect_agent_insights(
 # Define agent nodes with error recovery decorators (CHEF-Error-Handling)
 # @with_recovery handles Tier 0-1 errors locally with configurable retry counts
 @traceable(name="supervisor_node", tags=["langgraph", "node", "supervisor"])
-@with_recovery(max_retries=2, max_tier=RecoveryTier.TIER_1, step_id="supervisor", agent_name="supervisor")
+@with_recovery(
+    max_retries=2,
+    max_tier=RecoveryTier.TIER_1,
+    step_id="supervisor",
+    agent_name="supervisor",
+)
 async def supervisor_node(state: WorkflowState) -> WorkflowState:
     """Supervisor agent node - routes tasks to specialized agents.
 
@@ -292,7 +309,12 @@ REASONING: Task completed
 
 
 @traceable(name="feature_dev_node", tags=["langgraph", "node", "feature-dev"])
-@with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1, step_id="feature-dev", agent_name="feature-dev")
+@with_recovery(
+    max_retries=3,
+    max_tier=RecoveryTier.TIER_1,
+    step_id="feature-dev",
+    agent_name="feature-dev",
+)
 async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     """Feature development agent node - implements code.
 
@@ -302,6 +324,7 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     - Bug fixes
 
     CHEF-208: Captures insights to state for checkpoint persistence.
+    Phase 3: Performs risk assessment for code changes and routes to approval if needed.
     """
     agent = get_agent("feature-dev")
 
@@ -317,14 +340,52 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
         # Collect insights for checkpoint persistence (CHEF-208)
         captured_insights = _collect_agent_insights(agent, state, "feature-dev")
 
+        # Phase 3: Perform risk assessment for code changes
+        risk_context = {
+            "operation": "code_modification",
+            "environment": state.get("environment", "production"),
+            "description": state.get("pending_operation", "Code implementation"),
+            "files_changed": state.get("files_changed", 0),
+            "agent_name": "feature-dev",
+        }
+
+        from lib.risk_assessor import get_risk_assessor
+
+        risk_assessor = get_risk_assessor()
+        risk_level = risk_assessor.assess_task(risk_context)
+        requires_approval = risk_assessor.requires_approval(risk_level)
+
+        # If high-risk code changes, route to approval node
+        if requires_approval:
+            logger.info(
+                f"[LangGraph] feature-dev: High-risk code changes detected ({risk_level}), routing to approval"
+            )
+            return {
+                "messages": [response],
+                "current_agent": "feature-dev",
+                "next_agent": "approval",  # Route to approval instead of supervisor
+                "requires_approval": True,
+                "pending_operation": f"Deploy code changes: {result_content[:200]}",
+                "pr_context": state.get("pr_context", {}),  # Pass through PR context
+                "task_result": {
+                    "agent": "feature-dev",
+                    "completed": True,
+                    "output_length": len(result_content),
+                    "risk_level": risk_level,
+                },
+                "captured_insights": captured_insights,
+            }
+
         return {
             "messages": [response],
             "current_agent": "feature-dev",
-            "next_agent": "supervisor",  # Always return to supervisor
+            "next_agent": "supervisor",  # Low risk: return to supervisor
+            "requires_approval": False,
             "task_result": {
                 "agent": "feature-dev",
                 "completed": True,
                 "output_length": len(result_content),
+                "risk_level": risk_level,
             },
             "captured_insights": captured_insights,
         }
@@ -343,7 +404,12 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="code_review_node", tags=["langgraph", "node", "code-review"])
-@with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1, step_id="code-review", agent_name="code-review")
+@with_recovery(
+    max_retries=3,
+    max_tier=RecoveryTier.TIER_1,
+    step_id="code-review",
+    agent_name="code-review",
+)
 async def code_review_node(state: WorkflowState) -> WorkflowState:
     """Code review agent node - analyzes code quality.
 
@@ -394,7 +460,12 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="infrastructure_node", tags=["langgraph", "node", "infrastructure"])
-@with_recovery(max_retries=2, max_tier=RecoveryTier.TIER_1, step_id="infrastructure", agent_name="infrastructure")
+@with_recovery(
+    max_retries=2,
+    max_tier=RecoveryTier.TIER_1,
+    step_id="infrastructure",
+    agent_name="infrastructure",
+)
 async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     """Infrastructure agent node - manages cloud resources.
 
@@ -404,6 +475,7 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     - Cloud resource management
 
     CHEF-208: Captures insights to state for checkpoint persistence.
+    Phase 3: Performs risk assessment for infrastructure changes and routes to approval if needed.
     """
     agent = get_agent("infrastructure")
 
@@ -419,14 +491,52 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
         # Collect insights for checkpoint persistence (CHEF-208)
         captured_insights = _collect_agent_insights(agent, state, "infrastructure")
 
+        # Phase 3: Perform risk assessment for infrastructure changes
+        risk_context = {
+            "operation": "infrastructure_modification",
+            "environment": state.get("environment", "production"),
+            "description": state.get("pending_operation", "Infrastructure change"),
+            "resource_type": "infrastructure",
+            "agent_name": "infrastructure",
+        }
+
+        from lib.risk_assessor import get_risk_assessor
+
+        risk_assessor = get_risk_assessor()
+        risk_level = risk_assessor.assess_task(risk_context)
+        requires_approval = risk_assessor.requires_approval(risk_level)
+
+        # If high-risk infrastructure changes, route to approval node
+        if requires_approval:
+            logger.info(
+                f"[LangGraph] infrastructure: High-risk changes detected ({risk_level}), routing to approval"
+            )
+            return {
+                "messages": [response],
+                "current_agent": "infrastructure",
+                "next_agent": "approval",  # Route to approval instead of supervisor
+                "requires_approval": True,
+                "pending_operation": f"Deploy infrastructure changes: {result_content[:200]}",
+                "pr_context": state.get("pr_context", {}),  # Pass through PR context
+                "task_result": {
+                    "agent": "infrastructure",
+                    "completed": True,
+                    "output_length": len(result_content),
+                    "risk_level": risk_level,
+                },
+                "captured_insights": captured_insights,
+            }
+
         return {
             "messages": [response],
             "current_agent": "infrastructure",
-            "next_agent": "supervisor",
+            "next_agent": "supervisor",  # Low risk: return to supervisor
+            "requires_approval": False,
             "task_result": {
                 "agent": "infrastructure",
                 "completed": True,
                 "output_length": len(result_content),
+                "risk_level": risk_level,
             },
             "captured_insights": captured_insights,
         }
@@ -445,7 +555,9 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="cicd_node", tags=["langgraph", "node", "cicd"])
-@with_recovery(max_retries=2, max_tier=RecoveryTier.TIER_1, step_id="cicd", agent_name="cicd")
+@with_recovery(
+    max_retries=2, max_tier=RecoveryTier.TIER_1, step_id="cicd", agent_name="cicd"
+)
 async def cicd_node(state: WorkflowState) -> WorkflowState:
     """CI/CD agent node - handles deployments.
 
@@ -455,6 +567,7 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
     - CI configuration
 
     CHEF-208: Captures insights to state for checkpoint persistence.
+    Phase 3: Performs risk assessment for deployments and extracts PR context from state.
     """
     agent = get_agent("cicd")
 
@@ -469,6 +582,43 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
 
         # Collect insights for checkpoint persistence (CHEF-208)
         captured_insights = _collect_agent_insights(agent, state, "cicd")
+
+        # Phase 3: Perform risk assessment for deployments
+        # CI/CD is particularly important as it handles production deployments
+        risk_context = {
+            "operation": "deploy",
+            "environment": state.get("environment", "production"),
+            "description": state.get("pending_operation", "Deployment"),
+            "resource_type": "deployment",
+            "agent_name": "cicd",
+        }
+
+        from lib.risk_assessor import get_risk_assessor
+
+        risk_assessor = get_risk_assessor()
+        risk_level = risk_assessor.assess_task(risk_context)
+        requires_approval = risk_assessor.requires_approval(risk_level)
+
+        # If high-risk deployment (e.g., production), route to approval node
+        if requires_approval:
+            logger.info(
+                f"[LangGraph] cicd: High-risk deployment detected ({risk_level}), routing to approval"
+            )
+            return {
+                "messages": [response],
+                "current_agent": "cicd",
+                "next_agent": "approval",  # Route to approval instead of supervisor
+                "requires_approval": True,
+                "pending_operation": f"Deploy to {risk_context['environment']}: {result_content[:200]}",
+                "pr_context": state.get("pr_context", {}),  # Pass through PR context
+                "task_result": {
+                    "agent": "cicd",
+                    "completed": True,
+                    "output_length": len(result_content),
+                    "risk_level": risk_level,
+                },
+                "captured_insights": captured_insights,
+            }
 
         return {
             "messages": [response],
@@ -492,7 +642,12 @@ async def cicd_node(state: WorkflowState) -> WorkflowState:
 
 
 @traceable(name="documentation_node", tags=["langgraph", "node", "documentation"])
-@with_recovery(max_retries=3, max_tier=RecoveryTier.TIER_1, step_id="documentation", agent_name="documentation")
+@with_recovery(
+    max_retries=3,
+    max_tier=RecoveryTier.TIER_1,
+    step_id="documentation",
+    agent_name="documentation",
+)
 async def documentation_node(state: WorkflowState) -> WorkflowState:
     """Documentation agent node - writes technical docs.
 
@@ -555,6 +710,7 @@ async def approval_node(state: WorkflowState) -> WorkflowState:
     - approval_request_id for tracking
     - risk_level for audit trail
     - pending_operation description
+    - pr_context (if available) for GitHub PR comment integration
     """
     from lib.hitl_manager import get_hitl_manager
     from lib.risk_assessor import get_risk_assessor
@@ -586,12 +742,21 @@ async def approval_node(state: WorkflowState) -> WorkflowState:
     if requires_hitl:
         # Create approval request in database
         try:
+            # Extract PR context if available (Phase 3 enhancement)
+            pr_context = state.get("pr_context", {})
+            pr_number = pr_context.get("pr_number")
+            pr_url = pr_context.get("pr_url")
+            github_repo = pr_context.get("github_repo")
+
             request_id = await hitl_manager.create_approval_request(
                 workflow_id=state.get("workflow_id", str(uuid.uuid4())),
                 thread_id=state.get("thread_id", ""),
                 checkpoint_id=f"checkpoint-{uuid.uuid4()}",
                 task=risk_context,
                 agent_name=state.get("current_agent", "orchestrator"),
+                pr_number=pr_number,  # Phase 3: PR context
+                pr_url=pr_url,  # Phase 3: PR context
+                github_repo=github_repo,  # Phase 3: PR context
             )
 
             if request_id:
@@ -640,7 +805,10 @@ async def approval_node(state: WorkflowState) -> WorkflowState:
 # TEMPLATE-DRIVEN WORKFLOW EXECUTION (Phase 6 - CHEF-110)
 # =========================================================================
 
-@traceable(name="workflow_router_node", tags=["langgraph", "node", "workflow", "router"])
+
+@traceable(
+    name="workflow_router_node", tags=["langgraph", "node", "workflow", "router"]
+)
 async def workflow_router_node(state: WorkflowState) -> WorkflowState:
     """Route incoming task to appropriate workflow template.
 
@@ -661,7 +829,9 @@ async def workflow_router_node(state: WorkflowState) -> WorkflowState:
             break
 
     if not task_description:
-        logger.warning("[WorkflowRouter] No task description found, falling back to supervisor")
+        logger.warning(
+            "[WorkflowRouter] No task description found, falling back to supervisor"
+        )
         return {
             "messages": [],
             "current_agent": "workflow_router",
@@ -718,7 +888,9 @@ async def workflow_router_node(state: WorkflowState) -> WorkflowState:
         }
 
 
-@traceable(name="workflow_executor_node", tags=["langgraph", "node", "workflow", "executor"])
+@traceable(
+    name="workflow_executor_node", tags=["langgraph", "node", "workflow", "executor"]
+)
 async def workflow_executor_node(state: WorkflowState) -> WorkflowState:
     """Execute workflow using declarative YAML template.
 
@@ -785,7 +957,11 @@ async def workflow_executor_node(state: WorkflowState) -> WorkflowState:
                     "status": "completed",
                     "outputs": workflow_state.outputs,
                     "steps_completed": len(
-                        [s for s, st in workflow_state.step_statuses.items() if st.value == "completed"]
+                        [
+                            s
+                            for s, st in workflow_state.step_statuses.items()
+                            if st.value == "completed"
+                        ]
                     ),
                 },
             }
@@ -1002,11 +1178,32 @@ def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
         },
     )
 
-    # All agents route back to supervisor
-    workflow.add_edge("feature-dev", "supervisor")
+    # Phase 3: Add conditional routing from agents to approval or supervisor
+    def route_from_agent(state: WorkflowState) -> str:
+        """Route from agent node based on requires_approval flag."""
+        if state.get("requires_approval", False):
+            return "approval"
+        return "supervisor"
+
+    # Conditional edges for agents that can route to approval
+    workflow.add_conditional_edges(
+        "feature-dev",
+        route_from_agent,
+        {"approval": "approval", "supervisor": "supervisor"},
+    )
+    workflow.add_conditional_edges(
+        "infrastructure",
+        route_from_agent,
+        {"approval": "approval", "supervisor": "supervisor"},
+    )
+    workflow.add_conditional_edges(
+        "cicd",
+        route_from_agent,
+        {"approval": "approval", "supervisor": "supervisor"},
+    )
+
+    # These agents still route directly back to supervisor
     workflow.add_edge("code-review", "supervisor")
-    workflow.add_edge("infrastructure", "supervisor")
-    workflow.add_edge("cicd", "supervisor")
     workflow.add_edge("documentation", "supervisor")
     workflow.add_edge("approval", "supervisor")
 
