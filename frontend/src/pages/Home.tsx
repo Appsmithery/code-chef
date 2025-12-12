@@ -239,7 +239,7 @@ export default function Home() {
         <div className="container">
           <div className="flex flex-col mb-16 space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              <span className="cc-shimmer-text">What's Cookin'?</span>
+              What's Cookin'?
             </h2>
             <p className="text-muted-foreground max-w-[700px]">
               A complete menu of DevOps automation tools, served hot and ready

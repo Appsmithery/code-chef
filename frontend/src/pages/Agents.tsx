@@ -215,7 +215,7 @@ export default function Agents() {
         <div className="container">
           <div className="flex flex-col mb-12 space-y-4">
             <h2 className="text-4xl md:text-5xl font-bold tracking-tight">
-              A brigade that ships.
+              A team that ships.
             </h2>
             <p className="text-muted-foreground max-w-[750px] leading-relaxed">
               Scroll to meet each agent in detail. The console stays pinned so
