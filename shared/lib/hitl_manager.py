@@ -88,6 +88,9 @@ class HITLManager:
         checkpoint_id: str,
         task: Dict,
         agent_name: str,
+        pr_number: Optional[int] = None,
+        pr_url: Optional[str] = None,
+        github_repo: Optional[str] = None,
     ) -> str:
         """
         Create approval request in PostgreSQL.
@@ -98,6 +101,9 @@ class HITLManager:
             checkpoint_id: LangGraph checkpoint ID (for resumption)
             task: Task dict with operation, environment, resource_type, etc.
             agent_name: Name of agent requesting approval
+            pr_number: Optional GitHub PR number for linking
+            pr_url: Optional GitHub PR URL
+            github_repo: Optional GitHub repository (format: owner/repo)
 
         Returns:
             Approval request UUID
@@ -124,14 +130,16 @@ class HITLManager:
                         agent_name, risk_level, risk_score, risk_factors,
                         action_type, action_details, action_impact,
                         status, expires_at, created_at,
-                        linear_issue_id, linear_issue_url
+                        linear_issue_id, linear_issue_url,
+                        pr_number, pr_url, github_repo
                     ) VALUES (
                         %s, %s, %s, %s,
                         %s, %s,
                         %s, %s, %s, %s,
                         %s, %s, %s,
                         'pending', %s, NOW(),
-                        %s, %s
+                        %s, %s,
+                        %s, %s, %s
                     )
                     """,
                     (
@@ -151,6 +159,9 @@ class HITLManager:
                         expires_at,
                         None,  # linear_issue_id placeholder
                         None,  # linear_issue_url placeholder
+                        pr_number,
+                        pr_url,
+                        github_repo,
                     ),
                 )
                 await conn.commit()

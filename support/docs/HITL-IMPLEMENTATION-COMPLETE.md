@@ -1,6 +1,6 @@
 # HITL Linear Webhook Integration - Implementation Complete
 
-**Status**: ✅ Phase 1 Complete  
+**Status**: ✅ Phase 1 & 2 Complete  
 **Date**: December 12, 2025  
 **Implementation**: code-chef HITL approval flow with Linear/GitHub webhook integration
 
@@ -11,6 +11,10 @@
 ### Phase 1: Core Integration ✅
 
 All Phase 1 tasks from the implementation checklist have been completed:
+
+### Phase 2: GitHub Enrichment ✅
+
+All Phase 2 tasks for GitHub PR integration have been completed:
 
 #### 1. ✅ Database Schema Updates
 
@@ -121,7 +125,67 @@ try:
                     )
 ```
 
-#### 4. ✅ Test Infrastructure
+#### 4. ✅ Phase 2: GitHub PR Integration
+
+**Database Schema Enhanced**:
+
+Added three columns to `approval_requests` table for PR context:
+
+- `pr_number INTEGER` - GitHub pull request number
+- `pr_url TEXT` - Full URL to GitHub PR
+- `github_repo VARCHAR(255)` - Repository in format `owner/repo`
+
+**HITLManager PR Context Support**:
+
+Updated `create_approval_request()` signature to accept PR details:
+
+```python
+async def create_approval_request(
+    self,
+    workflow_id: str,
+    thread_id: str,
+    checkpoint_id: str,
+    task: dict,
+    agent_name: str = "unknown",
+    pr_number: Optional[int] = None,
+    pr_url: Optional[str] = None,
+    github_repo: Optional[str] = None,
+) -> str:
+```
+
+**GitHub PR Comment Posting**:
+
+Enhanced `resume_workflow_from_approval()` to post approval confirmation to GitHub PR:
+
+```python
+# Phase 2: Post GitHub PR comment if PR is linked
+if pr_number and github_repo:
+    owner, repo = github_repo.split("/")
+    comment_body = f"""✅ **HITL Approval Granted**
+
+Workflow resumed after human approval.
+
+**Details:**
+- **Approval ID**: `{approval_request_id}`
+- **Risk Level**: {risk_level}
+- **Operation**: {task_description}
+- **Status**: Resuming workflow execution
+
+**Linear Tracking**: [{linear_issue_id}]({linear_issue_url})
+
+*This approval was processed automatically via Linear webhook integration.*
+"""
+
+    # Posts comment using GitHub API with GITHUB_TOKEN
+```
+
+**Benefits**:
+
+- Approval confirmations visible directly in PR conversation
+- Links to Linear issue for detailed tracking
+- Maintains context between Linear approval and GitHub deployment
+
+#### 5. ✅ Test Infrastructure
 
 **Files Created**:
 
@@ -133,7 +197,8 @@ try:
 - Approval request creation with Linear issue
 - Linear issue formatting verification
 - Webhook processing and workflow resume
-- End-to-end approval flow
+- GitHub PR comment posting
+- End-to-end approval flow with PR context
 
 ---
 
@@ -149,7 +214,7 @@ try:
 
 2. **Approval Request Created**
 
-   - `HITLManager.create_approval_request()` called
+   - `HITLManager.create_approval_request()` called with optional PR context
    - Record inserted into `approval_requests` table with status = `pending`
    - LangGraph workflow paused via `interrupt()`
 
@@ -162,12 +227,14 @@ try:
      - Approval request ID
      - Operation details and impact
      - Approval instructions (👍/👎 reactions)
+     - Link to GitHub PR (if available)
    - Linear issue ID stored in `approval_requests.linear_issue_id`
 
 4. **Human Reviews in Linear**
 
    - Approver views issue in Linear workspace
    - Reviews operation details, risk factors, impact
+   - Can navigate to GitHub PR for additional context
    - Adds 👍 emoji reaction to approve (or 👎 to reject)
 
 5. **Webhook Fires**
@@ -183,13 +250,15 @@ try:
    - Calls `resume_workflow_from_approval(approval_request_id, action="approved")`
    - Function:
      - Updates approval status in database
+     - **Posts approval comment to GitHub PR** (if PR linked)
      - Loads workflow checkpoint from PostgreSQL
      - Injects approval context into workflow state
      - Resumes LangGraph execution via `workflow_app.ainvoke()`
 
 7. **Confirmation Posted**
    - Success comment added to Linear issue
-   - Includes thread ID and workflow status
+   - Approval confirmation posted to GitHub PR (if linked)
+   - Includes thread ID, workflow status, and Linear issue link
    - Workflow continues to completion
 
 ---
