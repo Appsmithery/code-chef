@@ -319,24 +319,27 @@ class BaseAgent:
 
         # Use LangChain get_llm for multi-provider support
         from lib.langchain_gradient import get_llm
-        
+
         llm = get_llm(
             agent_name=self.agent_name,
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
-            provider=provider
+            provider=provider,
         )
-        
+
         if llm is None:
-            logger.warning(f"[{self.agent_name}] Failed to initialize LLM with provider={provider}, model={model}")
+            logger.warning(
+                f"[{self.agent_name}] Failed to initialize LLM with provider={provider}, model={model}"
+            )
             # Fallback to gradient client for backward compatibility
             gradient_client = get_gradient_client(
-                agent_name=self.agent_name, model=agent_config.get("model", "llama-3.1-8b")
+                agent_name=self.agent_name,
+                model=agent_config.get("model", "llama-3.1-8b"),
             )
             self._gradient_client = gradient_client
             return gradient_client
-        
+
         # Store LLM for later use
         self._llm = llm
         return llm

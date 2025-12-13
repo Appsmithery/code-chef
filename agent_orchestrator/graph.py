@@ -1248,7 +1248,7 @@ _compiled_graph = None
 
 def get_graph():
     """Get the compiled LangGraph workflow (singleton).
-    
+
     Returns cached graph instance for streaming operations.
     Initializes on first call.
     """
