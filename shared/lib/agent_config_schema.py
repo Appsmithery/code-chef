@@ -278,7 +278,7 @@ class ModelsConfig(BaseModel):
     """Root configuration schema for models.yaml."""
 
     version: str = Field(..., description="Config schema version (semantic versioning)")
-    provider: Literal["gradient", "claude", "mistral", "openai"] = Field(
+    provider: Literal["gradient", "claude", "mistral", "openai", "openrouter"] = Field(
         default="gradient", description="Default LLM provider for all agents"
     )
     agents: Dict[str, AgentConfig] = Field(
