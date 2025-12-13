@@ -135,6 +135,8 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: VS Code Extension v${{ env.VERSION }}
           generate_release_notes: true
+          draft: false
+          prerelease: false
           body: |
             ![Version](https://img.shields.io/badge/version-${{ env.VERSION }}-blue)
 
@@ -190,11 +192,16 @@ jobs:
             ## 📝 Changes
 
             See [CHANGELOG.md](https://github.com/Appsmithery/code-chef/blob/main/extensions/vscode-codechef/CHANGELOG.md)
-          files: ${{ env.EXTENSION_DIR }}/*.vsix
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload VSIX to Release
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          gh release upload "v${{ env.VERSION }}" *.vsix --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages (npm)
         if: github.event_name == 'workflow_dispatch'
