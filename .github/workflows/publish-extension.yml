@@ -184,8 +184,9 @@ jobs:
 
       - name: Publish Release
         if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         run: |
-          gh release edit "v${{ env.VERSION }}" --draft=false
+          gh release edit "v${{ env.VERSION }}" --draft=false || echo "⚠️ Could not auto-publish release (repository rules), please publish manually"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
