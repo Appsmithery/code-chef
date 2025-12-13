@@ -1242,5 +1242,21 @@ def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
         return workflow.compile()
 
 
+# Cached graph instance for streaming
+_compiled_graph = None
+
+
+def get_graph():
+    """Get the compiled LangGraph workflow (singleton).
+    
+    Returns cached graph instance for streaming operations.
+    Initializes on first call.
+    """
+    global _compiled_graph
+    if _compiled_graph is None:
+        _compiled_graph = create_workflow()
+    return _compiled_graph
+
+
 # Export compiled workflow
 app = create_workflow()
