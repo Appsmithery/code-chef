@@ -1,6 +1,6 @@
 # ModelOps Training Module
 
-> **📘 Complete Documentation**: See [LLM Operations Guide](../../../../support/docs/operations/llm-operations.md) for the canonical reference covering model selection, training, evaluation, deployment, and A/B testing.
+> **📘 Complete Documentation**: See [LLM Operations Guide](../../../../support/docs/operations/LLM_OPERATIONS.md) for the canonical reference covering model selection, training, evaluation, deployment, and A/B testing.
 
 Fine-tune code-chef agents using LangSmith evaluation data and HuggingFace AutoTrain.
 

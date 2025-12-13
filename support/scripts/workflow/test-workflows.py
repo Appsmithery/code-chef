@@ -129,7 +129,7 @@ class WorkflowTester:
         print("=" * 80)
 
         context = {
-            "files_changed": ["README.md", "support/docs/QUICKSTART.md"],
+            "files_changed": ["README.md", "support/docs/getting-started/QUICK_START.md"],
             "pr_number": 789,
             "change_type": "typo_fix",
             "author": "contributor",

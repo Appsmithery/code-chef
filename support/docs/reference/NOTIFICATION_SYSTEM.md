@@ -599,7 +599,7 @@ docker compose up -d orchestrator --force-recreate
 
 ## Related Documentation
 
-- **Architecture**: `support/docs/ARCHITECTURE.md`
+- **Architecture**: `support/docs/architecture-and-platform/ARCHITECTURE.md`
 - **HITL System**: `support/docs/HITL_IMPLEMENTATION_PHASE2.md`
 - **Linear Setup**: `support/docs/LINEAR_SETUP.md`
 - **Agent Endpoints**: `support/docs/AGENT_ENDPOINTS.md`

@@ -199,7 +199,7 @@ comparison = await tracker.compare_experiments("exp-2025-01-001")
 # Returns: {"accuracy_improvement": 23.6%, "latency_improvement": 23.8%}
 ```
 
-**See**: [`../../support/docs/operations/llm-operations.md`](../../support/docs/operations/llm-operations.md) for full ModelOps guide.
+**See**: [`../../support/docs/operations/LLM_OPERATIONS.md`](../../support/docs/operations/LLM_OPERATIONS.md) for full ModelOps guide.
 
 ---
 
@@ -275,7 +275,7 @@ Common helpers used across agents.
 
 - [MCP Architecture](../mcp/README.md) - Docker MCP Toolkit integration
 - [System Architecture](../../support/docs/architecture-and-platform/ARCHITECTURE.md) - Overall system design
-- [LLM Operations](../../support/docs/operations/llm-operations.md) - Model training, evaluation, deployment
+- [LLM Operations](../../support/docs/operations/LLM_OPERATIONS.md) - Model training, evaluation, deployment
 - [Agent Configuration](../../config/agents/models.yaml) - Model settings per agent
 - [Tool Mapping](../../config/mcp-agent-tool-mapping.yaml) - Agent-specific tool priorities
 

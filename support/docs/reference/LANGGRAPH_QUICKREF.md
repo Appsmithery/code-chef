@@ -296,7 +296,7 @@ docker-compose logs langgraph | grep ERROR
 
 ## Documentation
 
-- **Integration Guide:** `docs/LANGGRAPH_INTEGRATION.md`
+- **Integration Guide:** `docs/architecture-and-platform/LANGGRAPH_INTEGRATION.md`
 - **Test Suite:** `test_langgraph_integration.py`
-- **Architecture:** `docs/ARCHITECTURE.md`
+- **Architecture:** `docs/architecture-and-platform/ARCHITECTURE.md`
 - **Agent Endpoints:** `docs/AGENT_ENDPOINTS.md`

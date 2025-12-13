@@ -637,8 +637,8 @@ ssh do-codechef-droplet 'docker exec deploy-postgres-1 psql -U devtools -d devto
 
 ## Related Documentation
 
-- **Linear Integration**: `support/docs/LINEAR_INTEGRATION_GUIDE.md`
-- **Deployment Guide**: `support/docs/DEPLOYMENT_GUIDE.md`
+- **Linear Integration**: `support/docs/integrations/LINEAR_INTEGRATION.md`
+- **Deployment Guide**: `support/docs/getting-started/DEPLOYMENT.md`
 - **Risk Assessment Rules**: `config/hitl/risk-assessment-rules.yaml`
 - **Approval Policies**: `config/hitl/approval-policies.yaml`
 - **Database Schema**: `config/state/approval_requests.sql`
