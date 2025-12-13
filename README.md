@@ -81,7 +81,7 @@ The Infrastructure agent handles the complete model lifecycle:
 | Demo       | $0.50 | 5 min    | Quick validation |
 | Production | $3.50 | 60 min   | Full training    |
 
-See [LLM Operations Guide](support/docs/operations/llm-operations.md) for complete documentation.
+See [LLM Operations Guide](support/docs/operations/LLM_OPERATIONS.md) for complete documentation.
 
 ---
 
@@ -167,7 +167,7 @@ flowchart TB
 3. **Configure**: `Ctrl+Shift+P` → "code/chef: Configure"
 4. **Use**: Open Copilot Chat and type `@chef <your request>`
 
-That's it! See [QUICKSTART.md](support/docs/QUICKSTART.md) for self-hosting options.
+That's it! See [Quick Start Guide](support/docs/getting-started/QUICK_START.md) for self-hosting options.
 
 ---
 
@@ -259,17 +259,17 @@ cd code-chef && cp config/env/.env.template config/env/.env
 cd deploy && docker-compose up -d
 ```
 
-See [QUICKSTART.md](support/docs/QUICKSTART.md) for detailed setup.
+See [Quick Start Guide](support/docs/getting-started/QUICK_START.md) for detailed setup.
 
 ---
 
 ## 📖 Documentation
 
-| Guide                                        | Description                 |
-| -------------------------------------------- | --------------------------- |
-| [Quick Start](support/docs/QUICKSTART.md)    | Installation & first steps  |
-| [Architecture](support/docs/ARCHITECTURE.md) | How it works under the hood |
-| [Deployment](support/docs/DEPLOYMENT.md)     | Production setup            |
+| Guide                                                                  | Description                 |
+| ---------------------------------------------------------------------- | --------------------------- |
+| [Quick Start](support/docs/getting-started/QUICK_START.md)             | Installation & first steps  |
+| [Architecture](support/docs/architecture-and-platform/ARCHITECTURE.md) | How it works under the hood |
+| [Deployment](support/docs/getting-started/DEPLOYMENT.md)               | Production setup            |
 
 ---
 

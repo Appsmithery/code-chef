@@ -68,10 +68,10 @@ First production release of code/chef featuring comprehensive ModelOps, advanced
 
 ### Documentation
 
-- **[LLM Operations Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/operations/llm-operations.md)**: Canonical 700+ line reference
-- **[Architecture Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/ARCHITECTURE.md)**: System design and patterns
+- **[LLM Operations Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/operations/LLM_OPERATIONS.md)**: Canonical 700+ line reference
+- **[Architecture Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/architecture-and-platform/ARCHITECTURE.md)**: System design and patterns
 - **[Tracing Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/integrations/langsmith-tracing.md)**: Observability setup
-- **[Quick Start](https://github.com/Appsmithery/code-chef/blob/main/support/docs/QUICKSTART.md)**: Installation and setup
+- **[Quick Start](https://github.com/Appsmithery/code-chef/blob/main/support/docs/getting-started/QUICK_START.md)**: Installation and setup
 
 ### Model Selection Strategy
 

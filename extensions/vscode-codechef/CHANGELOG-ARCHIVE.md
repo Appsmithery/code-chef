@@ -31,7 +31,7 @@ Complete observability overhaul with LangSmith integration (CHEF-227 through CHE
 ### Files Added
 
 - `config/observability/tracing-schema.yaml` - Metadata schema v1.0.0
-- `support/docs/operations/llm-operations.md` - Canonical LLM ops guide
+- `support/docs/operations/LLM_OPERATIONS.md` - Canonical LLM ops guide
 - `support/docs/procedures/langsmith-trace-cleanup.md` - Day 0 cleanup
 - `support/docs/procedures/langsmith-project-restructure.md` - Migration guide
 - `support/scripts/evaluation/baseline_runner.py` - A/B testing script

@@ -47,7 +47,7 @@ const recipes = [
       {
         title: "System Architecture",
         description: "LangGraph workflows, StateGraph, and agent coordination",
-        link: "https://github.com/Appsmithery/code-chef/blob/main/support/docs/ARCHITECTURE.md",
+        link: "https://github.com/Appsmithery/code-chef/blob/main/support/docs/architecture-and-platform/ARCHITECTURE.md",
       },
       {
         title: "Workflow Routing",
@@ -115,7 +115,7 @@ const recipes = [
       {
         title: "Deployment Procedures",
         description: "Production deployment to DigitalOcean",
-        link: "https://github.com/Appsmithery/code-chef/blob/main/support/docs/DEPLOYMENT.md",
+        link: "https://github.com/Appsmithery/code-chef/blob/main/support/docs/getting-started/DEPLOYMENT.md",
       },
       {
         title: "Health Monitoring",

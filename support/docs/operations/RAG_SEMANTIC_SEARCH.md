@@ -328,7 +328,7 @@ curl -X POST "https://83b61795-7dbd-4477-890e-edce352a00e2.us-east4-0.gcp.cloud.
 
 ## Related Documentation
 
-- **Architecture**: `support/docs/architecture/RAG_DOCUMENTATION_AGGREGATION.md`
+- **Architecture**: `support/docs/architecture-and-platform/RAG_DOCUMENTATION_AGGREGATION.md`
 - **Vector DB Config**: `config/rag/vectordb.config.yaml`
 - **Indexing Config**: `config/rag/indexing.yaml`
 - **RAG Service Code**: `shared/services/rag/main.py`

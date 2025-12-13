@@ -367,4 +367,4 @@ curl https://codechef.appsmithery.co/rag/collections
 - **Gradient AI Docs**: https://docs.digitalocean.com/products/gradient-ai-platform/
 - **Linear Roadmap**: AI DevOps Agent Platform project (b21cbaa1-9f09-40f4-b62a-73e0f86dd501)
 - **Zen Integration**: `support/docs/_temp/Reusable Components.md`
-- **RAG Architecture**: `support/docs/architecture/RAG_DOCUMENTATION_AGGREGATION.md`
+- **RAG Architecture**: `support/docs/architecture-and-platform/RAG_DOCUMENTATION_AGGREGATION.md`

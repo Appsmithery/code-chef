@@ -639,8 +639,8 @@ Create `.vscode/settings.json`:
 
 ## Related Documentation
 
-- **HITL Workflow**: `support/docs/LINEAR_HITL_WORKFLOW.md`
-- **Deployment Guide**: `support/docs/DEPLOYMENT.md`
+- **HITL Workflow**: `support/docs/integrations/LINEAR_HITL_WORKFLOW.md`
+- **Deployment Guide**: `support/docs/getting-started/DEPLOYMENT.md`
 - **Secrets Management**: `support/docs/operations/SECRETS_MANAGEMENT.md`
 - **GitHub Permalink Generator**: `shared/lib/github_permalink_generator.py`
 - **Config Loader**: `shared/lib/linear_config.py`

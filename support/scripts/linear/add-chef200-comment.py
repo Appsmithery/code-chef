@@ -26,7 +26,7 @@ comment = '''Implemented semantic tool discovery, tracing sampling, and centrali
 - `config/mcp-agent-tool-mapping.yaml`: Meta-tools for self-discovery
 - `agent_orchestrator/agents/supervisor/tools.yaml`: SEMANTIC strategy enabled
 - `agent_orchestrator/agents/code_review/tools.yaml`: SEMANTIC strategy enabled
-- `support/docs/ARCHITECTURE.md`: Tool loading strategies documentation
+- `support/docs/architecture-and-platform/ARCHITECTURE.md`: Tool loading strategies documentation
 
 **Token Savings:** 96% with semantic strategy (26K → 1K tokens)'''
 

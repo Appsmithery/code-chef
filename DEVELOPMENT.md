@@ -40,7 +40,7 @@
 
    - Copy `config/env/.env.example` to `config/env/.env`
    - Add required API keys (Gradient, Linear, OpenRouter, etc.)
-   - See [config/env/README.md](config/env/README.md) for details
+   - See [Secrets Management Guide](support/docs/operations/SECRETS_MANAGEMENT.md) for details
 
 4. **Start the local stack**:
    ```bash

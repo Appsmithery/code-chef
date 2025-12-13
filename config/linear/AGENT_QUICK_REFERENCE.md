@@ -261,7 +261,7 @@ await event_bus.emit("approval_request", {
 
 ## See Also
 
-- [DEVELOPMENT.md#Linear & GitHub Integration](../../DEVELOPMENT.md#-linear--github-integration) - Multi-repo setup
+- [DEVELOPMENT.md#Linear & GitHub Integration](../../DEVELOPMENT.md#linear--github-integration) - Multi-repo setup
 - [config/linear/github-webhook-config.yaml](github-webhook-config.yaml) - GitHub webhook configuration
 - [config/linear/agent-project-mapping.yaml](agent-project-mapping.yaml) - Agent identifiers and permissions
 - `support/docs/LINEAR_USAGE_GUIDELINES.md` - Comprehensive documentation (if exists)
