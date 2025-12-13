@@ -887,14 +887,14 @@ code-chef/
 
 ### Documentation
 
-| File                                                            | Purpose                                 |
-| --------------------------------------------------------------- | --------------------------------------- |
-| `support/docs/architecture-and-platform/ARCHITECTURE.md`        | System architecture overview            |
-| `support/docs/getting-started/DEPLOYMENT.md`                    | Deployment procedures                   |
-| `support/docs/operations/LLM_OPERATIONS.md`                     | ModelOps guide (training, eval, deploy) |
-| `shared/mcp/README.md`                                          | MCP v2.0 architecture guide             |
-| `shared/lib/README.md`                                          | Shared library reference                |
-| `shared/services/rag/README.md`                                 | RAG service documentation               |
+| File                                                     | Purpose                                 |
+| -------------------------------------------------------- | --------------------------------------- |
+| `support/docs/architecture-and-platform/ARCHITECTURE.md` | System architecture overview            |
+| `support/docs/getting-started/DEPLOYMENT.md`             | Deployment procedures                   |
+| `support/docs/operations/LLM_OPERATIONS.md`              | ModelOps guide (training, eval, deploy) |
+| `shared/mcp/README.md`                                   | MCP v2.0 architecture guide             |
+| `shared/lib/README.md`                                   | Shared library reference                |
+| `shared/services/rag/README.md`                          | RAG service documentation               |
 
 ---
 

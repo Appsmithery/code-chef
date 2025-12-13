@@ -21,7 +21,7 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 import httpx
 
@@ -129,7 +129,10 @@ class WorkflowTester:
         print("=" * 80)
 
         context = {
-            "files_changed": ["README.md", "support/docs/getting-started/QUICK_START.md"],
+            "files_changed": [
+                "README.md",
+                "support/docs/getting-started/QUICK_START.md",
+            ],
             "pr_number": 789,
             "change_type": "typo_fix",
             "author": "contributor",
