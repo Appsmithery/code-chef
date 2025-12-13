@@ -945,32 +945,522 @@ code-chef is currently in **Private Alpha** and requires an API key.
 - Check Output panel: View → Output → code-chef
 - Verify orchestrator health: https://codechef.appsmithery.co/api/v1/health
 
+````
+
+---
+
+## � Phase 8: VS Code Marketplace Registration (Post-UAT)
+
+### ⚠️ Important: Only After Successful UAT
+
+**Do NOT register on marketplace until:**
+- ✅ 2-4 weeks of successful UAT with 5-10 testers
+- ✅ No critical bugs reported for 2+ weeks
+- ✅ API key system validated with real usage patterns
+- ✅ Rate limiting tested under load
+- ✅ All documentation complete and reviewed
+- ✅ Screenshots, demo GIF, and marketing materials ready
+
+### Why Wait for UAT?
+
+**Benefits of VSIX-only distribution during UAT:**
+1. ✅ **Full control** - Revoke access by not sharing VSIX
+2. ✅ **No public visibility** - UAT testers only
+3. ✅ **Rapid iteration** - Update without marketplace review delays (24-48 hours)
+4. ✅ **Easy rollback** - Just share previous VSIX version
+5. ✅ **API key gating works** - Useless without a key even if leaked
+
+**Marketplace adds complexity:**
+- ❌ **Public listing** - Anyone can find and install
+- ❌ **Review delays** - Every update takes 1-2 business days
+- ❌ **Version immutability** - Can't unpublish easily
+- ❌ **Premature exposure** - Portfolio piece goes live before ready
+
+---
+
+### UAT Distribution Strategy (0.9.x Beta Versions)
+
+```bash
+# 1. Build beta VSIX
+Actions → Publish VS Code Extension → Run workflow
+  version: 0.9.0-beta.1  # Use beta versioning
+  version_bump: none
+
+# 2. Download VSIX from workflow artifacts
+# Artifacts stored for 90 days by default
+
+# 3. Share with UAT testers
+# Via email, private GitHub release, or Linear issue
+
+# 4. Testers install manually
+code --install-extension code-chef-0.9.0-beta.1.vsix
+
+# 5. Issue API keys to approved testers only
+# Use the API Access Request template
+
+# 6. Iterate based on feedback
+version: 0.9.0-beta.2  # Next iteration
+````
+
+---
+
+### Marketplace Registration Steps (Stable 1.0.0+)
+
+#### Step 1: Create Azure DevOps Organization
+
+**URL**: https://dev.azure.com
+
+1. Sign in with your GitHub account (alextorelli28)
+2. Click "Create new organization"
+3. Organization name: `appsmithery`
+4. Region: Select closest to your location
+5. Complete setup (free tier, no credit card required)
+
+---
+
+#### Step 2: Generate Personal Access Token (PAT)
+
+1. In Azure DevOps, click **User Settings** (top right) → **Personal Access Tokens**
+2. Click **+ New Token**
+3. **Name**: `vscode-marketplace-publish`
+4. **Organization**: `appsmithery`
+5. **Expiration**: 90 days (custom) - **Set calendar reminder to renew**
+6. **Scopes**:
+   - Select **Custom defined**
+   - Check **Marketplace** → **Manage** (this gives publish/unpublish rights)
+7. Click **Create**
+8. **⚠️ CRITICAL**: Copy the token immediately - you cannot view it again
+9. Save to password manager (1Password, Bitwarden, etc.)
+
+**Token Format**: `52-character alphanumeric string`
+
+---
+
+#### Step 3: Install VSCE (VS Code Extension Manager)
+
+```bash
+# Install globally
+npm install -g @vscode/vsce
+
+# Verify installation
+vsce --version
+# Should output: 2.x.x
 ```
+
+---
+
+#### Step 4: Create Publisher (One-Time Setup)
+
+```bash
+# Create publisher
+vsce create-publisher appsmithery
+
+# You'll be prompted:
+# Personal Access Token: <paste-azure-pat-from-step-2>
+# Publisher name: appsmithery
+# Display name: Appsmithery
+# Description: Developer tools and AI-powered DevOps solutions
+
+# Verify publisher created
+vsce ls-publishers
+# Should show: appsmithery
+```
+
+**Publisher Page**: https://marketplace.visualstudio.com/publishers/appsmithery
+
+---
+
+#### Step 5: Update Extension Manifest for Marketplace
+
+**File**: `extensions/vscode-codechef/package.json`
+
+```json
+{
+  "name": "vscode-codechef",
+  "displayName": "code-chef - AI DevOps Team",
+  "description": "Your personal AI DevOps Team, orchestrated by the Head Chef. Multi-agent platform with 150+ MCP tools, LangGraph orchestration, and API-key gated access.",
+  "version": "1.0.0", // Bump from 0.9.x to 1.0.0 for stable release
+  "publisher": "appsmithery", // Must match Azure publisher
+  "license": "MIT",
+  "icon": "icon.png", // 128x128 PNG required
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Appsmithery/code-chef"
+  },
+  "bugs": {
+    "url": "https://github.com/Appsmithery/code-chef/issues"
+  },
+  "homepage": "https://codechef.appsmithery.co",
+  "qna": "https://github.com/Appsmithery/code-chef/discussions",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
+  "badges": [
+    {
+      "url": "https://img.shields.io/badge/status-stable-green",
+      "href": "https://github.com/Appsmithery/code-chef/releases",
+      "description": "Stable Release"
+    },
+    {
+      "url": "https://img.shields.io/badge/API_Key-Required-red",
+      "href": "https://github.com/Appsmithery/code-chef/issues/new?template=api-access-request.md",
+      "description": "API Key Required"
+    }
+  ],
+  "preview": false // Set to true if still in preview
+  // ... rest of existing config
+}
+```
+
+**Required Assets** (add to `extensions/vscode-codechef/`):
+
+- ✅ `icon.png` - 128x128 PNG (extension icon)
+- ✅ `README.md` - Comprehensive setup guide with screenshots
+- ✅ `CHANGELOG.md` - Version history
+- ⚠️ **Screenshots** - Add to `images/` folder:
+  - `screenshot-1.png` - Main interface (1280x720+)
+  - `screenshot-2.png` - Agent execution example
+  - `screenshot-3.png` - Settings configuration
+  - `demo.gif` - 10-15 second demo (optional but recommended)
+
+**Update README.md** to reference images:
+
+```markdown
+## Features
+
+![code-chef in action](images/screenshot-1.png)
+
+### Multi-Agent Orchestration
+
+![Agent workflow](images/screenshot-2.png)
+
+### Easy Configuration
+
+![Settings panel](images/screenshot-3.png)
+```
+
+---
+
+#### Step 6: Add GitHub Secret for Marketplace PAT
+
+1. Go to: **GitHub repo → Settings → Secrets and variables → Actions**
+2. Click **New repository secret**
+3. **Name**: `VSCE_PAT`
+4. **Value**: Paste Azure PAT from Step 2
+5. Click **Add secret**
+
+---
+
+#### Step 7: Update Publish Workflow
+
+**File**: `.github/workflows/publish-extension.yml`
+
+Add marketplace publishing step:
+
+```yaml
+- name: Install dependencies
+  working-directory: ${{ env.EXTENSION_DIR }}
+  run: npm ci
+
+- name: Package VSIX
+  working-directory: ${{ env.EXTENSION_DIR }}
+  run: |
+    npm install -g @vscode/vsce
+    vsce package
+
+# NEW: Publish to marketplace
+- name: Publish to VS Code Marketplace
+  if: github.event.inputs.version != '' && !contains(github.event.inputs.version, 'beta')
+  working-directory: ${{ env.EXTENSION_DIR }}
+  run: |
+    vsce publish -p ${{ secrets.VSCE_PAT }}
+  env:
+    VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+# Upload VSIX artifact (keep existing)
+- name: Upload VSIX artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: vscode-codechef-${{ github.event.inputs.version }}.vsix
+    path: extensions/vscode-codechef/*.vsix
+    retention-days: 90
+```
+
+**Logic**: Only publish to marketplace if version doesn't contain "beta"
+
+- `0.9.0-beta.1` → VSIX only (UAT distribution)
+- `1.0.0` → VSIX + Marketplace (public release)
+
+---
+
+#### Step 8: Pre-Publication Checklist
+
+Before clicking "Publish" for the first time:
+
+- [ ] **Review marketplace guidelines**: https://code.visualstudio.com/api/working-with-extensions/publishing-extension
+- [ ] **Test extension locally**:
+  ```bash
+  cd extensions/vscode-codechef
+  vsce package
+  code --install-extension vscode-codechef-1.0.0.vsix
+  ```
+- [ ] **Verify icon displays correctly** (128x128 PNG, transparent background)
+- [ ] **Check README renders properly** in VS Code Marketplace preview
+- [ ] **Add `.vscodeignore`** to exclude dev files from package:
+  ```
+  .vscode/**
+  .vscode-test/**
+  src/**
+  .gitignore
+  tsconfig.json
+  webpack.config.js
+  node_modules/**
+  **/*.map
+  **/*.ts
+  ```
+- [ ] **Verify package size** (should be <10MB):
+  ```bash
+  vsce ls
+  # Check "Files:" count and total size
+  ```
+- [ ] **Test API key validation** with fresh install
+- [ ] **Prepare support documentation** (FAQ, troubleshooting)
+
+---
+
+#### Step 9: Initial Marketplace Publication
+
+```bash
+# Via workflow (recommended)
+Actions → Publish VS Code Extension → Run workflow
+  version: 1.0.0
+  version_bump: none
+
+# Or manually
+cd extensions/vscode-codechef
+vsce publish -p <azure-pat>
+```
+
+**What Happens**:
+
+1. Extension submitted to marketplace (~5 minutes)
+2. Microsoft automated security scan (~10 minutes)
+3. Manual review if flagged (~1-2 business days)
+4. Publication live once approved
+5. Users can install via `code --install-extension appsmithery.vscode-codechef`
+
+**First Publication Timeline**: 15 minutes - 48 hours (average: 2-4 hours)
+
+---
+
+#### Step 10: Post-Publication Verification
+
+1. **Search marketplace**: https://marketplace.visualstudio.com/search?term=code-chef&target=VSCode
+2. **Verify extension page**: https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef
+3. **Test installation**:
+   ```bash
+   code --uninstall-extension appsmithery.vscode-codechef
+   code --install-extension appsmithery.vscode-codechef
+   ```
+4. **Check auto-updates work**: Publish 1.0.1 patch, verify VS Code auto-updates
+5. **Monitor marketplace ratings**: Respond to reviews within 24 hours
+6. **Track installation metrics**: Azure DevOps → Extensions → Reports
+
+---
+
+### Marketplace Listing Optimization
+
+#### Title & Description
+
+**Title** (50 chars max): `code-chef - AI DevOps Team`
+
+**Short Description** (140 chars):
+
+```
+Your personal AI DevOps Team with LangGraph orchestration, 150+ MCP tools, and multi-agent workflows. API key required.
+```
+
+**Full Description** (use README.md):
+
+- Clear feature list with screenshots
+- Setup instructions with API key requirement
+- Architecture diagram
+- Use case examples
+- Links to documentation
+- Support contact info
+
+#### Keywords (5 max)
+
+```json
+"keywords": [
+  "devops",
+  "ai",
+  "langgraph",
+  "mcp",
+  "agents"
+]
+```
+
+#### Categories (3 max)
+
+```json
+"categories": [
+  "Programming Languages",
+  "Linters",
+  "Other"
+]
+```
+
+---
+
+### Marketplace Maintenance
+
+#### Updating the Extension
+
+```bash
+# 1. Update version in package.json
+"version": "1.0.1"
+
+# 2. Update CHANGELOG.md
+## [1.0.1] - 2025-12-20
+### Fixed
+- Fixed API key validation timeout
+- Improved error messages
+
+# 3. Publish update
+Actions → Publish VS Code Extension → Run workflow
+  version: 1.0.1
+
+# Users auto-update within 24 hours
+```
+
+#### Monitoring
+
+**Azure DevOps Dashboard**:
+
+- https://dev.azure.com/appsmithery/_extensions
+- **Metrics**: Installs, uninstalls, ratings, Q&A
+- **Reports**: Daily/weekly/monthly trends
+
+**GitHub Discussions**:
+
+- Enable for support questions
+- Monitor for bug reports and feature requests
+
+**Linear Integration**:
+
+- Create issues for marketplace reviews
+- Track feature requests from users
+
+---
+
+### Marketplace Policies & Best Practices
+
+#### Prohibited Content
+
+- ❌ Misleading descriptions or screenshots
+- ❌ Trademark violations
+- ❌ Malicious code or telemetry without disclosure
+- ❌ Obfuscated code in published package
+
+#### Required Disclosures
+
+- ✅ **API Key Requirement**: Clearly state in description
+- ✅ **Data Collection**: Disclose any telemetry/analytics
+- ✅ **External Services**: List all external APIs used
+- ✅ **Pricing**: Clearly indicate if paid features exist
+
+#### Version Management
+
+- Follow semantic versioning (semver): `MAJOR.MINOR.PATCH`
+- Don't skip versions (e.g., don't jump from 1.0.0 to 2.0.0 without intermediates)
+- Use pre-release tags for betas: `1.1.0-beta.1`
+- Can't unpublish versions (only deprecate)
+
+---
+
+### Rollback & Deprecation
+
+#### Deprecate a Version
+
+```bash
+# Mark version as deprecated (doesn't remove it)
+vsce unpublish appsmithery.vscode-codechef@1.0.1
+
+# Publish fixed version
+vsce publish
+```
+
+#### Emergency Unpublish
+
+**Use only for critical security issues**:
+
+```bash
+# Unpublish entire extension (requires Microsoft approval)
+vsce unpublish appsmithery.vscode-codechef
+
+# Re-publish with fix
+vsce publish
+```
+
+**Note**: Unpublishing disrupts users and requires Microsoft support ticket.
+
+---
+
+### Support & Community
+
+#### Required Support Channels
+
+Set these in `package.json`:
+
+```json
+{
+  "bugs": {
+    "url": "https://github.com/Appsmithery/code-chef/issues"
+  },
+  "qna": "https://github.com/Appsmithery/code-chef/discussions",
+  "homepage": "https://codechef.appsmithery.co"
+}
+```
+
+#### Response Time Commitments
+
+**Marketplace Review Responses**: Within 48 hours
+
+- Acknowledge bug reports: <24 hours
+- Fix critical issues: <7 days
+- Feature requests: Triage within 1 week
+
+#### Community Guidelines
+
+- Be professional and helpful
+- Don't argue with negative reviews
+- Offer to troubleshoot privately
+- Update changelog to address feedback
 
 ---
 
 ## 🎯 Summary
 
-### Deployment Order (Full Update)
-
-| Step | Workflow | Duration | Critical |
-|------|----------|----------|----------|
-| 1 | deploy-intelligent.yml (full) | ~3 min | ✅ Yes |
-| 2 | deploy-frontend.yml | ~2 min | ✅ Yes |
-| 3 | publish-extension.yml | ~4 min | ✅ Yes |
-| 4 | cleanup-docker-resources.yml | ~2 min | ⚠️ Optional |
+| Step | Workflow                      | Duration | Critical    |
+| ---- | ----------------------------- | -------- | ----------- |
+| 1    | deploy-intelligent.yml (full) | ~3 min   | ✅ Yes      |
+| 2    | deploy-frontend.yml           | ~2 min   | ✅ Yes      |
+| 3    | publish-extension.yml         | ~4 min   | ✅ Yes      |
+| 4    | cleanup-docker-resources.yml  | ~2 min   | ⚠️ Optional |
 
 **Total**: ~11 minutes for complete production update
 
 ### Distribution Strategy
 
-| Component | Distribution | Access Control |
-|-----------|--------------|----------------|
-| Backend Services | Docker (Droplet) | Network isolation + API keys |
-| Frontend | Caddy (HTTPS) | Public read, API gated writes |
-| VS Code Extension | Marketplace + VSIX | API key required at runtime |
-| Shared Packages | GitHub Packages | GitHub PAT required |
-| Releases | GitHub Releases | Public read, immutable |
+| Component         | Distribution       | Access Control                |
+| ----------------- | ------------------ | ----------------------------- |
+| Backend Services  | Docker (Droplet)   | Network isolation + API keys  |
+| Frontend          | Caddy (HTTPS)      | Public read, API gated writes |
+| VS Code Extension | Marketplace + VSIX | API key required at runtime   |
+| Shared Packages   | GitHub Packages    | GitHub PAT required           |
+| Releases          | GitHub Releases    | Public read, immutable        |
 
 ### Security Layers
 
@@ -983,6 +1473,7 @@ code-chef is currently in **Private Alpha** and requires an API key.
 ---
 
 **Next Actions**:
+
 1. Execute deployment sequence (Steps 1-4)
 2. Test API key validation end-to-end
 3. Create API key for alextorelli (admin tier)
@@ -991,4 +1482,7 @@ code-chef is currently in **Private Alpha** and requires an API key.
 6. Enable rate limiting if needed
 
 **Status**: Ready for UAT with API key gating 🔐
+
+```
+
 ```
