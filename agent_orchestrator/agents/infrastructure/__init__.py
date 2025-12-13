@@ -10,7 +10,7 @@ from .modelops.coordinator import ModelOpsCoordinator
 class InfrastructureAgent(BaseAgent):
     """Infrastructure agent specialized in cloud and container orchestration.
 
-    Uses llama-3.1-8b model for infrastructure operations.
+    Uses Gemini 2.0 Flash (OpenRouter) for infrastructure operations.
     Has access to Terraform, Kubernetes, Docker, and ModelOps tools.
     """
 

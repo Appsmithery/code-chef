@@ -8,7 +8,7 @@ from .._shared.base_agent import BaseAgent
 class FeatureDevAgent(BaseAgent):
     """Feature development agent specialized in code implementation.
 
-    Uses codellama-13b model optimized for code generation.
+    Uses Qwen 2.5 Coder 32B (OpenRouter) optimized for code generation.
     Has access to GitHub, filesystem, git, and docker tools.
     """
 

@@ -336,15 +336,23 @@ class ModelOpsTrainer:
         """Default configuration if YAML not found."""
         return {
             "model_presets": {
+                "qwen-coder-32b": {
+                    "model_id": "Qwen/Qwen2.5-Coder-32B-Instruct",
+                    "hardware": "a10g-large",
+                    "parameters": "32B",
+                    "description": "Purpose-built for code generation (recommended)",
+                },
+                "deepseek-coder-33b": {
+                    "model_id": "deepseek-ai/deepseek-coder-33b-instruct",
+                    "hardware": "a10g-large",
+                    "parameters": "33B",
+                    "description": "Strong code understanding and generation",
+                },
                 "phi-3-mini": {
                     "model_id": "microsoft/Phi-3-mini-4k-instruct",
                     "hardware": "t4-small",
                     "parameters": "3.8B",
-                },
-                "codellama-7b": {
-                    "model_id": "codellama/CodeLlama-7b-Instruct-hf",
-                    "hardware": "a10g-large",
-                    "parameters": "7B",
+                    "description": "Lightweight model for simple tasks",
                 },
             },
             "training_defaults": {
@@ -450,7 +458,7 @@ class ModelOpsTrainer:
         Args:
             agent_name: Agent name (e.g., "feature_dev", "code_review")
             langsmith_project: LangSmith project to export data from
-            base_model_preset: Preset from config (e.g., "phi-3-mini", "codellama-7b")
+            base_model_preset: Preset from config (e.g., "qwen-coder-32b", "deepseek-coder-33b", "phi-3-mini")
             is_demo: If True, runs quick demo mode
             filter_criteria: Optional filters for LangSmith data
             export_limit: Max examples to export from LangSmith

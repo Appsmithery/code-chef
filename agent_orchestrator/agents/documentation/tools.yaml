@@ -1,8 +1,9 @@
 agent:
   name: documentation
-  model: mistral-7b
+  model: deepseek/deepseek-chat
+  provider: openrouter
   temperature: 0.6
-  max_tokens: 3000
+  max_tokens: 4000
   system_prompt: |
     You are a polyglot technical writer specializing in clear, comprehensive documentation across all programming languages and documentation formats.
 

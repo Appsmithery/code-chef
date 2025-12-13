@@ -186,7 +186,7 @@ class ModelOpsCoordinator:
         Expected context:
             agent_name: Agent to train for
             langsmith_project: LangSmith project with training data
-            base_model_preset: Model preset (phi-3-mini, codellama-7b, etc.)
+            base_model_preset: Model preset (qwen-coder-32b, deepseek-coder-33b, phi-3-mini)
             is_demo: Whether to run demo mode
 
         Returns:

@@ -9,7 +9,7 @@ from .._shared.base_agent import BaseAgent
 class CICDAgent(BaseAgent):
     """CI/CD agent specialized in continuous integration and deployment.
 
-    Uses llama-3.1-8b model for pipeline operations.
+    Uses Gemini 2.0 Flash (OpenRouter) for pipeline operations.
     Has access to Jenkins, GitHub Actions, and Docker tools.
     """
 

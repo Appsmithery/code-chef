@@ -8,7 +8,7 @@ from .._shared.base_agent import BaseAgent
 class DocumentationAgent(BaseAgent):
     """Documentation agent specialized in technical writing.
 
-    Uses mistral-7b model optimized for documentation.
+    Uses DeepSeek V3 (OpenRouter) optimized for technical writing.
     Has access to Confluence, Markdown, and filesystem tools.
     """
 
