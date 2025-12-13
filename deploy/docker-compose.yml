@@ -38,6 +38,7 @@ services:
       - ../config/env:/app/config/env:ro
       - ../config/mcp-agent-tool-mapping.yaml:/app/config/mcp-agent-tool-mapping.yaml:ro
       - ../config/prometheus:/app/config/prometheus:ro
+      - ../config/agents/models.yaml:/config/agents/models.yaml:ro
       - ../agent_orchestrator/tools:/app/tools:ro
       - ../shared:/app/shared:ro
       - ../support/scripts:/app/support/scripts:ro
