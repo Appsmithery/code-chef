@@ -107,8 +107,8 @@ class ModelOpsCoordinator:
             deployment: ModelOpsDeployment instance (creates new if None)
         """
         self.registry = registry or ModelRegistry()
-        self.trainer = trainer or ModelOpsTrainer(registry=self.registry)
-        self.evaluator = evaluator or ModelEvaluator(registry=self.registry)
+        self.trainer = trainer or ModelOpsTrainer()
+        self.evaluator = evaluator or ModelEvaluator()
         self.deployment = deployment or ModelOpsDeployment(registry=self.registry)
 
     @traceable(
