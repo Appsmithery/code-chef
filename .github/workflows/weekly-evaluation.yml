@@ -1,0 +1,168 @@
+# GitHub Actions Workflow: Weekly LangSmith Evaluation
+#
+# Lightweight weekly health check for code-chef agent platform.
+# Runs minimal evaluations on Sunday mornings to detect regressions.
+#
+# For full evaluation runs, use e2e-langsmith-eval.yml (manual dispatch)
+#
+# Linear Issue: DEV-195
+
+name: Weekly Health Check
+
+on:
+    schedule:
+        # Weekly on Sunday at 6 AM UTC
+        - cron: "0 6 * * 0"
+
+    workflow_dispatch:
+        inputs:
+            project:
+                description: "LangSmith project to evaluate"
+                required: false
+                default: "code-chef-production"
+
+env:
+    PYTHON_VERSION: "3.11"
+    LANGCHAIN_TRACING_V2: "true"
+    LANGCHAIN_PROJECT: ${{ github.event.inputs.project || 'code-chef-production' }}
+
+jobs:
+    # ==========================================================================
+    # WEEKLY HEALTH CHECK: Core evaluators only
+    # ==========================================================================
+    health-check:
+        name: Weekly Agent Health Check
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  cache: "pip"
+                  cache-dependency-path: |
+                      agent_orchestrator/requirements.txt
+                      support/tests/requirements.txt
+
+            - name: Install dependencies
+              run: |
+                  pip install --upgrade pip
+                  pip install -r agent_orchestrator/requirements.txt
+                  pip install -r support/tests/requirements.txt
+                  pip install langsmith pytest-langsmith pyyaml
+
+            - name: Validate OpenRouter Configuration
+              env:
+                  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+              run: |
+                  python -c "
+                  import os
+                  import yaml
+                  assert os.getenv('OPENROUTER_API_KEY'), 'Missing OPENROUTER_API_KEY'
+                  with open('config/agents/models.yaml') as f:
+                      config = yaml.safe_load(f)
+                      provider = config.get('provider', config.get('agents', {}).get('supervisor', {}).get('provider', 'unknown'))
+                      assert 'openrouter' in str(provider).lower(), f'Provider not set to openrouter: {provider}'
+                  print('✅ OpenRouter configuration validated')
+                  "
+
+            - name: Run core evaluators
+              env:
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+              run: |
+                  python support/tests/evaluation/run_evaluation.py \
+                    --dataset ib-agent-scenarios-v1 \
+                    --project ${{ env.LANGCHAIN_PROJECT }} \
+                    --evaluators agent_routing_accuracy token_efficiency latency_threshold \
+                    --output reports/weekly-health.json \
+                    --experiment-id "weekly-$(date +%Y%m%d)" \
+                    --experiment-group code-chef
+              continue-on-error: true
+
+            - name: Check for regressions
+              id: check-regression
+              run: |
+                  if [ -f reports/weekly-health.json ]; then
+                    OVERALL_SCORE=$(cat reports/weekly-health.json | jq -r '.summary.overall_score // 0')
+                    FAILURE_COUNT=$(cat reports/weekly-health.json | jq -r '.summary.failure_count // 0')
+                    
+                    echo "overall_score=$OVERALL_SCORE" >> $GITHUB_OUTPUT
+                    echo "failure_count=$FAILURE_COUNT" >> $GITHUB_OUTPUT
+                    
+                    # Regression threshold: <70% overall score or >5 failures
+                    if (( $(echo "$OVERALL_SCORE < 0.70" | bc -l) )) || [ "$FAILURE_COUNT" -gt 5 ]; then
+                      echo "regression_detected=true" >> $GITHUB_OUTPUT
+                      echo "❌ Regression detected: Score=$OVERALL_SCORE, Failures=$FAILURE_COUNT"
+                    else
+                      echo "regression_detected=false" >> $GITHUB_OUTPUT
+                      echo "✅ Health check passed: Score=$OVERALL_SCORE, Failures=$FAILURE_COUNT"
+                    fi
+                  else
+                    echo "regression_detected=true" >> $GITHUB_OUTPUT
+                    echo "❌ No evaluation results generated"
+                  fi
+
+            - name: Generate summary
+              run: |
+                  echo "## Weekly Agent Health Check" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Project:** ${{ env.LANGCHAIN_PROJECT }}" >> $GITHUB_STEP_SUMMARY
+                  echo "**Date:** $(date +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  if [ -f reports/weekly-health.json ]; then
+                    OVERALL_SCORE=$(cat reports/weekly-health.json | jq -r '.summary.overall_score // 0')
+                    FAILURE_COUNT=$(cat reports/weekly-health.json | jq -r '.summary.failure_count // 0')
+                    
+                    echo "### Results" >> $GITHUB_STEP_SUMMARY
+                    echo "- **Overall Score:** ${OVERALL_SCORE}" >> $GITHUB_STEP_SUMMARY
+                    echo "- **Failures:** ${FAILURE_COUNT}" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    
+                    if [ "${{ steps.check-regression.outputs.regression_detected }}" == "true" ]; then
+                      echo "⚠️ **Regression Detected** - Review required" >> $GITHUB_STEP_SUMMARY
+                    else
+                      echo "✅ **Health Check Passed**" >> $GITHUB_STEP_SUMMARY
+                    fi
+                    
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "### Evaluator Scores" >> $GITHUB_STEP_SUMMARY
+                    echo '```json' >> $GITHUB_STEP_SUMMARY
+                    cat reports/weekly-health.json | jq '.scores' >> $GITHUB_STEP_SUMMARY
+                    echo '```' >> $GITHUB_STEP_SUMMARY
+                  else
+                    echo "❌ **Evaluation Failed** - No results generated" >> $GITHUB_STEP_SUMMARY
+                  fi
+
+            - name: Upload results
+              uses: actions/upload-artifact@v4
+              with:
+                  name: weekly-health-check
+                  path: reports/
+                  retention-days: 90
+
+            - name: Create Linear issue for regression
+              if: steps.check-regression.outputs.regression_detected == 'true'
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const overallScore = ${{ steps.check-regression.outputs.overall_score }};
+                      const failureCount = ${{ steps.check-regression.outputs.failure_count }};
+
+                      console.log(`🚨 Regression detected in weekly health check`);
+                      console.log(`Overall Score: ${overallScore}`);
+                      console.log(`Failure Count: ${failureCount}`);
+
+                      // TODO: Integrate with Linear API via webhook
+                      // POST to: codechef.appsmithery.co/webhooks/linear/health-regression
+                      // Payload: { score, failure_count, timestamp, project }
+              continue-on-error: true
+
+            - name: Fail workflow on regression
+              if: steps.check-regression.outputs.regression_detected == 'true'
+              run: |
+                  echo "::error::Weekly health check detected regression (Score: ${{ steps.check-regression.outputs.overall_score }}, Failures: ${{ steps.check-regression.outputs.failure_count }})"
+                  exit 1

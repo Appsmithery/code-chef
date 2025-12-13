@@ -548,6 +548,99 @@ def modelops_deployment_success(run: Run, example: Example) -> EvaluationResult:
     )
 
 
+def streaming_response_quality(run: Run, example: Example) -> EvaluationResult:
+    """
+    Evaluate streaming response quality and SSE compliance.
+
+    Checks for:
+    - Streaming events present in trace (40%)
+    - Proper SSE format (data: prefix, newlines) (30%)
+    - Chunk timing efficiency (<500ms between chunks) (20%)
+    - Error handling for stream interruptions (10%)
+
+    Args:
+        run: LangSmith run with streaming events
+        example: Dataset example
+
+    Returns:
+        EvaluationResult for streaming quality
+    """
+    score = 0.0
+    checks = []
+
+    # Check if task involves streaming
+    task = str(example.inputs.get("task", "")).lower()
+    streaming_keywords = ["stream", "sse", "real-time", "progress", "websocket"]
+
+    # Skip for non-streaming tasks
+    if not any(kw in task for kw in streaming_keywords):
+        return EvaluationResult(
+            key="streaming_response_quality",
+            score=1.0,
+            comment="Non-streaming task (skipped)",
+        )
+
+    has_streaming_events = False
+    has_sse_format = False
+    has_efficient_timing = True
+    has_error_handling = False
+
+    # Analyze streaming events
+    if hasattr(run, "outputs") and run.outputs:
+        outputs_str = str(run.outputs).lower()
+
+        # Check for streaming events
+        if any(kw in outputs_str for kw in ["stream", "chunk", "delta", "event:"]):
+            has_streaming_events = True
+            checks.append("Streaming events")
+            score += 0.4
+
+            # Check SSE format compliance
+            if "data:" in outputs_str and (
+                "\\n\\n" in outputs_str or "\n\n" in outputs_str
+            ):
+                has_sse_format = True
+                checks.append("SSE format")
+                score += 0.3
+
+        # Check for error handling
+        if any(kw in outputs_str for kw in ["error", "retry", "fallback", "timeout"]):
+            has_error_handling = True
+            checks.append("Error handling")
+            score += 0.1
+
+    # Check chunk timing from child runs
+    if hasattr(run, "child_runs") and run.child_runs:
+        chunk_times = []
+        for child in run.child_runs:
+            if hasattr(child, "start_time") and hasattr(child, "end_time"):
+                if child.start_time and child.end_time:
+                    duration = (child.end_time - child.start_time).total_seconds()
+                    if "stream" in getattr(child, "name", "").lower():
+                        chunk_times.append(duration)
+
+        if chunk_times:
+            avg_chunk_time = sum(chunk_times) / len(chunk_times)
+            if avg_chunk_time < 0.5:  # 500ms threshold
+                has_efficient_timing = True
+                checks.append("Efficient timing")
+                score += 0.2
+
+    # If no streaming detected but task requires it, score 0
+    if not has_streaming_events:
+        return EvaluationResult(
+            key="streaming_response_quality",
+            score=0.0,
+            comment="Streaming required but not implemented",
+        )
+
+    return EvaluationResult(
+        key="streaming_response_quality",
+        score=score,
+        comment=f"Checks passed: {', '.join(checks)}",
+    )
+
+
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
@@ -614,6 +707,7 @@ ALL_EVALUATORS = [
     risk_assessment_accuracy,
     modelops_training_quality,
     modelops_deployment_success,
+    streaming_response_quality,
 ]
 
 # Phase 1: Data Layer Foundation evaluators (MCP, Docker, infrastructure)
@@ -629,6 +723,7 @@ PHASE2_EVALUATORS = [
     token_efficiency,
     latency_threshold,
     workflow_completeness,
+    streaming_response_quality,
 ]
 
 # ModelOps: Training and deployment evaluators
@@ -649,6 +744,7 @@ EVALUATOR_MAP = {
     "risk_assessment_accuracy": risk_assessment_accuracy,
     "modelops_training_quality": modelops_training_quality,
     "modelops_deployment_success": modelops_deployment_success,
+    "streaming_response_quality": streaming_response_quality,
 }
 
 
