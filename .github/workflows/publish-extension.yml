@@ -99,28 +99,7 @@ jobs:
           git commit -m "chore(extension): remove old VSIX files" || echo "No old files to remove"
           git push || echo "Nothing to push"
 
-      - name: Create Git tag
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Check if tag exists locally and remotely
-          if git rev-parse "v${{ env.VERSION }}" >/dev/null 2>&1; then
-            echo "⚠️ Tag v${{ env.VERSION }} exists locally, deleting..."
-            git tag -d "v${{ env.VERSION }}"
-          fi
-          
-          if git ls-remote --tags origin | grep -q "refs/tags/v${{ env.VERSION }}"; then
-            echo "⚠️ Tag v${{ env.VERSION }} exists remotely, deleting..."
-            git push origin :refs/tags/v${{ env.VERSION }} || echo "Could not delete remote tag (may be protected)"
-          fi
-          
-          # Create new tag
-          git tag -a "v${{ env.VERSION }}" -m "Release v${{ env.VERSION }}"
-          git push origin "v${{ env.VERSION }}"
-
-      - name: Delete existing release (if exists)
+      - name: Delete existing release and tag (if exists)
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
