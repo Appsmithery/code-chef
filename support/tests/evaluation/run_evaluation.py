@@ -49,6 +49,7 @@ from support.tests.evaluation.evaluators import (
     modelops_deployment_success,
     modelops_training_quality,
     risk_assessment_accuracy,
+    streaming_response_quality,
     token_efficiency,
     workflow_completeness,
 )
@@ -79,6 +80,7 @@ SCORE_THRESHOLDS = {
     "workflow_completeness": 0.7,
     "mcp_integration_quality": 0.6,
     "risk_assessment_accuracy": 0.7,
+    "streaming_response_quality": 0.7,
 }
 
 

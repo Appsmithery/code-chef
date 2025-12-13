@@ -9,19 +9,20 @@
 name: E2E LangSmith Evaluation
 
 on:
-  schedule:
-    # Daily at 6 AM UTC
-    - cron: "0 6 * * *"
-
-  push:
-    paths:
-      - "agent_orchestrator/**"
-      - "shared/**"
-      - "support/tests/evaluation/**"
-      - "support/tests/e2e/**"
-
+  # Manual-only trigger for on-demand evaluation
+  # Use weekly-evaluation.yml for scheduled runs
   workflow_dispatch:
     inputs:
+      phase:
+        description: "Which phase to evaluate"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - phase1
+          - phase2
+          - modelops
+          - all
       dataset:
         description: "LangSmith dataset name"
         required: false
@@ -48,7 +49,7 @@ jobs:
   phase1-data-layer:
     name: Phase 1 - Data Layer Evaluation
     runs-on: ubuntu-latest
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all'
+    if: github.event.inputs.phase == 'all' || github.event.inputs.phase == 'phase1'
 
     steps:
       - name: Checkout code
@@ -66,6 +67,21 @@ jobs:
           pip install -r agent_orchestrator/requirements.txt
           pip install -r support/tests/requirements.txt
           pip install langsmith pytest-langsmith
+
+      - name: Validate OpenRouter Configuration
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          python -c "
+          import os
+          import yaml
+          assert os.getenv('OPENROUTER_API_KEY'), 'Missing OPENROUTER_API_KEY'
+          with open('config/agents/models.yaml') as f:
+              config = yaml.safe_load(f)
+              provider = config.get('provider', config.get('agents', {}).get('supervisor', {}).get('provider', 'unknown'))
+              assert 'openrouter' in str(provider).lower(), f'Provider not set to openrouter: {provider}'
+          print('✅ OpenRouter configuration validated')
+          "
 
       - name: Run Phase 1 tests
         env:
@@ -104,7 +120,7 @@ jobs:
     name: Phase 2 - Core Agent Evaluation
     runs-on: ubuntu-latest
     needs: phase1-data-layer
-    if: always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all')
+    if: always() && (github.event.inputs.phase == 'all' || github.event.inputs.phase == 'phase2')
 
     steps:
       - name: Checkout code
@@ -162,7 +178,7 @@ jobs:
     name: ModelOps Extension Evaluation
     runs-on: ubuntu-latest
     needs: phase2-core-agents
-    if: always() && (github.event_name != 'workflow_dispatch' || github.event.inputs.evaluators == 'all')
+    if: always() && (github.event.inputs.phase == 'all' || github.event.inputs.phase == 'modelops')
 
     steps:
       - name: Checkout code
