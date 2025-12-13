@@ -271,19 +271,33 @@ async def supervisor_node(state: WorkflowState) -> WorkflowState:
     supervisor = get_agent("supervisor", project_context=project_context)
 
     # Add routing instruction to messages
-    routing_prompt = """Analyze this task and determine:
-1. Which specialized agent should handle it (feature-dev, code-review, infrastructure, cicd, documentation)
-2. Whether it requires HITL approval (high-risk operations like production deployments, infrastructure changes, database migrations)
+    routing_prompt = """You're having a conversation with a developer who needs help. Based on their message, decide:
 
-Respond in this format:
+1. Which specialist should help them:
+   - feature-dev: Writing/fixing code, implementing features
+   - code-review: Checking security, code quality, best practices
+   - infrastructure: Cloud setup, Docker, Kubernetes, IaC
+   - cicd: Build pipelines, deployments, automation
+   - documentation: README, API docs, code comments
+
+2. Is this risky enough to need human approval?
+   - Production deployments, infrastructure changes, DB migrations, destructive operations → YES
+   - Code generation, reviews, docs, local testing → NO
+
+Format your response exactly like this:
 NEXT_AGENT: <agent-name>
 REQUIRES_APPROVAL: <true|false>
-REASONING: <your analysis>
+REASONING: <brief explanation in conversational tone>
 
-If the task is complete or no further action is needed, respond with:
+If the request is unclear or you need more info:
+NEXT_AGENT: supervisor
+REQUIRES_APPROVAL: false
+REASONING: Need clarification on [specific question]
+
+If the conversation is done:
 NEXT_AGENT: end
 REQUIRES_APPROVAL: false
-REASONING: Task completed
+REASONING: Task completed successfully
 """
 
     messages = state["messages"] + [HumanMessage(content=routing_prompt)]
