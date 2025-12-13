@@ -340,7 +340,7 @@ REASONING: Task completed
 async def feature_dev_node(state: WorkflowState) -> WorkflowState:
     """Feature development agent node - implements code.
 
-    Uses FeatureDevAgent with codellama model for:
+    Uses FeatureDevAgent with Qwen 2.5 Coder 32B (OpenRouter) for:
     - Code implementation
     - Refactoring
     - Bug fixes
@@ -436,7 +436,7 @@ async def feature_dev_node(state: WorkflowState) -> WorkflowState:
 async def code_review_node(state: WorkflowState) -> WorkflowState:
     """Code review agent node - analyzes code quality.
 
-    Uses CodeReviewAgent with llama3.3-70b model for:
+    Uses CodeReviewAgent with DeepSeek V3 (OpenRouter) for:
     - OWASP Top 10 security analysis
     - Code quality checks
     - Best practices validation
@@ -493,7 +493,7 @@ async def code_review_node(state: WorkflowState) -> WorkflowState:
 async def infrastructure_node(state: WorkflowState) -> WorkflowState:
     """Infrastructure agent node - manages cloud resources.
 
-    Uses InfrastructureAgent with llama3-8b model for:
+    Uses InfrastructureAgent with Gemini 2.0 Flash (OpenRouter) for:
     - Terraform/IaC changes
     - Docker/Compose configurations
     - Cloud resource management
@@ -586,7 +586,7 @@ async def infrastructure_node(state: WorkflowState) -> WorkflowState:
 async def cicd_node(state: WorkflowState) -> WorkflowState:
     """CI/CD agent node - handles deployments.
 
-    Uses CICDAgent with llama3-8b model for:
+    Uses CICDAgent with Gemini 2.0 Flash (OpenRouter) for:
     - GitHub Actions workflows
     - Deployment pipelines
     - CI configuration

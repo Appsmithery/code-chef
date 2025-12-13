@@ -8,7 +8,7 @@ from .._shared.base_agent import BaseAgent
 class CodeReviewAgent(BaseAgent):
     """Code review agent specialized in quality and security analysis.
 
-    Uses llama-3.1-70b model for deep code analysis.
+    Uses DeepSeek V3 (OpenRouter) for deep code analysis.
     Has access to GitHub, SonarQube, and git tools.
     """
 

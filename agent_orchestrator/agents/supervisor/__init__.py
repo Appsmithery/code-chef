@@ -34,7 +34,7 @@ from .._shared.base_agent import BaseAgent
 class SupervisorAgent(BaseAgent):
     """Supervisor agent that routes tasks to specialized agents.
 
-    Uses llama-3.1-70b model for complex routing decisions.
+    Uses Claude 3.5 Sonnet (OpenRouter) for complex routing decisions.
     Analyzes tasks and determines which specialized agent should handle them.
 
     Phase 6 Features (CHEF-110):
