@@ -3299,23 +3299,61 @@ class ChatStreamRequest(BaseModel):
 @traceable(name="chat_stream", tags=["chat", "streaming", "sse"])
 async def chat_stream_endpoint(request: ChatStreamRequest):
     """
-    Stream chat response via Server-Sent Events (SSE).
+    Stream chat response via Server-Sent Events (SSE) for interactive conversations.
 
-    Provides real-time token-by-token responses for the @chef chat participant.
-    Uses LangGraph's astream_events for streaming LLM output.
+    This endpoint powers the @chef chat participant in VS Code, providing real-time
+    token-by-token responses with full LangGraph agent orchestration.
 
-    Event types:
-    - content: Token chunk from LLM
-    - agent_complete: Agent finished processing
-    - tool_call: Tool invocation (for visibility)
-    - done: Stream complete
-    - error: Error occurred
+    **Conversational AI Features:**
+    - Natural language understanding (no formal syntax required)
+    - Multi-turn conversation support via session_id
+    - Context-aware responses based on workspace and project
+    - Automatic routing to specialized agents (code, review, infrastructure, etc.)
+    - Human-in-the-loop approvals for high-risk operations
 
-    Example SSE response:
-        data: {"type": "content", "content": "I'll help you"}
-        data: {"type": "content", "content": " create that"}
-        data: {"type": "agent_complete", "agent": "feature_dev"}
-        data: {"type": "done"}
+    **Request Body:**
+    ```json
+    {
+      "message": "Fix the authentication bug in login.py",
+      "session_id": "optional-session-id",  // Auto-generated if omitted
+      "user_id": "user-123",  // Optional user identifier
+      "project_context": {
+        "linear_project_id": "PROJ-123",
+        "github_repo_url": "https://github.com/user/repo",
+        "workspace_name": "my-project"
+      },
+      "workspace_config": {
+        "name": "my-workspace",
+        "path": "/path/to/workspace"
+      }
+    }
+    ```
+
+    **SSE Event Types:**
+    - `content`: LLM-generated text chunks (stream in real-time)
+    - `agent_complete`: Agent finished processing (shows progress)
+    - `tool_call`: MCP tool invocation (for transparency)
+    - `done`: Stream complete with session_id (for follow-up messages)
+    - `error`: Error occurred with user-friendly message
+
+    **Example SSE Response:**
+    ```
+    data: {"type": "content", "content": "I'll help you"}
+    data: {"type": "content", "content": " fix that"}
+    data: {"type": "agent_complete", "agent": "feature_dev"}
+    data: {"type": "content", "content": " authentication issue"}
+    data: {"type": "done", "session_id": "stream-abc123"}
+    ```
+
+    **Error Handling:**
+    - Authentication errors → Check API key configuration
+    - Rate limits → Automatic retry with exponential backoff
+    - Timeouts → Request simpler task or retry
+    - Model errors → Contact support if persistent
+
+    **Multi-Turn Conversations:**
+    Save the session_id from the "done" event and include it in subsequent
+    requests to maintain conversation context.
     """
     session_id = request.session_id or f"stream-{uuid.uuid4()}"
 
@@ -3331,7 +3369,7 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                 yield f"data: {json.dumps({'type': 'error', 'error': 'Graph not available'})}\n\n"
                 return
 
-            # Extract project context from request
+            # Extract and enrich project context from request
             project_context = None
             if request.project_context:
                 project_context = {
@@ -3339,6 +3377,12 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                     or request.project_context.get("github_repo_url"),
                     "repository_url": request.project_context.get("github_repo_url"),
                     "workspace_name": request.project_context.get("workspace_name"),
+                }
+            elif request.workspace_config:
+                # Fallback to workspace config for project identification
+                project_context = {
+                    "workspace_name": request.workspace_config.get("name"),
+                    "workspace_path": request.workspace_config.get("path"),
                 }
 
             # Build initial state
@@ -3395,7 +3439,25 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
 
         except Exception as e:
             logger.error(f"Chat stream error: {e}", exc_info=True)
-            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+            error_message = str(e)
+            # Make error messages more user-friendly
+            if "API key" in error_message or "401" in error_message:
+                error_message = (
+                    "Authentication failed. Please check your API configuration."
+                )
+            elif "429" in error_message or "rate limit" in error_message.lower():
+                error_message = (
+                    "Rate limit exceeded. Please wait a moment and try again."
+                )
+            elif "timeout" in error_message.lower():
+                error_message = "Request timed out. The operation took too long. Please try a simpler task or try again."
+            elif (
+                "model" in error_message.lower()
+                and "not found" in error_message.lower()
+            ):
+                error_message = "Model configuration error. Please contact support."
+
+            yield f"data: {json.dumps({'type': 'error', 'error': error_message, 'details': str(e) if logger.level <= logging.DEBUG else None})}\n\n"
 
     return StreamingResponse(
         event_generator(),
