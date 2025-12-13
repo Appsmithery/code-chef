@@ -1,5 +1,7 @@
 """LangGraph agent nodes for multi-agent workflows."""
 
+from typing import Optional
+
 from ._shared.base_agent import BaseAgent
 from .cicd import CICDAgent
 from .code_review import CodeReviewAgent
