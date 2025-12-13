@@ -54,12 +54,13 @@ Streamed Response (SSE)
 **File**: `agent_orchestrator/agents/supervisor/tools.yaml`
 
 **Key Settings**:
+
 ```yaml
 agent:
   name: supervisor
   model: anthropic/claude-3-5-sonnet
   provider: openrouter
-  temperature: 0.3  # Low for consistent routing
+  temperature: 0.3 # Low for consistent routing
   max_tokens: 2000
   system_prompt: |
     Conversational AI system prompt optimized for:
@@ -71,6 +72,7 @@ agent:
 ```
 
 **Why Claude 3.5 Sonnet?**
+
 - Best-in-class reasoning for complex routing decisions
 - Excellent instruction following
 - Strong multi-turn conversation memory
@@ -78,15 +80,16 @@ agent:
 
 ### Specialized Agents
 
-| Agent          | Model                | Temperature | Max Tokens | Use Case                    |
-| -------------- | -------------------- | ----------- | ---------- | --------------------------- |
-| Feature Dev    | Qwen 2.5 Coder 32B   | 0.3         | 4000       | Code generation, bug fixes  |
-| Code Review    | DeepSeek V3          | 0.2         | 4000       | Security, quality analysis  |
-| Infrastructure | Gemini 2.0 Flash     | 0.4         | 8000       | IaC, cloud configs          |
-| CI/CD          | Gemini 2.0 Flash     | 0.4         | 8000       | Pipelines, deployments      |
-| Documentation  | DeepSeek V3          | 0.5         | 4000       | READMEs, API docs           |
+| Agent          | Model              | Temperature | Max Tokens | Use Case                   |
+| -------------- | ------------------ | ----------- | ---------- | -------------------------- |
+| Feature Dev    | Qwen 2.5 Coder 32B | 0.3         | 4000       | Code generation, bug fixes |
+| Code Review    | DeepSeek V3        | 0.2         | 4000       | Security, quality analysis |
+| Infrastructure | Gemini 2.0 Flash   | 0.4         | 8000       | IaC, cloud configs         |
+| CI/CD          | Gemini 2.0 Flash   | 0.4         | 8000       | Pipelines, deployments     |
+| Documentation  | DeepSeek V3        | 0.5         | 4000       | READMEs, API docs          |
 
 **Temperature Guidelines**:
+
 - **Low (0.2-0.3)**: Code generation, security analysis (deterministic)
 - **Medium (0.4-0.5)**: Documentation, infrastructure (some creativity)
 - **High (0.6-0.8)**: [NOT USED] Creative writing (not needed for dev tools)
@@ -101,7 +104,7 @@ agent:
 def get_graph() -> CompiledGraph:
     """
     Singleton pattern for expensive graph compilation.
-    
+
     Returns cached _compiled_graph to avoid re-compilation on every request.
     Critical for streaming performance (<50ms overhead).
     """
@@ -112,6 +115,7 @@ def get_graph() -> CompiledGraph:
 ```
 
 **Routing Logic** (`supervisor_node`):
+
 ```python
 async def supervisor_node(state: WorkflowState) -> WorkflowState:
     """
@@ -127,6 +131,7 @@ async def supervisor_node(state: WorkflowState) -> WorkflowState:
 ```
 
 **Why This Architecture?**
+
 - **Flexibility**: Supervisor can route to any agent dynamically
 - **Context Preservation**: Full message history passed to each agent
 - **Observability**: LangSmith traces every routing decision
@@ -151,6 +156,7 @@ class ChatStreamRequest(BaseModel):
 ```
 
 **Field Usage**:
+
 - `message`: Only required field. Can be casual ("fix the bug") or specific
 - `session_id`: Auto-generated if omitted. Include in follow-up messages
 - `project_context`: Enables RAG isolation (queries scoped to project)
@@ -159,6 +165,7 @@ class ChatStreamRequest(BaseModel):
 ### Response Format (SSE)
 
 **Event Structure**:
+
 ```javascript
 // Content chunk (many per response)
 data: {"type": "content", "content": "I'll help you"}
@@ -177,33 +184,37 @@ data: {"type": "error", "error": "Rate limit exceeded. Please wait a moment."}
 ```
 
 **Client Implementation Example**:
+
 ```typescript
-const eventSource = new EventSource('https://codechef.appsmithery.co/api/chat/stream', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'X-API-Key': API_KEY
-  },
-  body: JSON.stringify({
-    message: "Review this code for security issues",
-    session_id: sessionId  // Optional
-  })
-});
+const eventSource = new EventSource(
+  "https://codechef.appsmithery.co/api/chat/stream",
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": API_KEY,
+    },
+    body: JSON.stringify({
+      message: "Review this code for security issues",
+      session_id: sessionId, // Optional
+    }),
+  }
+);
 
 eventSource.onmessage = (event) => {
   const data = JSON.parse(event.data);
-  
+
   switch (data.type) {
-    case 'content':
+    case "content":
       appendToChat(data.content);
       break;
-    case 'agent_complete':
+    case "agent_complete":
       showAgentBadge(data.agent);
       break;
-    case 'done':
-      sessionId = data.session_id;  // Save for next message
+    case "done":
+      sessionId = data.session_id; // Save for next message
       break;
-    case 'error':
+    case "error":
       showError(data.error);
       break;
   }
@@ -218,15 +229,16 @@ eventSource.onmessage = (event) => {
 
 The endpoint transforms technical errors into actionable messages:
 
-| Technical Error                  | User Message                                                  |
-| -------------------------------- | ------------------------------------------------------------- |
-| `401 Unauthorized`               | "Authentication failed. Please check your API configuration." |
-| `429 Too Many Requests`          | "Rate limit exceeded. Please wait a moment and try again."    |
-| `Timeout`                        | "Request timed out. Please try a simpler task or try again."  |
-| `Model not found`                | "Model configuration error. Please contact support."          |
-| Generic exception                | Full error in DEBUG mode, sanitized in PRODUCTION             |
+| Technical Error         | User Message                                                  |
+| ----------------------- | ------------------------------------------------------------- |
+| `401 Unauthorized`      | "Authentication failed. Please check your API configuration." |
+| `429 Too Many Requests` | "Rate limit exceeded. Please wait a moment and try again."    |
+| `Timeout`               | "Request timed out. Please try a simpler task or try again."  |
+| `Model not found`       | "Model configuration error. Please contact support."          |
+| Generic exception       | Full error in DEBUG mode, sanitized in PRODUCTION             |
 
 **Why User-Friendly Errors?**
+
 - Reduces support burden (users understand what to do)
 - Improves UX (no cryptic stack traces in chat)
 - Security (doesn't expose internal implementation details)
@@ -240,6 +252,7 @@ The endpoint transforms technical errors into actionable messages:
 **Purpose**: Ensure RAG queries only return relevant documentation for the current project.
 
 **Implementation**:
+
 ```python
 project_context = {
     "project_id": linear_project_id or github_repo_url,
@@ -249,6 +262,7 @@ project_context = {
 ```
 
 **Effect**:
+
 - RAG queries filtered by project_id
 - Prevents cross-project information leakage
 - Improves response relevance
@@ -258,12 +272,14 @@ project_context = {
 **Stateless Design**: Each request contains full context.
 
 **Session Continuity**:
+
 1. Client saves `session_id` from "done" event
 2. Client includes `session_id` in next ChatStreamRequest
 3. LangGraph retrieves checkpoint from PostgreSQL via thread_id
 4. Supervisor has access to full conversation history
 
 **Why PostgreSQL Checkpointing?**
+
 - Persistent across container restarts
 - Enables "resume conversation" feature
 - Supports debugging (inspect conversation state)
@@ -280,6 +296,7 @@ project_context = {
 **Solution**: `get_graph()` singleton with `_compiled_graph` global.
 
 **Impact**:
+
 - First request: 500ms compilation + execution
 - Subsequent requests: <50ms overhead + execution
 - 90% reduction in cold-start latency
@@ -291,6 +308,7 @@ project_context = {
 **Solution**: Load only relevant tools per task.
 
 **Implementation**:
+
 ```python
 relevant_toolsets = progressive_loader.get_tools_for_task(
     task_description=request.message,
@@ -299,6 +317,7 @@ relevant_toolsets = progressive_loader.get_tools_for_task(
 ```
 
 **Impact**:
+
 - Token savings: ~6000 tokens per request
 - Cost savings: ~$0.018 per request (at $3/1M tokens)
 - Context window savings: More room for conversation history
@@ -306,6 +325,7 @@ relevant_toolsets = progressive_loader.get_tools_for_task(
 ### Streaming Backpressure
 
 **Implementation**:
+
 ```python
 async for event in graph.astream_events(state, config):
     yield sse_event
@@ -313,6 +333,7 @@ async for event in graph.astream_events(state, config):
 ```
 
 **Why 10ms Delay?**
+
 - Prevents TCP buffer overflow on slow clients
 - Allows browser JS event loop to process chunks
 - Minimal impact on perceived latency (<1% slower)
@@ -326,12 +347,14 @@ async for event in graph.astream_events(state, config):
 **Project**: `code-chef-production`
 
 **Key Traces**:
+
 - `chat_stream`: Top-level endpoint invocation
 - `supervisor_node`: Routing decisions with NEXT_AGENT
 - `feature_dev_node`, `code_review_node`, etc.: Agent executions
 - Tool calls: MCP tool invocations
 
 **Filter Examples**:
+
 ```python
 # Recent chat sessions
 environment:"production" AND module:"chat" AND start_time > now-1h
@@ -348,6 +371,7 @@ event_name:"feature_dev_node" AND latency > 5s
 **Endpoint**: `http://localhost:8001/metrics`
 
 **Key Metrics**:
+
 ```promql
 # Streaming sessions
 http_requests_total{endpoint="/chat/stream", status="200"}
@@ -367,6 +391,7 @@ rate(http_requests_total{endpoint="/chat/stream", status="500"}[5m])
 **Dashboard**: "LLM Token Metrics" + "Chat Performance"
 
 **Panels**:
+
 - **Active Sessions**: Current concurrent chat streams
 - **Tokens per Session**: Avg token usage by conversation length
 - **Agent Distribution**: Which agents get routed to most often
@@ -382,6 +407,7 @@ rate(http_requests_total{endpoint="/chat/stream", status="500"}[5m])
 **Header**: `X-API-Key: <orchestrator-api-key>`
 
 **Validation**:
+
 ```python
 @app.middleware("http")
 async def validate_api_key(request: Request, call_next):
@@ -403,11 +429,13 @@ async def validate_api_key(request: Request, call_next):
 ### Content Safety
 
 **Input Validation**:
+
 - Max message length: 10,000 characters (prevents abuse)
 - Session ID validation: UUID format only
 - Project context sanitization: Prevent injection attacks
 
 **Output Filtering**:
+
 - No raw error stack traces in production
 - Sensitive data (API keys, credentials) redacted from logs
 - HITL approval required for destructive operations
@@ -464,6 +492,7 @@ curl -X POST http://localhost:8001/chat/stream \
 **Symptoms**: Request hangs, no SSE events
 
 **Check**:
+
 ```bash
 # Container logs
 docker logs deploy-orchestrator-1 --tail=100 -f
@@ -486,6 +515,7 @@ docker logs deploy-orchestrator-1 --tail=100 -f
 **Cause**: Graph compilation + model cold start
 
 **Solution**: Pre-warm cache by sending test message on deployment:
+
 ```bash
 curl -X POST http://localhost:8001/chat/stream \
   -H "Content-Type: application/json" \
@@ -500,6 +530,7 @@ curl -X POST http://localhost:8001/chat/stream \
 **Symptoms**: 401 from OpenRouter
 
 **Check**:
+
 ```bash
 # Verify API key
 echo $OPENROUTER_API_KEY
@@ -538,16 +569,19 @@ curl https://openrouter.ai/api/v1/models \
 ### Token Usage
 
 **Average Chat Session**:
+
 - Supervisor routing: ~500 tokens
 - Agent response: ~1500 tokens
 - Total: ~2000 tokens per message
 
 **Cost per Message**:
+
 - Supervisor (Claude 3.5): 500 tokens × $3/1M = $0.0015
 - Specialist (avg): 1500 tokens × $0.50/1M = $0.00075
 - **Total**: ~$0.00225 per message
 
 **Monthly Cost** (1000 users, 10 messages/day):
+
 - 10M messages/month
 - $22,500/month
 - **Can reduce by 30%** with better prompt engineering
