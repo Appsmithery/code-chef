@@ -1,6 +1,6 @@
 agent:
   name: supervisor
-  model: google/gemini-2.0-flash-exp:free
+  model: anthropic/claude-3-5-sonnet
   provider: openrouter
   temperature: 0.3
   max_tokens: 2000
