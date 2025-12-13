@@ -311,29 +311,35 @@ class BaseAgent:
         """Initialize LLM with agent-specific configuration."""
         agent_config = self.config["agent"]
 
-        # Get Gradient client with agent-specific model
-        gradient_client = get_gradient_client(
-            agent_name=self.agent_name, model=agent_config.get("model", "llama-3.1-8b")
+        # Get provider from config or default to openrouter
+        provider = agent_config.get("provider", "openrouter")
+        model = agent_config.get("model", "anthropic/claude-3-5-sonnet")
+        temperature = agent_config.get("temperature", 0.7)
+        max_tokens = agent_config.get("max_tokens", 2000)
+
+        # Use LangChain get_llm for multi-provider support
+        from lib.langchain_gradient import get_llm
+        
+        llm = get_llm(
+            agent_name=self.agent_name,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            provider=provider
         )
-
-        # Store gradient client for later tool binding
-        self._gradient_client = gradient_client
-
-        # For now, return a mock LangChain LLM (will be replaced with actual LLM at runtime)
-        # This avoids requiring API keys at import/initialization time
-        try:
-            # Try to get LangChain LLM if client is configured
-            if gradient_client.is_enabled():
-                return gradient_client.get_llm_with_tools(
-                    tools=[],
-                    temperature=agent_config.get("temperature", 0.7),
-                    max_tokens=agent_config.get("max_tokens", 2000),
-                )
-        except:
-            pass
-
-        # Return gradient client itself (now has ainvoke/invoke methods for compatibility)
-        return gradient_client
+        
+        if llm is None:
+            logger.warning(f"[{self.agent_name}] Failed to initialize LLM with provider={provider}, model={model}")
+            # Fallback to gradient client for backward compatibility
+            gradient_client = get_gradient_client(
+                agent_name=self.agent_name, model=agent_config.get("model", "llama-3.1-8b")
+            )
+            self._gradient_client = gradient_client
+            return gradient_client
+        
+        # Store LLM for later use
+        self._llm = llm
+        return llm
 
     def _bind_tools(self) -> BaseChatModel | Any:
         """Legacy method - returns base LLM without tools.
