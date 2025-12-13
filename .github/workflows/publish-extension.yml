@@ -98,6 +98,15 @@ jobs:
           git commit -m "chore(extension): remove old VSIX files" || echo "No old files to remove"
           git push || echo "Nothing to push"
 
+      - name: Create Git tag
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ env.VERSION }}" -m "Release v${{ env.VERSION }}"
+          git push origin "v${{ env.VERSION }}" || echo "Tag may already exist"
+
       - name: Create GitHub Release
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v1
@@ -204,8 +213,14 @@ jobs:
       - name: Report status
         run: |
           if [ "${{ needs.build-and-publish.result }}" == "success" ]; then
-            echo "✅ Extension build completed successfully!"
+            echo "✅ Extension build and publish completed successfully!"
+            echo "📦 VSIX artifact uploaded"
+            echo "🏷️ GitHub Release created"
+          elif [ "${{ needs.build-and-publish.result }}" == "failure" ]; then
+            echo "❌ Extension build failed - check logs above"
+            # Don't fail the notify job itself
+            exit 0
           else
-            echo "❌ Extension build failed"
-            exit 1
+            echo "⚠️ Extension build status: ${{ needs.build-and-publish.result }}"
+            exit 0
           fi
