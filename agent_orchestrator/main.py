@@ -3290,6 +3290,9 @@ class ChatStreamRequest(BaseModel):
     workspace_config: Optional[Dict[str, Any]] = Field(
         None, description="Workspace configuration from VS Code extension"
     )
+    project_context: Optional[Dict[str, Any]] = Field(
+        None, description="Project context (Linear project ID, GitHub repo, workspace)"
+    )
 
 
 @app.post("/chat/stream", tags=["chat"])
