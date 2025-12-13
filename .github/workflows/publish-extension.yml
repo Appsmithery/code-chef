@@ -135,7 +135,7 @@ jobs:
           tag_name: v${{ env.VERSION }}
           name: VS Code Extension v${{ env.VERSION }}
           generate_release_notes: true
-          draft: false
+          draft: true
           prerelease: false
           body: |
             ![Version](https://img.shields.io/badge/version-${{ env.VERSION }}-blue)
@@ -200,6 +200,13 @@ jobs:
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
           gh release upload "v${{ env.VERSION }}" *.vsix --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish Release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          gh release edit "v${{ env.VERSION }}" --draft=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
