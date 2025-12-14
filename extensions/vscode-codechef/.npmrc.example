@@ -1,0 +1,9 @@
+# NPM Configuration for @appsmithery scoped packages
+# This file configures registry for GitHub Packages
+
+@appsmithery:registry=https://npm.pkg.github.com
+
+# Authentication token (replace with your GitHub Personal Access Token)
+# Generate token at: https://github.com/settings/tokens/new?scopes=read:packages
+# Scope required: read:packages
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN_HERE
