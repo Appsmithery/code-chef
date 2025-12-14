@@ -411,7 +411,6 @@ async def health_check():
         "service": "rag-context-manager",
         "version": "1.0.0",
         "qdrant_status": qdrant_status,
-        "mcp_docker_toolkit": mcp_toolkit_status,
         "timestamp": timestamp,
     }
 
