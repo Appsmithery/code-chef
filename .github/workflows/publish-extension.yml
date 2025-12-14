@@ -204,15 +204,8 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
-          # Temporarily scope package name for GitHub Packages
-          node -e "
-            const pkg = require('./package.json');
-            pkg.name = '@appsmithery/vscode-codechef';
-            require('fs').writeFileSync('./package.json', JSON.stringify(pkg, null, 2));
-          "
+          # Package already scoped as @appsmithery/vscode-codechef in package.json
           npm publish --access public || echo "Package may already exist at this version"
-          # Restore original package.json
-          git checkout package.json
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

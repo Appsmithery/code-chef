@@ -144,6 +144,18 @@ Or manually:
 - Add to `~/.npmrc` (Linux/macOS) or `%USERPROFILE%\.npmrc` (Windows)
 - Or use Option 2 (Open VSX) - no authentication needed
 
+**"VSIX not found in package" (npx)**
+
+The npm package downloads the VSIX from GitHub releases automatically. If this fails:
+- Check your internet connection
+- Manually download from [Releases](https://github.com/Appsmithery/code-chef/releases) (Option 3)
+
+**"Extension activation failed"**
+
+1. Check VS Code version: Must be >= 1.85.0
+2. Update VS Code: Help → Check for Updates
+3. Restart VS Code after installation
+
 ### Step 2: Set Up Your API Key
 
 1. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)

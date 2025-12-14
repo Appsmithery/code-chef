@@ -207,6 +207,34 @@ echo "lin_oauth_***" > config/env/secrets/linear_oauth_token.txt
 echo "ghp_***" > config/env/secrets/github_pat.txt
 ```
 
+### GitHub Secrets (for CI/CD)
+
+**Required for extension publishing workflow:**
+
+Navigate to: https://github.com/Appsmithery/code-chef/settings/secrets/actions
+
+1. **NPM_TOKEN** - GitHub Personal Access Token
+   - Scopes: `read:packages`, `write:packages`
+   - Generate: https://github.com/settings/tokens/new
+   - Used for: Publishing to GitHub Packages
+
+2. **OPENVSX_TOKEN** - Open VSX Registry Token
+   - Register namespace: https://open-vsx.org/user-settings/namespaces
+   - Generate token: https://open-vsx.org/user-settings/tokens
+   - Used for: Publishing to Open VSX (public, no-auth distribution)
+
+**Test publishing workflow:**
+
+```bash
+# Trigger manually
+gh workflow run publish-extension.yml \
+  --field version=1.0.0-beta.5 \
+  --field version_bump=none
+
+# Monitor progress
+gh run watch
+```
+
 ---
 
 ## Deployment Workflow
