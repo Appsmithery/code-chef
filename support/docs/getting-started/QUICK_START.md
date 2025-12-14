@@ -16,9 +16,39 @@ Use the hosted code/chef service—no server setup required.
 
 ### Step 1: Install the Extension
 
-**Quick Install (Recommended)**:
+**Quick Install (Recommended - npx)**:
 
-Download and install the latest version in one command:
+Install with one command (requires [GitHub Personal Access Token](https://github.com/settings/tokens/new?scopes=read:packages) with `read:packages` scope):
+
+**Bash/Linux/macOS:**
+
+```bash
+# First time only: Setup authentication
+echo "@appsmithery:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
+
+# Install
+npx @appsmithery/vscode-codechef
+```
+
+**Windows PowerShell:**
+
+```powershell
+# First time only: Setup authentication
+Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "@appsmithery:registry=https://npm.pkg.github.com"
+Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN"
+
+# Install
+npx @appsmithery/vscode-codechef
+```
+
+**Alternative: Open VSX (No Authentication)**:
+
+```bash
+code --install-extension appsmithery.vscode-codechef
+```
+
+**Manual Install from GitHub Releases**:
 
 **Bash/Linux/macOS:**
 
@@ -32,7 +62,7 @@ curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode
 curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix; code --install-extension codechef.vsix
 ```
 
-**Manual Install from GitHub Releases**:
+Or via VS Code UI:
 
 1. Go to [Releases](https://github.com/Appsmithery/code-chef/releases)
 2. Download the latest `vscode-codechef-*.vsix` file
@@ -44,20 +74,14 @@ curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode
 **Bash/Linux/macOS:**
 
 ```bash
-code --uninstall-extension appsmithery.vscode-codechef && curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix && code --install-extension codechef.vsix
+code --uninstall-extension appsmithery.vscode-codechef && npx @appsmithery/vscode-codechef
 ```
 
 **PowerShell/Windows:**
 
 ```powershell
-code --uninstall-extension appsmithery.vscode-codechef; curl -L https://github.com/Appsmithery/code-chef/releases/latest/download/vscode-codechef-1.0.0.vsix -o codechef.vsix; code --install-extension codechef.vsix
+code --uninstall-extension appsmithery.vscode-codechef; npx @appsmithery/vscode-codechef
 ```
-
-**From VS Code Marketplace** (Coming Soon):
-
-1. Open Extensions (`Ctrl+Shift+X`)
-2. Search "code/chef"
-3. Click Install
 
 ### Step 2: Configure
 
