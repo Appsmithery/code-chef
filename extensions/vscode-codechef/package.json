@@ -1,5 +1,5 @@
 {
-  "name": "@appsmithery/vscode-codechef",
+  "name": "vscode-codechef",
   "displayName": "code/chef - AI DevOps Team",
   "description": "Your personal AI DevOps Team, orchestrated by the Head Chef.",
   "version": "1.0.0-beta.4",
