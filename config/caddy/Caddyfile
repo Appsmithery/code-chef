@@ -5,8 +5,7 @@
 
 {$CADDY_DOMAIN:codechef.appsmithery.co} {
 	# API endpoints proxy to orchestrator (MUST come before file_server)
-	handle /api/* {
-		uri strip_prefix /api
+	handle_path /api/* {
 		reverse_proxy orchestrator:8001
 	}
 
@@ -16,59 +15,48 @@
 	}
 
 	# RAG service endpoints
-	handle /rag/* {
-		uri strip_prefix /rag
+	handle_path /rag/* {
 		reverse_proxy rag-context:8007
 	}
 
 	# State persistence endpoints
-	handle /state/* {
-		uri strip_prefix /state
+	handle_path /state/* {
 		reverse_proxy state-persistence:8008
 	}
 
 	# LangGraph endpoints
-	handle /langgraph/* {
-		uri strip_prefix /langgraph
+	handle_path /langgraph/* {
 		reverse_proxy langgraph:8010
 	}
 
 	# Prometheus monitoring with OAuth protection
 	redir /prometheus /prometheus/
-	handle /prometheus/* {
-		uri strip_prefix /prometheus
+	handle_path /prometheus/* {
 		reverse_proxy oauth2-proxy:4180
 	}
 
 	# OAuth2 callback traffic
-	handle /oauth2/* {
-		uri strip_prefix /oauth2
+	handle_path /oauth2/* {
 		reverse_proxy oauth2-proxy:4180
 	}
 
 	# Agent health endpoints (optional, for direct monitoring)
-	handle /orchestrator/* {
-		uri strip_prefix /orchestrator
+	handle_path /orchestrator/* {
 		reverse_proxy orchestrator:8001
 	}
-	handle /feature-dev/* {
-		uri strip_prefix /feature-dev
+	handle_path /feature-dev/* {
 		reverse_proxy feature-dev:8002
 	}
-	handle /code-review/* {
-		uri strip_prefix /code-review
+	handle_path /code-review/* {
 		reverse_proxy code-review:8003
 	}
-	handle /infrastructure/* {
-		uri strip_prefix /infrastructure
+	handle_path /infrastructure/* {
 		reverse_proxy infrastructure:8004
 	}
-	handle /cicd/* {
-		uri strip_prefix /cicd
+	handle_path /cicd/* {
 		reverse_proxy cicd:8005
 	}
-	handle /documentation/* {
-		uri strip_prefix /documentation
+	handle_path /documentation/* {
 		reverse_proxy documentation:8006
 	}
 
