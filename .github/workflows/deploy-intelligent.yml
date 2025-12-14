@@ -75,7 +75,7 @@ jobs:
           echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> config/env/.env
           # HuggingFace (ModelOps)
           echo "HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}" >> config/env/.env
-          
+
           # Verify file exists and has content
           ls -la config/env/.env
           wc -l config/env/.env
