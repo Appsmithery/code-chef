@@ -16,9 +16,11 @@ Use the hosted code/chef service—no server setup required.
 
 ### Step 1: Install the Extension
 
-**Quick Install (Recommended - npx)**:
+> **⚠️ Authentication Required**: Access to this extension is controlled via GitHub Packages to prevent unauthorized LLM usage.
 
-Install with one command (requires [GitHub Personal Access Token](https://github.com/settings/tokens/new?scopes=read:packages) with `read:packages` scope):
+**Primary Method (npx)**:
+
+Requires [GitHub Personal Access Token](https://github.com/settings/tokens/new?scopes=read:packages) with `read:packages` scope:
 
 **Bash/Linux/macOS:**
 
@@ -42,13 +44,7 @@ Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "//npm.pkg.github.com/:_authT
 npx @appsmithery/vscode-codechef
 ```
 
-**Alternative: Open VSX (No Authentication)**:
-
-```bash
-code --install-extension appsmithery.vscode-codechef
-```
-
-**Manual Install from GitHub Releases**:
+**Alternative: Manual from Administrator**:
 
 **Bash/Linux/macOS:**
 

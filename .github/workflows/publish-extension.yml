@@ -78,12 +78,6 @@ jobs:
           npx vsce package --no-update-package-json
           echo "VSIX_PATH=$(ls *.vsix)" >> $GITHUB_ENV
 
-      - name: Publish to Open VSX Registry
-        if: github.event_name == 'workflow_dispatch'
-        working-directory: ${{ env.EXTENSION_DIR }}
-        run: npx ovsx publish *.vsix -p ${{ secrets.OPENVSX_TOKEN }}
-        continue-on-error: true
-
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
