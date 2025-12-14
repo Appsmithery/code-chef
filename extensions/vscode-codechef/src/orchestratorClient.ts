@@ -56,6 +56,13 @@ export interface ChatMessage {
     workspace_config?: Record<string, any>;
 }
 
+export interface ChatReferences {
+    files: string[];
+    symbols: Array<{file: string; line: number; name?: string}>;
+    strings: string[];
+    count: number;
+}
+
 export interface ChatResponse {
     response: string;
     session_id: string;
