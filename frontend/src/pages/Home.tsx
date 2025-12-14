@@ -113,32 +113,19 @@ export default function Home() {
 
               <div className="grid grid-cols-3 gap-8 pt-8 border-t border-border">
                 <div>
-                  <div
-                    className="text-3xl font-bold"
-                    style={{ color: "#f4b9b8" }}
-                  >
-                    6
-                  </div>
+                  <div className="text-3xl font-bold text-emerald-400">6</div>
                   <div className="text-sm text-muted-foreground mt-1">
                     AI Agents
                   </div>
                 </div>
                 <div>
-                  <div
-                    className="text-3xl font-bold"
-                    style={{ color: "#f4b9b8" }}
-                  >
-                    20+
-                  </div>
+                  <div className="text-3xl font-bold text-emerald-400">20+</div>
                   <div className="text-sm text-muted-foreground mt-1">
                     MCP Servers
                   </div>
                 </div>
                 <div>
-                  <div
-                    className="text-3xl font-bold"
-                    style={{ color: "#f4b9b8" }}
-                  >
+                  <div className="text-3xl font-bold text-emerald-400">
                     178+
                   </div>
                   <div className="text-sm text-muted-foreground mt-1">
@@ -148,50 +135,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Hero Visual - Terminal */}
+            {/* Hero Visual - Screenshot */}
             <div className="relative hidden lg:block">
-              <div className="absolute -inset-1 bg-gradient-to-r from-accent to-secondary rounded-2xl blur opacity-10"></div>
+              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-emerald-400 rounded-2xl blur opacity-10"></div>
               <div className="relative bg-card rounded-xl overflow-hidden shadow-2xl dark:shadow-[0_25px_50px_-12px_rgb(0_0_0_/_0.5)]">
-                <div className="flex items-center px-4 py-3 border-b border-border bg-muted">
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-400"></div>
-                  </div>
-                  <div className="ml-4 text-xs font-medium text-muted-foreground">
-                    chef-orchestrator — zsh — 80x24
-                  </div>
-                </div>
-                <div className="p-6 font-medium text-sm space-y-4 bg-gradient-to-b from-card to-muted/50">
-                  <div className="flex gap-2">
-                    <span className="text-primary">➜</span>
-                    <span className="text-secondary">~</span>
-                    <span className="text-foreground">chef status --all</span>
-                  </div>
-                  <div className="space-y-2 text-muted-foreground">
-                    <div className="flex justify-between">
-                      <span>[Orchestrator]</span>
-                      <span className="text-primary">● Online</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>[Sous-Chef]</span>
-                      <span className="text-primary">● Online</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>[Code-Review]</span>
-                      <span className="text-primary">● Online</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>[Infrastructure]</span>
-                      <span className="text-primary">● Online</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-4">
-                    <span className="text-primary">➜</span>
-                    <span className="text-secondary">~</span>
-                    <span className="text-foreground animate-pulse">_</span>
-                  </div>
-                </div>
+                <img
+                  src="/screenshots/orchestrator-chat.png"
+                  alt="code/chef Orchestrator interface showing intelligent task routing"
+                  className="w-full h-auto"
+                />
               </div>
 
               {/* Floating Status Card */}
