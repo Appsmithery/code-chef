@@ -83,14 +83,18 @@ export function activate(context: vscode.ExtensionContext) {
             });
         }
 
-    // Initialize Linear watcher for approval notifications
+    // Initialize Linear watcher for approval notifications (non-blocking)
     linearWatcher = new LinearWatcher(context);
     const config = vscode.workspace.getConfiguration('codechef');
     const workspaceSlug = config.get('linearWorkspaceSlug', 'dev-ops');
-    if (config.get('enableNotifications')) {
-        linearWatcher.start(config.get('linearHubIssue', 'DEV-68'), workspaceSlug);
-    }
     context.subscriptions.push(linearWatcher);
+    
+    // Start watcher asynchronously to avoid blocking activation
+    if (config.get('enableNotifications')) {
+        setTimeout(() => {
+            linearWatcher.start(config.get('linearHubIssue', 'DEV-68'), workspaceSlug);
+        }, 1000);
+    }
 
     // Register copy permalink command
     registerCopyPermalinkCommand(context);
