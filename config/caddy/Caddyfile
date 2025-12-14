@@ -1,84 +1,24 @@
-{
-	# Enable automatic HTTPS with Let's Encrypt
-	email {$CADDY_ACME_EMAIL:alex@appsmithery.co}
-}
+codechef.appsmithery.co {
+	# API endpoints
+	reverse_proxy /api/* orchestrator:8001
+	reverse_proxy /webhooks/linear orchestrator:8001
 
-{$CADDY_DOMAIN:codechef.appsmithery.co} {
-	# API endpoints proxy to orchestrator (MUST come before file_server)
-	handle_path /api/* {
-		reverse_proxy orchestrator:8001
-	}
+	# Service endpoints
+	reverse_proxy /rag/* rag-context:8007
+	reverse_proxy /state/* state-persistence:8008
+	reverse_proxy /langgraph/* langgraph:8010
 
-	# Linear webhooks proxy to orchestrator (HITL approvals)
-	handle /webhooks/linear {
-		reverse_proxy orchestrator:8001
-	}
-
-	# RAG service endpoints
-	handle_path /rag/* {
-		reverse_proxy rag-context:8007
-	}
-
-	# State persistence endpoints
-	handle_path /state/* {
-		reverse_proxy state-persistence:8008
-	}
-
-	# LangGraph endpoints
-	handle_path /langgraph/* {
-		reverse_proxy langgraph:8010
-	}
-
-	# Prometheus monitoring with OAuth protection
+	# OAuth2 protected Prometheus
 	redir /prometheus /prometheus/
-	handle_path /prometheus/* {
-		reverse_proxy oauth2-proxy:4180
-	}
+	reverse_proxy /prometheus/* oauth2-proxy:4180
+	reverse_proxy /oauth2/* oauth2-proxy:4180
 
-	# OAuth2 callback traffic
-	handle_path /oauth2/* {
-		reverse_proxy oauth2-proxy:4180
-	}
+	# Frontend SPA (catch-all for client-side routing)
+	root * /srv/frontend
+	encode gzip
+	try_files {path} /index.html
+	file_server
 
-	# Agent health endpoints (optional, for direct monitoring)
-	handle_path /orchestrator/* {
-		reverse_proxy orchestrator:8001
-	}
-	handle_path /feature-dev/* {
-		reverse_proxy feature-dev:8002
-	}
-	handle_path /code-review/* {
-		reverse_proxy code-review:8003
-	}
-	handle_path /infrastructure/* {
-		reverse_proxy infrastructure:8004
-	}
-	handle_path /cicd/* {
-		reverse_proxy cicd:8005
-	}
-	handle_path /documentation/* {
-		reverse_proxy documentation:8006
-	}
-
-	# Serve React SPA from mounted volume (MUST come after API handlers)
-	# SPA routing: try file, then fallback to index.html for client-side routing
-	handle {
-		root * /srv/frontend
-		encode gzip
-		
-		# Cache busting: no cache for HTML, aggressive cache for assets
-		@assets path *.js *.css *.woff2 *.woff *.ttf *.png *.jpg *.svg *.ico
-		header @assets Cache-Control "public, max-age=31536000, immutable"
-		
-		@html path *.html /
-		header @html Cache-Control "no-cache, no-store, must-revalidate"
-		header @html Pragma "no-cache"
-		header @html Expires "0"
-		
-		try_files {path} /index.html
-		file_server
-	}
-
-	# HTTPS configuration with automatic certificates
-	tls {$CADDY_ACME_EMAIL:alex@appsmithery.co}
+	# HTTPS with Let's Encrypt
+	tls alex@appsmithery.co
 }
