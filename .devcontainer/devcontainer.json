@@ -33,7 +33,8 @@
         "vscjava.vscode-java-debug",
         "task.vscode-task",
         "hfloveyy.langgraphv",
-        "appsmithery.vscode-devtools-copilot"
+        "appsmithery.vscode-devtools-copilot",
+        "ms-vscode.powershell"
       ]
     }
   }
