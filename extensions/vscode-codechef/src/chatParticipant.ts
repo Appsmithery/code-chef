@@ -153,6 +153,8 @@ export class CodeChefChatParticipant {
             
             let currentAgent = '';
             let sessionIdFromStream = sessionId;
+            let fullResponse = '';  // Accumulate full response for parsing
+            let isSuprevisorResponse = false;  // Track if we're in supervisor mode
 
             // Stream response token by token
             for await (const chunk of this.client.chatStream({
@@ -169,9 +171,20 @@ export class CodeChefChatParticipant {
 
                 switch (chunk.type) {
                     case 'content':
-                        // Stream content token by token
+                        // Accumulate content for parsing
                         if (chunk.content) {
-                            stream.markdown(chunk.content);
+                            fullResponse += chunk.content;
+                            
+                            // Check if this is a supervisor routing response
+                            if (fullResponse.includes('NEXT_AGENT:') || fullResponse.includes('REQUIRES_APPROVAL:') || fullResponse.includes('REASONING:')) {
+                                isSuprevisorResponse = true;
+                            }
+                            
+                            // If it's a supervisor response, buffer until complete
+                            // Otherwise stream normally
+                            if (!isSuprevisorResponse) {
+                                stream.markdown(chunk.content);
+                            }
                         }
                         break;
                     
@@ -200,6 +213,14 @@ export class CodeChefChatParticipant {
                         if (chunk.session_id) {
                             sessionIdFromStream = chunk.session_id;
                         }
+                        
+                        // If supervisor response, extract and display only reasoning
+                        if (isSuprevisorResponse && fullResponse) {
+                            const reasoning = this.extractReasoning(fullResponse);
+                            if (reasoning) {
+                                stream.markdown(reasoning);
+                            }
+                        }
                         break;
                 }
             }
@@ -221,6 +242,36 @@ export class CodeChefChatParticipant {
                 errorDetails: { message: error.message } 
             };
         }
+    }
+
+    /**
+     * Extract only the REASONING portion from supervisor routing responses.
+     * Filters out NEXT_AGENT and REQUIRES_APPROVAL metadata for cleaner UX.
+     * Full trace data is still captured in LangSmith for evaluation.
+     */
+    private extractReasoning(fullResponse: string): string {
+        const lines = fullResponse.split('\n');
+        const reasoningLines: string[] = [];
+        let inReasoning = false;
+
+        for (const line of lines) {
+            if (line.startsWith('REASONING:')) {
+                // Extract reasoning content (skip the REASONING: prefix)
+                const reasoningContent = line.substring('REASONING:'.length).trim();
+                if (reasoningContent) {
+                    reasoningLines.push(reasoningContent);
+                }
+                inReasoning = true;
+            } else if (inReasoning && !line.startsWith('NEXT_AGENT:') && !line.startsWith('REQUIRES_APPROVAL:')) {
+                // Continue collecting reasoning lines
+                reasoningLines.push(line);
+            } else if (line.startsWith('NEXT_AGENT:') || line.startsWith('REQUIRES_APPROVAL:')) {
+                // Skip metadata lines
+                inReasoning = false;
+            }
+        }
+
+        return reasoningLines.join('\n').trim();
     }
 
     private async handleCommand(
