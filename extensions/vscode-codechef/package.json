@@ -2,7 +2,7 @@
   "name": "vscode-codechef",
   "displayName": "code/chef - AI DevOps Team",
   "description": "Your personal AI DevOps Team, orchestrated by the Head Chef.",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "publisher": "appsmithery",
   "license": "MIT",
   "icon": "icon.png",
