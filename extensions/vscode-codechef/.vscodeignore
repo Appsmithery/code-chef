@@ -1,17 +1,20 @@
 # Build outputs
-# out/ is needed for extension runtime
-dist/
+out/
+dist/**/*.map
 *.vsix
 
 # Source files (exclude from package)
 src/
 tsconfig.json
 .eslintrc.json
+webpack.config.js
 
 # Development files
 .vscode-test/
 .vscode/
-*.map
+
+# Node modules (bundled by webpack)
+node_modules/
 
 # Build config
 Taskfile.yml
