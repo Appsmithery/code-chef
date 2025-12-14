@@ -112,6 +112,7 @@ jobs:
 
       - name: Create GitHub Release
         if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get-version.outputs.version }}
@@ -180,6 +181,7 @@ jobs:
 
       - name: Upload VSIX to Release
         if: github.event_name == 'workflow_dispatch'
+        continue-on-error: true
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
           gh release upload "v${{ steps.get-version.outputs.version }}" *.vsix --clobber
@@ -243,4 +245,3 @@ jobs:
             echo "⚠️ Extension build status: ${{ needs.build-and-publish.result }}"
             exit 0
           fi
-
