@@ -343,7 +343,7 @@ class CodeChefChatParticipant {
         }
         return reasoningLines.join('\n').trim();
     }
-    async handleCommand(command, args, stream, token) {
+    async handleCommand(command, args, stream, _token) {
         switch (command) {
             case constants_1.CHAT_COMMANDS.STATUS:
                 return await this.statusHandler.handleStatus(args, stream);

@@ -160,7 +160,7 @@ function activate(context) {
         context.subscriptions.push(vscode.commands.registerCommand('codechef.showMenu', async () => {
             const config = vscode.workspace.getConfiguration('codechef');
             const orchestratorUrl = config.get('orchestratorUrl', 'https://codechef.appsmithery.co/api');
-            const langsmithUrl = config.get('langsmithUrl', '');
+            // langsmithUrl reserved for future use
             const items = [
                 {
                     label: '$(rocket) Submit Task',
