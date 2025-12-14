@@ -252,6 +252,8 @@ export class CodeChefChatParticipant {
             let sessionIdFromStream = sessionId;
             let fullResponse = '';  // Accumulate full response for parsing
             let isSuprevisorResponse = false;  // Track if we're in supervisor mode
+            let chunkCount = 0;  // Track chunks received
+            const BUFFER_CHUNKS = 3;  // Buffer first N chunks to detect supervisor responses
 
             // Stream response token by token
             for await (const chunk of this.client.chatStream({
@@ -277,15 +279,20 @@ export class CodeChefChatParticipant {
                         // Accumulate content for parsing
                         if (chunk.content) {
                             fullResponse += chunk.content;
+                            chunkCount++;
                             
-                            // Check if this is a supervisor routing response
-                            if (fullResponse.includes('NEXT_AGENT:') || fullResponse.includes('REQUIRES_APPROVAL:') || fullResponse.includes('REASONING:')) {
+                            // Check if this is a supervisor routing response (look for metadata markers)
+                            const hasSupervisorMarkers = fullResponse.includes('NEXT_AGENT:') || 
+                                                        fullResponse.includes('REQUIRES_APPROVAL:') || 
+                                                        fullResponse.includes('REASONING:');
+                            
+                            if (hasSupervisorMarkers) {
                                 isSuprevisorResponse = true;
                             }
                             
-                            // If it's a supervisor response, buffer until complete
-                            // Otherwise stream normally
-                            if (!isSuprevisorResponse) {
+                            // Buffer first few chunks to detect supervisor responses early
+                            // After that, only stream if NOT a supervisor response
+                            if (chunkCount > BUFFER_CHUNKS && !isSuprevisorResponse) {
                                 stream.markdown(chunk.content);
                             }
                         }
