@@ -147,6 +147,7 @@ Or manually:
 **"VSIX not found in package" (npx)**
 
 The npm package downloads the VSIX from GitHub releases automatically. If this fails:
+
 - Check your internet connection
 - Manually download from [Releases](https://github.com/Appsmithery/code-chef/releases) (Option 3)
 

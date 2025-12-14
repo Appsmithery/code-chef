@@ -214,6 +214,7 @@ echo "ghp_***" > config/env/secrets/github_pat.txt
 Navigate to: https://github.com/Appsmithery/code-chef/settings/secrets/actions
 
 1. **NPM_TOKEN** - GitHub Personal Access Token
+
    - Scopes: `read:packages`, `write:packages`
    - Generate: https://github.com/settings/tokens/new
    - Used for: Publishing to GitHub Packages
