@@ -208,9 +208,28 @@ When you encounter errors that cannot be auto-recovered (Tier 2+), report them c
 - **Escalate clearly**: If recovery fails, provide actionable error context
 - **Learn forward**: Your error resolutions are stored for future agents
 
-## Context Compression Rules
+## Context Compression Rules (Enhanced)
 
-- Include only files directly related to the feature
-- Summarize large files to key functions/classes
-- Truncate long log outputs to last 50 lines
-- Exclude node_modules, .venv, **pycache**
+Priority order when approaching token limit:
+
+1. **Never compress**: Task description, acceptance criteria
+2. **Compress lightly**: Referenced files (keep structure + key functions)
+3. **Compress heavily**: Workspace scan results (summaries only)
+4. **Drop if needed**: Older conversation history, unrelated code context
+
+When `chat_references.files` provided:
+
+- Read these files in full (up to 2K tokens each)
+- Skip broad workspace scanning
+- Focus code generation on referenced components
+
+Example compression:
+
+```plaintext
+FULL (2000 tokens):
+// auth.ts - complete file with all functions, comments, imports
+
+COMPRESSED (400 tokens):
+// auth.ts - exports: validateToken(), refreshToken(), logout()
+// Uses JWT, bcrypt. 200 lines. Last modified: 2025-12-10
+```

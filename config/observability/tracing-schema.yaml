@@ -145,6 +145,39 @@ module:
     Used for filtering and analyzing specific workflows.
 
 # ==============================================================================
+# COPILOT CONTEXT METADATA (v1.0.0-beta.4)
+# ==============================================================================
+# Track Copilot model usage and context enhancement features
+
+copilot_model_family:
+  type: string
+  required: false
+  description: |
+    Copilot model family selected by user (gpt-4o, gpt-3.5-turbo, etc.)
+    Used for analytics on model preferences and performance correlation.
+
+copilot_model_vendor:
+  type: string
+  required: false
+  description: |
+    Copilot model vendor (copilot, openai, anthropic)
+    Used to track which provider users prefer.
+
+chat_references_count:
+  type: integer
+  required: false
+  description: |
+    Number of files/symbols referenced in chat (via #file or right-click)
+    Used to measure adoption of context enhancement features.
+
+prompt_enhanced:
+  type: boolean
+  required: false
+  description: |
+    Whether prompt was enhanced using Copilot before orchestration.
+    Used to measure adoption and correlate with task success rates.
+
+# ==============================================================================
 # ADDITIONAL CONTEXT
 # ==============================================================================
 # Optional metadata for enhanced analysis

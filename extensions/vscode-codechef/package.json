@@ -457,6 +457,30 @@
           "description": "Grafana dashboard URL for metrics",
           "format": "uri",
           "order": 51
+        },
+        "codechef.enhancePrompts": {
+          "type": "boolean",
+          "default": false,
+          "description": "Use Copilot to enhance task descriptions before sending to orchestrator (adds 1-2s latency)",
+          "markdownDescription": "**Prompt Enhancement** 🤖\n\nWhen enabled, uses your selected Copilot model to expand ambiguous requests into detailed specifications before sending to the orchestrator.\n\n- **Enabled**: Enhanced prompts (adds 1-2s latency)\n- **Disabled**: Raw prompts (faster, default)\n\n*Useful for vague requests like 'fix the bug' or 'add tests'*",
+          "order": 15
+        },
+        "codechef.enhancementTemplate": {
+          "type": "string",
+          "enum": [
+            "detailed",
+            "structured",
+            "minimal"
+          ],
+          "default": "structured",
+          "description": "Prompt enhancement style",
+          "enumDescriptions": [
+            "Detailed: Maximum context and specifications",
+            "Structured: Balanced structure with key details (recommended)",
+            "Minimal: Light enhancement, preserve user style"
+          ],
+          "markdownDescription": "**Enhancement Style**\n\nControls how much the prompt is expanded:\n\n| Style | Use Case | Example |\n|-------|----------|---------|\n| `detailed` | Complex tasks | Full specs with acceptance criteria |\n| `structured` | **Recommended** | Clear goals and constraints |\n| `minimal` | Simple tasks | Brief additions only |",
+          "order": 16
         }
       }
     }

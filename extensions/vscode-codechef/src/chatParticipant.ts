@@ -4,6 +4,7 @@ import { ContextExtractor } from './contextExtractor';
 import { StatusHandler } from './handlers/statusHandler';
 import { WorkflowHandler } from './handlers/workflowHandler';
 import { OrchestratorClient } from './orchestratorClient';
+import { PromptEnhancer } from './promptEnhancer';
 import {
     renderError,
     renderLinearProjectCreated,
@@ -16,6 +17,7 @@ export class CodeChefChatParticipant {
     private client: OrchestratorClient;
     private contextExtractor: ContextExtractor;
     private sessionManager: SessionManager;
+    private promptEnhancer: PromptEnhancer;
     private lastTaskId?: string;
     private useStreaming: boolean;
     
@@ -31,6 +33,7 @@ export class CodeChefChatParticipant {
         });
         this.contextExtractor = new ContextExtractor();
         this.sessionManager = new SessionManager(context);
+        this.promptEnhancer = new PromptEnhancer();
         
         // Enable streaming by default, can be configured
         this.useStreaming = config.get('useStreaming', true);
@@ -51,6 +54,56 @@ export class CodeChefChatParticipant {
         });
     }
 
+    /**
+     * Extract chat references (files/symbols selected by user).
+     * These provide explicit context signals for better RAG queries.
+     */
+    private extractChatReferences(references: readonly vscode.ChatPromptReference[]) {
+        const files: string[] = [];
+        const symbols: Array<{file: string; line: number; name?: string}> = [];
+        const strings: string[] = [];
+
+        for (const ref of references) {
+            if (ref.value instanceof vscode.Uri) {
+                // File reference (#file)
+                files.push(ref.value.fsPath);
+            } else if (ref.value instanceof vscode.Location) {
+                // Symbol reference (function, class, etc.)
+                symbols.push({
+                    file: ref.value.uri.fsPath,
+                    line: ref.value.range.start.line,
+                    name: undefined  // VS Code doesn't provide symbol name in Location
+                });
+            } else if (typeof ref.value === 'string') {
+                // String reference (variable name, etc.)
+                strings.push(ref.value);
+            }
+            // Note: SymbolInformation not commonly used in chat refs
+        }
+
+        return {
+            files,
+            symbols,
+            strings,
+            count: files.length + symbols.length + strings.length
+        };
+    }
+
+    /**
+     * Extract Copilot model metadata for telemetry.
+     * Tracks which models users prefer for different task types.
+     */
+    private extractModelMetadata(model: vscode.LanguageModelChat) {
+        return {
+            vendor: model.vendor,
+            family: model.family,
+            version: model.version || 'unknown',
+            name: model.name,
+            maxInputTokens: model.maxInputTokens
+            // Note: maxOutputTokens not available in VS Code API
+        };
+    }
+
     async handleChatRequest(
         request: vscode.ChatRequest,
         context: vscode.ChatContext,
@@ -66,7 +119,7 @@ export class CodeChefChatParticipant {
 
         // Use streaming for conversational chat
         if (this.useStreaming) {
-            return await this.handleStreamingChat(userMessage, context, stream, token);
+            return await this.handleStreamingChat(userMessage, context, stream, token, request);  // Pass request
         }
 
         stream.progress('Analyzing workspace context...');
@@ -140,7 +193,8 @@ export class CodeChefChatParticipant {
         userMessage: string,
         context: vscode.ChatContext,
         stream: vscode.ChatResponseStream,
-        token: vscode.CancellationToken
+        token: vscode.CancellationToken,
+        request: vscode.ChatRequest  // ADD parameter
     ): Promise<vscode.ChatResult> {
         stream.progress('Connecting to code/chef...');
 
@@ -151,6 +205,49 @@ export class CodeChefChatParticipant {
             // Get or create session
             const sessionId = this.sessionManager.getOrCreateSession(context);
             
+            // === COPILOT CONTEXT ENHANCEMENT ===
+            const chatReferences = this.extractChatReferences(request.references);
+            const copilotModel = this.extractModelMetadata(request.model);
+
+            // Log for debugging (remove after UAT)
+            if (chatReferences.count > 0) {
+                console.log(`code/chef: Captured ${chatReferences.count} chat references`, chatReferences);
+            }
+            console.log(`code/chef: Using Copilot model ${copilotModel.family}`, copilotModel);
+
+            // === PROMPT ENHANCEMENT (NEW) ===
+            const config = vscode.workspace.getConfiguration('codechef');
+            const enhancePrompts = config.get('enhancePrompts', false);
+            let finalPrompt = userMessage;
+            let enhancementError: string | undefined;
+
+            if (enhancePrompts) {
+                stream.progress('Enhancing task description with Copilot...');
+                
+                const template = config.get<'detailed' | 'structured' | 'minimal'>(
+                    'enhancementTemplate',
+                    'structured'
+                );
+                
+                const result = await this.promptEnhancer.enhance(
+                    userMessage,
+                    request.model,  // Use user's selected Copilot model
+                    template,
+                    token
+                );
+                
+                finalPrompt = result.enhanced;
+                enhancementError = result.error;
+
+                // Log enhancement for debugging
+                if (enhancementError) {
+                    console.warn(`code/chef: Prompt enhancement failed: ${enhancementError}`);
+                } else {
+                    console.log(`code/chef: Enhanced prompt from ${userMessage.length} to ${finalPrompt.length} chars`);
+                }
+            }
+            // === END ENHANCEMENT ===
+            
             let currentAgent = '';
             let sessionIdFromStream = sessionId;
             let fullResponse = '';  // Accumulate full response for parsing
@@ -158,9 +255,15 @@ export class CodeChefChatParticipant {
 
             // Stream response token by token
             for await (const chunk of this.client.chatStream({
-                message: userMessage,
+                message: finalPrompt,  // Use enhanced prompt
                 session_id: sessionId,
-                context: workspaceContext,
+                context: {
+                    ...workspaceContext,
+                    chat_references: chatReferences,  // NEW
+                    copilot_model: copilotModel,      // NEW
+                    prompt_enhanced: enhancePrompts,  // NEW
+                    enhancement_error: enhancementError  // NEW
+                },
                 workspace_config: buildWorkspaceConfig()
             })) {
                 // Check for cancellation
@@ -229,7 +332,9 @@ export class CodeChefChatParticipant {
                 metadata: { 
                     status: 'success',
                     streaming: true,
-                    sessionId: sessionIdFromStream
+                    sessionId: sessionIdFromStream,
+                    promptEnhanced: enhancePrompts,
+                    enhancementError
                 } 
             };
 
