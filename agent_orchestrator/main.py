@@ -3296,39 +3296,6 @@ class ChatStreamRequest(BaseModel):
 
 
 @app.post("/chat/stream", tags=["chat"])
-@traceable(
-    name="chat_stream",
-    tags=["chat", "streaming", "sse"],
-    metadata=lambda: {
-        # Existing metadata
-        "experiment_group": os.getenv("EXPERIMENT_GROUP", "code-chef"),
-        "environment": os.getenv("TRACE_ENVIRONMENT", "production"),
-        "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
-        # NEW: Copilot model tracking
-        "copilot_model_family": (
-            request.context.get("copilot_model", {}).get("family", "unknown")
-            if request and request.context
-            else "unknown"
-        ),
-        "copilot_model_vendor": (
-            request.context.get("copilot_model", {}).get("vendor", "unknown")
-            if request and request.context
-            else "unknown"
-        ),
-        # NEW: Chat references tracking
-        "chat_references_count": (
-            len(request.context.get("chat_references", {}).get("files", []))
-            if request and request.context
-            else 0
-        ),
-        # NEW: Prompt enhancement tracking
-        "prompt_enhanced": (
-            request.context.get("prompt_enhanced", False)
-            if request and request.context
-            else False
-        ),
-    },
-)
 async def chat_stream_endpoint(request: ChatStreamRequest):
     """
     Stream chat response via Server-Sent Events (SSE) for interactive conversations.
