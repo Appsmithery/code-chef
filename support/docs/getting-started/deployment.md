@@ -217,12 +217,9 @@ Navigate to: https://github.com/Appsmithery/code-chef/settings/secrets/actions
 
    - Scopes: `read:packages`, `write:packages`
    - Generate: https://github.com/settings/tokens/new
-   - Used for: Publishing to GitHub Packages
+   - Used for: Publishing to GitHub Packages (authenticated distribution)
 
-2. **OPENVSX_TOKEN** - Open VSX Registry Token
-   - Register namespace: https://open-vsx.org/user-settings/namespaces
-   - Generate token: https://open-vsx.org/user-settings/tokens
-   - Used for: Publishing to Open VSX (public, no-auth distribution)
+> **Note**: Extension distribution is intentionally restricted to GitHub Packages to control access until metered accounts are implemented.
 
 **Test publishing workflow:**
 

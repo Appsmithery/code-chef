@@ -162,12 +162,22 @@ flowchart TB
 
 ### Install the VS Code Extension
 
-1. **Download** from [GitHub Releases](https://github.com/Appsmithery/code-chef/releases)
-2. **Install**: `Ctrl+Shift+P` → "Extensions: Install from VSIX..."
-3. **Configure**: `Ctrl+Shift+P` → "code/chef: Configure"
-4. **Use**: Open Copilot Chat and type `@chef <your request>`
+> **⚠️ Authentication Required**: Access to this extension is controlled via GitHub Packages to prevent unauthorized LLM usage until metered accounts are implemented.
 
-That's it! See [Quick Start Guide](support/docs/getting-started/QUICK_START.md) for self-hosting options.
+**Install via npx** (requires GitHub token with `read:packages` scope):
+
+```bash
+# Setup authentication (first time only)
+echo "@appsmithery:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
+
+# Install extension
+npx @appsmithery/vscode-codechef
+```
+
+**Alternative**: Download VSIX from [GitHub Releases](https://github.com/Appsmithery/code-chef/releases) and install manually.
+
+See [Quick Start Guide](support/docs/getting-started/QUICK_START.md) for self-hosting options.
 
 ---
 

@@ -74,12 +74,16 @@ code/chef automatically picks the best AI for each task—you don't need to worr
 
 ### Step 1: Install the Extension
 
+> **⚠️ Access Required**: This extension requires GitHub authentication to prevent unauthorized LLM usage. Contact your administrator for access.
+
 #### **Option 1: npx (Recommended)**
 
-Install with one command (requires [GitHub Personal Access Token](https://github.com/settings/tokens/new?scopes=read:packages) with `read:packages` scope):
+Install with one command using your [GitHub Personal Access Token](https://github.com/settings/tokens/new?scopes=read:packages) with `read:packages` scope:
+
+**Bash/Linux/macOS:**
 
 ```bash
-# First time only: Create .npmrc in your home directory
+# First time only: Setup authentication
 echo "@appsmithery:registry=https://npm.pkg.github.com" >> ~/.npmrc
 echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
 
@@ -90,7 +94,7 @@ npx @appsmithery/vscode-codechef
 **Windows PowerShell:**
 
 ```powershell
-# First time only
+# First time only: Setup authentication
 Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "@appsmithery:registry=https://npm.pkg.github.com"
 Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN"
 
@@ -98,17 +102,7 @@ Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "//npm.pkg.github.com/:_authT
 npx @appsmithery/vscode-codechef
 ```
 
-> **Why authentication?** We use GitHub Packages for future monetization support. Public availability via Open VSX (Option 2) doesn't require authentication.
-
-#### **Option 2: Open VSX Registry** (No Authentication)
-
-```bash
-code --install-extension appsmithery.vscode-codechef
-```
-
-Or search "code/chef" in VS Code Extensions (`Ctrl+Shift+X`) if using VSCodium or other Open VSX-compatible editors.
-
-#### **Option 3: GitHub Releases** (Manual)
+#### **Option 2: Manual from Administrator**
 
 **Bash/Linux/macOS:**
 
@@ -140,9 +134,10 @@ Or manually:
 
 **"Authentication required" (npx)**
 
-- Generate token: https://github.com/settings/tokens/new?scopes=read:packages
-- Add to `~/.npmrc` (Linux/macOS) or `%USERPROFILE%\.npmrc` (Windows)
-- Or use Option 2 (Open VSX) - no authentication needed
+This is intentional. Contact your administrator for:
+
+- GitHub Personal Access Token with `read:packages` scope
+- Access to the GitHub Packages repository
 
 **"VSIX not found in package" (npx)**
 
