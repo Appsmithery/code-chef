@@ -117,7 +117,7 @@ jobs:
           tag_name: v${{ steps.get-version.outputs.version }}
           name: VS Code Extension v${{ steps.get-version.outputs.version }}
           generate_release_notes: true
-          draft: true
+          draft: false
           prerelease: false
           body: |
             ![Version](https://img.shields.io/badge/version-${{ steps.get-version.outputs.version }}-blue)
@@ -243,3 +243,4 @@ jobs:
             echo "⚠️ Extension build status: ${{ needs.build-and-publish.result }}"
             exit 0
           fi
+
