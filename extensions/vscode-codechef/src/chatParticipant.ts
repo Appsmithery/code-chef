@@ -383,7 +383,7 @@ export class CodeChefChatParticipant {
         command: string,
         args: string,
         stream: vscode.ChatResponseStream,
-        token: vscode.CancellationToken
+        _token: vscode.CancellationToken
     ): Promise<vscode.ChatResult> {
         switch (command) {
             case CHAT_COMMANDS.STATUS:

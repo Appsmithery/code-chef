@@ -52,7 +52,7 @@ interface ModelVersion {
  */
 export async function trainAgentModel(
     orchestratorClient: OrchestratorClient,
-    context: vscode.ExtensionContext
+    _context: vscode.ExtensionContext
 ): Promise<void> {
     try {
         // Step 1: Select agent
@@ -715,7 +715,7 @@ export async function listAgentModels(
                 title: `Loading models for ${selectedAgent.label}`,
                 cancellable: false
             },
-            async (progress) => {
+            async (_progress) => {
                 const response = await orchestratorClient.chat({
                     message: `List all model versions for ${selectedAgent.value} agent`,
                     session_id: `modelops-list-${Date.now()}`,
