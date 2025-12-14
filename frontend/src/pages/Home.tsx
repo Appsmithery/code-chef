@@ -11,81 +11,61 @@ import {
   Search,
   ShieldCheck,
   Sparkles,
-  Wrench,
 } from "lucide-react";
 
 export default function Home() {
   const capabilityRails = [
     {
-      id: "multi-agent",
-      title: "Multi-Agent Orchestration",
+      id: "orchestration",
+      title: "Smart Task Routing",
       description:
-        "LangGraph StateGraph workflow with intelligent task routing. The Head Chef (Orchestrator) coordinates specialized agents for optimal results.",
+        "Automatically routes work to the right specialist agent. When critical changes arise, humans approve before execution—keeping you in control without slowing you down.",
       Icon: Bot,
-      accent: "accent" as const,
+      accent: "lavender" as const,
       bullets: [
-        "LangGraph StateGraph",
-        "Deterministic handoffs",
-        "Context-aware routing",
+        "Intelligent agent selection",
+        "Seamless handoffs",
+        "Human approval for high-risk operations",
       ],
     },
     {
-      id: "mcp-tools",
-      title: "MCP Tool Integration",
+      id: "efficiency",
+      title: "Up to 90% Lower Token Costs",
       description:
-        "Docker MCP Toolkit with 20 servers and 178+ tools. Progressive disclosure saves 80–90% on token costs.",
-      Icon: Wrench,
-      accent: "secondary" as const,
-      bullets: ["20 MCP servers", "178+ tools", "Invoke-time tool binding"],
-    },
-    {
-      id: "rag",
-      title: "RAG Semantic Search",
-      description:
-        "Qdrant-backed retrieval across code patterns, Linear issues, and documentation for contextual assistance.",
-      Icon: Search,
-      accent: "primary" as const,
-      bullets: ["Code patterns", "Linear issues", "Documentation"],
-    },
-    {
-      id: "observability",
-      title: "Full Observability",
-      description:
-        "LangSmith tracing for LLM calls, Grafana Cloud for metrics, and PostgreSQL checkpointing for durable workflows.",
-      Icon: Activity,
-      accent: "primary" as const,
-      bullets: [
-        "LangSmith traces",
-        "Grafana dashboards",
-        "Postgres checkpoints",
-      ],
-    },
-    {
-      id: "hitl",
-      title: "Human-in-the-Loop",
-      description:
-        "Risk-based approval workflows via Linear integration. Critical changes require human sign-off.",
-      Icon: ShieldCheck,
-      accent: "primary" as const,
-      bullets: ["Risk assessment", "Approval policies", "Audit trail"],
-    },
-    {
-      id: "cloud",
-      title: "Cloud-Native Agents",
-      description:
-        "Running on DigitalOcean with Caddy reverse proxy, automatic HTTPS, and optimized for a small memory footprint.",
-      Icon: Cloud,
-      accent: "accent" as const,
-      bullets: ["Caddy + HTTPS", "Compose deploy", "Health endpoints"],
-    },
-    {
-      id: "modelops",
-      title: "Train Your Own AI",
-      description:
-        "ModelOps makes it easy to fine-tune on your codebase—train in about an hour, test results, and deploy with one click.",
+        "Loads only the tools and context needed for each task. Smart retrieval finds relevant code patterns instantly, drastically reducing token waste.",
       Icon: Sparkles,
-      accent: "secondary" as const,
-      bullets: ["One-hour training", "Automatic testing", "Safe rollback"],
+      accent: "mint" as const,
+      bullets: [
+        "Progressive tool loading",
+        "Semantic code search",
+        "Context-aware retrieval",
+      ],
+    },
+    {
+      id: "learning",
+      title: "Learns Your Codebase",
+      description:
+        "Fine-tune models on your code in about an hour. Test improvements automatically, then deploy with confidence—or roll back instantly if needed.",
+      Icon: Sparkles,
+      accent: "butter" as const,
+      bullets: [
+        "One-hour training runs",
+        "Automatic performance testing",
+        "Safe, instant rollback",
+      ],
+    },
+    {
+      id: "deployment",
+      title: "Production-Ready from Day One",
+      description:
+        "Runs on secure cloud infrastructure with automatic HTTPS, health monitoring, and zero-downtime deploys. Built for teams that ship.",
+      Icon: Cloud,
+      accent: "mint" as const,
+      bullets: [
+        "Secure cloud hosting",
+        "Health checks & monitoring",
+        "No-downtime updates",
+      ],
     },
   ];
 
@@ -253,17 +233,17 @@ export default function Home() {
               const alignRight = idx % 2 === 1;
               const Icon = rail.Icon;
               const accentTone =
-                rail.accent === "primary"
-                  ? "from-primary/10 to-primary/5"
-                  : rail.accent === "secondary"
-                  ? "from-secondary/10 to-secondary/5"
-                  : "from-accent/10 to-accent/5";
+                rail.accent === "lavender"
+                  ? "from-purple-500/10 to-purple-400/5"
+                  : rail.accent === "mint"
+                  ? "from-emerald-400/10 to-emerald-300/5"
+                  : "from-amber-300/10 to-yellow-200/5";
               const accentIcon =
-                rail.accent === "primary"
-                  ? "text-primary bg-primary/10 border-primary/20"
-                  : rail.accent === "secondary"
-                  ? "text-secondary bg-secondary/10 border-secondary/20"
-                  : "text-accent bg-accent/10 border-accent/20";
+                rail.accent === "lavender"
+                  ? "text-purple-400 bg-purple-500/10 border-purple-400/20"
+                  : rail.accent === "mint"
+                  ? "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
+                  : "text-amber-300 bg-amber-300/10 border-amber-300/20";
 
               return (
                 <div
@@ -309,46 +289,28 @@ export default function Home() {
                                 Kitchen Note
                               </div>
                               <div className="text-lg font-semibold leading-snug">
-                                {rail.id === "multi-agent" && (
+                                {rail.id === "orchestration" && (
                                   <>
                                     Route tasks like a head chef—fast, calm, and
                                     consistent.
                                   </>
                                 )}
-                                {rail.id === "mcp-tools" && (
+                                {rail.id === "efficiency" && (
                                   <>
                                     Tools appear only when needed. Less noise.
                                     More signal.
                                   </>
                                 )}
-                                {rail.id === "rag" && (
+                                {rail.id === "learning" && (
                                   <>
-                                    Find the right pattern, instantly—without
-                                    losing context.
+                                    Teach the kitchen your recipes—then deploy
+                                    with confidence.
                                   </>
                                 )}
-                                {rail.id === "observability" && (
-                                  <>
-                                    Every call traceable. Every workflow
-                                    durable.
-                                  </>
-                                )}
-                                {rail.id === "hitl" && (
-                                  <>
-                                    Let humans sign off where it matters.
-                                    Automate the rest.
-                                  </>
-                                )}
-                                {rail.id === "cloud" && (
+                                {rail.id === "deployment" && (
                                   <>
                                     Ship it with confidence: health checks,
                                     HTTPS, and clean deploys.
-                                  </>
-                                )}
-                                {rail.id === "modelops" && (
-                                  <>
-                                    Teach the kitchen your recipes—then deploy
-                                    the new taste.
                                   </>
                                 )}
                               </div>
@@ -371,10 +333,10 @@ export default function Home() {
                               <span className="opacity-70">{rail.id}</span>
                             </div>
                             <div className="p-4 space-y-3 text-sm">
-                              {rail.id === "multi-agent" && (
+                              {rail.id === "orchestration" && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-primary">➜</span>
+                                    <span className="text-purple-400">➜</span>
                                     <span className="text-foreground">
                                       route task
                                     </span>
@@ -383,7 +345,7 @@ export default function Home() {
                                     </span>
                                   </div>
                                   <div className="grid grid-cols-3 gap-3">
-                                    <div className="rounded-md bg-primary/10 border border-primary/20 p-3">
+                                    <div className="rounded-md bg-purple-500/10 border border-purple-400/20 p-3">
                                       <div className="text-xs text-muted-foreground">
                                         dispatch
                                       </div>
@@ -391,7 +353,7 @@ export default function Home() {
                                         feature-dev
                                       </div>
                                     </div>
-                                    <div className="rounded-md bg-secondary/10 border border-secondary/20 p-3">
+                                    <div className="rounded-md bg-emerald-400/10 border border-emerald-400/20 p-3">
                                       <div className="text-xs text-muted-foreground">
                                         guardrails
                                       </div>
@@ -399,20 +361,26 @@ export default function Home() {
                                         code-review
                                       </div>
                                     </div>
-                                    <div className="rounded-md bg-accent/10 border border-accent/20 p-3">
+                                    <div className="rounded-md bg-amber-300/10 border border-amber-300/20 p-3">
                                       <div className="text-xs text-muted-foreground">
                                         ship
                                       </div>
                                       <div className="font-semibold">cicd</div>
                                     </div>
                                   </div>
+                                  <div className="flex items-center gap-2 mt-3">
+                                    <ShieldCheck className="h-4 w-4 text-purple-400" />
+                                    <span className="text-xs text-muted-foreground">
+                                      High-risk detected: awaiting approval
+                                    </span>
+                                  </div>
                                 </div>
                               )}
 
-                              {rail.id === "mcp-tools" && (
+                              {rail.id === "efficiency" && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-primary">➜</span>
+                                    <span className="text-emerald-400">➜</span>
                                     <span className="text-foreground">
                                       tools
                                     </span>
@@ -431,88 +399,59 @@ export default function Home() {
                                       <Badge
                                         key={t}
                                         variant="secondary"
-                                        className="bg-secondary/10 text-secondary border-none text-xs"
+                                        className="bg-emerald-400/10 text-emerald-400 border-none text-xs"
                                       >
                                         {t}
                                       </Badge>
                                     ))}
                                   </div>
+                                  <div className="flex items-center gap-2 mt-3">
+                                    <Search className="h-4 w-4 text-emerald-400" />
+                                    <span className="text-xs text-muted-foreground">
+                                      Token savings:{" "}
+                                      <span className="text-emerald-400 font-semibold">
+                                        87%
+                                      </span>
+                                    </span>
+                                  </div>
                                 </div>
                               )}
 
-                              {rail.id === "rag" && (
+                              {rail.id === "learning" && (
                                 <div className="space-y-2">
                                   <div className="flex items-center gap-2">
-                                    <Search className="h-4 w-4 text-primary" />
+                                    <Sparkles className="h-4 w-4 text-amber-300" />
                                     <span className="text-muted-foreground">
-                                      Search:
+                                      Pipeline:
                                     </span>
                                     <span className="font-medium">
-                                      "retry with exponential backoff"
+                                      train → evaluate → deploy
                                     </span>
                                   </div>
-                                  <div className="rounded-md bg-card/60 border border-border p-3 text-xs text-muted-foreground">
-                                    Top hits:{" "}
-                                    <span className="text-foreground">
-                                      workflow_engine.py
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="px-2 py-1 rounded bg-amber-300/10 border border-amber-300/20">
+                                      demo
                                     </span>
-                                    ,{" "}
-                                    <span className="text-foreground">
-                                      self_healing.py
-                                    </span>
-                                    ,{" "}
-                                    <span className="text-foreground">
-                                      DEPLOYMENT.md
+                                    <ArrowRight className="h-3 w-3" />
+                                    <span className="px-2 py-1 rounded bg-amber-300/10 border border-amber-300/20">
+                                      production
                                     </span>
                                   </div>
-                                </div>
-                              )}
-
-                              {rail.id === "observability" && (
-                                <div className="space-y-2">
-                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                    <span>llm_latency_seconds (p95)</span>
-                                    <span className="text-primary">1.8s</span>
-                                  </div>
-                                  <div className="h-10 rounded-md bg-card/60 border border-border p-2 flex items-end gap-1">
-                                    {[3, 6, 4, 8, 5, 7, 6, 9].map((h, i) => (
-                                      <div
-                                        key={i}
-                                        className="flex-1 rounded-sm bg-primary/25"
-                                        style={{ height: `${h * 4}px` }}
-                                      />
-                                    ))}
+                                  <div className="text-xs text-muted-foreground mt-2">
+                                    Improvement:{" "}
+                                    <span className="text-amber-300 font-semibold">
+                                      +18%
+                                    </span>{" "}
+                                    accuracy
                                   </div>
                                 </div>
                               )}
 
-                              {rail.id === "hitl" && (
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <ShieldCheck className="h-4 w-4 text-accent" />
-                                    <span className="text-muted-foreground">
-                                      Pending operation:
-                                    </span>
-                                    <span className="font-medium">
-                                      deploy to production
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs">
-                                    <Badge className="bg-secondary/20 text-secondary-foreground border-none">
-                                      requires approval
-                                    </Badge>
-                                    <span className="text-muted-foreground">
-                                      via Linear webhook
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {rail.id === "cloud" && (
+                              {rail.id === "deployment" && (
                                 <div className="space-y-2">
                                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                                     <span>Droplet</span>
-                                    <span className="text-primary">
+                                    <span className="text-emerald-400">
                                       healthy
                                     </span>
                                   </div>
@@ -528,29 +467,6 @@ export default function Home() {
                                     · Health:{" "}
                                     <span className="text-foreground">
                                       /health
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {rail.id === "modelops" && (
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Sparkles className="h-4 w-4 text-secondary" />
-                                    <span className="text-muted-foreground">
-                                      Pipeline:
-                                    </span>
-                                    <span className="font-medium">
-                                      train → evaluate → deploy
-                                    </span>
-                                  </div>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span className="px-2 py-1 rounded bg-secondary/10 border border-secondary/20">
-                                      demo
-                                    </span>
-                                    <ArrowRight className="h-3 w-3" />
-                                    <span className="px-2 py-1 rounded bg-secondary/10 border border-secondary/20">
-                                      production
                                     </span>
                                   </div>
                                 </div>
