@@ -1,24 +1,44 @@
 codechef.appsmithery.co {
-	# API endpoints
-	reverse_proxy /api/* orchestrator:8001
+	# API endpoints (strip /api prefix before proxying)
+	handle /api/* {
+		uri strip_prefix /api
+		reverse_proxy orchestrator:8001
+	}
+
+	# Linear webhooks
 	reverse_proxy /webhooks/linear orchestrator:8001
 
-	# Service endpoints
-	reverse_proxy /rag/* rag-context:8007
-	reverse_proxy /state/* state-persistence:8008
-	reverse_proxy /langgraph/* langgraph:8010
+	# Service endpoints (strip prefix)
+	handle /rag/* {
+		uri strip_prefix /rag
+		reverse_proxy rag-context:8007
+	}
+	handle /state/* {
+		uri strip_prefix /state
+		reverse_proxy state-persistence:8008
+	}
+	handle /langgraph/* {
+		uri strip_prefix /langgraph
+		reverse_proxy langgraph:8010
+	}
 
 	# OAuth2 protected Prometheus
 	redir /prometheus /prometheus/
-	reverse_proxy /prometheus/* oauth2-proxy:4180
-	reverse_proxy /oauth2/* oauth2-proxy:4180
+	handle /prometheus/* {
+		uri strip_prefix /prometheus
+		reverse_proxy oauth2-proxy:4180
+	}
+	handle /oauth2/* {
+		reverse_proxy oauth2-proxy:4180
+	}
 
 	# Frontend SPA (catch-all for client-side routing)
-	root * /srv/frontend
-	encode gzip
-	try_files {path} /index.html
-	file_server
-
+	handle {
+		root * /srv/frontend
+		encode gzip
+		try_files {path} /index.html
+		file_server
+	}
 	# HTTPS with Let's Encrypt
 	tls alex@appsmithery.co
 }
