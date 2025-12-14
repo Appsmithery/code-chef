@@ -28,6 +28,8 @@ jobs:
       contents: write
       packages: write
       id-token: write
+    outputs:
+      version: ${{ steps.get-version.outputs.version }}
 
     steps:
       - name: Checkout repository
@@ -60,14 +62,15 @@ jobs:
       - name: Bump version (if requested)
         if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
         working-directory: ${{ env.EXTENSION_DIR }}
-        run: |
-          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
-          echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+        run: npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
 
       - name: Get current version
+        id: get-version
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
-          echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
       - name: Package VSIX
         working-directory: ${{ env.EXTENSION_DIR }}
@@ -78,7 +81,7 @@ jobs:
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: vscode-codechef-${{ env.VERSION }}
+          name: vscode-codechef-${{ steps.get-version.outputs.version }}
           path: ${{ env.EXTENSION_DIR }}/*.vsix
           retention-days: 30
 
@@ -91,7 +94,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # List all VSIX files except the current version
           for file in *.vsix; do
-            if [[ "$file" != "vscode-codechef-${{ env.VERSION }}.vsix" ]]; then
+            if [[ "$file" != "vscode-codechef-${{ steps.get-version.outputs.version }}.vsix" ]]; then
               echo "Removing old file: $file"
               git rm -f "$file" || echo "File already removed: $file"
             fi
@@ -103,7 +106,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          gh release delete "v${{ env.VERSION }}" --yes --cleanup-tag || echo "No existing release to delete"
+          gh release delete "v${{ steps.get-version.outputs.version }}" --yes --cleanup-tag || echo "No existing release to delete"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -111,13 +114,13 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ env.VERSION }}
-          name: VS Code Extension v${{ env.VERSION }}
+          tag_name: v${{ steps.get-version.outputs.version }}
+          name: VS Code Extension v${{ steps.get-version.outputs.version }}
           generate_release_notes: true
           draft: true
           prerelease: false
           body: |
-            ![Version](https://img.shields.io/badge/version-${{ env.VERSION }}-blue)
+            ![Version](https://img.shields.io/badge/version-${{ steps.get-version.outputs.version }}-blue)
 
             ## 🚀 Quick Install (Recommended)
 
@@ -125,18 +128,18 @@ jobs:
 
             **Bash/Linux/macOS:**
             ```bash
-            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ steps.get-version.outputs.version }}/vscode-codechef-${{ steps.get-version.outputs.version }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
             ```
 
             **PowerShell/Windows:**
             ```powershell
-            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ steps.get-version.outputs.version }}/vscode-codechef-${{ steps.get-version.outputs.version }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
             ```
 
             ## 📦 Manual Installation
 
             ### Option 1: Download and Install
-            1. Download `vscode-codechef-${{ env.VERSION }}.vsix` below
+            1. Download `vscode-codechef-${{ steps.get-version.outputs.version }}.vsix` below
             2. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
             3. Select the downloaded file
             4. Reload VS Code
@@ -146,13 +149,14 @@ jobs:
             **Bash/Linux/macOS:**
             ```bash
             # Download and install
-            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ steps.get-version.outputs.version }}/vscode-codechef-${{ steps.get-version.outputs.version }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
             ```
 
             **PowerShell/Windows:**
             ```powershell
             # Download and install
-            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
+            curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ steps.get-version.outputs.version }}/vscode-codechef-${{ steps.get-version.outputs.version }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
+            ```
 
             ## 🔄 Update Existing Installation
 
@@ -160,12 +164,12 @@ jobs:
 
             **Bash/Linux/macOS:**
             ```bash
-            code --uninstall-extension appsmithery.vscode-codechef && curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
+            code --uninstall-extension appsmithery.vscode-codechef && curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ steps.get-version.outputs.version }}/vscode-codechef-${{ steps.get-version.outputs.version }}.vsix -o codechef.vsix && code --install-extension codechef.vsix
             ```
 
             **PowerShell/Windows:**
             ```powershell
-            code --uninstall-extension appsmithery.vscode-codechef; curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ env.VERSION }}/vscode-codechef-${{ env.VERSION }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
+            code --uninstall-extension appsmithery.vscode-codechef; curl -L https://github.com/Appsmithery/code-chef/releases/download/v${{ steps.get-version.outputs.version }}/vscode-codechef-${{ steps.get-version.outputs.version }}.vsix -o codechef.vsix; code --install-extension codechef.vsix
             ```
 
             ## 📝 Changes
@@ -178,7 +182,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
-          gh release upload "v${{ env.VERSION }}" *.vsix --clobber
+          gh release upload "v${{ steps.get-version.outputs.version }}" *.vsix --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -186,7 +190,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          gh release edit "v${{ env.VERSION }}" --draft=false || echo "⚠️ Could not auto-publish release (repository rules), please publish manually"
+          gh release edit "v${{ steps.get-version.outputs.version }}" --draft=false || echo "⚠️ Could not auto-publish release (repository rules), please publish manually"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -218,7 +222,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json
-          git commit -m "chore(extension): bump version to ${{ env.VERSION }}" || echo "No changes to commit"
+          git commit -m "chore(extension): bump version to ${{ steps.get-version.outputs.version }}" || echo "No changes to commit"
           git push || echo "Nothing to push"
 
   notify:
