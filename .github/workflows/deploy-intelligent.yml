@@ -67,8 +67,10 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> config/env/.env
           # OAuth Configuration (GH_OAUTH_CLIENT_SECRET renamed to avoid GITHUB_ prefix restriction)
           echo "GITHUB_OAUTH_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}" >> config/env/.env
+          echo "OAUTH2_PROXY_CLIENT_ID=${{ secrets.OAUTH2_PROXY_CLIENT_ID }}" >> config/env/.env
           echo "OAUTH2_PROXY_CLIENT_SECRET=${{ secrets.OAUTH2_PROXY_CLIENT_SECRET }}" >> config/env/.env
           echo "OAUTH2_PROXY_COOKIE_SECRET=${{ secrets.OAUTH2_PROXY_COOKIE_SECRET }}" >> config/env/.env
+          echo "OAUTH2_PROXY_EMAIL_DOMAINS=*" >> config/env/.env
           # Grafana Cloud
           echo "GRAFANA_CLOUD_API_TOKEN=${{ secrets.GRAFANA_CLOUD_API_TOKEN }}" >> config/env/.env
           # Supabase
@@ -188,7 +190,10 @@ jobs:
 
       - name: Restart services (down+up to reload env)
         run: |
-          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose down && docker compose up -d"
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && \
+            docker compose down && \
+            docker compose up -d && \
+            docker image prune -f --filter 'dangling=true'"
 
       - name: Wait for services and health check
         run: |
@@ -263,7 +268,9 @@ jobs:
             docker compose down --remove-orphans && \
             DOCKER_BUILDKIT=1 docker compose build --build-arg BUILDKIT_INLINE_CACHE=1 && \
             docker compose up -d && \
-            docker image prune -f"
+            docker image prune -af --filter 'until=24h' && \
+            docker container prune -f --filter 'until=1h' && \
+            docker builder prune -af --filter 'until=24h'"
 
       - name: Wait for services and health check
         run: |
@@ -325,7 +332,9 @@ jobs:
 
       - name: Quick restart
         run: |
-          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && docker compose restart"
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && \
+            docker compose restart && \
+            docker image prune -f --filter 'dangling=true'"
 
       - name: Wait for services and health check
         run: |
@@ -372,11 +381,13 @@ jobs:
     steps:
       - name: Summary
         run: |
-          echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Strategy:** ${{ needs.detect-changes.outputs.deploy_strategy }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Strategy**: ${{ needs.detect-changes.outputs.deploy_strategy }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
           echo "**Code Changes:** ${{ needs.detect-changes.outputs.has_code_changes }}" >> $GITHUB_STEP_SUMMARY
           echo "**Config Changes:** ${{ needs.detect-changes.outputs.has_config_changes }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp**: $(date -u)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.deploy-config.result }}" == "success" ] || \
@@ -387,5 +398,18 @@ jobs:
             echo "❌ **Deployment failed**" >> $GITHUB_STEP_SUMMARY
           fi
 
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**LangSmith:** [View Traces](https://smith.langchain.com/o/5029c640-3f73-480c-82f3-58e402ed4207/projects/p/f967bb5e-2e61-434f-8ee1-0df8c22bc046)" >> $GITHUB_STEP_SUMMARY
+      - name: Trigger cleanup workflow
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'cleanup-docker-resources.yml',
+              ref: 'main',
+              inputs: {
+                cleanup_type: 'standard'
+              }
+            });
