@@ -74,7 +74,41 @@ code/chef automatically picks the best AI for each task—you don't need to worr
 
 ### Step 1: Install the Extension
 
-**From GitHub Releases** (Recommended):
+#### **Option 1: npx (Recommended)**
+
+Install with one command (requires [GitHub Personal Access Token](https://github.com/settings/tokens/new?scopes=read:packages) with `read:packages` scope):
+
+```bash
+# First time only: Create .npmrc in your home directory
+echo "@appsmithery:registry=https://npm.pkg.github.com" >> ~/.npmrc
+echo "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN" >> ~/.npmrc
+
+# Install extension
+npx @appsmithery/vscode-codechef
+```
+
+**Windows PowerShell:**
+
+```powershell
+# First time only
+Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "@appsmithery:registry=https://npm.pkg.github.com"
+Add-Content -Path "$env:USERPROFILE\.npmrc" -Value "//npm.pkg.github.com/:_authToken=YOUR_GITHUB_TOKEN"
+
+# Install extension
+npx @appsmithery/vscode-codechef
+```
+
+> **Why authentication?** We use GitHub Packages for future monetization support. Public availability via Open VSX (Option 2) doesn't require authentication.
+
+#### **Option 2: Open VSX Registry** (No Authentication)
+
+```bash
+code --install-extension appsmithery.vscode-codechef
+```
+
+Or search "code/chef" in VS Code Extensions (`Ctrl+Shift+X`) if using VSCodium or other Open VSX-compatible editors.
+
+#### **Option 3: GitHub Releases** (Manual)
 
 **Bash/Linux/macOS:**
 
@@ -95,12 +129,20 @@ Or manually:
 3. In VS Code: `Ctrl+Shift+P` → **Extensions: Install from VSIX...**
 4. Select the downloaded file and reload VS Code
 
-**From VS Code Marketplace** (Coming Soon):
+#### **Troubleshooting**
 
-1. Open VS Code Extensions (`Ctrl+Shift+X`)
-2. Search for "code/chef"
-3. Click Install
-4. Reload VS Code if prompted
+**"code command not found"**
+
+1. Open VS Code
+2. Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on Mac)
+3. Type "Shell Command: Install 'code' command in PATH"
+4. Retry installation
+
+**"Authentication required" (npx)**
+
+- Generate token: https://github.com/settings/tokens/new?scopes=read:packages
+- Add to `~/.npmrc` (Linux/macOS) or `%USERPROFILE%\.npmrc` (Windows)
+- Or use Option 2 (Open VSX) - no authentication needed
 
 ### Step 2: Set Up Your API Key
 
