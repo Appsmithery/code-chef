@@ -1,5 +1,5 @@
-# Don't include VSIX files in npm package
-*.vsix
+# VSIX files ARE included for bundled installation
+# *.vsix
 
 # Don't include source maps
 *.map
