@@ -34,6 +34,7 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
 from langsmith import traceable
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -126,6 +127,26 @@ class WorkflowState(TypedDict):
     project_context: Optional[
         Dict[str, Any]
     ]  # project_id, repository_url, workspace_name
+    # Routing decision (structured output from supervisor)
+    routing_decision: Optional[Dict[str, Any]]  # Routing metadata (not user-facing)
+
+
+class RoutingDecision(BaseModel):
+    """Structured output from supervisor agent routing decision."""
+
+    agent_name: str = Field(
+        description="Name of the specialist agent to route to (feature-dev, code-review, infrastructure, cicd, documentation) or 'end' to finish"
+    )
+    requires_approval: bool = Field(
+        default=False,
+        description="Whether this operation requires human approval (HITL)",
+    )
+    reasoning: str = Field(
+        description="Brief explanation of routing decision in conversational tone"
+    )
+    routing_metadata: Optional[Dict[str, Any]] = Field(
+        default=None, description="Internal routing metadata (not shown to user)"
+    )
 
 
 # Agent cache with bound LLM instances
@@ -266,6 +287,10 @@ async def supervisor_node(state: WorkflowState) -> WorkflowState:
     Uses the real SupervisorAgent with LLM to analyze the task and decide:
     1. Which specialized agent should handle it
     2. Whether it requires HITL approval (high-risk operations)
+
+    Uses Pydantic structured output to get clean JSON routing decisions
+    instead of text parsing. Routing metadata is kept separate from
+    user-facing messages.
     """
     project_context = state.get("project_context")
     supervisor = get_agent("supervisor", project_context=project_context)
@@ -284,64 +309,60 @@ async def supervisor_node(state: WorkflowState) -> WorkflowState:
    - Production deployments, infrastructure changes, DB migrations, destructive operations → YES
    - Code generation, reviews, docs, local testing → NO
 
-Format your response exactly like this:
-NEXT_AGENT: <agent-name>
-REQUIRES_APPROVAL: <true|false>
-REASONING: <brief explanation in conversational tone>
+Provide:
+- agent_name: The specialist agent name (or 'end' if conversation is done)
+- requires_approval: true/false for HITL approval
+- reasoning: Brief explanation in conversational tone
 
-If the request is unclear or you need more info:
-NEXT_AGENT: supervisor
-REQUIRES_APPROVAL: false
-REASONING: Need clarification on [specific question]
-
-If the conversation is done:
-NEXT_AGENT: end
-REQUIRES_APPROVAL: false
-REASONING: Task completed successfully
+If the request is unclear, set agent_name='supervisor' and ask for clarification in reasoning.
 """
 
     messages = state["messages"] + [HumanMessage(content=routing_prompt)]
 
     try:
-        response = await supervisor.invoke(messages)
-        response_text = (
-            response.content if hasattr(response, "content") else str(response)
+        # Get supervisor agent with structured output
+        from langchain_core.output_parsers import PydanticOutputParser
+
+        # Configure LLM to return structured output
+        llm_with_structure = supervisor.llm.with_structured_output(RoutingDecision)
+
+        # Invoke with structured output
+        routing_decision: RoutingDecision = await llm_with_structure.ainvoke(messages)
+
+        logger.info(
+            f"[LangGraph] Supervisor routed to: {routing_decision.agent_name}, "
+            f"approval_required: {routing_decision.requires_approval}"
         )
+
+        # Create a user-facing message with just the reasoning (no routing metadata)
+        conversational_response = AIMessage(
+            content=routing_decision.reasoning,
+            additional_kwargs={"routing_decision": routing_decision.model_dump()},
+        )
+
+        return {
+            "messages": [conversational_response],
+            "current_agent": "supervisor",
+            "next_agent": routing_decision.agent_name.lower(),
+            "requires_approval": routing_decision.requires_approval,
+            "pending_operation": routing_decision.reasoning,
+            "routing_decision": routing_decision.model_dump(),  # Store in state for debugging
+        }
+
     except Exception as e:
         logger.error(f"[LangGraph] Supervisor invoke failed: {e}")
         # Fallback to end state on error
         return {
-            "messages": [AIMessage(content=f"Supervisor error: {e}")],
+            "messages": [
+                AIMessage(
+                    content=f"I encountered an error routing your request. Let me try again or please rephrase."
+                )
+            ],
             "current_agent": "supervisor",
             "next_agent": "end",
             "requires_approval": False,
             "task_result": {"error": str(e)},
         }
-
-    # Parse supervisor's routing decision
-    next_agent = "end"  # Default to end
-    requires_approval = False
-    pending_operation = ""
-
-    for line in response_text.split("\n"):
-        if line.startswith("NEXT_AGENT:"):
-            next_agent = line.split(":", 1)[1].strip().lower()
-        elif line.startswith("REQUIRES_APPROVAL:"):
-            requires_approval = "true" in line.lower()
-        elif line.startswith("REASONING:"):
-            pending_operation = line.split(":", 1)[1].strip()
-
-    logger.info(
-        f"[LangGraph] Supervisor routed to: {next_agent}, approval_required: {requires_approval}"
-    )
-
-    return {
-        "messages": [response],
-        "current_agent": "supervisor",
-        "next_agent": next_agent,
-        "requires_approval": requires_approval,
-        "pending_operation": pending_operation,
-    }
 
 
 @traceable(name="feature_dev_node", tags=["langgraph", "node", "feature-dev"])

@@ -88,6 +88,41 @@ from contextlib import asynccontextmanager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifespan event handler for startup/shutdown"""
+    # Validate LangSmith tracing configuration
+    langsmith_tracing = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+    langsmith_project = os.getenv("LANGCHAIN_PROJECT")
+    langsmith_api_key = os.getenv("LANGCHAIN_API_KEY")
+
+    if langsmith_tracing:
+        if not langsmith_project:
+            logger.warning("[Tracing] LANGCHAIN_PROJECT not set, using default project")
+        if not langsmith_api_key:
+            logger.error(
+                "[Tracing] LANGCHAIN_TRACING_V2=true but LANGCHAIN_API_KEY not set!"
+            )
+            raise RuntimeError("LangSmith tracing enabled but API key missing")
+
+        # Test LangSmith connectivity
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    "https://api.smith.langchain.com/health",
+                    headers={"x-api-key": langsmith_api_key},
+                    timeout=5.0,
+                )
+                if response.status_code == 200:
+                    logger.info(
+                        f"[Tracing] ✓ LangSmith connected (project: {langsmith_project})"
+                    )
+                else:
+                    logger.warning(
+                        f"[Tracing] LangSmith health check failed: {response.status_code}"
+                    )
+        except Exception as e:
+            logger.warning(f"[Tracing] Could not verify LangSmith connectivity: {e}")
+    else:
+        logger.info("[Tracing] LangSmith tracing disabled")
+
     # Startup: Register with agent registry
     registry_url = os.getenv("AGENT_REGISTRY_URL", "http://agent-registry:8009")
     agent_id = "orchestrator"
@@ -3293,6 +3328,15 @@ class ChatStreamRequest(BaseModel):
     project_context: Optional[Dict[str, Any]] = Field(
         None, description="Project context (Linear project ID, GitHub repo, workspace)"
     )
+    file_attachments: Optional[List[str]] = Field(
+        None, description="List of file paths to attach to the conversation"
+    )
+    active_file: Optional[str] = Field(
+        None, description="Path to currently active file in editor"
+    )
+    workspace_root: Optional[str] = Field(
+        None, description="Root path of the workspace"
+    )
 
 
 @app.post("/chat/stream", tags=["chat"])
@@ -3361,83 +3405,272 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
         try:
             # Import the graph for streaming
             from graph import WorkflowState, get_graph
-            from langchain_core.messages import HumanMessage
+            from langchain_core.messages import AIMessage, HumanMessage
 
             graph = get_graph()
             if not graph:
                 yield f"data: {json.dumps({'type': 'error', 'error': 'Graph not available'})}\n\n"
                 return
 
+            # Load conversation history from session if exists
+            conversation_history = []
+            try:
+                existing_session = await session_manager.get_session(session_id)
+                if existing_session:
+                    # Load previous messages
+                    history = await session_manager.load_conversation_history(
+                        session_id, limit=10
+                    )
+                    for msg in history:
+                        role = msg.get("role", "user")
+                        content = msg.get("content", "")
+                        if role == "user":
+                            conversation_history.append(HumanMessage(content=content))
+                        elif role == "assistant":
+                            conversation_history.append(AIMessage(content=content))
+                    logger.info(
+                        f"[Chat Stream] Loaded {len(conversation_history)} messages from session {session_id}"
+                    )
+                else:
+                    # Create new session
+                    await session_manager.create_session(
+                        session_id=session_id,
+                        user_id=request.user_id,
+                        metadata={
+                            "project_context": request.project_context,
+                            "workspace_root": request.workspace_root,
+                        },
+                    )
+                    logger.info(f"[Chat Stream] Created new session {session_id}")
+            except Exception as e:
+                logger.warning(f"[Chat Stream] Could not load session history: {e}")
+
             # Extract and enrich project context from request
             project_context = None
             if request.project_context:
+                # Validate required fields
+                required_fields = [
+                    "linear_project_id",
+                    "github_repo_url",
+                    "workspace_name",
+                ]
+                provided_fields = [
+                    f for f in required_fields if request.project_context.get(f)
+                ]
+
+                if not provided_fields:
+                    logger.warning(
+                        "[Chat Stream] project_context provided but missing all identifiers"
+                    )
+
                 project_context = {
                     "project_id": request.project_context.get("linear_project_id")
                     or request.project_context.get("github_repo_url"),
                     "repository_url": request.project_context.get("github_repo_url"),
                     "workspace_name": request.project_context.get("workspace_name"),
+                    "branch": request.project_context.get("branch", "main"),
+                    "directory": request.project_context.get("directory", "."),
                 }
+
+                # Add workspace root if available
+                if request.workspace_root:
+                    project_context["workspace_path"] = request.workspace_root
+
+                logger.info(
+                    f"[Chat Stream] Project context: {project_context.get('project_id', 'unknown')} "
+                    f"({project_context.get('workspace_name', 'unknown')})"
+                )
             elif request.workspace_config:
                 # Fallback to workspace config for project identification
                 project_context = {
                     "workspace_name": request.workspace_config.get("name"),
-                    "workspace_path": request.workspace_config.get("path"),
+                    "workspace_path": request.workspace_config.get("path")
+                    or request.workspace_root,
                 }
+                logger.info(
+                    f"[Chat Stream] Using workspace config: {project_context.get('workspace_name')}"
+                )
+
+            # Read file attachments and active file using MCP filesystem tools
+            file_contents_text = ""
+            files_read = []
+
+            try:
+                # Get MCP tool client for filesystem operations
+                mcp_tool_client = get_mcp_tool_client("feature_dev")
+
+                # Read active file if provided
+                if request.active_file and request.workspace_root:
+                    try:
+                        active_file_path = request.active_file
+                        # Use MCP rust-mcp-filesystem to read file
+                        file_result = await mcp_tool_client.call_tool(
+                            server_name="rust-mcp-filesystem",
+                            tool_name="read_file",
+                            arguments={"path": active_file_path},
+                        )
+                        if file_result and not file_result.get("isError"):
+                            file_content = file_result.get("content", [])
+                            if file_content and len(file_content) > 0:
+                                content_text = file_content[0].get("text", "")
+                                files_read.append(active_file_path)
+                                file_contents_text += f"\\n\\n**Currently Active File: `{active_file_path}`**\\n```\\n{content_text}\\n```\\n"
+                    except Exception as e:
+                        logger.warning(
+                            f"Could not read active file {request.active_file}: {e}"
+                        )
+
+                # Read additional file attachments
+                if request.file_attachments:
+                    for file_path in request.file_attachments:
+                        try:
+                            file_result = await mcp_tool_client.call_tool(
+                                server_name="rust-mcp-filesystem",
+                                tool_name="read_file",
+                                arguments={"path": file_path},
+                            )
+                            if file_result and not file_result.get("isError"):
+                                file_content = file_result.get("content", [])
+                                if file_content and len(file_content) > 0:
+                                    content_text = file_content[0].get("text", "")
+                                    files_read.append(file_path)
+                                    file_contents_text += f"\\n\\n**Attached File: `{file_path}`**\\n```\\n{content_text}\\n```\\n"
+                        except Exception as e:
+                            logger.warning(f"Could not read file {file_path}: {e}")
+
+                if files_read:
+                    logger.info(
+                        f"[Chat Stream] Read {len(files_read)} file(s): {', '.join(files_read)}"
+                    )
+
+            except Exception as e:
+                logger.warning(f"[Chat Stream] Error reading files: {e}")
+
+            # Enrich message with file contents if any were read
+            enriched_message = request.message
+            if file_contents_text:
+                enriched_message = f"{request.message}\\n\\n**Context from workspace:**{file_contents_text}"
+
+            # Build message list: conversation history + new message
+            all_messages = conversation_history + [
+                HumanMessage(content=enriched_message)
+            ]
 
             # Build initial state
             initial_state: WorkflowState = {
-                "messages": [HumanMessage(content=request.message)],
+                "messages": all_messages,
                 "current_agent": "orchestrator",
                 "next_agent": None,
                 "task_result": None,
                 "approvals": [],
                 "requires_approval": False,
                 "workflow_id": session_id,
-                "thread_id": session_id,
+                "thread_id": session_id,  # Reuse same thread for continuity
                 "pending_operation": None,
                 "project_context": project_context,
             }
 
             config = {"configurable": {"thread_id": session_id}}
 
+            # Define specialist agents (not supervisor)
+            SPECIALIST_AGENTS = [
+                "feature_dev",
+                "feature-dev",
+                "code_review",
+                "code-review",
+                "infrastructure",
+                "cicd",
+                "documentation",
+            ]
+
+            # Track current node for filtering
+            current_node = None
+
             # Stream events from LangGraph
             async for event in graph.astream_events(
                 initial_state, config, version="v2"
             ):
                 event_kind = event.get("event", "")
+                event_name = event.get("name", "")
 
-                # Stream LLM tokens
+                # Track which node we're in
+                if event_kind == "on_chain_start":
+                    if any(agent in event_name.lower() for agent in SPECIALIST_AGENTS):
+                        current_node = event_name
+                    elif "supervisor" in event_name.lower():
+                        current_node = "supervisor"
+
+                # Only stream LLM tokens from specialist agents (not supervisor)
                 if event_kind == "on_chat_model_stream":
                     chunk = event.get("data", {}).get("chunk")
                     if chunk and hasattr(chunk, "content") and chunk.content:
-                        yield f"data: {json.dumps({'type': 'content', 'content': chunk.content})}\n\n"
+                        # Check if this is from a specialist agent (not supervisor routing)
+                        if current_node and current_node != "supervisor":
+                            yield f"data: {json.dumps({'type': 'content', 'content': chunk.content})}\n\n"
 
-                # Agent completed
+                # Agent completed (for progress indication)
                 elif event_kind == "on_chain_end":
                     name = event.get("name", "")
-                    if "agent" in name.lower() or name in [
-                        "orchestrator",
-                        "feature_dev",
-                        "code_review",
-                        "infrastructure",
-                        "cicd",
-                        "documentation",
-                    ]:
+                    if any(agent in name.lower() for agent in SPECIALIST_AGENTS):
                         yield f"data: {json.dumps({'type': 'agent_complete', 'agent': name})}\n\n"
+                        current_node = None  # Reset after completion
 
-                # Tool calls (optional visibility)
+                # Tool calls from specialist agents only
                 elif event_kind == "on_tool_start":
-                    tool_name = event.get("name", "unknown")
-                    yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name})}\n\n"
+                    if current_node and current_node != "supervisor":
+                        tool_name = event.get("name", "unknown")
+                        yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name})}\n\n"
 
                 # Add small delay to prevent overwhelming the client
                 await asyncio.sleep(0.01)
+
+            # Save messages to session history
+            try:
+                # Save user message
+                await session_manager.add_message(
+                    session_id=session_id,
+                    role="user",
+                    content=request.message,
+                    metadata={
+                        "file_attachments": request.file_attachments,
+                        "active_file": request.active_file,
+                    },
+                )
+
+                # Get final state to extract assistant response
+                # Note: In streaming, we should collect the response as we go
+                # For now, we'll save a completion marker
+                await session_manager.add_message(
+                    session_id=session_id,
+                    role="assistant",
+                    content="[Response streamed to client]",
+                    metadata={"workflow_id": session_id},
+                )
+                logger.debug(f"[Chat Stream] Saved messages to session {session_id}")
+            except Exception as e:
+                logger.warning(f"[Chat Stream] Could not save to session: {e}")
 
             # Stream complete
             yield f"data: {json.dumps({'type': 'done', 'session_id': session_id})}\n\n"
 
         except Exception as e:
             logger.error(f"Chat stream error: {e}", exc_info=True)
+
+            # Capture LangSmith trace URL if available
+            trace_url = None
+            try:
+                from langsmith import utils as langsmith_utils
+
+                run_tree = langsmith_utils.get_current_run_tree()
+                if run_tree and hasattr(run_tree, "trace_id"):
+                    langsmith_project = os.getenv(
+                        "LANGCHAIN_PROJECT", "code-chef-production"
+                    )
+                    trace_url = f"https://smith.langchain.com/o/default/projects/p/{langsmith_project}/r/{run_tree.trace_id}"
+                    logger.info(f"[Chat Stream] Error trace: {trace_url}")
+            except Exception as trace_err:
+                logger.debug(f"Could not capture trace URL: {trace_err}")
+
             error_message = str(e)
             # Make error messages more user-friendly
             if "API key" in error_message or "401" in error_message:
@@ -3456,7 +3689,18 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             ):
                 error_message = "Model configuration error. Please contact support."
 
-            yield f"data: {json.dumps({'type': 'error', 'error': error_message, 'details': str(e) if logger.level <= logging.DEBUG else None})}\n\n"
+            error_response = {
+                "type": "error",
+                "error": error_message,
+                "trace_url": trace_url,
+                "session_id": session_id,
+            }
+
+            # Include full details in debug mode
+            if logger.level <= logging.DEBUG:
+                error_response["details"] = str(e)
+
+            yield f"data: {json.dumps(error_response)}\n\n"
 
     return StreamingResponse(
         event_generator(),
