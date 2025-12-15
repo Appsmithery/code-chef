@@ -191,7 +191,8 @@ jobs:
       - name: Restart services (down+up to reload env)
         run: |
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/deploy && \
-            docker compose down && \
+            docker compose down --remove-orphans --volumes && \
+            docker container prune -f && \
             docker compose up -d && \
             docker image prune -f --filter 'dangling=true'"
 
@@ -265,11 +266,11 @@ jobs:
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }} && \
             git pull origin main && \
             cd deploy && \
-            docker compose down --remove-orphans && \
+            docker compose down --remove-orphans --volumes && \
+            docker container prune -f && \
             DOCKER_BUILDKIT=1 docker compose build --build-arg BUILDKIT_INLINE_CACHE=1 && \
             docker compose up -d && \
             docker image prune -af --filter 'until=24h' && \
-            docker container prune -f --filter 'until=1h' && \
             docker builder prune -af --filter 'until=24h'"
 
       - name: Wait for services and health check
