@@ -39,6 +39,7 @@ from lib.langgraph_base import (
 )
 from lib.linear_client import get_linear_client
 from lib.linear_project_manager import get_project_manager
+from lib.llm_client import LLMClient, get_llm_client
 from lib.mcp_client import MCPClient, resolve_manifest_path
 from lib.mcp_discovery import get_mcp_discovery
 from lib.mcp_tool_client import get_mcp_tool_client
