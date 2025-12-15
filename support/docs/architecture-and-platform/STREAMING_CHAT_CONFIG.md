@@ -447,7 +447,7 @@ async def validate_api_key(request: Request, call_next):
 ### Pre-Deployment
 
 - [ ] All agent models configured in `config/agents/models.yaml`
-- [ ] OpenRouter API key in `deploy/.env`
+- [ ] OpenRouter API key in `config/env/.env`
 - [ ] PostgreSQL checkpointer connection tested
 - [ ] LangSmith project created with correct API key
 - [ ] Grafana dashboards imported
