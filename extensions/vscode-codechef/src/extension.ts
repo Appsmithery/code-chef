@@ -5,6 +5,7 @@ import { registerCopyPermalinkCommand } from './commands/copyPermalink';
 import * as modelops from './commands/modelops';
 import { AGENT_ICONS, buildLinearIssueUrl, getAgentColor as getAgentColorFn } from './constants';
 import { LinearWatcher } from './linearWatcher';
+import { showFirstRunWizard } from './onboarding';
 import { OrchestratorClient } from './orchestratorClient';
 
 let chatParticipant: CodeChefChatParticipant;
@@ -57,6 +58,9 @@ export function activate(context: vscode.ExtensionContext) {
             
             context.subscriptions.push(participant);
             console.log('code/chef: Chat participant registered successfully as @chef');
+            
+            // Show first-run onboarding wizard
+            showFirstRunWizard(context);
             
             // Show success notification on first install
             const hasShownWelcome = context.globalState.get('hasShownChatWelcome', false);

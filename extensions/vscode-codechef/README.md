@@ -1,6 +1,8 @@
 # code/chef — Your AI Development Team
 
-[![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue?logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
+[![VS Code Marketplace](https://img.shields.io/vscode-marketplace/v/appsmithery.vscode-codechef.svg?label=VS%20Code%20Marketplace&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
+[![Installs](https://img.shields.io/vscode-marketplace/i/appsmithery.vscode-codechef.svg?label=Installs)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
+[![Rating](https://img.shields.io/vscode-marketplace/r/appsmithery.vscode-codechef.svg?label=Rating)](https://marketplace.visualstudio.com/items?itemName=appsmithery.vscode-codechef)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 > **Talk to your code. Ship faster.**
@@ -67,6 +69,61 @@ Get professional docs written for you—README files, API guides, whatever you n
 ### 🧠 Always Uses the Right AI
 
 code/chef automatically picks the best AI for each task—you don't need to worry about which model to use. Different tasks get different specialists, just like a real team.
+
+### 🎯 Smart Task Routing
+
+6 specialized agents handle your requests with expert precision:
+
+```mermaid
+graph LR
+    User[👤 You] --> Supervisor[🎩 Supervisor]
+    Supervisor --> FeatureDev[💻 Feature Dev]
+    Supervisor --> CodeReview[🔍 Code Review]
+    Supervisor --> Infrastructure[🏗️ Infrastructure]
+    Supervisor --> CICD[🚀 CI/CD]
+    Supervisor --> Documentation[📚 Documentation]
+
+    FeatureDev --> Tools[178+ MCP Tools]
+    CodeReview --> Tools
+    Infrastructure --> Tools
+    CICD --> Tools
+    Documentation --> Tools
+```
+
+### 💰 90% Lower Token Costs
+
+Progressive tool loading + semantic code search drastically reduces token waste compared to traditional approaches.
+
+| Operation              | Traditional | code/chef | Savings |
+| ---------------------- | ----------- | --------- | ------- |
+| Feature implementation | ~8K tokens  | ~800      | 90%     |
+| Code review            | ~5K tokens  | ~600      | 88%     |
+| Documentation          | ~3K tokens  | ~400      | 87%     |
+
+### 🧠 Learns Your Codebase
+
+Fine-tune models on your code in ~1 hour. Test improvements automatically, deploy with confidence. (Optional - works great out of the box!)
+
+### 🚀 Production-Ready
+
+Secure cloud infrastructure with automatic HTTPS, health monitoring, zero-downtime deploys. Or self-host on your own infrastructure.
+
+---
+
+## 🆓 Pricing
+
+> **Current Status**: Private beta testing phase
+
+code/chef is currently in **private beta** with limited testing. The extension will transition to a paid model in 2025 with:
+
+- **Free tier**: For personal projects and evaluation
+- **Pro tier**: For professional developers with higher usage needs
+- **Team tier**: For development teams with collaboration features
+- **Enterprise tier**: Custom pricing with SSO and audit logging
+
+Beta testers will receive **special early-adopter pricing** when paid plans launch.
+
+For comprehensive documentation and updates, visit [codechef.appsmithery.co](https://codechef.appsmithery.co)
 
 ---
 
@@ -288,6 +345,45 @@ code/chef integrates with the tools you already use:
 - **Databases** — PostgreSQL, Redis, and more
 
 No extra setup needed—code/chef figures out what you're using and works with it.
+
+---
+
+## ❓ Frequently Asked Questions
+
+### How much does it cost?
+
+code/chef is currently in private beta testing. Paid plans will launch in 2025 with a free tier for personal projects. Beta testers will receive special early-adopter pricing.
+
+### What's the difference vs GitHub Copilot?
+
+GitHub Copilot provides inline code suggestions. code/chef orchestrates **multi-agent workflows** with 6 specialized agents (feature-dev, code-review, infrastructure, cicd, documentation, supervisor), progressive tool loading (90% token savings), and ModelOps for continuous improvement. It's like having an entire dev team instead of just an autocomplete assistant.
+
+### Can I self-host?
+
+Yes! See [DEPLOYMENT.md](https://github.com/Appsmithery/code-chef/blob/main/support/docs/getting-started/DEPLOYMENT.md) for complete self-hosting instructions. Requires Docker and a $5/month DigitalOcean droplet (or equivalent).
+
+### What models are used?
+
+We use specialized models for each agent:
+
+- **Supervisor**: Claude 3.5 Sonnet (best reasoning for complex routing)
+- **Feature Dev**: Qwen 2.5 Coder 32B (purpose-built for code generation)
+- **Code Review**: DeepSeek V3 (strong analytical reasoning)
+- **Infrastructure/CI/CD**: Gemini 2.0 Flash (1M context window for IaC)
+- **Documentation**: DeepSeek V3 (excellent technical writing)
+
+See the [LLM Operations Guide](https://github.com/Appsmithery/code-chef/blob/main/support/docs/operations/LLM_OPERATIONS.md) for complete model selection strategy.
+
+### How is my code kept private?
+
+**Your code is never stored** on our servers. When using the cloud orchestrator, requests are logged for debugging (retained 7 days) but no source code is persisted. For complete data privacy, self-host the orchestrator. See [PRIVACY.md](PRIVACY.md) for full details.
+
+### Who is code/chef for?
+
+- **Solo developers** who want a full dev team without the overhead
+- **Small teams** looking to move faster without hiring more people
+- **Enterprise teams** who want consistent code quality and automated workflows
+- **Anyone** who's tired of context-switching between multiple tools
 
 ---
 

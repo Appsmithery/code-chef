@@ -59,6 +59,39 @@ jobs:
         working-directory: ${{ env.EXTENSION_DIR }}
         run: npm run lint || true
 
+      - name: Validate Visual Assets
+        working-directory: ${{ env.EXTENSION_DIR }}
+        run: |
+          echo "📸 Validating visual assets for marketplace..."
+
+          # Check if docs folder exists
+          if [ ! -d "docs" ]; then
+            echo "⚠️ Warning: docs/ folder not found - screenshots recommended for marketplace"
+          fi
+
+          # Check for icon
+          if [ -f "icon.png" ]; then
+            echo "✅ Icon found"
+            # Check icon dimensions (requires imagemagick)
+            # identify -format "%wx%h" icon.png | grep "128x128" || echo "⚠️ Icon should be 128x128 pixels"
+          else
+            echo "❌ Missing icon.png"
+          fi
+
+          # Check for README
+          if [ -f "README.md" ]; then
+            echo "✅ README.md found"
+          else
+            echo "❌ Missing README.md"
+          fi
+
+          # Check for CHANGELOG
+          if [ -f "CHANGELOG.md" ]; then
+            echo "✅ CHANGELOG.md found"
+          else
+            echo "⚠️ Warning: CHANGELOG.md not found - recommended for marketplace"
+          fi
+
       - name: Bump version (if requested)
         if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
         working-directory: ${{ env.EXTENSION_DIR }}
@@ -211,6 +244,24 @@ jobs:
           git checkout package.json
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish to VS Code Marketplace
+        if: github.event_name == 'workflow_dispatch'
+        working-directory: ${{ env.EXTENSION_DIR }}
+        continue-on-error: true
+        run: |
+          echo "📦 Publishing to VS Code Marketplace..."
+          if [ -z "${{ secrets.VSCE_TOKEN }}" ]; then
+            echo "⚠️ VSCE_TOKEN not configured - skipping marketplace publish"
+            echo "ℹ️ Add VSCE_TOKEN secret to enable marketplace publishing"
+            exit 0
+          fi
+          # Install vsce if not available
+          npm install -g @vscode/vsce
+          # Publish to marketplace
+          vsce publish --no-git-tag-version --pat ${{ secrets.VSCE_TOKEN }} || echo "⚠️ Marketplace publish failed - may already exist at this version"
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
 
       - name: Commit version bump
         if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
