@@ -82,7 +82,7 @@ You are the **first touchpoint** for all automation requests in the Dev-Tools sy
 
 - `shared/lib/gradient_client.py` - LLM inference with automatic LangSmith tracing
 - `shared/lib/mcp_client.py` - Tool invocation via MCP gateway
-- `shared/lib/langchain_gradient.py` - LangChain LLM wrappers for multi-provider support
+- `shared/lib/llm_providers.py` - LangChain LLM wrappers for multi-provider support (OpenRouter, Claude, Mistral, OpenAI)
 - `shared/lib/guardrail.py` - Policy enforcement and safety checks
 
 ## Specialist Agent Fleet

@@ -3,23 +3,23 @@ Unified LangGraph Configuration
 Single source of truth for all LLM, embedding, and infrastructure config across agents
 """
 
-import os
-from typing import Dict, Any, Optional
 import logging
+import os
+from typing import Any, Dict, Optional
 
-from shared.lib.langchain_gradient import (
-    orchestrator_llm,
-    feature_dev_llm,
-    code_review_llm,
-    infrastructure_llm,
+from shared.lib.llm_providers import (
     cicd_llm,
+    code_review_llm,
     documentation_llm,
-    gradient_embeddings,
-    get_gradient_llm,
-    get_gradient_embeddings
+    feature_dev_llm,
+    get_embeddings,
+    get_llm,
+    shared_embeddings,
+    infrastructure_llm,
+    orchestrator_llm,
 )
-from shared.lib.qdrant_client import get_qdrant_client
 from shared.lib.langgraph_base import get_postgres_checkpointer
+from shared.lib.qdrant_client import get_qdrant_client
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ AGENT_LLMS = {
     "code-review": code_review_llm,
     "infrastructure": infrastructure_llm,
     "cicd": cicd_llm,
-    "documentation": documentation_llm
+    "documentation": documentation_llm,
 }
 
 # Shared components
@@ -45,53 +45,53 @@ MODEL_METADATA: Dict[str, Dict[str, Any]] = {
         "provider": "digitalocean-gradient",
         "use_case": "complex_reasoning",
         "cost_per_1m_tokens": 0.60,
-        "context_window": 128000
+        "context_window": 128000,
     },
     "feature-dev": {
         "model": "codellama-13b-instruct",
         "provider": "digitalocean-gradient",
         "use_case": "code_generation",
         "cost_per_1m_tokens": 0.30,
-        "context_window": 16000
+        "context_window": 16000,
     },
     "code-review": {
         "model": "llama-3.1-70b-instruct",
         "provider": "digitalocean-gradient",
         "use_case": "code_analysis",
         "cost_per_1m_tokens": 0.60,
-        "context_window": 128000
+        "context_window": 128000,
     },
     "infrastructure": {
         "model": "llama-3.1-8b-instruct",
         "provider": "digitalocean-gradient",
         "use_case": "infrastructure_config",
         "cost_per_1m_tokens": 0.20,
-        "context_window": 128000
+        "context_window": 128000,
     },
     "cicd": {
         "model": "llama-3.1-8b-instruct",
         "provider": "digitalocean-gradient",
         "use_case": "pipeline_generation",
         "cost_per_1m_tokens": 0.20,
-        "context_window": 128000
+        "context_window": 128000,
     },
     "documentation": {
         "model": "mistral-7b-instruct",
         "provider": "digitalocean-gradient",
         "use_case": "documentation_generation",
         "cost_per_1m_tokens": 0.20,
-        "context_window": 8192
-    }
+        "context_window": 8192,
+    },
 }
 
 
 def get_agent_llm(agent_name: str):
     """
     Get configured LLM for specific agent
-    
+
     Args:
         agent_name: Name of the agent (orchestrator, feature-dev, etc.)
-        
+
     Returns:
         Configured ChatOpenAI instance or None if not found
     """
@@ -123,10 +123,10 @@ def get_checkpointer():
 def get_model_metadata(agent_name: str) -> Optional[Dict[str, Any]]:
     """
     Get metadata about the model used by an agent
-    
+
     Args:
         agent_name: Name of the agent
-        
+
     Returns:
         Dict with model metadata or None if not found
     """
@@ -136,7 +136,7 @@ def get_model_metadata(agent_name: str) -> Optional[Dict[str, Any]]:
 def is_fully_configured() -> Dict[str, bool]:
     """
     Check configuration status of all components
-    
+
     Returns:
         Dict mapping component name to availability status
     """
@@ -144,9 +144,9 @@ def is_fully_configured() -> Dict[str, bool]:
         "llms": all(llm is not None for llm in AGENT_LLMS.values()),
         "embeddings": EMBEDDINGS is not None,
         "qdrant": QDRANT_CLIENT.is_enabled(),
-        "checkpointer": CHECKPOINTER is not None
+        "checkpointer": CHECKPOINTER is not None,
     }
-    
+
     return status
 
 

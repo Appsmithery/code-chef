@@ -34,7 +34,7 @@ else:
 agents_path = repo_root / "agents"
 sys.path.insert(0, str(agents_path))
 
-from shared.lib.langchain_gradient import get_llm, get_embeddings, LLM_PROVIDER, EMBEDDING_PROVIDER
+from shared.lib.llm_providers import get_llm, get_embeddings, LLM_PROVIDER, EMBEDDING_PROVIDER
 
 
 async def test_llm(provider: str, model: str = None):

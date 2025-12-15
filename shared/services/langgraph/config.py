@@ -3,23 +3,23 @@ Unified LangGraph Configuration
 Single source of truth for all LLM, embedding, and infrastructure config across agents
 """
 
-import os
-from typing import Dict, Any, Optional
 import logging
+import os
+from typing import Any, Dict, Optional
 
-from shared.lib.langchain_gradient import (
-    orchestrator_llm,
-    feature_dev_llm,
-    code_review_llm,
-    infrastructure_llm,
+from shared.lib.llm_providers import (
     cicd_llm,
+    code_review_llm,
     documentation_llm,
-    shared_embeddings,
-    get_gradient_llm,
+    feature_dev_llm,
     get_embeddings,
+    get_gradient_llm,
+    infrastructure_llm,
+    orchestrator_llm,
+    shared_embeddings,
 )
-from shared.lib.qdrant_client import get_qdrant_client
 from shared.lib.langgraph_base import get_postgres_checkpointer
+from shared.lib.qdrant_client import get_qdrant_client
 
 logger = logging.getLogger(__name__)
 

@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple
 # Mapping of deprecated → current import paths
 IMPORT_MIGRATIONS = {
     r'from agents\._shared\.qdrant_client import': 'from shared.lib.qdrant_client import',
-    r'from agents\._shared\.langchain_gradient import': 'from shared.lib.langchain_gradient import',
+    r'from agents\._shared\.llm_providers import': 'from shared.lib.llm_providers import',
     r'from agents\._shared\.mcp_discovery import': 'from shared.lib.mcp_discovery import',
     r'from agents\._shared\.langgraph_base import': 'from shared.lib.langgraph_base import',
     r'from agents\.cicd\.service import': 'from agent_cicd.service import',
