@@ -4,12 +4,12 @@
 # Runs via cron: 0 3 * * 0 (Sundays at 3 AM)
 #
 # Purpose: Prevent memory/disk exhaustion from accumulated Docker resources
-# Location: /opt/Dev-Tools/support/scripts/maintenance/weekly-cleanup.sh
+# Location: /opt/code-chef/support/scripts/maintenance/weekly-cleanup.sh
 #
 
 set -e
 
-DEPLOY_PATH="/opt/Dev-Tools/deploy"
+DEPLOY_PATH="/opt/code-chef/deploy"
 LOG_FILE="/var/log/docker-cleanup.log"
 
 # Logging functions

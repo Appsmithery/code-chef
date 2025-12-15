@@ -17,7 +17,7 @@ Usage:
 
 Schedule as cron job:
     # Run every Sunday at 2 AM
-    0 2 * * 0 /usr/bin/python3 /opt/Dev-Tools/support/scripts/generate_audit_reports.py
+    0 2 * * 0 /usr/bin/python3 /opt/code-chef/support/scripts/generate_audit_reports.py
 """
 
 import argparse

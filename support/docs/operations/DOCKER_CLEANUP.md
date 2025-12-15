@@ -56,7 +56,7 @@ df -h
 
 ```bash
 # Stop Dev-Tools services first
-cd /opt/Dev-Tools/compose
+cd /opt/code-chef/compose
 docker-compose down
 
 # Remove stopped containers
@@ -82,7 +82,7 @@ docker builder prune -f
 
 ```bash
 # Stop Dev-Tools services
-cd /opt/Dev-Tools/compose
+cd /opt/code-chef/compose
 docker-compose down
 
 # Remove ALL unused images (including base images)
@@ -108,7 +108,7 @@ docker network prune -f
 
 ```bash
 # Stop Dev-Tools services
-cd /opt/Dev-Tools/compose
+cd /opt/code-chef/compose
 docker-compose down
 
 # Remove EVERYTHING (except volumes)
@@ -132,7 +132,7 @@ docker builder prune -a -f
 # STOP! Are you sure? This deletes ALL data!
 # Backup first: ./scripts/backup_volumes.sh
 
-cd /opt/Dev-Tools/compose
+cd /opt/code-chef/compose
 docker-compose down -v  # -v flag removes volumes
 
 # Remove everything

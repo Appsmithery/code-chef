@@ -59,7 +59,7 @@ function Write-Success { param($Message) Write-Host "  [OK] $Message" -Foregroun
 function Write-Failure { param($Message) Write-Host "  [ERROR] $Message" -ForegroundColor Red }
 
 $DROPLET = "do-codechef-droplet"
-$DEPLOY_PATH = "/opt/Dev-Tools"
+$DEPLOY_PATH = "/opt/code-chef"
 
 # Port mapping
 $ports = @{

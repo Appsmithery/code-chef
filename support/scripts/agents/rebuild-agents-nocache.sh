@@ -6,7 +6,7 @@ export DOCKER_HOST=unix:///var/run/docker.sock
 
 echo "[REBUILD] Building all 6 agents with --no-cache..."
 
-cd /opt/Dev-Tools
+cd /opt/code-chef
 
 # Build each agent individually using docker build --no-cache
 agents=("orchestrator" "feature-dev" "code-review" "infrastructure" "cicd" "documentation")

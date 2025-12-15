@@ -383,7 +383,7 @@ CREATE INDEX idx_approval_requests_workflow ON approval_requests(workflow_id);
 ssh do-codechef-droplet
 
 # Apply schema
-cd /opt/Dev-Tools
+cd /opt/code-chef
 task workflow:init-db
 
 # Verify

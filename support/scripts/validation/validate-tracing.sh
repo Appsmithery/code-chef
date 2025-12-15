@@ -152,12 +152,12 @@ if [ $FAILED -eq 0 ]; then
     echo "   curl http://localhost:8007/collections | jq"
     echo ""
     echo "4. Check Docker Logs:"
-    echo "   docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs -f orchestrator"
+    echo "   docker compose -f /opt/code-chef/deploy/docker-compose.yml logs -f orchestrator"
     echo ""
     exit 0
 else
     echo -e "${RED}❌ Some tests failed. Check logs:${NC}"
-    echo "docker compose -f /opt/Dev-Tools/deploy/docker-compose.yml logs --tail=50"
+    echo "docker compose -f /opt/code-chef/deploy/docker-compose.yml logs --tail=50"
     echo ""
     exit 1
 fi

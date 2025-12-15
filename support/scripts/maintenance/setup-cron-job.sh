@@ -13,7 +13,7 @@ set -e
 DROPLET_HOST="codechef.appsmithery.co"
 DROPLET_IP="45.55.173.72"  # For SSH
 DROPLET_USER="root"
-DEPLOY_PATH="/opt/Dev-Tools"
+DEPLOY_PATH="/opt/code-chef"
 SCRIPT_NAME="weekly-cleanup.sh"
 CRON_SCHEDULE="0 3 * * 0"
 
@@ -33,7 +33,7 @@ scp support/scripts/maintenance/$SCRIPT_NAME $DROPLET_USER@$DROPLET_IP:$DEPLOY_P
 # Make script executable and install cron job
 echo "⚙️  Installing cron job..."
 ssh $DROPLET_USER@$DROPLET_IP << 'EOF'
-    SCRIPT_PATH="/opt/Dev-Tools/support/scripts/maintenance/weekly-cleanup.sh"
+    SCRIPT_PATH="/opt/code-chef/support/scripts/maintenance/weekly-cleanup.sh"
     CRON_SCHEDULE="0 3 * * 0"
     LOG_FILE="/var/log/docker-cleanup.log"
     
