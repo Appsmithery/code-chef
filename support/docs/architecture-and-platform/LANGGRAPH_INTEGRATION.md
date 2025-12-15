@@ -273,7 +273,7 @@ invoke_workflow(
 The `GradientLLM` class wraps `gradient_client` for use with LangChain tools:
 
 ```python
-from agents._shared.langchain_gradient import get_gradient_llm
+from agents._shared.llm_providers import get_llm
 
 llm = get_gradient_llm(
     agent_name="orchestrator",

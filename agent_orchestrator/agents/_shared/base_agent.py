@@ -318,7 +318,7 @@ class BaseAgent:
         max_tokens = agent_config.get("max_tokens", 2000)
 
         # Use LangChain get_llm for multi-provider support
-        from lib.langchain_gradient import get_llm
+        from lib.llm_providers import get_llm
 
         llm = get_llm(
             agent_name=self.agent_name,

@@ -1,19 +1,45 @@
 """
-Unified LangChain Configuration for Multi-Provider LLM Support
+Unified LangChain LLM Provider Configuration
 
-Supports DigitalOcean Gradient AI (default), Claude, Mistral, OpenAI with easy provider switching.
+Multi-provider LLM abstraction layer with OpenRouter as the primary gateway.
 Single source of truth for all model configurations across agents.
 
-DigitalOcean Gradient AI Products:
-1. Serverless Inference (OpenAI-compatible chat completions)
-   - Endpoint: https://api.digitalocean.com/v2/ai
-   - Auth: Bearer token from Model Provider Keys (sk-do-...)
-   - Models: llama3-8b-instruct, llama3-70b-instruct, etc.
+Architecture:
+- Primary LLM Gateway: OpenRouter (200+ models, unified API)
+- Embedding Provider: OpenAI (text-embedding-3-small)
+- Additional Providers: Claude, Mistral, OpenAI (direct access)
 
-2. Gradient AI Platform (Agentic Cloud)
-   - Endpoint: https://api.digitalocean.com/
-   - Auth: Personal Access Token (dop_v1_...)
-   - Features: Agent workspaces, knowledge bases, guardrails
+OpenRouter Benefits:
+- Access to 200+ models from 50+ providers via single API key
+- Per-agent model selection for cost/performance optimization
+- Automatic failover between providers
+- Unified billing and rate limiting
+- Free tier models available for development
+
+Supported Providers:
+1. openrouter (default) - Multi-model gateway
+   - Endpoint: https://openrouter.ai/api/v1
+   - Auth: API key from https://openrouter.ai/keys
+   - Models: anthropic/claude-3-5-sonnet, qwen/qwen-2.5-coder-32b-instruct, etc.
+   - See: https://openrouter.ai/models
+
+2. openai - Direct OpenAI API access
+   - Endpoint: https://api.openai.com/v1
+   - Models: gpt-4o, gpt-4o-mini, etc.
+   - Also used for embeddings (text-embedding-3-small)
+
+3. claude - Direct Anthropic API access
+   - Endpoint: https://api.anthropic.com/v1
+   - Models: claude-3-5-sonnet, claude-3-5-haiku
+
+4. mistral - Direct Mistral API access
+   - Endpoint: https://api.mistral.ai/v1
+   - Models: mistral-large-latest, mistral-small-latest
+
+Configuration:
+- Per-agent models: config/agents/models.yaml
+- Provider selection: LLM_PROVIDER environment variable (default: openrouter)
+- API keys: OPENROUTER_API_KEY, OPENAI_API_KEY, etc.
 """
 
 import logging
@@ -61,9 +87,7 @@ def get_llm(
     model: Optional[str] = None,
     temperature: float = 0.7,
     max_tokens: int = 2000,
-    provider: Optional[
-        Literal["claude", "mistral", "openai", "openrouter"]
-    ] = None,
+    provider: Optional[Literal["claude", "mistral", "openai", "openrouter"]] = None,
     **kwargs,
 ) -> Union[ChatOpenAI, "ChatAnthropic", "ChatMistralAI"]:
     """
@@ -275,7 +299,9 @@ def get_gradient_llm(
     agent_name: str, model: str = "llama3-8b-instruct", **kwargs
 ) -> ChatOpenAI:
     """Deprecated: Use get_llm() with provider='openrouter' instead"""
-    logger.warning("get_gradient_llm() is deprecated. Use get_llm() with provider='openrouter'")
+    logger.warning(
+        "get_gradient_llm() is deprecated. Use get_llm() with provider='openrouter'"
+    )
     return get_llm(agent_name, model=model, provider="openrouter", **kwargs)
 
 
@@ -360,4 +386,6 @@ logger.info(f"  LLM Provider: {LLM_PROVIDER} (OpenRouter multi-model gateway)")
 logger.info(f"  Embedding Provider: {EMBEDDING_PROVIDER} (text-embedding-3-small)")
 logger.info(f"  OpenRouter API Key: {'✓ SET' if OPENROUTER_API_KEY else '✗ NOT SET'}")
 logger.info(f"  OpenAI API Key: {'✓ SET' if OPENAI_API_KEY else '✗ NOT SET'}")
-logger.info(f"  LangSmith tracing: {'✓ ENABLED' if LANGSMITH_ENABLED else '✗ DISABLED'}")
+logger.info(
+    f"  LangSmith tracing: {'✓ ENABLED' if LANGSMITH_ENABLED else '✗ DISABLED'}"
+)

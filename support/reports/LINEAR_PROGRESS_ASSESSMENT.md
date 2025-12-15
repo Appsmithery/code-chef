@@ -39,7 +39,7 @@
 **Evidence**:
 
 - LangSmith tracing configured in all agents via `LANGCHAIN_TRACING_V2=true`
-- Automatic tracing in `shared/lib/gradient_client.py` and `shared/lib/langchain_gradient.py`
+- Automatic tracing in `shared/lib/gradient_client.py` and `shared/lib/llm_providers.py`
 - Environment variables configured:
   - `LANGCHAIN_TRACING_V2=true`
   - `LANGCHAIN_PROJECT=dev-tools-agents`
@@ -50,7 +50,7 @@
 **Artifacts**:
 
 - `shared/lib/gradient_client.py` - Lines 4-8, 23, 32-40 (tracing implementation)
-- `shared/lib/langchain_gradient.py` - Lines 49-55, 97, 244 (LangSmith integration)
+- `shared/lib/llm_providers.py` - Lines 49-55, 97, 244 (LangSmith integration)
 - `config/env/.env` - Lines 40-46 (configuration)
 - All 6 agents log: "LangSmith tracing ENABLED"
 

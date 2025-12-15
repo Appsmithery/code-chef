@@ -20,7 +20,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 import time
 
-from lib.langchain_gradient import get_llm
+from lib.llm_providers import get_llm
 from lib.token_tracker import token_tracker
 from lib.config_loader import get_config_loader
 
