@@ -385,8 +385,11 @@ progressive_loader = get_progressive_loader(mcp_client, mcp_discovery)
 risk_assessor = get_risk_assessor()
 hitl_manager = get_hitl_manager()
 
+# LLM client for orchestrator operations
+llm_client = get_llm_client("supervisor")
+
 # Chat interface components (Phase 5)
-intent_recognizer = get_intent_recognizer(gradient_client)
+intent_recognizer = get_intent_recognizer(llm_client)
 session_manager = get_session_manager()
 
 # Event bus for notifications (Phase 5.2)
@@ -1446,7 +1449,7 @@ async def execute_orchestration_flow(
     available_tools_context = progressive_loader.format_tools_for_llm(relevant_toolsets)
     required_tools = get_required_tools_for_task(request.description)
 
-    if gradient_client.is_enabled():
+    if llm_client.is_enabled():
         subtasks = await decompose_with_llm(
             request, task_id, available_tools=available_tools_context
         )
@@ -2929,7 +2932,7 @@ Use available tools to gather context if needed."""
         )
 
         # Get LLM with tools bound for function calling
-        llm_with_tools = gradient_client.get_llm_with_tools(
+        llm_with_tools = llm_client.get_llm_with_tools(
             tools=langchain_tools, temperature=0.3, max_tokens=1000
         )
 
@@ -3762,7 +3765,7 @@ async def handle_orchestrator_request(request: AgentRequestEvent) -> Dict[str, A
             raise ValueError("task_description required for DECOMPOSE_TASK")
 
         # Use Gradient AI to decompose (if available)
-        if gradient_client.is_enabled():
+        if llm_client.is_enabled():
             prompt = f"""Decompose this development task into 3-5 subtasks:
 
 Task: {task_description}
@@ -3773,7 +3776,7 @@ Return JSON array of subtasks with:
 - priority: high/normal/low
 - dependencies: List of prerequisite subtask indices"""
 
-            decomposition = await gradient_client.generate(
+            decomposition = await llm_client.generate(
                 prompt=prompt, session_id=request.correlation_id or request.request_id
             )
 
@@ -4554,7 +4557,7 @@ async def smart_execute_workflow(request: SmartWorkflowRequest):
 
     # Get or create the workflow router
     router = get_workflow_router(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         confirm_threshold=request.confirm_threshold or 0.7,
     )
 
@@ -4587,7 +4590,7 @@ async def smart_execute_workflow(request: SmartWorkflowRequest):
 
     # Execute the workflow
     try:
-        engine = WorkflowEngine(gradient_client=gradient_client)
+        engine = WorkflowEngine(llm_client=llm_client)
         template_name = f"{selection.workflow_name}.workflow.yaml"
 
         # Merge extracted context with provided context
@@ -4650,7 +4653,7 @@ async def execute_workflow(request: WorkflowExecuteRequest):
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        gradient_client=get_gradient_client(),
+        llm_client=get_llm_client(),
         state_client=registry_client,
     )
 
@@ -4771,7 +4774,7 @@ async def resume_workflow(workflow_id: str, request: WorkflowResumeRequest):
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        gradient_client=get_gradient_client(),
+        llm_client=get_llm_client(),
         state_client=registry_client,
     )
 
@@ -4852,7 +4855,7 @@ async def get_workflow_events(
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         state_client=state_client,
     )
 
@@ -4904,7 +4907,7 @@ async def export_workflow_events(
     from shared.lib.workflow_events import export_events_to_csv, export_events_to_json
 
     engine = WorkflowEngine(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         state_client=state_client,
     )
 
@@ -4973,7 +4976,7 @@ async def replay_workflow_events(workflow_id: str):
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         state_client=state_client,
     )
 
@@ -5025,7 +5028,7 @@ async def get_workflow_state_at_timestamp(workflow_id: str, timestamp: str):
     from shared.lib.workflow_reducer import get_state_at_timestamp
 
     engine = WorkflowEngine(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         state_client=state_client,
     )
 
@@ -5136,7 +5139,7 @@ async def annotate_workflow_event(
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         state_client=state_client,
     )
 
@@ -5206,7 +5209,7 @@ async def cancel_workflow(
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         state_client=state_client,
     )
 
@@ -5261,7 +5264,7 @@ async def retry_workflow_from_step(
     from shared.lib.retry_logic import RetryConfig
 
     engine = WorkflowEngine(
-        gradient_client=gradient_client,
+        llm_client=llm_client,
         state_client=state_client,
     )
 
