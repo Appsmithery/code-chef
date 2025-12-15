@@ -28,7 +28,7 @@ def workflow_engine():
     """WorkflowEngine instance without state_client for unit testing"""
     engine = WorkflowEngine(
         templates_dir="agent_orchestrator/workflows/templates",
-        gradient_client=None,
+        llm_client=None,
         state_client=None,
     )
     return engine

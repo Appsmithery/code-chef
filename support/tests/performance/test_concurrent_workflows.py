@@ -30,8 +30,8 @@ class TestConcurrentWorkflowExecution:
     """Test concurrent workflow performance."""
 
     @pytest.fixture
-    def mock_gradient_client(self):
-        """Mock Gradient AI client."""
+    def mock_llm_client(self):
+        """Mock LLM client."""
         mock = MagicMock()
 
         # Simulate LLM latency
@@ -54,7 +54,7 @@ class TestConcurrentWorkflowExecution:
         mock.call_tool = mock_call_tool
         return mock
 
-    async def test_10_concurrent_workflows(self, mock_gradient_client, mock_mcp_client):
+    async def test_10_concurrent_workflows(self, mock_llm_client, mock_mcp_client):
         """Test 10 workflows executing concurrently."""
         from graph import create_orchestrator_graph
         from workflows import WorkflowState
@@ -110,7 +110,7 @@ class TestConcurrentWorkflowExecution:
         print(f"   - Workflows completed: {len(results)}")
 
     async def test_checkpoint_database_contention(
-        self, mock_gradient_client, mock_mcp_client
+        self, mock_llm_client, mock_mcp_client
     ):
         """Test database performance under concurrent checkpoint writes."""
         import os

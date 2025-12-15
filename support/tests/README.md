@@ -132,7 +132,7 @@ Available in `conftest.py`:
 
 ### Mock Clients
 
-- `mock_gradient_client` - Mock Gradient AI LLM client
+- `mock_llm_client` - Mock LLM LLM client
 - `mock_mcp_client` - Mock MCP gateway client
 - `mock_linear_client` - Mock Linear GraphQL client
 
@@ -161,7 +161,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 
-async def test_feature_workflow(mock_gradient_client, mock_mcp_client):
+async def test_feature_workflow(mock_llm_client, mock_mcp_client):
     # Test with mocked clients
     result = await run_workflow()
     assert result["status"] == "success"

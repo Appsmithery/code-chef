@@ -4716,13 +4716,14 @@ async def get_workflow_status(workflow_id: str):
             }
         }
     """
+    from lib.llm_client import LLMClient
     from workflows.workflow_engine import WorkflowEngine
 
-    # Initialize gradient client for workflow engine
-    workflow_gradient_client = GradientClient(agent_name="supervisor")
+    # Initialize LLM client for workflow engine
+    workflow_llm_client = LLMClient(agent_name="supervisor")
 
     engine = WorkflowEngine(
-        gradient_client=workflow_gradient_client,
+        llm_client=workflow_llm_client,
         state_client=registry_client,
     )
 

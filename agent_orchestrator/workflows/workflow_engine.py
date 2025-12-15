@@ -28,42 +28,40 @@ from typing import Any, Dict, List, Optional, Union
 
 import yaml
 from jinja2 import Template
-from pydantic import BaseModel, Field
 from langsmith import traceable
+from pydantic import BaseModel, Field
 
-from shared.lib.gradient_client import GradientClient
+from shared.lib.llm_client import LLMClient
 
 # Initialize logger
 logger = logging.getLogger(__name__)
-from shared.lib.workflow_reducer import (
-    WorkflowAction,
-    WorkflowEvent,
-    workflow_reducer,
-    replay_workflow,
-)
-from shared.lib.workflow_events import (
-    serialize_event,
-    sign_event,
-)
 from shared.lib.dependency_handler import (
     DependencyErrorHandler,
     DependencyRemediationResult,
     get_dependency_handler,
 )
+from shared.lib.workflow_events import serialize_event, sign_event
+from shared.lib.workflow_reducer import (
+    WorkflowAction,
+    WorkflowEvent,
+    replay_workflow,
+    workflow_reducer,
+)
 
 # Import error recovery engine for tiered recovery (CHEF-Error-Handling)
 try:
+    from shared.lib.error_classification import (
+        ErrorCategory,
+        RecoveryTier,
+        classify_error,
+    )
     from shared.lib.error_recovery_engine import (
         ErrorRecoveryEngine,
         RecoveryOutcome,
         RecoveryResult,
         get_error_recovery_engine,
     )
-    from shared.lib.error_classification import (
-        ErrorCategory,
-        RecoveryTier,
-        classify_error,
-    )
+
     ERROR_RECOVERY_ENABLED = True
 except ImportError:
     ERROR_RECOVERY_ENABLED = False
@@ -184,21 +182,21 @@ class WorkflowEngine:
     def __init__(
         self,
         templates_dir: str = "agent_orchestrator/workflows/templates",
-        gradient_client: Optional[GradientClient] = None,
+        llm_client: Optional[LLMClient] = None,
         state_client: Optional[Any] = None,
         linear_client: Optional[Any] = None,
     ):
         self.templates_dir = Path(templates_dir)
-        self.gradient_client = gradient_client  # Will be provided by caller
+        self.llm_client = llm_client  # Will be provided by caller
         self.state_client = state_client  # Will be provided by caller
         self.linear_client = linear_client  # For dependency escalation
-        
+
         # Initialize dependency error handler for auto-remediation
         self.dependency_handler = get_dependency_handler(
             orchestrator_root=str(Path(__file__).parent.parent.parent),
             linear_client=linear_client,
         )
-        
+
         # Initialize error recovery engine for tiered recovery (CHEF-Error-Handling)
         self.error_recovery_engine: Optional[ErrorRecoveryEngine] = None
         if ERROR_RECOVERY_ENABLED:
@@ -209,7 +207,9 @@ class WorkflowEngine:
                     "Tiered recovery enabled for Tier 0-4"
                 )
             except Exception as e:
-                logger.warning(f"[WorkflowEngine] Failed to initialize error recovery engine: {e}")
+                logger.warning(
+                    f"[WorkflowEngine] Failed to initialize error recovery engine: {e}"
+                )
 
         # Task 5.3: Calculate TTL in seconds
         self.ttl_seconds = self.WORKFLOW_TTL_HOURS * 3600
@@ -802,8 +802,9 @@ class WorkflowEngine:
         """Create Linear issue for HITL approval."""
 
         try:
-            from lib.linear_workspace_client import LinearWorkspaceClient
             import os
+
+            from lib.linear_workspace_client import LinearWorkspaceClient
 
             linear_client = LinearWorkspaceClient(
                 api_key=os.getenv("LINEAR_API_KEY"),
@@ -875,33 +876,34 @@ class WorkflowEngine:
     ) -> Optional[Dict[str, Any]]:
         """
         Handle workflow errors with tiered recovery system.
-        
+
         Uses ErrorRecoveryEngine for intelligent tiered recovery:
         - Tier 0: Instant heuristic triage (<10ms, 0 tokens)
         - Tier 1: Automatic remediation (<5s, 0 tokens)
         - Tier 2: RAG-assisted recovery (<30s, ~50 tokens)
         - Tier 3: Agent-assisted diagnosis (<2min, ~500 tokens)
         - Tier 4: Human-in-the-loop escalation (async)
-        
+
         Falls back to legacy dependency handler for backward compatibility.
-        
+
         Returns:
             Dict with remediation result if handled, None otherwise
         """
         import traceback
+
         tb_str = traceback.format_exc()
-        
+
         # Try tiered recovery first (CHEF-Error-Handling)
         if self.error_recovery_engine:
             logger.info(
                 f"[WorkflowEngine] Using tiered recovery for error in step '{step.id}': "
                 f"{type(error).__name__}"
             )
-            
+
             # Create a retry operation that re-executes the step
             async def retry_step_operation():
                 return await self._execute_step(step, state)
-            
+
             try:
                 outcome = await self.error_recovery_engine.recover(
                     exception=error,
@@ -912,13 +914,13 @@ class WorkflowEngine:
                     context={"traceback": tb_str[:2000], "step_payload": step.payload},
                     max_tier=RecoveryTier.TIER_3,  # Don't auto-escalate to HITL here
                 )
-                
+
                 if outcome.success:
                     logger.info(
                         f"[WorkflowEngine] Tiered recovery succeeded at Tier {outcome.final_tier.value} "
                         f"for step '{step.id}'"
                     )
-                    
+
                     # Emit recovery success event
                     await self._emit_event(
                         workflow_id=state.workflow_id,
@@ -930,7 +932,7 @@ class WorkflowEngine:
                             "recovery_metrics": outcome.metrics,
                         },
                     )
-                    
+
                     return {
                         "recovered": True,
                         "tier": outcome.final_tier.value,
@@ -942,55 +944,59 @@ class WorkflowEngine:
                         f"[WorkflowEngine] Tiered recovery failed for step '{step.id}'. "
                         f"Final tier: {outcome.final_tier.value}, Result: {outcome.result.value}"
                     )
-                    
+
                     # If we exhausted all tiers up to TIER_3, escalate to HITL
                     if outcome.final_tier == RecoveryTier.TIER_3:
                         logger.info(
                             f"[WorkflowEngine] Escalating to HITL (Tier 4) for step '{step.id}'"
                         )
                         if self.linear_client:
-                            await self._create_escalation_issue(state, step, error, tb_str)
+                            await self._create_escalation_issue(
+                                state, step, error, tb_str
+                            )
                         return {
                             "escalated": True,
                             "reason": str(error),
                             "recovery_tier": outcome.final_tier.value,
                         }
-                    
+
             except Exception as recovery_error:
                 logger.error(
                     f"[WorkflowEngine] Error recovery engine failed: {recovery_error}. "
                     f"Falling back to legacy handler."
                 )
-        
+
         # Legacy: Check for dependency errors (ModuleNotFoundError, ImportError)
         if isinstance(error, (ModuleNotFoundError, ImportError)):
             logger.warning(
                 f"Dependency error in step '{step.id}': {error}. "
                 f"Attempting auto-remediation..."
             )
-            
+
             # Parse the error
             dep_error = self.dependency_handler.parse_error(
                 exception=error,
                 traceback_file=step.id,
                 traceback_str=tb_str,
             )
-            
+
             if dep_error:
                 # Get workspace context from state
                 workspace_path = state.context.get("workspace_path")
                 docker_context = state.context.get("docker_context")
-                
+
                 # Create remediation plan
                 plan = self.dependency_handler.create_remediation_plan(
                     error=dep_error,
                     workspace_path=workspace_path,
                     docker_context=docker_context,
                 )
-                
+
                 # Execute remediation
-                result, error_msg = await self.dependency_handler.execute_remediation(plan)
-                
+                result, error_msg = await self.dependency_handler.execute_remediation(
+                    plan
+                )
+
                 # Emit event for dependency remediation
                 await self._emit_event(
                     workflow_id=state.workflow_id,
@@ -1007,7 +1013,7 @@ class WorkflowEngine:
                         "package_name": dep_error.package_name,
                     },
                 )
-                
+
                 if result == DependencyRemediationResult.SUCCESS:
                     logger.info(
                         f"Successfully remediated dependency '{dep_error.module_name}'. "
@@ -1034,28 +1040,28 @@ class WorkflowEngine:
                     logger.error(
                         f"Failed to remediate dependency '{dep_error.module_name}': {error_msg}"
                     )
-        
+
         # Check workflow.error_handling for custom handlers
         for handler in state.definition.error_handling:
             error_type = handler.get("error_type", "*")
             if error_type == "*" or error_type == type(error).__name__:
                 action = handler.get("action", "fail")
-                
+
                 if action == "retry":
                     max_retries = handler.get("max_retries", 3)
                     # Retry logic would be implemented here
                     logger.info(f"Retry action configured for {error_type}")
-                
+
                 elif action == "skip":
                     logger.info(f"Skipping step '{step.id}' due to error handler")
                     return {"skipped": True, "reason": str(error)}
-                
+
                 elif action == "escalate":
                     # Create Linear issue for manual intervention
                     if self.linear_client:
                         await self._create_escalation_issue(state, step, error, tb_str)
                     return {"escalated": True, "reason": str(error)}
-        
+
         return None
 
     async def _create_escalation_issue(
@@ -1067,23 +1073,25 @@ class WorkflowEngine:
     ) -> Optional[Dict[str, Any]]:
         """
         Create a Linear issue for error escalation.
-        
+
         Args:
             state: Current workflow state
             step: The step that failed
             error: The exception that occurred
             traceback_str: Full traceback for debugging
-            
+
         Returns:
             Linear issue dict if created, None otherwise
         """
         if not self.linear_client:
             logger.warning("No Linear client available for escalation")
             return None
-        
+
         try:
-            title = f"[Workflow Error] {state.definition.name} - Step '{step.id}' failed"
-            
+            title = (
+                f"[Workflow Error] {state.definition.name} - Step '{step.id}' failed"
+            )
+
             description = (
                 f"## Workflow Error Escalation\n\n"
                 f"**Workflow:** {state.definition.name} (v{state.definition.version})\n"
@@ -1095,17 +1103,17 @@ class WorkflowEngine:
                 f"### Context\n```json\n{state.context}\n```\n\n"
                 f"### Traceback\n```\n{traceback_str[:2000]}\n```\n"
             )
-            
+
             issue = await self.linear_client.create_issue(
                 title=title,
                 description=description,
                 labels=["workflow-error", "auto-escalated"],
                 priority=2,  # Medium priority
             )
-            
+
             logger.info(f"Created escalation issue: {issue.get('id')}")
             return issue
-            
+
         except Exception as e:
             logger.error(f"Failed to create escalation issue: {e}")
             return None
@@ -1327,8 +1335,9 @@ class WorkflowEngine:
 
         # Cleanup: Mark Linear approval issues complete
         try:
-            from lib.linear_workspace_client import LinearWorkspaceClient
             import os
+
+            from lib.linear_workspace_client import LinearWorkspaceClient
 
             linear_client = LinearWorkspaceClient(
                 api_key=os.getenv("LINEAR_API_KEY"),

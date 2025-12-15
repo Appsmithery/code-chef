@@ -216,7 +216,7 @@ foreach ($agent in $agents) {
         
         if ($has_main -and $has_dockerfile -and $has_reqs) {
             $main_content = Get-Content "$dir/main.py" -Raw
-            $has_gradient = $main_content -match "gradient_client|GradientClient"
+            $has_gradient = $main_content -match "llm_client|LLMClient"
             $has_prometheus = $main_content -match "Instrumentator|prometheus"
             
             if ($has_gradient -and $has_prometheus) {
