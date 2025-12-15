@@ -117,12 +117,12 @@ class WorkflowRouter:
         self,
         templates_dir: str = "agent_orchestrator/workflows/templates",
         rules_path: str = "agent_orchestrator/agents/supervisor/workflows/workflow-router.rules.yaml",
-        gradient_client: Optional[Any] = None,
+        llm_client: Optional[Any] = None,
         confirm_threshold: float = DEFAULT_CONFIRM_THRESHOLD,
     ):
         self.templates_dir = Path(templates_dir)
         self.rules_path = Path(rules_path)
-        self.gradient_client = gradient_client
+        self.llm_client = llm_client
         self.confirm_threshold = confirm_threshold
 
         # Load heuristic rules
@@ -317,7 +317,7 @@ class WorkflowRouter:
             return heuristic_result
 
         # Phase 3: LLM fallback
-        if self.gradient_client:
+        if self.llm_client:
             llm_result = await self._llm_select(task_description, context, templates)
 
             # Combine with heuristic if both have results
@@ -470,7 +470,7 @@ class WorkflowRouter:
         """
         Use LLM for semantic workflow selection when heuristics fail.
         """
-        if not self.gradient_client:
+        if not self.llm_client:
             return None
 
         # Build template descriptions for LLM
@@ -502,7 +502,7 @@ Respond in JSON format:
 }}"""
 
         try:
-            response = await self.gradient_client.chat_async(
+            response = await self.llm_client.chat_async(
                 messages=[{"role": "user", "content": prompt}],
                 max_tokens=200,
                 temperature=0.1,
@@ -639,7 +639,7 @@ _workflow_router: Optional[WorkflowRouter] = None
 
 
 def get_workflow_router(
-    gradient_client: Optional[Any] = None,
+    llm_client: Optional[Any] = None,
     confirm_threshold: float = WorkflowRouter.DEFAULT_CONFIRM_THRESHOLD,
 ) -> WorkflowRouter:
     """Get or create the workflow router singleton."""
@@ -647,7 +647,7 @@ def get_workflow_router(
 
     if _workflow_router is None:
         _workflow_router = WorkflowRouter(
-            gradient_client=gradient_client,
+            llm_client=llm_client,
             confirm_threshold=confirm_threshold,
         )
 

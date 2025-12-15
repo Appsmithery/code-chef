@@ -1,28 +1,35 @@
-"""LangChain-backed client wrapper used across agents.
+"""LangChain-backed LLM client wrapper used across agents.
 
-Historically this module talked to the DigitalOcean Gradient SDK directly,
-but we now route every LLM call through LangChain so LangSmith tracing works
-out-of-the-box whenever ``LANGCHAIN_TRACING_V2=true``.
+Provides unified interface for LLM completions with automatic:
+- LangSmith tracing (when LANGCHAIN_TRACING_V2=true)
+- Token usage tracking and cost calculation
+- Per-agent model configuration from models.yaml
+- Multi-provider support via OpenRouter gateway
 
-The public surface area of :class:`GradientClient` stays the same (``complete``
-and ``complete_structured``) which keeps all existing agents untouched while
-shifting the implementation to LangChain's ``ChatOpenAI`` wrapper that already
-handles the DigitalOcean Serverless Inference endpoint.
+The public API (``complete`` and ``complete_structured``) provides a simple,
+consistent interface while leveraging LangChain's provider integrations and
+OpenRouter's multi-model gateway for optimal model selection per agent.
+
+Key Features:
+- Automatic cost tracking based on model pricing
+- Structured output parsing with JSON validation
+- Async and sync interfaces for Runnable compatibility
+- Tool binding support for function calling
+- Configurable temperature, max_tokens per request
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
-import time
-
+from lib.config_loader import get_config_loader
 from lib.llm_providers import get_llm
 from lib.token_tracker import token_tracker
-from lib.config_loader import get_config_loader
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +63,12 @@ def _strip_code_fences(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-class GradientClient:
-    """Compatibility wrapper that now delegates to LangChain's ChatOpenAI."""
+class LLMClient:
+    """Unified LLM client that delegates to LangChain with OpenRouter provider.
+
+    Handles completions, structured outputs, token tracking, and cost calculation.
+    Configurable per-agent via models.yaml for optimal model selection.
+    """
 
     def __init__(self, agent_name: str, model: Optional[str] = None):
         self.agent_name = agent_name
@@ -94,7 +105,7 @@ class GradientClient:
         )
         if not llm:
             raise RuntimeError(
-                f"{self.agent_name}: LangChain LLM not configured (check GRADIENT_MODEL_ACCESS_KEY / provider keys)"
+                f"{self.agent_name}: LangChain LLM not configured (check OPENROUTER_API_KEY / provider keys)"
             )
         return llm
 
@@ -253,7 +264,7 @@ class GradientClient:
     ) -> Any:
         """Async invoke method for LangChain Runnable interface compatibility.
 
-        This allows GradientClient to be used as a drop-in replacement for
+        This allows LLMClient to be used as a drop-in replacement for
         LangChain LLMs when tools are unavailable.
 
         Args:
@@ -304,6 +315,7 @@ class GradientClient:
             LangChain AIMessage with response content
         """
         import asyncio
+
         return asyncio.get_event_loop().run_until_complete(
             self.ainvoke(messages, config)
         )
@@ -327,11 +339,29 @@ class GradientClient:
         return llm.bind_tools(tools)
 
 
-_clients: Dict[str, GradientClient] = {}
+_clients: Dict[str, LLMClient] = {}
 
 
-def get_gradient_client(agent_name: str, model: Optional[str] = None) -> GradientClient:
+def get_llm_client(agent_name: str, model: Optional[str] = None) -> LLMClient:
+    """Get cached LLM client instance for agent.
+
+    Args:
+        agent_name: Agent identifier (orchestrator, feature-dev, etc.)
+        model: Optional model override (uses config/agents/models.yaml if None)
+
+    Returns:
+        Cached LLMClient instance
+    """
     cache_key = f"{agent_name}:{model or 'default'}"
     if cache_key not in _clients:
-        _clients[cache_key] = GradientClient(agent_name=agent_name, model=model)
+        _clients[cache_key] = LLMClient(agent_name=agent_name, model=model)
     return _clients[cache_key]
+
+
+# Backward compatibility alias (deprecated)
+def get_gradient_client(agent_name: str, model: Optional[str] = None) -> LLMClient:
+    """Deprecated: Use get_llm_client() instead."""
+    logger.warning(
+        f"get_gradient_client() is deprecated. Use get_llm_client() instead (agent: {agent_name})"
+    )
+    return get_llm_client(agent_name, model)

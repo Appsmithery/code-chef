@@ -66,7 +66,7 @@ $env:LINEAR_PROJECT_ID="codechef-78b3b839d36b"
 # GitHub (for Phase 2 HITL)
 $env:GITHUB_TOKEN="ghp_***"
 
-# Gradient AI
+# LLM
 $env:GRADIENT_API_KEY="***"
 $env:GRADIENT_WORKSPACE_ID="***"
 ```
@@ -198,7 +198,7 @@ Available fixtures in `conftest.py`:
 - `secret_key` - HMAC secret key for event signatures
 - `sample_workflow_template` - Sample workflow with 3 steps
 - `sample_workflow_context` - Sample context (pr_number, repo, branch, author)
-- `mock_gradient_client` - Mock Gradient AI client (model-agnostic)
+- `mock_llm_client` - Mock LLM client (model-agnostic)
 - `mock_mcp_client` - Mock MCP client
 - `mock_linear_client` - Mock Linear GraphQL client
 - `mock_rag_client` - Mock RAG semantic search client

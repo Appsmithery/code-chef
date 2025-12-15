@@ -47,7 +47,7 @@ from lib.agent_events import (
 
 # Inter-agent communication (Phase 6 - CHEF-110)
 from lib.event_bus import Event, EventBus
-from lib.gradient_client import get_gradient_client
+from lib.llm_client import get_llm_client
 from lib.mcp_client import MCPClient
 from lib.progressive_mcp_loader import ProgressiveMCPLoader, ToolLoadingStrategy
 
@@ -333,12 +333,12 @@ class BaseAgent:
                 f"[{self.agent_name}] Failed to initialize LLM with provider={provider}, model={model}"
             )
             # Fallback to gradient client for backward compatibility
-            gradient_client = get_gradient_client(
+            llm_client = get_llm_client(
                 agent_name=self.agent_name,
                 model=agent_config.get("model", "llama-3.1-8b"),
             )
-            self._gradient_client = gradient_client
-            return gradient_client
+            self._llm_client = llm_client
+            return llm_client
 
         # Store LLM for later use
         self._llm = llm
@@ -413,7 +413,7 @@ class BaseAgent:
 
             # Bind tools and cache result
             agent_config = self.config.get("agent", {})
-            bound_llm = self._gradient_client.get_llm_with_tools(
+            bound_llm = self._llm_client.get_llm_with_tools(
                 tools=tools,
                 temperature=agent_config.get("temperature", 0.7),
                 max_tokens=agent_config.get("max_tokens", 2000),

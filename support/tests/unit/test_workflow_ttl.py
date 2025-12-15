@@ -39,7 +39,7 @@ def workflow_engine_with_ttl(mock_state_client):
     os.environ["WORKFLOW_TTL_HOURS"] = "24"
     engine = WorkflowEngine(
         templates_dir="agent_orchestrator/workflows/templates",
-        gradient_client=None,
+        llm_client=None,
         state_client=mock_state_client,
     )
     return engine
@@ -55,7 +55,7 @@ def test_ttl_configuration_from_env(monkeypatch):
     monkeypatch.setenv("WORKFLOW_TTL_HOURS", "12")
     # Force class variable reload after env change
     WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
-    engine = WorkflowEngine(gradient_client=None, state_client=None)
+    engine = WorkflowEngine(llm_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 12
     assert engine.ttl_seconds == 12 * 3600  # 43200 seconds
@@ -66,7 +66,7 @@ def test_ttl_default_value(monkeypatch):
     monkeypatch.delenv("WORKFLOW_TTL_HOURS", raising=False)
     # Force class variable reload after env change
     WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
-    engine = WorkflowEngine(gradient_client=None, state_client=None)
+    engine = WorkflowEngine(llm_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 24
     assert engine.ttl_seconds == 24 * 3600
@@ -77,7 +77,7 @@ def test_ttl_seconds_calculated(monkeypatch):
     monkeypatch.setenv("WORKFLOW_TTL_HOURS", "3")
     # Force class variable reload after env change
     WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
-    engine = WorkflowEngine(gradient_client=None, state_client=None)
+    engine = WorkflowEngine(llm_client=None, state_client=None)
 
     assert engine.ttl_seconds == 3 * 3600  # 10800 seconds
 
@@ -176,7 +176,7 @@ async def test_long_running_workflow_stays_alive():
     # Set short TTL for testing (1 hour)
     os.environ["WORKFLOW_TTL_HOURS"] = "1"
     mock_state_client = AsyncMock()
-    engine = WorkflowEngine(gradient_client=None, state_client=mock_state_client)
+    engine = WorkflowEngine(llm_client=None, state_client=mock_state_client)
 
     workflow_id = "pr-deploy-123"
 
@@ -233,7 +233,7 @@ def test_development_ttl_3_hours(monkeypatch):
     monkeypatch.setenv("WORKFLOW_TTL_HOURS", "3")
     # Force class variable reload after env change
     WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
-    engine = WorkflowEngine(gradient_client=None, state_client=None)
+    engine = WorkflowEngine(llm_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 3
     assert engine.ttl_seconds == 3 * 3600
@@ -244,7 +244,7 @@ def test_staging_ttl_12_hours(monkeypatch):
     monkeypatch.setenv("WORKFLOW_TTL_HOURS", "12")
     # Force class variable reload after env change
     WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
-    engine = WorkflowEngine(gradient_client=None, state_client=None)
+    engine = WorkflowEngine(llm_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 12
     assert engine.ttl_seconds == 12 * 3600
@@ -255,7 +255,7 @@ def test_production_ttl_24_hours(monkeypatch):
     monkeypatch.setenv("WORKFLOW_TTL_HOURS", "24")
     # Force class variable reload after env change
     WorkflowEngine.WORKFLOW_TTL_HOURS = int(os.getenv("WORKFLOW_TTL_HOURS", "24"))
-    engine = WorkflowEngine(gradient_client=None, state_client=None)
+    engine = WorkflowEngine(llm_client=None, state_client=None)
 
     assert engine.WORKFLOW_TTL_HOURS == 24
     assert engine.ttl_seconds == 24 * 3600
@@ -270,7 +270,7 @@ def test_production_ttl_24_hours(monkeypatch):
 async def test_ttl_refreshed_for_all_event_types():
     """TTL refreshed for all workflow event types"""
     mock_state_client = AsyncMock()
-    engine = WorkflowEngine(gradient_client=None, state_client=mock_state_client)
+    engine = WorkflowEngine(llm_client=None, state_client=mock_state_client)
 
     workflow_id = "multi-event-123"
 

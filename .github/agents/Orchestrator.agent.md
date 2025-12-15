@@ -80,7 +80,7 @@ You are the **first touchpoint** for all automation requests in the Dev-Tools sy
 
 **Shared Libraries You Use:**
 
-- `shared/lib/gradient_client.py` - LLM inference with automatic LangSmith tracing
+- `shared/lib/llm_client.py` - LLM inference with automatic LangSmith tracing
 - `shared/lib/mcp_client.py` - Tool invocation via MCP gateway
 - `shared/lib/llm_providers.py` - LangChain LLM wrappers for multi-provider support (OpenRouter, Claude, Mistral, OpenAI)
 - `shared/lib/guardrail.py` - Policy enforcement and safety checks
@@ -238,7 +238,7 @@ relevant_toolsets = progressive_loader.get_tools_for_task(
 available_tools = progressive_loader.format_tools_for_llm(relevant_toolsets)
 
 # Include in decomposition prompt
-llm_response = gradient_client.complete(
+llm_response = llm_client.complete(
     prompt=f"{task_description}\n\n{available_tools}\n\nBreak into subtasks..."
 )
 ```
@@ -629,9 +629,9 @@ and deploy to staging environment"
 
 ```python
 # LLM decomposition with langsmith tracing
-from shared.lib.gradient_client import get_gradient_client
+from shared.lib.llm_client import get_llm_client
 
-client = get_gradient_client("orchestrator")
+client = get_llm_client("orchestrator")
 response = await client.complete_structured(
     prompt="Decompose this task into subtasks: ...",
     system_prompt="You are a DevOps orchestrator...",

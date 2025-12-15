@@ -30,7 +30,7 @@ class TestTemplateWorkflowE2E:
     """Test template-driven workflow execution with WorkflowEngine."""
 
     @pytest.fixture
-    def mock_gradient_client(self):
+    def mock_llm_client(self):
         """Mock Gradient client for LLM calls."""
         mock = MagicMock()
         mock.is_enabled.return_value = True
@@ -382,7 +382,7 @@ class TestTemplateWorkflowE2E:
     async def test_full_pr_deployment_workflow(
         self, 
         mock_event_bus, 
-        mock_gradient_client, 
+        mock_llm_client, 
         sample_pr_context
     ):
         """Test complete PR deployment workflow execution.

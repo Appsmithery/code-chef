@@ -39,7 +39,7 @@ This guide covers observability for LLM token usage, cost attribution, RAG perfo
 ```
 Agent makes LLM call
   ↓
-GradientClient.complete() / complete_structured()
+LLMClient.complete() / complete_structured()
   ↓
 Extract token usage from response metadata
   ↓
@@ -77,7 +77,7 @@ agents:
 **Cost Calculation**:
 
 ```python
-# In gradient_client.py (automatic)
+# In llm_client.py (automatic)
 total_tokens = prompt_tokens + completion_tokens
 cost = (total_tokens / 1_000_000) * agent_config.cost_per_1m_tokens
 ```

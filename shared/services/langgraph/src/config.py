@@ -7,6 +7,7 @@ import logging
 import os
 from typing import Any, Dict, Optional
 
+from shared.lib.langgraph_base import get_postgres_checkpointer
 from shared.lib.llm_providers import (
     cicd_llm,
     code_review_llm,
@@ -14,11 +15,10 @@ from shared.lib.llm_providers import (
     feature_dev_llm,
     get_embeddings,
     get_llm,
-    shared_embeddings,
     infrastructure_llm,
     orchestrator_llm,
+    shared_embeddings,
 )
-from shared.lib.langgraph_base import get_postgres_checkpointer
 from shared.lib.qdrant_client import get_qdrant_client
 
 logger = logging.getLogger(__name__)

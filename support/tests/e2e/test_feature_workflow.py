@@ -115,7 +115,7 @@ def jwt_required(f):
         from langchain_core.messages import HumanMessage
         
         # Patch dependencies
-        with patch('lib.gradient_client.get_gradient_client', return_value=mock_gradient_client), \
+        with patch('lib.llm_client.get_llm_client', return_value=mock_gradient_client), \
              patch('lib.mcp_client.MCPClient', return_value=mock_mcp_client), \
              patch('lib.linear_workspace_client.LinearWorkspaceClient', return_value=mock_linear_client):
             
@@ -201,7 +201,7 @@ def jwt_required(f):
             "state": {"name": "Done"}  # Approved
         })
         
-        with patch('lib.gradient_client.get_gradient_client', return_value=mock_gradient_client), \
+        with patch('lib.llm_client.get_llm_client', return_value=mock_gradient_client), \
              patch('lib.mcp_client.MCPClient', return_value=mock_mcp_client), \
              patch('lib.linear_workspace_client.LinearWorkspaceClient', return_value=mock_linear_client):
             
@@ -270,9 +270,9 @@ class TestFeatureWorkflowIntegration:
     )
     async def test_real_llm_code_generation(self):
         """Test code generation with real Gradient AI API."""
-        from lib.gradient_client import get_gradient_client
-        
-        client = get_gradient_client("feature-dev")
+from lib.llm_client import get_llm_client
+
+        client = get_llm_client("feature-dev")
         
         prompt = "Generate Python code for JWT authentication middleware using PyJWT"
         

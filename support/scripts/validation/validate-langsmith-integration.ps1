@@ -130,22 +130,22 @@ if (Test-Path $envFile) {
     $errors += ".env file not found at $envFile"
 }
 
-# Check 4: Verify gradient_client.py configuration
-Write-Host "`n✓ Checking gradient_client.py..." -ForegroundColor Yellow
-$gradientClient = "shared/lib/gradient_client.py"
+# Check 4: Verify llm_client.py configuration
+Write-Host "`n✓ Checking llm_client.py..." -ForegroundColor Yellow
+$gradientClient = "shared/lib/llm_client.py"
 
 if (Test-Path $gradientClient) {
     $clientContent = Get-Content $gradientClient -Raw
     
     if ($clientContent -match "LangSmith" -and $clientContent -match "LANGCHAIN_TRACING_V2") {
-        Write-Host "  gradient_client.py configured for LangSmith ✅" -ForegroundColor Green
+        Write-Host "  llm_client.py configured for LangSmith ✅" -ForegroundColor Green
     } else {
-        Write-Host "  gradient_client.py missing LangSmith references ⚠️" -ForegroundColor Yellow
-        $warnings += "gradient_client.py may not be configured for automatic tracing"
+        Write-Host "  llm_client.py missing LangSmith references ⚠️" -ForegroundColor Yellow
+        $warnings += "llm_client.py may not be configured for automatic tracing"
     }
 } else {
-    Write-Host "  gradient_client.py not found ❌" -ForegroundColor Red
-    $errors += "gradient_client.py not found at $gradientClient"
+    Write-Host "  llm_client.py not found ❌" -ForegroundColor Red
+    $errors += "llm_client.py not found at $gradientClient"
 }
 
 # Check 5: Health checks (if not skipped)

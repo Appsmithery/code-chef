@@ -19,7 +19,7 @@ All agent `main.py` files properly configured:
 
 1. **orchestrator** (`agent_orchestrator/main.py`)
 
-   - ✅ Imports gradient_client via `get_gradient_client("orchestrator")`
+   - ✅ Imports llm_client via `get_llm_client("orchestrator")`
    - ✅ LangGraph infrastructure initialized (PostgreSQL checkpointer, Qdrant, Hybrid memory)
    - ✅ Prometheus metrics instrumentation
    - ✅ Health endpoints with MCP/observability status
@@ -27,7 +27,7 @@ All agent `main.py` files properly configured:
 
 2. **feature-dev** (`agent_feature-dev/main.py`)
 
-   - ✅ Imports gradient_client via service.py
+   - ✅ Imports llm_client via service.py
    - ✅ LangGraph infrastructure initialized
    - ✅ Prometheus metrics instrumentation
    - ✅ Health + readiness endpoints
@@ -35,7 +35,7 @@ All agent `main.py` files properly configured:
 
 3. **code-review** (`agent_code-review/main.py`)
 
-   - ✅ Imports gradient_client via service.py
+   - ✅ Imports llm_client via service.py
    - ✅ LangGraph infrastructure initialized
    - ✅ Prometheus metrics instrumentation
    - ✅ Health endpoints with gateway status
@@ -43,7 +43,7 @@ All agent `main.py` files properly configured:
 
 4. **infrastructure** (`agent_infrastructure/main.py`)
 
-   - ✅ Imports gradient_client via service.py
+   - ✅ Imports llm_client via service.py
    - ✅ LangGraph infrastructure initialized
    - ✅ Prometheus metrics instrumentation
    - ✅ Health endpoints with MCP status
@@ -51,14 +51,14 @@ All agent `main.py` files properly configured:
 
 5. **cicd** (`agent_cicd/main.py`)
 
-   - ✅ Imports gradient_client via service.py
+   - ✅ Imports llm_client via service.py
    - ✅ LangGraph infrastructure initialized
    - ✅ Prometheus metrics instrumentation
    - ✅ Health endpoints with gateway health
    - ✅ Agent registry integration with lifespan events
 
 6. **documentation** (`agent_documentation/main.py`)
-   - ✅ Imports gradient_client via service.py
+   - ✅ Imports llm_client via service.py
    - ✅ LangGraph infrastructure initialized
    - ✅ Prometheus metrics instrumentation
    - ✅ Health endpoints with capabilities
@@ -74,7 +74,7 @@ All workflow files in `agent_orchestrator/workflows/` properly configured:
 
    - ✅ Uses event_bus for inter-agent communication
    - ✅ LangGraph StateGraph with parallel execution
-   - ✅ Automatic tracing through gradient_client calls
+   - ✅ Automatic tracing through llm_client calls
    - ✅ Error handling and state management
 
 2. **pr_deployment.py**
@@ -155,7 +155,7 @@ This validation report documents the legacy microservices architecture (6 separa
 
 ### ✅ Gradient Client Configuration
 
-The `shared/lib/gradient_client.py` is properly configured for automatic LangSmith tracing:
+The `shared/lib/llm_client.py` is properly configured for automatic LangSmith tracing:
 
 **Key Features**:
 
@@ -249,7 +249,7 @@ All agents expose health endpoints that verify observability status:
 
 ```
 1. User Request → Agent Endpoint
-2. Agent calls gradient_client.complete()
+2. Agent calls llm_client.complete()
 3. Gradient SDK wraps OpenAI-compatible API
 4. LangChain intercepts via LANGCHAIN_TRACING_V2=true
 5. Trace sent to LangSmith (https://api.smith.langchain.com)
@@ -260,7 +260,7 @@ All agents expose health endpoints that verify observability status:
 
 Each trace includes:
 
-- **Agent Name**: From `gradient_client.agent_name`
+- **Agent Name**: From `llm_client.agent_name`
 - **Model**: Per-agent model configuration
 - **Task ID**: From request metadata
 - **Session ID**: For multi-turn conversations
@@ -366,7 +366,7 @@ curl -X POST http://localhost:8001/orchestrate `
 
    - Automatic via `LANGCHAIN_TRACING_V2=true`
    - Captured in `dev-tools-agents` project
-   - Includes all LLM calls from gradient_client
+   - Includes all LLM calls from llm_client
 
 2. **Prometheus Metrics**:
 
