@@ -1,0 +1,211 @@
+project_name: "code-chef-uat-framework"
+project_type: "testing_automation"
+repository: "Appsmithery/code-chef-uat"
+linear_project: "code-chef-uat"
+
+objectives:
+  primary: "Develop comprehensive UAT testing framework with screenshot capture"
+  secondary:
+    - "Validate all agent workflows end-to-end"
+    - "Generate visual documentation automatically"
+    - "Create reusable test scenarios for CI/CD"
+    - "Establish baseline performance metrics"
+
+business_requirements:
+  1: "Test all 6 agent types (supervisor, feature_dev, code_review, infrastructure, cicd, documentation)"
+  2: "Capture screenshots at each workflow step for documentation"
+  3: "Validate HITL approval flows with Linear integration"
+  4: "Test progressive MCP tool loading strategies"
+  5: "Verify LangSmith tracing and metrics collection"
+  6: "Validate workflow templates (PR deployment, hotfix, feature, docs-update, infrastructure)"
+  7: "Test multi-agent coordination and event bus"
+  8: "Validate checkpoint/resume functionality"
+
+technical_requirements:
+  platform: "Windows + WSL2 + Docker"
+  languages:
+    - Python 3.11+
+    - PowerShell 7+
+    - TypeScript (for VS Code extension testing)
+  frameworks:
+    - pytest (testing)
+    - playwright (browser automation + screenshots)
+    - hypothesis (property-based testing)
+  integrations:
+    - Linear API (issue tracking)
+    - LangSmith (tracing)
+    - GitHub API (repository setup)
+    - OpenRouter (model testing)
+
+deliverables:
+  phase_1_foundation:
+    - "New GitHub repository: Appsmithery/code-chef-uat"
+    - "Linear project: code-chef UAT"
+    - "Project structure with test fixtures"
+    - "Docker Compose for isolated test environment"
+    - "CI/CD pipeline (GitHub Actions)"
+
+  phase_2_test_scenarios:
+    - "Unit tests for each agent (60+ tests)"
+    - "Integration tests for workflows (30+ tests)"
+    - "E2E tests with screenshot capture (15+ scenarios)"
+    - "Property-based tests (using Hypothesis)"
+
+  phase_3_screenshot_automation:
+    - "Playwright configuration for headless Chrome"
+    - "Screenshot capture at each workflow step"
+    - "Automatic image optimization and storage"
+    - "Visual diff comparison (baseline vs current)"
+
+  phase_4_reporting:
+    - "HTML test report with embedded screenshots"
+    - "Performance metrics dashboard"
+    - "Linear issue auto-creation for failures"
+    - "Weekly UAT summary reports"
+
+success_criteria:
+  - "All 6 agents tested with >90% code coverage"
+  - "Screenshot capture working for all workflows"
+  - "UAT suite runs in <15 minutes"
+  - "Automated reporting to Linear"
+  - "Zero manual intervention required"
+
+action_plan:
+  step_1_repo_setup:
+    agent: "infrastructure"
+    tasks:
+      - "Create GitHub repository: Appsmithery/code-chef-uat"
+      - "Initialize with README, .gitignore, LICENSE"
+      - "Set up branch protection rules (main, develop)"
+      - "Configure GitHub secrets (OPENROUTER_API_KEY, LINEAR_API_KEY, etc.)"
+      - "Create Linear project: code-chef UAT"
+      - "Link GitHub repo to Linear project"
+
+  step_2_project_structure:
+    agent: "feature_dev"
+    tasks:
+      - "Create project structure (tests/, fixtures/, screenshots/, reports/)"
+      - "Set up Python virtual environment"
+      - "Configure pytest with plugins (pytest-asyncio, pytest-playwright, pytest-html)"
+      - "Create docker-compose.yml for test services"
+      - "Set up Playwright for screenshot automation"
+
+  step_3_linear_integration:
+    agent: "infrastructure"
+    tasks:
+      - "Register new project in config/linear/project-registry.yaml"
+      - "Update agent-project-mapping.yaml with UAT project assignments"
+      - "Configure webhook handlers for test result notifications"
+      - "Create Linear labels (uat-failed, uat-passed, screenshot-captured)"
+
+  step_4_test_scenarios:
+    agent: "feature_dev"
+    tasks:
+      - "Create test_agent_supervisor.py (15 test cases)"
+      - "Create test_agent_feature_dev.py (20 test cases)"
+      - "Create test_agent_code_review.py (10 test cases)"
+      - "Create test_agent_infrastructure.py (10 test cases)"
+      - "Create test_agent_cicd.py (10 test cases)"
+      - "Create test_agent_documentation.py (10 test cases)"
+      - "Create test_workflow_pr_deployment.py (E2E)"
+      - "Create test_workflow_hotfix.py (E2E)"
+      - "Create test_workflow_feature.py (E2E)"
+      - "Create test_hitl_approval_flow.py (E2E)"
+
+  step_5_screenshot_automation:
+    agent: "feature_dev"
+    tasks:
+      - "Implement ScreenshotCapture class with Playwright"
+      - "Add screenshot hooks to pytest fixtures"
+      - "Configure image optimization (compression, format)"
+      - "Implement visual diff comparison"
+      - "Store screenshots in artifacts directory"
+
+  step_6_cicd_pipeline:
+    agent: "cicd"
+    tasks:
+      - "Create .github/workflows/uat-suite.yml"
+      - "Configure scheduled runs (daily at 6am UTC)"
+      - "Set up artifact upload (screenshots, reports)"
+      - "Configure Slack/email notifications"
+      - "Add manual trigger button"
+
+  step_7_reporting:
+    agent: "documentation"
+    tasks:
+      - "Create HTML report template (Jinja2)"
+      - "Generate test summary dashboard"
+      - "Embed screenshots in report"
+      - "Create Linear issue summary generator"
+      - "Set up weekly report automation"
+
+  step_8_validation:
+    agent: "code_review"
+    tasks:
+      - "Review all test code for quality"
+      - "Validate screenshot capture works"
+      - "Test CI/CD pipeline end-to-end"
+      - "Verify Linear integration"
+      - "Check performance metrics"
+
+workflow_execution:
+  start_command: "codechef.execute.workflow"
+  monitoring:
+    - "LangSmith project: code-chef-production"
+    - "Linear project: code-chef UAT"
+    - "GitHub Actions: Appsmithery/code-chef-uat"
+  checkpointing: true
+  hitl_approval_required: true
+  hitl_approval_gate: "step_6_cicd_pipeline"
+
+platforms_and_keys:
+  github:
+    organization: "Appsmithery"
+    repository: "code-chef-uat"
+    create_if_missing: true
+    secrets_required:
+      - OPENROUTER_API_KEY
+      - LINEAR_API_KEY
+      - LANGCHAIN_API_KEY
+      - HUGGINGFACE_TOKEN
+
+  linear:
+    team_id: "f5b610be-ac34-4983-918b-2c9d00aa9b7a"
+    create_project: true
+    project_name: "code-chef UAT"
+    project_key: "UAT"
+    labels:
+      - "uat-test"
+      - "screenshot-captured"
+      - "test-failed"
+      - "test-passed"
+
+  docker:
+    services:
+      - postgres:15
+      - qdrant/qdrant:latest
+      - playwright:focal
+
+  langsmith:
+    project: "code-chef-uat-testing"
+    create_if_missing: true
+
+expected_timeline:
+  total_duration: "4-6 hours"
+  phase_1: "45 minutes (repo setup)"
+  phase_2: "90 minutes (test scenarios)"
+  phase_3: "60 minutes (screenshot automation)"
+  phase_4: "45 minutes (reporting)"
+  validation: "30 minutes"
+
+cost_estimate:
+  llm_tokens: "$2.50 (using Qwen Coder for most tasks)"
+  infrastructure: "$0 (uses existing Docker)"
+  total: "$2.50"
+
+post_execution_validation:
+  - "Repository exists: https://github.com/Appsmithery/code-chef-uat"
+  - "Linear project accessible: https://linear.app/dev-ops/project/code-chef-uat-<slug>"
+  - "CI/CD pipeline passing"
+  - "Screenshots generated successfully"
+  - "Test report available"
