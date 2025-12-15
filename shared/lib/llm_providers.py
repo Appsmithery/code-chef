@@ -134,30 +134,7 @@ def get_llm(
     # LangSmith tracing is automatic - no callbacks needed
     tags = [agent_name, provider]
 
-    if provider == "gradient":
-        if not GRADIENT_API_KEY:
-            logger.warning(
-                f"[{agent_name}] GRADIENT_API_KEY/DO_SERVERLESS_INFERENCE_KEY not set, LLM calls will fail"
-            )
-            logger.warning(
-                f"[{agent_name}] Get key at: https://cloud.digitalocean.com/gradient-ai/model-provider-keys"
-            )
-            return None
-
-        # Use DigitalOcean Serverless Inference (OpenAI-compatible)
-        # Note: max_tokens must be >= 256
-        effective_max_tokens = max(max_tokens, 256)
-        return ChatOpenAI(
-            base_url=GRADIENT_BASE_URL,
-            api_key=GRADIENT_API_KEY,
-            model=model or "llama3-8b-instruct",
-            temperature=temperature,
-            max_tokens=effective_max_tokens,
-            tags=tags,
-            model_kwargs=kwargs,
-        )
-
-    elif provider == "claude":
+    if provider == "claude":
         if not CLAUDE_API_KEY:
             logger.warning(
                 f"[{agent_name}] CLAUDE_API_KEY not set, LLM calls will fail"
