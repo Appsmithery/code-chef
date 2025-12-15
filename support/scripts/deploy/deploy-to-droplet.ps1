@@ -39,7 +39,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $DROPLET = "do-codechef-droplet"
-$DEPLOY_PATH = "/opt/Dev-Tools"
+$DEPLOY_PATH = "/opt/code-chef"
 $LOCAL_ENV_PATH = "config/env/.env"
 
 function Write-Step { param($Message) Write-Host "`n[STEP] $Message" -ForegroundColor Cyan }

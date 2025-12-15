@@ -226,7 +226,7 @@ if ($Target -eq 'remote') {
     $DROPLET_IP = "45.55.173.72"
     $DROPLET_HOST = "codechef.appsmithery.co"
     $DROPLET_USER = "root"
-    $DEPLOY_PATH = "/opt/Dev-Tools"
+    $DEPLOY_PATH = "/opt/code-chef"
     
     Write-Info "Target: $DROPLET_USER@$DROPLET_IP ($DROPLET_HOST) $DEPLOY_PATH"
     

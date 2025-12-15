@@ -196,7 +196,7 @@ catch {
 Write-TestHeader "5. Container Health Status"
 
 try {
-    $containers = ssh root@$HostAddress "cd /opt/Dev-Tools/deploy && docker compose ps --format json" | ConvertFrom-Json
+    $containers = ssh root@$HostAddress "cd /opt/code-chef/deploy && docker compose ps --format json" | ConvertFrom-Json
     
     foreach ($container in $containers) {
         # Containers are healthy if:

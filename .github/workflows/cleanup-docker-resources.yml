@@ -29,7 +29,7 @@ on:
 env:
   DROPLET_IP: 45.55.173.72
   DROPLET_USER: root
-  DEPLOY_PATH: /opt/Dev-Tools
+  DEPLOY_PATH: /opt/code-chef
 
 jobs:
   cleanup:

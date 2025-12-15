@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Test progressive MCP tool discovery"""
 import sys
-sys.path.insert(0, '/opt/Dev-Tools')
+sys.path.insert(0, '/opt/code-chef')
 
 from shared.lib.progressive_mcp_loader import get_progressive_loader, ToolLoadingStrategy
 

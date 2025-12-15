@@ -3,7 +3,7 @@
 param(
     [string]$DropletHost = "codechef.appsmithery.co",
     [string]$DropletIP = "45.55.173.72",  # For SSH
-    [string]$DropletPath = "/opt/Dev-Tools"
+    [string]$DropletPath = "/opt/code-chef"
 )
 
 $timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'

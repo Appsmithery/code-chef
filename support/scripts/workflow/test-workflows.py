@@ -101,7 +101,7 @@ class WorkflowTester:
 
         context = {
             "task_description": "Add test feature for workflow validation",
-            "project_path": "/opt/Dev-Tools/agent_orchestrator",
+            "project_path": "/opt/code-chef/agent_orchestrator",
             "language": "python",
             "framework": "FastAPI",
             "requires_infrastructure": False,

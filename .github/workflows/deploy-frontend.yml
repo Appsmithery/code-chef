@@ -33,7 +33,7 @@ jobs:
           chmod 600 /tmp/deploy_key
           # Sync dist folder to server (correct path that Caddy mounts)
           rsync -avz --delete -e "ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no" \
-            frontend/dist/ ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/opt/Dev-Tools/support/frontend/dist/
+            frontend/dist/ ${{ secrets.DROPLET_USER }}@${{ secrets.DROPLET_HOST }}:/opt/code-chef/support/frontend/dist/
           # Cleanup
           rm /tmp/deploy_key
 
@@ -44,7 +44,7 @@ jobs:
           username: ${{ secrets.DROPLET_USER }}
           key: ${{ secrets.DROPLET_SSH_KEY }}
           script: |
-            cd /opt/Dev-Tools/deploy
+            cd /opt/code-chef/deploy
             docker compose restart caddy
             echo "✅ Frontend deployed and Caddy restarted"
 
