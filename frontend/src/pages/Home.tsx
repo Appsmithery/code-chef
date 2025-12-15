@@ -136,9 +136,11 @@ export default function Home() {
             </div>
 
             {/* Hero Visual - Screenshot */}
-            <div className="relative hidden lg:block">
-              <div className="absolute -inset-1 bg-gradient-to-r from-purple-500 to-emerald-400 rounded-2xl blur opacity-10"></div>
-              <div className="relative bg-card rounded-xl overflow-hidden shadow-2xl dark:shadow-[0_25px_50px_-12px_rgb(0_0_0_/_0.5)] max-w-[67%] mx-auto">
+            <div className="relative hidden lg:block flex justify-center">
+              <div className="absolute inset-0 flex justify-center items-center">
+                <div className="w-[67%] h-full bg-gradient-to-r from-purple-500 to-emerald-400 rounded-2xl blur opacity-10"></div>
+              </div>
+              <div className="relative bg-card rounded-xl overflow-hidden shadow-2xl dark:shadow-[0_25px_50px_-12px_rgb(0_0_0_/_0.5)] max-w-[67%]">
                 <img
                   src="/screenshots/hello-chef.png"
                   alt="code/chef Orchestrator interface showing intelligent task routing"
