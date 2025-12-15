@@ -34,7 +34,7 @@ AGENT_LLMS = {
 }
 
 # Shared components
-EMBEDDINGS = gradient_embeddings
+EMBEDDINGS = shared_embeddings
 QDRANT_CLIENT = get_qdrant_client()
 CHECKPOINTER = get_postgres_checkpointer()
 

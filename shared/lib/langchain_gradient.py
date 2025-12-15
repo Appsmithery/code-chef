@@ -24,23 +24,9 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 logger = logging.getLogger(__name__)
 
-# Provider selection (defaults to Gradient AI)
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gradient").lower()
-EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "gradient").lower()
-
-# DigitalOcean Gradient AI - Serverless Inference (OpenAI-compatible)
-# Documentation: https://docs.digitalocean.com/products/gradient-ai-platform/how-to/use-serverless-inference/
-GRADIENT_BASE_URL = os.getenv("GRADIENT_BASE_URL", "https://inference.do-ai.run/v1")
-GRADIENT_API_KEY = os.getenv("GRADIENT_MODEL_ACCESS_KEY") or os.getenv(
-    "DO_SERVERLESS_INFERENCE_KEY"
-)
-
-# DigitalOcean Gradient AI Platform (Agentic Cloud API)
-# Documentation: https://docs.digitalocean.com/reference/api/digitalocean/#tag/GradientAI-Platform
-GRADIENT_GENAI_BASE_URL = os.getenv(
-    "GRADIENT_GENAI_BASE_URL", "https://api.digitalocean.com"
-)
-GRADIENT_GENAI_API_KEY = os.getenv("GRADIENT_API_KEY") or os.getenv("DIGITAL_OCEAN_PAT")
+# Provider selection (defaults to OpenRouter for multi-model access)
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openrouter").lower()
+EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "openai").lower()
 
 # Claude (Anthropic)
 CLAUDE_API_KEY = os.getenv("CLAUDE_API_KEY")
@@ -76,7 +62,7 @@ def get_llm(
     temperature: float = 0.7,
     max_tokens: int = 2000,
     provider: Optional[
-        Literal["gradient", "claude", "mistral", "openai", "openrouter"]
+        Literal["claude", "mistral", "openai", "openrouter"]
     ] = None,
     **kwargs,
 ) -> Union[ChatOpenAI, "ChatAnthropic", "ChatMistralAI"]:
@@ -284,19 +270,21 @@ def get_embeddings(
         )
 
 
-# Backward compatibility aliases
+# Backward compatibility aliases (deprecated - use get_llm/get_embeddings directly)
 def get_gradient_llm(
     agent_name: str, model: str = "llama3-8b-instruct", **kwargs
 ) -> ChatOpenAI:
-    """Backward compatibility wrapper for get_llm() with gradient provider"""
-    return get_llm(agent_name, model=model, provider="gradient", **kwargs)
+    """Deprecated: Use get_llm() with provider='openrouter' instead"""
+    logger.warning("get_gradient_llm() is deprecated. Use get_llm() with provider='openrouter'")
+    return get_llm(agent_name, model=model, provider="openrouter", **kwargs)
 
 
 def get_gradient_embeddings(
-    model: str = "text-embedding-ada-002", chunk_size: int = 1000
+    model: str = "text-embedding-3-small", chunk_size: int = 1000
 ) -> OpenAIEmbeddings:
-    """Backward compatibility wrapper for get_embeddings() with gradient provider"""
-    return get_embeddings(model=model, chunk_size=chunk_size, provider="gradient")
+    """Deprecated: Use get_embeddings() with provider='openai' instead"""
+    logger.warning("get_gradient_embeddings() is deprecated. Use get_embeddings()")
+    return get_embeddings(model=model, chunk_size=chunk_size, provider="openai")
 
 
 # Pre-configured instances loaded from YAML config
@@ -364,12 +352,12 @@ except Exception as e:
     cicd_llm = get_llm("cicd", model="llama3-8b-instruct")
     documentation_llm = get_llm("documentation", model="mistral-nemo-instruct-2407")
 
-# Shared embeddings instance (falls back to OpenAI since Gradient doesn't support embeddings)
-gradient_embeddings = get_embeddings()
+# Shared embeddings instance (OpenAI text-embedding-3-small)
+shared_embeddings = get_embeddings()
 
-logger.info("Unified LangChain configuration initialized")
-logger.info(f"LLM Provider: {LLM_PROVIDER}")
-logger.info(f"Embedding Provider: {EMBEDDING_PROVIDER}")
-logger.info(f"Gradient Base URL: {GRADIENT_BASE_URL}")
-logger.info(f"Gradient API Key: {'SET' if GRADIENT_API_KEY else 'NOT SET'}")
-logger.info(f"LangSmith tracing: {'ENABLED' if LANGSMITH_ENABLED else 'DISABLED'}")
+logger.info("🚀 Unified LangChain configuration initialized")
+logger.info(f"  LLM Provider: {LLM_PROVIDER} (OpenRouter multi-model gateway)")
+logger.info(f"  Embedding Provider: {EMBEDDING_PROVIDER} (text-embedding-3-small)")
+logger.info(f"  OpenRouter API Key: {'✓ SET' if OPENROUTER_API_KEY else '✗ NOT SET'}")
+logger.info(f"  OpenAI API Key: {'✓ SET' if OPENAI_API_KEY else '✗ NOT SET'}")
+logger.info(f"  LangSmith tracing: {'✓ ENABLED' if LANGSMITH_ENABLED else '✗ DISABLED'}")

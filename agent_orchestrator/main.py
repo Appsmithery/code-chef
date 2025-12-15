@@ -27,7 +27,6 @@ from fastapi.security import APIKeyHeader
 from langsmith import traceable
 from lib.event_bus import Event, get_event_bus
 from lib.github_permalink_generator import enrich_markdown_with_permalinks_stateless
-from lib.gradient_client import get_gradient_client
 from lib.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
 from lib.hitl_manager import get_hitl_manager
 from lib.intent_recognizer import IntentType, get_intent_recognizer, intent_to_task
@@ -366,9 +365,6 @@ STATE_SERVICE_URL = os.getenv("STATE_SERVICE_URL", "http://state-persistence:800
 
 # Shared MCP client for tool access and telemetry
 mcp_client = MCPClient(agent_name="orchestrator")
-
-# Gradient AI client for LLM inference (with Langfuse tracing)
-gradient_client = get_gradient_client("orchestrator")
 
 # Guardrail orchestrator for compliance checks
 guardrail_orchestrator = GuardrailOrchestrator()
@@ -967,11 +963,11 @@ async def readiness_check():
     available_servers = await mcp_tool_client.list_servers()
 
     # Check critical dependencies
-    gradient_ready = gradient_client.is_enabled()
+    openrouter_ready = bool(os.getenv("OPENROUTER_API_KEY"))
     linear_ready = linear_client.is_enabled()
 
     # Service is ready if MCP is available and at least basic integrations work
-    is_ready = mcp_available and (gradient_ready or not os.getenv("GRADIENT_API_KEY"))
+    is_ready = mcp_available and openrouter_ready
 
     return {
         "ready": is_ready,
@@ -989,7 +985,11 @@ async def readiness_check():
             "shared_tool_servers": mcp_client.shared_tools,
             "capabilities": mcp_client.capabilities,
         },
-        "integrations": {"linear": linear_ready, "gradient_ai": gradient_ready},
+        "integrations": {
+            "linear": linear_ready,
+            "openrouter": openrouter_ready,
+            "openai_embeddings": bool(os.getenv("OPENAI_API_KEY")),
+        },
         "chat": {
             "enabled": True,
             "endpoint": "/chat",
