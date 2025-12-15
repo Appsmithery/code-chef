@@ -101,9 +101,6 @@ error_recovery:
         - model: "meta-llama/llama-3.1-70b-instruct"
           provider: "openrouter"
           timeout_seconds: 45
-        - model: "llama3.3-70b-instruct"
-          provider: "gradient"
-          timeout_seconds: 60
 
     feature-dev:
       max_tier: TIER_2
