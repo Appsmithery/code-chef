@@ -20,6 +20,13 @@
     "url": "https://github.com/Appsmithery/code-chef/issues"
   },
   "homepage": "https://codechef.appsmithery.co",
+  "qna": "marketplace",
+  "galleryBanner": {
+    "color": "#bcece0",
+    "theme": "dark"
+  },
+  "preview": true,
+  "pricing": "Trial",
   "badges": [
     {
       "url": "https://img.shields.io/badge/orchestrator-LangGraph-blue",
