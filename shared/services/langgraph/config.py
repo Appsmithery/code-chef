@@ -14,9 +14,9 @@ from shared.lib.langchain_gradient import (
     infrastructure_llm,
     cicd_llm,
     documentation_llm,
-    gradient_embeddings,
+    shared_embeddings,
     get_gradient_llm,
-    get_gradient_embeddings,
+    get_embeddings,
 )
 from shared.lib.qdrant_client import get_qdrant_client
 from shared.lib.langgraph_base import get_postgres_checkpointer
@@ -34,7 +34,7 @@ AGENT_LLMS = {
 }
 
 # Shared components
-EMBEDDINGS = gradient_embeddings
+EMBEDDINGS = shared_embeddings
 QDRANT_CLIENT = get_qdrant_client()
 CHECKPOINTER = get_postgres_checkpointer()
 
