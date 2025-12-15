@@ -26,7 +26,7 @@ import os
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 # Add project paths
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -34,6 +34,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "shared"))
 
 import asyncpg
+
 from shared.lib.workflow_events import export_events_to_pdf
 
 
