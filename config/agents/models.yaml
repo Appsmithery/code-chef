@@ -184,6 +184,17 @@ agents:
     tags: [routing, orchestration, supervisor, streaming]
     langsmith_project: code-chef-orchestrator
 
+  supervisor:
+    model: anthropic/claude-3-5-sonnet
+    provider: openrouter
+    temperature: 0.3
+    max_tokens: 2000
+    cost_per_1m_tokens: 3.00 # Claude 3.5 Sonnet via OpenRouter
+    context_window: 200000
+    use_case: complex_reasoning
+    tags: [routing, orchestration, supervisor, streaming]
+    langsmith_project: code-chef-orchestrator
+
   feature-dev:
     model: qwen/qwen-2.5-coder-32b-instruct
     provider: openrouter
