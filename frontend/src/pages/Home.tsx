@@ -143,6 +143,7 @@ export default function Home() {
                   src="/screenshots/hello-chef.png"
                   alt="code/chef Orchestrator interface showing intelligent task routing"
                   className="w-full h-auto"
+                  style={{ imageRendering: "crisp-edges" }}
                 />
               </div>
 
