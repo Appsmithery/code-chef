@@ -147,10 +147,10 @@ export default function Home() {
               </div>
 
               {/* Floating Status Card */}
-              <Card className="absolute -bottom-6 -left-6 w-64 bg-card shadow-medium dark:shadow-medium-dark">
+              <Card className="absolute -bottom-6 -left-6 w-64 bg-card/60 backdrop-blur-md shadow-medium dark:shadow-medium-dark border-border/50">
                 <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-primary" />
+                    <Activity className="h-4 w-4 text-emerald-400" />
                     System Load
                   </CardTitle>
                 </CardHeader>
