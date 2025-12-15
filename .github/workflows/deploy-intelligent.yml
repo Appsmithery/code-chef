@@ -183,6 +183,7 @@ jobs:
       - name: Upload .env to droplet
         run: |
           scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
+          ssh ${{ env.DROPLET_HOST }} "cp ${{ env.DEPLOY_PATH }}/config/env/.env ${{ env.DEPLOY_PATH }}/deploy/.env"
 
       - name: Pull latest code on droplet
         run: |
@@ -260,6 +261,7 @@ jobs:
       - name: Upload .env to droplet
         run: |
           scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
+          ssh ${{ env.DROPLET_HOST }} "cp ${{ env.DEPLOY_PATH }}/config/env/.env ${{ env.DEPLOY_PATH }}/deploy/.env"
 
       - name: Pull and rebuild on droplet
         run: |
