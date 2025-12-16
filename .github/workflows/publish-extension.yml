@@ -95,7 +95,12 @@ jobs:
       - name: Bump version (if requested)
         if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
         working-directory: ${{ env.EXTENSION_DIR }}
-        run: npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+        run: |
+          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "chore(extension): bump version to $(node -p 'require(\"./package.json\").version')" || echo "No changes to commit"
 
       - name: Get current version
         id: get-version
@@ -233,7 +238,8 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
-          # Scope package name for GitHub Packages (VSIX can't be scoped)
+          # Create a temporary scoped package.json for npm publish
+          cp package.json package.json.bak
           node -e "
             const pkg = require('./package.json');
             pkg.name = '@appsmithery/vscode-codechef';
@@ -241,7 +247,7 @@ jobs:
           "
           npm publish --access public || echo "Package may already exist at this version"
           # Restore original package.json
-          git checkout package.json
+          mv package.json.bak package.json
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -263,18 +269,10 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
 
-      - name: Commit version bump
+      - name: Push version bump
         if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
-          # Restore original package.json name
-          git checkout package.json
-          # Update version only
-          npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json
-          git commit -m "chore(extension): bump version to ${{ steps.get-version.outputs.version }}" || echo "No changes to commit"
           git push || echo "Nothing to push"
 
   notify:
