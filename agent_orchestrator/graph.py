@@ -1281,17 +1281,32 @@ def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
 _compiled_graph = None
 
 
+@traceable(name="get_graph", tags=["langgraph", "graph", "initialization"])
 def get_graph():
     """Get the compiled LangGraph workflow (singleton).
 
     Returns cached graph instance for streaming operations.
-    Initializes on first call.
+    Initializes on first call with checkpointing enabled.
     """
     global _compiled_graph
     if _compiled_graph is None:
-        _compiled_graph = create_workflow()
+        # Get PostgreSQL connection string from environment
+        import os
+
+        checkpoint_conn_string = os.getenv("POSTGRES_CHECKPOINT_URI")
+        if checkpoint_conn_string:
+            logger.info("[LangGraph] Initializing graph with PostgreSQL checkpointing")
+            _compiled_graph = create_workflow(checkpoint_conn_string)
+        else:
+            logger.warning(
+                "[LangGraph] No POSTGRES_CHECKPOINT_URI found, checkpointing disabled"
+            )
+            _compiled_graph = create_workflow()
     return _compiled_graph
 
 
-# Export compiled workflow
-app = create_workflow()
+# Export compiled workflow (with checkpointing if available)
+import os
+
+checkpoint_conn = os.getenv("POSTGRES_CHECKPOINT_URI")
+app = create_workflow(checkpoint_conn) if checkpoint_conn else create_workflow()
