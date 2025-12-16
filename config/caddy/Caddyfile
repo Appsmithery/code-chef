@@ -4,18 +4,13 @@ codechef.appsmithery.co {
 		reverse_proxy orchestrator:8001
 	}
 
-	# Root endpoint (orchestrator main)
-	handle / {
+	# Chat stream endpoint (SSE streaming) - BEFORE root handler!
+	handle /chat/stream {
 		reverse_proxy orchestrator:8001
 	}
 
 	# Execute endpoint (orchestrator workflows)
 	handle /execute* {
-		reverse_proxy orchestrator:8001
-	}
-
-	# Chat stream endpoint (SSE streaming)
-	handle /chat/stream {
 		reverse_proxy orchestrator:8001
 	}
 
@@ -49,7 +44,7 @@ codechef.appsmithery.co {
 		reverse_proxy langgraph:8010
 	}
 
-	# Frontend SPA (fallback for unmatched routes)
+	# Frontend SPA (fallback for unmatched routes including root)
 	handle {
 		root * /srv/frontend
 		encode gzip
