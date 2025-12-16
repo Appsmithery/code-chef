@@ -31,17 +31,20 @@ services:
     networks:
       - devtools-network
     depends_on:
-      - rag-context
-      - state-persistence
-      - agent-registry
-      - redis
+      rag-context:
+        condition: service_healthy
+      state-persistence:
+        condition: service_healthy
+      agent-registry:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     volumes:
-      - orchestrator-data:/app/data
+      - /opt/code-chef/data/orchestrator:/app/data
       - ../config/hitl:/app/config/hitl:ro
       - ../config/linear:/app/config/linear:ro
       - ../config/env:/app/config/env:ro
       - ../config/mcp-agent-tool-mapping.yaml:/app/config/mcp-agent-tool-mapping.yaml:ro
-      - ../config/prometheus:/app/config/prometheus:ro
       - ../config/agents/models.yaml:/config/agents/models.yaml:ro
       - ../agent_orchestrator/tools:/app/tools:ro
       - ../shared:/app/shared:ro
@@ -49,7 +52,13 @@ services:
     secrets:
       - db_password
       - linear_webhook_secret
-    restart: unless-stopped
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
       interval: 10s
@@ -83,7 +92,13 @@ services:
       - ../config/env/.env
     networks:
       - devtools-network
-    restart: unless-stopped
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
     healthcheck:
       test:
         [
@@ -123,10 +138,17 @@ services:
     networks:
       - devtools-network
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     secrets:
       - db_password
-    restart: unless-stopped
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
     healthcheck:
       test:
         [
@@ -172,11 +194,19 @@ services:
     networks:
       - devtools-network
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     secrets:
       - db_password
-    restart: unless-stopped
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
     deploy:
       resources:
         limits:
@@ -200,14 +230,30 @@ services:
       - POSTGRES_DB=devtools
       - POSTGRES_USER=devtools
       - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - max_connections=50
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=32MB
     networks:
       - devtools-network
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - /opt/code-chef/data/postgres:/var/lib/postgresql/data
       - ../config/state:/docker-entrypoint-initdb.d
     secrets:
       - db_password
-    restart: unless-stopped
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
     deploy:
       resources:
         limits:
@@ -227,12 +273,18 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
-    command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000
+    command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000 --maxmemory 64mb --maxmemory-policy allkeys-lru
     networks:
       - devtools-network
     volumes:
-      - redis-data:/data
-    restart: unless-stopped
+      - /opt/code-chef/data/redis:/data
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
     deploy:
       resources:
         limits:
@@ -268,10 +320,17 @@ services:
     networks:
       - devtools-network
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     secrets:
       - db_password
-    restart: unless-stopped
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.Name}}"
     healthcheck:
       test:
         [
@@ -293,68 +352,6 @@ services:
           cpus: "0.1"
           memory: 128M
 
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ../config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../config/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
-      - prometheus-data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
-      - "--web.console.templates=/usr/share/prometheus/consoles"
-      - "--web.enable-lifecycle"
-    networks:
-      - devtools-network
-    restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:9090/-/healthy || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-
-  oauth2-proxy:
-    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
-    environment:
-      - OAUTH2_PROXY_UPSTREAMS=http://prometheus:9090
-      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
-      - OAUTH2_PROXY_COOKIE_SECURE=false
-      - OAUTH2_PROXY_COOKIE_HTTPONLY=true
-      - OAUTH2_PROXY_REVERSE_PROXY=true
-    env_file:
-      - ../config/env/.env
-    networks:
-      - devtools-network
-    depends_on:
-      - prometheus
-    restart: unless-stopped
-    healthcheck:
-      disable: true
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
-
   caddy:
     image: caddy:2.8.4-alpine
     ports:
@@ -370,9 +367,9 @@ services:
     networks:
       - devtools-network
     depends_on:
-      - orchestrator
-      - oauth2-proxy
-    restart: unless-stopped
+      orchestrator:
+        condition: service_healthy
+    restart: always
     healthcheck:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 30s
@@ -390,108 +387,13 @@ services:
     logging:
       driver: "json-file"
       options:
+        max-size: "10m"
+        max-file: "3"
         tag: "{{.Name}}"
 
-  # ============================================================================
-  # OBSERVABILITY STACK (Grafana + Loki + Promtail)
-  # ============================================================================
-
-  grafana:
-    image: grafana/grafana:10.2.3
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_AUTH_GITHUB_SCOPES=user:email,read:org
-      - GF_AUTH_GITHUB_AUTH_URL=https://github.com/login/oauth/authorize
-      - GF_AUTH_GITHUB_TOKEN_URL=https://github.com/login/oauth/access_token
-      - GF_AUTH_GITHUB_API_URL=https://api.github.com/user
-      - GF_AUTH_GITHUB_ALLOW_SIGN_UP=true
-      - GF_INSTALL_PLUGINS=grafana-piechart-panel
-    env_file:
-      - ../config/env/.env
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ../config/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
-      - ../config/grafana/datasources:/etc/grafana/provisioning/datasources:ro
-    networks:
-      - devtools-network
-    depends_on:
-      - prometheus
-      - loki
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  loki:
-    image: grafana/loki:2.9.3
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
-    volumes:
-      - ../config/loki/loki-config.yaml:/etc/loki/local-config.yaml:ro
-      - loki-data:/loki
-    networks:
-      - devtools-network
-    restart: unless-stopped
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --no-verbose --tries=1 --spider http://localhost:3100/ready || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 128M
-
-  promtail:
-    image: grafana/promtail:2.9.3
-    volumes:
-      - ../config/loki/promtail-config.yaml:/etc/promtail/config.yaml:ro
-      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: -config.file=/etc/promtail/config.yaml
-    networks:
-      - devtools-network
-    depends_on:
-      - loki
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
-
 volumes:
-  orchestrator-data:
-  postgres-data:
-  redis-data:
-  prometheus-data:
-  grafana-data:
   caddy-data:
   caddy-config:
-  loki-data:
 
 secrets:
   db_password:
