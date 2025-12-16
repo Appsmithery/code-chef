@@ -387,7 +387,7 @@ risk_assessor = get_risk_assessor()
 hitl_manager = get_hitl_manager()
 
 # LLM client for orchestrator operations
-llm_client = get_llm_client("supervisor")
+llm_client = get_llm_client("orchestrator")
 
 # Chat interface components (Phase 5)
 intent_recognizer = get_intent_recognizer(llm_client)
