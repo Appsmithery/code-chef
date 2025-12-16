@@ -44,7 +44,8 @@ services:
       - ../config/linear:/app/config/linear:ro
       - ../config/env:/app/config/env:ro
       - ../config/mcp-agent-tool-mapping.yaml:/app/config/mcp-agent-tool-mapping.yaml:ro
-      - ../config/agents/models.yaml:/config/agents/models.yaml:ro
+      - ../config/agents/models.yaml:/app/config/agents/models.yaml:ro
+      - ../config/agents:/app/config/agents:ro
       - ../agent_orchestrator/tools:/app/tools:ro
       - ../shared:/app/shared:ro
       - ../support/scripts:/app/support/scripts:ro
