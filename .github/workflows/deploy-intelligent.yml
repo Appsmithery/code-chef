@@ -40,46 +40,85 @@ jobs:
 
       - name: Create .env file
         run: |
+          # Create fresh .env from template (contains default values)
           cp config/env/.env.template config/env/.env
+          
+          # Create temporary file for secrets (will be merged)
+          cat > /tmp/secrets.env << 'EOF'
+          # === SECRETS FROM GITHUB (Overrides template defaults) ===
           # Orchestrator API Security
-          echo "ORCHESTRATOR_API_KEY=${{ secrets.ORCHESTRATOR_API_KEY }}" >> config/env/.env
+          ORCHESTRATOR_API_KEY=${{ secrets.ORCHESTRATOR_API_KEY }}
           # LLM & Tracing
-          echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
-          echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
-          echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
+          LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}
+          LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}
           # OpenRouter (Multi-Model LLM Gateway)
-          echo "OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}" >> config/env/.env
+          OPENROUTER_API_KEY=${{ secrets.OPENROUTER_API_KEY }}
           # LLM Provider Keys
-          echo "CLAUDE_API_KEY=${{ secrets.CLAUDE_API_KEY }}" >> config/env/.env
-          echo "MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}" >> config/env/.env
-          echo "PERPLEXITY_API_KEY=${{ secrets.PERPLEXITY_API_KEY }}" >> config/env/.env
+          CLAUDE_API_KEY=${{ secrets.CLAUDE_API_KEY }}
+          MISTRAL_API_KEY=${{ secrets.MISTRAL_API_KEY }}
+          PERPLEXITY_API_KEY=${{ secrets.PERPLEXITY_API_KEY }}
           # Linear Integration
-          echo "LINEAR_TEAM_ID=${{ secrets.LINEAR_TEAM_ID }}" >> config/env/.env
-          echo "LINEAR_API_KEY=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
-          echo "LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}" >> config/env/.env
-          echo "LINEAR_WEBHOOK_SIGNING_SECRET=${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}" >> config/env/.env
+          LINEAR_TEAM_ID=${{ secrets.LINEAR_TEAM_ID }}
+          LINEAR_API_KEY=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}
+          LINEAR_OAUTH_DEV_TOKEN=${{ secrets.LINEAR_OAUTH_DEV_TOKEN }}
+          LINEAR_WEBHOOK_SIGNING_SECRET=${{ secrets.LINEAR_WEBHOOK_SIGNING_SECRET }}
           # RAG/Qdrant
-          echo "QDRANT_URL=${{ secrets.QDRANT_URL }}" >> config/env/.env
-          echo "QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}" >> config/env/.env
-          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> config/env/.env
+          QDRANT_URL=${{ secrets.QDRANT_URL }}
+          QDRANT_API_KEY=${{ secrets.QDRANT_API_KEY }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           # Database
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> config/env/.env
-          # OAuth Configuration (GH_OAUTH_CLIENT_SECRET renamed to avoid GITHUB_ prefix restriction)
-          echo "GITHUB_OAUTH_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}" >> config/env/.env
-          echo "OAUTH2_PROXY_CLIENT_ID=${{ secrets.OAUTH2_PROXY_CLIENT_ID }}" >> config/env/.env
-          echo "OAUTH2_PROXY_CLIENT_SECRET=${{ secrets.OAUTH2_PROXY_CLIENT_SECRET }}" >> config/env/.env
-          echo "OAUTH2_PROXY_COOKIE_SECRET=${{ secrets.OAUTH2_PROXY_COOKIE_SECRET }}" >> config/env/.env
-          echo "OAUTH2_PROXY_EMAIL_DOMAINS=*" >> config/env/.env
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          # OAuth Configuration
+          GITHUB_OAUTH_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}
+          OAUTH2_PROXY_CLIENT_ID=${{ secrets.OAUTH2_PROXY_CLIENT_ID }}
+          OAUTH2_PROXY_CLIENT_SECRET=${{ secrets.OAUTH2_PROXY_CLIENT_SECRET }}
+          OAUTH2_PROXY_COOKIE_SECRET=${{ secrets.OAUTH2_PROXY_COOKIE_SECRET }}
+          OAUTH2_PROXY_EMAIL_DOMAINS=*
           # Grafana Cloud
-          echo "GRAFANA_CLOUD_API_TOKEN=${{ secrets.GRAFANA_CLOUD_API_TOKEN }}" >> config/env/.env
+          GRAFANA_CLOUD_API_TOKEN=${{ secrets.GRAFANA_CLOUD_API_TOKEN }}
           # Supabase
-          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> config/env/.env
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # HuggingFace (ModelOps)
-          echo "HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}" >> config/env/.env
-
-          # Verify file exists and has content
+          HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}
+          EOF
+          
+          # Merge secrets into .env, replacing duplicates (secrets override template)
+          while IFS='=' read -r key value; do
+            # Skip comments and empty lines
+            [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+            # Remove existing key from .env (prevents duplicates)
+            sed -i "/^${key}=/d" config/env/.env
+          done < /tmp/secrets.env
+          
+          # Append all secrets
+          cat /tmp/secrets.env >> config/env/.env
+          
+          # Validate: Check for duplicate keys
+          echo "🔍 Validating .env file for duplicates..."
+          duplicates=$(grep -v '^#' config/env/.env | grep -v '^$' | cut -d= -f1 | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "❌ DUPLICATE KEYS FOUND:"
+            echo "$duplicates"
+            echo "Full .env content:"
+            cat config/env/.env
+            exit 1
+          fi
+          
+          # Verify critical variables present
+          echo "✅ Checking critical variables..."
+          for var in LLM_PROVIDER OPENROUTER_API_KEY LANGSMITH_API_KEY; do
+            if ! grep -q "^${var}=" config/env/.env; then
+              echo "❌ Missing critical variable: ${var}"
+              exit 1
+            fi
+          done
+          
+          # Show summary
+          echo "✅ .env file created successfully"
+          echo "📊 Total variables: $(grep -v '^#' config/env/.env | grep -v '^$' | wc -l)"
+          echo "🔑 LLM_PROVIDER: $(grep '^LLM_PROVIDER=' config/env/.env | cut -d= -f2)"
           ls -la config/env/.env
-          wc -l config/env/.env
 
       - name: Upload .env as artifact
         uses: actions/upload-artifact@v4
@@ -179,9 +218,29 @@ jobs:
           name: env-file
           path: config/env/
 
-      - name: Upload .env to droplet
+      - name: Upload .env to droplet (with backup)
         run: |
+          # Backup existing .env on droplet
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
+            if [ -f .env ]; then \
+              cp .env .env.backup-\$(date +%Y%m%d-%H%M%S); \
+              echo '📦 Backed up existing .env'; \
+            fi"
+          
+          # Upload new .env (overwrites completely)
           scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
+          
+          # Verify upload and check for duplicates on droplet
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
+            echo '🔍 Verifying uploaded .env...' && \
+            duplicates=\$(grep -v '^#' .env | grep -v '^\$' | cut -d= -f1 | sort | uniq -d) && \
+            if [ -n \"\$duplicates\" ]; then \
+              echo '❌ DUPLICATE KEYS FOUND ON DROPLET:'; \
+              echo \"\$duplicates\"; \
+              exit 1; \
+            fi && \
+            echo '✅ .env validated on droplet' && \
+            echo '🔑 LLM_PROVIDER:' \$(grep '^LLM_PROVIDER=' .env | cut -d= -f2)"
 
       - name: Pull latest code on droplet
         run: |
@@ -256,9 +315,29 @@ jobs:
           name: env-file
           path: config/env/
 
-      - name: Upload .env to droplet
+      - name: Upload .env to droplet (with backup)
         run: |
+          # Backup existing .env on droplet
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
+            if [ -f .env ]; then \
+              cp .env .env.backup-\$(date +%Y%m%d-%H%M%S); \
+              echo '📦 Backed up existing .env'; \
+            fi"
+          
+          # Upload new .env (overwrites completely)
           scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
+          
+          # Verify upload and check for duplicates on droplet
+          ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
+            echo '🔍 Verifying uploaded .env...' && \
+            duplicates=\$(grep -v '^#' .env | grep -v '^\$' | cut -d= -f1 | sort | uniq -d) && \
+            if [ -n \"\$duplicates\" ]; then \
+              echo '❌ DUPLICATE KEYS FOUND ON DROPLET:'; \
+              echo \"\$duplicates\"; \
+              exit 1; \
+            fi && \
+            echo '✅ .env validated on droplet' && \
+            echo '🔑 LLM_PROVIDER:' \$(grep '^LLM_PROVIDER=' .env | cut -d= -f2)"
 
       - name: Pull and rebuild on droplet
         run: |
