@@ -61,10 +61,10 @@ services:
         tag: "{{.Name}}"
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8001/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -107,10 +107,10 @@ services:
           "-c",
           "import urllib.request; urllib.request.urlopen('http://localhost:8007/health')",
         ]
-      interval: 15s
+      interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -157,10 +157,10 @@ services:
           "-c",
           "import urllib.request; urllib.request.urlopen('http://localhost:8008/health')",
         ]
-      interval: 15s
+      interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -218,8 +218,9 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8009/health || exit 1"]
       interval: 30s
-      timeout: 5s
-      retries: 3
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # PostgreSQL Database
   postgres:
@@ -264,9 +265,10 @@ services:
           memory: 128M
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U devtools -d devtools"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 60s
 
   # Redis for Event Bus & Caching
   redis:
@@ -295,9 +297,10 @@ services:
           memory: 32M
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 30s
 
   # LangGraph Workflow Service
   langgraph:
@@ -339,10 +342,10 @@ services:
           "-c",
           "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')",
         ]
-      interval: 15s
+      interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 40s
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -374,8 +377,8 @@ services:
       test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 30s
     deploy:
       resources:
         limits:
