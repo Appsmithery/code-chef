@@ -71,8 +71,8 @@
   "linear.defaultProject": "AI DevOps Agent Platform",
 
   // Code-Chef Extension Settings
-  "codechef.orchestratorUrl": "https://codechef.appsmithery.co/api",
-  "codechef.apiKey": "gt5Ae88fz-inOpFmRf1kVAkOJSV3enR7qr8ri1V2so0",
+  "codechef.orchestratorUrl": "https://codechef.appsmithery.co",
+  "codechef.apiKey": "qt5Ae88fz-inOpFmRf1kVAkOJSV3enR7qr8ri1V2so0",
   "codechef.environment": "production",
   "codechef.enableNotifications": true,
   "codechef.showTokenUsage": true,
