@@ -331,26 +331,16 @@ try:
     logger.info("Successfully loaded agent configs from config/agents/models.yaml")
 
 except Exception as e:
-    # Backward compatibility: Fall back to hardcoded models if YAML unavailable
-    logger.warning(f"Failed to load config from YAML, using hardcoded models: {e}")
-    orchestrator_llm = get_llm(
-        "orchestrator", model="anthropic/claude-3-5-sonnet", provider="openrouter"
-    )
-    feature_dev_llm = get_llm(
-        "feature-dev", model="qwen/qwen-2.5-coder-32b-instruct", provider="openrouter"
-    )
-    code_review_llm = get_llm(
-        "code-review", model="deepseek/deepseek-v3", provider="openrouter"
-    )
-    infrastructure_llm = get_llm(
-        "infrastructure", model="google/gemini-2.0-flash-exp", provider="openrouter"
-    )
-    cicd_llm = get_llm(
-        "cicd", model="google/gemini-2.0-flash-exp", provider="openrouter"
-    )
-    documentation_llm = get_llm(
-        "documentation", model="deepseek/deepseek-v3", provider="openrouter"
-    )
+    logger.error(f"FATAL: Failed to load config from config/agents/models.yaml: {e}")
+    logger.error("Check:")
+    logger.error("  1. File exists: config/agents/models.yaml")
+    logger.error("  2. File is valid YAML")
+    logger.error("  3. All agent configs present: orchestrator, feature_dev, code_review, infrastructure, cicd, documentation")
+    logger.error("  4. All agents have required fields: model, provider, temperature, max_tokens")
+    raise RuntimeError(
+        f"Configuration error: Cannot load config/agents/models.yaml. "
+        f"Service cannot start without valid agent configuration. Error: {e}"
+    ) from e
 
 # Shared embeddings instance (OpenAI text-embedding-3-small)
 shared_embeddings = get_embeddings()

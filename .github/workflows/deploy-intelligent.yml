@@ -44,7 +44,6 @@ jobs:
           # Orchestrator API Security
           echo "ORCHESTRATOR_API_KEY=${{ secrets.ORCHESTRATOR_API_KEY }}" >> config/env/.env
           # LLM & Tracing
-          echo "GRADIENT_API_KEY=${{ secrets.GRADIENT_API_KEY }}" >> config/env/.env
           echo "LANGCHAIN_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_API_KEY=${{ secrets.LANGSMITH_API_KEY }}" >> config/env/.env
           echo "LANGSMITH_WORKSPACE_ID=${{ secrets.LANGSMITH_WORKSPACE_ID }}" >> config/env/.env
