@@ -160,7 +160,7 @@ jobs:
           tag_name: v${{ steps.get-version.outputs.version }}
           name: VS Code Extension v${{ steps.get-version.outputs.version }}
           generate_release_notes: true
-          draft: false
+          draft: true  # Create as draft first to allow file uploads (immutable releases block uploads)
           prerelease: false
           files: ${{ env.EXTENSION_DIR }}/*.vsix
           body: |
@@ -224,9 +224,8 @@ jobs:
 
       - name: Publish Release
         if: github.event_name == 'workflow_dispatch'
-        continue-on-error: true
         run: |
-          gh release edit "v${{ steps.get-version.outputs.version }}" --draft=false || echo "⚠️ Could not auto-publish release (repository rules), please publish manually"
+          gh release edit "v${{ steps.get-version.outputs.version }}" --draft=false
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
