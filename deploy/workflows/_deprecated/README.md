@@ -14,14 +14,16 @@ These workflows have been deprecated and archived. They are kept for historical 
 ## Deprecated Files
 
 ### 1. `deploy.yml`
+
 - **Status**: DISABLED (already marked as "Legacy - DISABLED")
 - **Reason**: Replaced by `.github/workflows/deploy-intelligent.yml`
-- **Issues**: 
+- **Issues**:
   - Used old compose directory structure
   - No .env syncing mechanism
   - Manual secret file management
 
 ### 2. `build-images.yml`
+
 - **Status**: OBSOLETE
 - **Reason**: Uses old `containers/` directory structure
 - **Issues**:
@@ -30,6 +32,7 @@ These workflows have been deprecated and archived. They are kept for historical 
   - GitHub Container Registry (ghcr.io) not actively used
 
 ### 3. `docker-hub-deploy.yml`
+
 - **Status**: PARTIAL - Contains legacy references
 - **Reason**: Still references deprecated Gradient AI provider
 - **Issues**:
@@ -38,6 +41,7 @@ These workflows have been deprecated and archived. They are kept for historical 
   - Replaced by direct droplet deployment via SSH
 
 ### 4. `docr-build.yml`
+
 - **Status**: UNUSED
 - **Reason**: DigitalOcean Container Registry not used in production
 - **Issues**:
@@ -46,6 +50,7 @@ These workflows have been deprecated and archived. They are kept for historical 
   - Unnecessary complexity for single-droplet deployment
 
 ### 5. `lint.yml`
+
 - **Status**: DUPLICATE (stale copy)
 - **Reason**: Active version is in `.github/workflows/lint.yml`
 - **Issues**:
@@ -60,6 +65,7 @@ These workflows have been deprecated and archived. They are kept for historical 
 **Use this instead**: `.github/workflows/deploy-intelligent.yml`
 
 ### Features
+
 - ✅ Automated .env syncing to production droplet
 - ✅ Intelligent deployment strategy selection (config/full/quick)
 - ✅ Health check validation after deployment
@@ -70,18 +76,21 @@ These workflows have been deprecated and archived. They are kept for historical 
 ### Usage
 
 **Automatic Deployment** (on push to main):
+
 ```bash
 git push origin main
 # Triggers deploy-intelligent.yml automatically
 ```
 
 **Manual Deployment** (via GitHub Actions UI):
+
 1. Go to: https://github.com/Appsmithery/code-chef/actions/workflows/deploy-intelligent.yml
 2. Click "Run workflow"
 3. Select deployment type: auto/config/full/quick
 4. Click "Run workflow"
 
 **Local Deployment** (manual via SSH):
+
 ```bash
 # Sync .env first
 bash support/scripts/deployment/sync-env-to-droplet.sh
@@ -98,11 +107,11 @@ curl https://codechef.appsmithery.co/health
 
 ## 🔍 Migration History
 
-| Date | Action | Details |
-|------|--------|---------|
-| Dec 16, 2025 | Archived workflows | Moved to `_deprecated/` after Gradient → OpenRouter migration |
-| Dec 16, 2025 | Created `deploy-intelligent.yml` | Unified deployment with .env sync and health checks |
-| Dec 16, 2025 | Removed hardcoded fallbacks | Fail-fast error handling in `shared/lib/llm_providers.py` |
+| Date         | Action                           | Details                                                       |
+| ------------ | -------------------------------- | ------------------------------------------------------------- |
+| Dec 16, 2025 | Archived workflows               | Moved to `_deprecated/` after Gradient → OpenRouter migration |
+| Dec 16, 2025 | Created `deploy-intelligent.yml` | Unified deployment with .env sync and health checks           |
+| Dec 16, 2025 | Removed hardcoded fallbacks      | Fail-fast error handling in `shared/lib/llm_providers.py`     |
 
 ---
 
