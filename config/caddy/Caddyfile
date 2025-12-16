@@ -1,4 +1,19 @@
 codechef.appsmithery.co {
+	# Health check endpoint (highest priority)
+	handle /health {
+		reverse_proxy orchestrator:8001
+	}
+
+	# Root endpoint (orchestrator main)
+	handle / {
+		reverse_proxy orchestrator:8001
+	}
+
+	# Execute endpoint (orchestrator workflows)
+	handle /execute {
+		reverse_proxy orchestrator:8001
+	}
+
 	# API endpoints (strip /api prefix before proxying)
 	handle /api/* {
 		uri strip_prefix /api
@@ -6,7 +21,14 @@ codechef.appsmithery.co {
 	}
 
 	# Linear webhooks
-	reverse_proxy /webhooks/linear orchestrator:8001
+	handle /webhooks/linear {
+		reverse_proxy orchestrator:8001
+	}
+
+	# Metrics endpoint (orchestrator)
+	handle /metrics* {
+		reverse_proxy orchestrator:8001
+	}
 
 	# Service endpoints (strip prefix)
 	handle /rag/* {
@@ -22,23 +44,14 @@ codechef.appsmithery.co {
 		reverse_proxy langgraph:8010
 	}
 
-	# OAuth2 protected Prometheus
-	redir /prometheus /prometheus/
-	handle /prometheus/* {
-		uri strip_prefix /prometheus
-		reverse_proxy oauth2-proxy:4180
-	}
-	handle /oauth2/* {
-		reverse_proxy oauth2-proxy:4180
-	}
-
-	# Frontend SPA (catch-all for client-side routing)
+	# Frontend SPA (fallback for unmatched routes)
 	handle {
 		root * /srv/frontend
 		encode gzip
 		try_files {path} /index.html
 		file_server
 	}
-	# HTTPS with Let's Encrypt
+
+	# HTTPS with Let's Encrypt (fallback to ZeroSSL)
 	tls alex@appsmithery.co
 }
