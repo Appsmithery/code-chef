@@ -162,7 +162,7 @@ jobs:
           tag_name: v${{ steps.get-version.outputs.version }}
           name: VS Code Extension v${{ steps.get-version.outputs.version }}
           generate_release_notes: true
-          draft: true  # Create as draft first to allow file uploads (immutable releases block uploads)
+          draft: true # Create as draft first to allow file uploads (immutable releases block uploads)
           prerelease: false
           files: ${{ env.EXTENSION_DIR }}/*.vsix
           body: |
