@@ -69,6 +69,14 @@
   "linear.workspaceId": "5029c640-3f73-480c-82f3-58e402ed4207",
   "linear.teamId": "f5b610be-ac34-4983-918b-2c9d00aa9b7a",
   "linear.defaultProject": "AI DevOps Agent Platform",
+
+  // Code-Chef Extension Settings
+  "codechef.orchestratorUrl": "https://codechef.appsmithery.co/api",
+  "codechef.apiKey": "gt5Ae88fz-inOpFmRf1kVAkOJSV3enR7qr8ri1V2so0",
+  "codechef.environment": "production",
+  "codechef.enableNotifications": true,
+  "codechef.showTokenUsage": true,
+
   "chat.mcp.serverSampling": {
     "Dev-Tools Root/.vscode/mcp.json: Docs by LangChain": {
       "allowedModels": ["copilot/claude-sonnet-4.5"]
