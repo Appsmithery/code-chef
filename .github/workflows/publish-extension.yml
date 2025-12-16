@@ -28,6 +28,8 @@ jobs:
       contents: write
       packages: write
       id-token: write
+      # Required for bypassing org-level tag restrictions
+      repository-projects: write
     outputs:
       version: ${{ steps.get-version.outputs.version }}
 
