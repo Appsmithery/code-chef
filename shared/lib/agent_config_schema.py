@@ -229,9 +229,7 @@ class AgentConfig(BaseModel):
         """OpenRouter and other providers have flexible max_tokens requirements."""
         # No minimum validation needed for OpenRouter
         if v < 1:
-            raise ValueError(
-                f"max_tokens must be at least 1, got {v}"
-            )
+            raise ValueError(f"max_tokens must be at least 1, got {v}")
         return v
 
     @field_validator("langsmith_project")

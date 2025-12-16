@@ -237,10 +237,10 @@ error_recovery:
 
   # Fallback chain for LLM failures
   llm_fallback_chain:
-    - model: "codellama-13b"
-      provider: "gradient"
-    - model: "llama3.3-70b"
-      provider: "gradient"
+    - model: "qwen/qwen-2.5-coder-32b-instruct"
+      provider: "openrouter"
+    - model: "qwen/qwen-2.5-coder-14b"
+      provider: "openrouter"
     - model: "gpt-4o-mini"
       provider: "openai"
 
