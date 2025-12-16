@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import EventSource from 'eventsource';
 
 export interface TaskRequest {
     description: string;
@@ -228,65 +229,45 @@ export class OrchestratorClient {
      */
     async *chatStream(request: ChatStreamRequest): AsyncGenerator<StreamChunk> {
         const url = `${this.client.defaults.baseURL}/chat/stream`;
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-        };
-        if (this.apiKey) {
-            headers['X-API-Key'] = this.apiKey;
-        }
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(request),
+        
+        // Use axios for Node.js compatibility (VS Code runs in Node.js, not browser)
+        const response = await this.client.post(url, request, {
+            responseType: 'stream',
+            headers: {
+                'Accept': 'text/event-stream',
+            }
         });
 
-        if (!response.ok) {
-            throw new Error(`Stream failed: ${response.status} ${response.statusText}`);
-        }
-
-        if (!response.body) {
-            throw new Error('No response body for streaming');
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
+        // Process SSE stream
         let buffer = '';
+        
+        for await (const chunk of response.data) {
+            buffer += chunk.toString();
+            
+            // Process complete SSE messages (separated by double newlines)
+            const messages = buffer.split('\n\n');
+            buffer = messages.pop() || '';
 
-        try {
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                
-                // Process complete SSE messages (separated by double newlines)
-                const messages = buffer.split('\n\n');
-                buffer = messages.pop() || '';
-
-                for (const message of messages) {
-                    if (message.startsWith('data: ')) {
-                        try {
-                            const data = JSON.parse(message.slice(6));
-                            yield data as StreamChunk;
-                        } catch (parseError) {
-                            console.warn('Failed to parse SSE message:', message);
-                        }
+            for (const message of messages) {
+                if (message.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(message.slice(6));
+                        yield data as StreamChunk;
+                    } catch (parseError) {
+                        console.warn('Failed to parse SSE message:', message);
                     }
                 }
             }
+        }
 
-            // Process any remaining buffer
-            if (buffer.startsWith('data: ')) {
-                try {
-                    const data = JSON.parse(buffer.slice(6));
-                    yield data as StreamChunk;
-                } catch {
-                    // Ignore incomplete final message
-                }
+        // Process any remaining buffer
+        if (buffer.startsWith('data: ')) {
+            try {
+                const data = JSON.parse(buffer.slice(6));
+                yield data as StreamChunk;
+            } catch {
+                // Ignore incomplete final message
             }
-        } finally {
-            reader.releaseLock();
         }
     }
 
