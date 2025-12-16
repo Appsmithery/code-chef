@@ -42,7 +42,7 @@ jobs:
         run: |
           # Create fresh .env from template (contains default values)
           cp config/env/.env.template config/env/.env
-          
+
           # Create temporary file for secrets (will be merged)
           cat > /tmp/secrets.env << 'EOF'
           # === SECRETS FROM GITHUB (Overrides template defaults) ===
@@ -82,7 +82,7 @@ jobs:
           # HuggingFace (ModelOps)
           HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}
           EOF
-          
+
           # Merge secrets into .env, replacing duplicates (secrets override template)
           while IFS='=' read -r key value; do
             # Skip comments and empty lines
@@ -90,10 +90,10 @@ jobs:
             # Remove existing key from .env (prevents duplicates)
             sed -i "/^${key}=/d" config/env/.env
           done < /tmp/secrets.env
-          
+
           # Append all secrets
           cat /tmp/secrets.env >> config/env/.env
-          
+
           # Validate: Check for duplicate keys
           echo "🔍 Validating .env file for duplicates..."
           duplicates=$(grep -v '^#' config/env/.env | grep -v '^$' | cut -d= -f1 | sort | uniq -d)
@@ -104,7 +104,7 @@ jobs:
             cat config/env/.env
             exit 1
           fi
-          
+
           # Verify critical variables present
           echo "✅ Checking critical variables..."
           for var in LLM_PROVIDER OPENROUTER_API_KEY LANGSMITH_API_KEY; do
@@ -113,7 +113,7 @@ jobs:
               exit 1
             fi
           done
-          
+
           # Show summary
           echo "✅ .env file created successfully"
           echo "📊 Total variables: $(grep -v '^#' config/env/.env | grep -v '^$' | wc -l)"
@@ -226,10 +226,10 @@ jobs:
               cp .env .env.backup-\$(date +%Y%m%d-%H%M%S); \
               echo '📦 Backed up existing .env'; \
             fi"
-          
+
           # Upload new .env (overwrites completely)
           scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
-          
+
           # Verify upload and check for duplicates on droplet
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
             echo '🔍 Verifying uploaded .env...' && \
@@ -323,10 +323,10 @@ jobs:
               cp .env .env.backup-\$(date +%Y%m%d-%H%M%S); \
               echo '📦 Backed up existing .env'; \
             fi"
-          
+
           # Upload new .env (overwrites completely)
           scp config/env/.env ${{ env.DROPLET_HOST }}:${{ env.DEPLOY_PATH }}/config/env/.env
-          
+
           # Verify upload and check for duplicates on droplet
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
             echo '🔍 Verifying uploaded .env...' && \
