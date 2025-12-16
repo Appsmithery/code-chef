@@ -1285,23 +1285,19 @@ _compiled_graph = None
 def get_graph():
     """Get the compiled LangGraph workflow (singleton).
 
-    Returns cached graph instance for streaming operations.
-    Initializes on first call with checkpointing enabled.
+    Returns cached graph instance WITHOUT checkpointing for streaming.
+
+    Note:
+        PostgresSaver doesn't support async aget_tuple needed for astream_events.
+        For streaming endpoints, we use a graph without checkpointing.
+        For regular execution with ainvoke, use the 'app' export which has checkpointing.
     """
     global _compiled_graph
     if _compiled_graph is None:
-        # Get PostgreSQL connection string from environment
-        import os
-
-        checkpoint_conn_string = os.getenv("POSTGRES_CHECKPOINT_URI")
-        if checkpoint_conn_string:
-            logger.info("[LangGraph] Initializing graph with PostgreSQL checkpointing")
-            _compiled_graph = create_workflow(checkpoint_conn_string)
-        else:
-            logger.warning(
-                "[LangGraph] No POSTGRES_CHECKPOINT_URI found, checkpointing disabled"
-            )
-            _compiled_graph = create_workflow()
+        logger.info(
+            "[LangGraph] Initializing graph without checkpointing (for streaming)"
+        )
+        _compiled_graph = create_workflow()  # No checkpointing for streaming
     return _compiled_graph
 
 
