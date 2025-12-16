@@ -105,8 +105,19 @@ class ConfigLoader:
 
     def _get_default_config_path(self) -> Path:
         """Resolve default config path relative to repo root."""
-        # Assuming this file is in shared/lib/config_loader.py
-        repo_root = Path(__file__).parent.parent.parent
+        # In Docker: /app/lib/config_loader.py (copied from shared/lib/)
+        # Locally: <repo>/shared/lib/config_loader.py
+        # repo_root should be /app in Docker, <repo> locally
+        file_path = Path(__file__)  # /app/lib/config_loader.py or <repo>/shared/lib/config_loader.py
+        
+        # Check if running in Docker (file is in /app/lib instead of <repo>/shared/lib)
+        if file_path.parts[-3:-1] == ('app', 'lib'):
+            # Docker: /app/lib/config_loader.py → repo_root = /app
+            repo_root = file_path.parent.parent
+        else:
+            # Local: <repo>/shared/lib/config_loader.py → repo_root = <repo>
+            repo_root = file_path.parent.parent.parent
+            
         config_path = repo_root / "config" / "agents" / "models.yaml"
 
         if not config_path.exists():
