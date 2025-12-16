@@ -1,8 +1,10 @@
 # GitHub Copilot Instructions for Code-Chef
 
-> **Version**: 2.0  
-> **Updated**: December 12, 2025  
-> **Role**: **Sous Chef** - Development assistant and monitoring companion for the code-chef multi-agent DevOps platform
+> **Version**: 2.1  
+> **Updated**: December 15, 2025  
+> **Role**: **Sous Chef** - Development assistant and monitoring companion for the code-chef multi-agent DevOps platform  
+> **Status**: Public Beta (single user) → Future: Commercial VS Code extension on VSCE Marketplace  
+> **Architecture**: Cloud-first (4GB DigitalOcean droplet) with local development environment
 
 ---
 
@@ -36,13 +38,13 @@ You complement the **Head Chef** (LangGraph orchestrator) by providing:
 
 **When Copilot acts directly**:
 
-- Code edits requested by user
-- Log analysis and debugging
-- Container inspection and health checks
+- Code edits requested by user (local IDE)
+- Remote log analysis and debugging (droplet via SSH)
+- Remote container inspection and health checks (droplet)
 - Linear issue creation/updates
 - Documentation queries
-- Configuration validation
-- Local testing and verification
+- Configuration validation (local changes, remote deployment)
+- Pre-deployment testing (local), production monitoring (droplet)
 
 ---
 
@@ -119,18 +121,21 @@ mcp_linear_create_issue(title="Fix health check", project="CHEF")
 Check all services before diagnosing issues:
 
 ```bash
-# Service health endpoints
-curl http://localhost:8001/health  # orchestrator
-curl http://localhost:8007/health  # rag-context
-curl http://localhost:8008/health  # state-persist
-curl http://localhost:8009/health  # agent-registry
-curl http://localhost:8010/health  # langgraph
+# Production health endpoints (via droplet)
+ssh root@45.55.173.72 "curl -s http://localhost:8001/health | jq ."
+ssh root@45.55.173.72 "curl -s http://localhost:8007/health | jq ."
+ssh root@45.55.173.72 "curl -s http://localhost:8008/health | jq ."
+ssh root@45.55.173.72 "curl -s http://localhost:8009/health | jq ."
+ssh root@45.55.173.72 "curl -s http://localhost:8010/health | jq ."
 
-# Container status
-mcp_copilot_conta_list_containers
+# Or via public endpoint (Caddy reverse proxy)
+curl -s https://codechef.appsmithery.co/health | jq .
 
-# Docker Compose status
-docker compose ps
+# Container status on droplet
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose ps"
+
+# Local testing (optional, not production)
+docker compose ps  # D:\APPS\code-chef\deploy
 ```
 
 **Expected Response**:
@@ -157,20 +162,19 @@ docker compose ps
 4. **LangSmith traces**: Filter by `environment:"production"` and recent timestamp
 5. **Prometheus metrics**: Check `/metrics` endpoint for anomalies
 
-**Common Log Locations**:
+**Common Log Locations** (Production on Droplet):
 
 ```bash
-# Orchestrator logs
-docker logs deploy-orchestrator-1 --tail=100 -f
+# Via SSH (recommended for production debugging)
+ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 --tail=100 -f"
+ssh root@45.55.173.72 "docker logs deploy-rag-context-1 --tail=100 -f"
+ssh root@45.55.173.72 "docker logs deploy-langgraph-1 --tail=100 -f"
 
-# RAG service logs
-docker logs deploy-rag-context-1 --tail=100 -f
+# All services at once
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose logs -f --tail=50"
 
-# LangGraph logs
-docker logs deploy-langgraph-1 --tail=100 -f
-
-# All services
-docker compose logs -f --tail=50
+# Local testing (if running local stack)
+docker logs deploy-orchestrator-1 --tail=100 -f  # Windows local only
 ```
 
 **Log Patterns to Watch**:
@@ -382,36 +386,47 @@ tools = await loader.get_tools_for_task(
 
 ```
 Production (codechef.appsmithery.co → 45.55.173.72)
-├── orchestrator:8001       # Main entry point, workflow coordination
-├── rag-context:8007        # Vector DB (Qdrant), semantic search
-├── state-persist:8008      # PostgreSQL, checkpointing, events
-├── agent-registry:8009     # Agent manifest, tool discovery
-└── langgraph:8010          # LangGraph API server (optional)
-
-Dependencies
-├── PostgreSQL:5432         # State, checkpoints, workflow events
-├── Qdrant Cloud            # Embeddings (OpenAI text-embedding-3-small)
-└── Linear API              # Issue tracking, HITL approvals
+├── Droplet Specs: 4GB RAM, 50GB SSD, 2 vCPUs, Ubuntu 22.04, NYC3
+├── Git Repo: /opt/Dev-Tools (Appsmithery/code-chef)
+├── Status: Public Beta (single user) → Future: VSCE Marketplace
+│
+├── Core Services (on droplet):
+│   ├── orchestrator:8001       # Main entry point, workflow coordination
+│   ├── rag-context:8007        # Vector DB client (Qdrant Cloud)
+│   ├── state-persist:8008      # PostgreSQL, checkpointing, events
+│   ├── agent-registry:8009     # Agent manifest, tool discovery
+│   ├── langgraph:8010          # LangGraph API server
+│   ├── postgres:5432           # PostgreSQL database
+│   ├── redis:6379              # Caching layer
+│   └── caddy:80/443            # Reverse proxy with SSL
+│
+└── Cloud Dependencies:
+    ├── Qdrant Cloud            # Vector embeddings (GCP us-east4, $25/mo)
+    ├── Grafana Cloud           # Metrics & logs (free tier, replaces local stack)
+    ├── LangSmith               # LLM tracing (free tier)
+    ├── Linear API              # Issue tracking, HITL approvals (free tier)
+    └── OpenRouter              # Multi-model LLM gateway (usage-based)
 ```
 
 ### Health Check Protocol
 
-**Always check health before diagnosing**:
+**Always check health before diagnosing** (Production Droplet):
 
 ```bash
-# Quick check all services
-curl -s http://localhost:8001/health | jq .
-curl -s http://localhost:8007/health | jq .
-curl -s http://localhost:8008/health | jq .
-curl -s http://localhost:8009/health | jq .
-curl -s http://localhost:8010/health | jq .
+# Quick health check via public endpoint
+curl -s https://codechef.appsmithery.co/health | jq .
 
-# Container status
-docker compose ps
+# Detailed checks via SSH
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose ps"
+ssh root@45.55.173.72 "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}'"
 
-# Detailed container inspection
-mcp_copilot_conta_list_containers
-mcp_copilot_conta_inspect_container("deploy-orchestrator-1")
+# Individual service health
+ssh root@45.55.173.72 "curl -s http://localhost:8001/health | jq ."
+ssh root@45.55.173.72 "curl -s http://localhost:8007/health | jq ."
+
+# Use VS Code task for convenience
+# Command Palette → Tasks: Run Task → "Check Droplet Services"
+# Command Palette → Tasks: Run Task → "View Droplet Logs"
 ```
 
 **Expected Response** (healthy):
@@ -439,16 +454,18 @@ mcp_copilot_conta_inspect_container("deploy-orchestrator-1")
 
 ### Common Issues & Resolutions
 
-| Symptom                  | Check                             | Resolution                                   |
-| ------------------------ | --------------------------------- | -------------------------------------------- | ---------------- |
-| 503 Service Unavailable  | `docker compose ps`               | `docker compose up -d <service>`             |
-| Connection refused       | Port conflicts                    | `netstat -ano                                | findstr :<port>` |
-| Slow response            | `/metrics` latency                | Check LangSmith traces for bottleneck        |
-| Database errors          | PostgreSQL logs                   | Check schema migrations, connection pool     |
-| Tool invocation failures | Docker MCP Toolkit                | `docker mcp list`, restart extension         |
-| HITL not triggering      | Linear webhook config             | Verify `config/linear/webhook-handlers.yaml` |
-| Agent not responding     | LangSmith traces + container logs | Check model API keys, Gradient AI status     |
-| Missing embeddings       | Qdrant health                     | Verify OpenAI API key, check collection      |
+| Symptom                  | Check (Droplet)                                               | Resolution                                                                               |
+| ------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| 503 Service Unavailable  | `ssh root@45.55.173.72 "docker compose ps"`                   | SSH in, `cd /opt/Dev-Tools && docker compose up -d <service>`                            |
+| Extension not connecting | Droplet health, Caddy logs                                    | Check SSL cert, verify orchestrator running, test direct curl to 8001                    |
+| Connection refused       | Firewall rules on droplet                                     | `ufw status`, ensure ports 80/443 open, check Caddy config                               |
+| Slow response            | Droplet memory pressure                                       | `ssh root@45.55.173.72 "free -h"`, check swap usage, review LangSmith traces             |
+| Database errors          | PostgreSQL logs on droplet                                    | SSH in, check schema migrations, connection pool, disk space                             |
+| Tool invocation failures | Docker MCP Toolkit (local) + droplet connectivity             | `docker mcp list`, restart extension, verify orchestrator accessible                     |
+| HITL not triggering      | Linear webhook config, droplet can reach Linear API           | Verify `config/linear/webhook-handlers.yaml`, check egress firewall rules                |
+| Agent not responding     | LangSmith traces + droplet container logs                     | SSH to droplet, check logs, verify OpenRouter API keys in env, model quotas              |
+| Missing embeddings       | Qdrant Cloud connectivity from droplet                        | Verify Qdrant Cloud URL/API key on droplet, test network from droplet                    |
+| Out of memory (OOM)      | `ssh root@45.55.173.72 "free -h && docker stats --no-stream"` | Check swap usage (should be 0MB on 4GB), review container limits, restart heavy services |
 
 ---
 
@@ -489,25 +506,31 @@ Route tasks by **function**, not technology:
 
 **When monitoring Head Chef activity**, use tools efficiently:
 
-### Debugging Workflow
+### Debugging Workflow (Production Droplet)
 
 ```bash
-# 1. Check service health
-curl http://localhost:8001/health
+# 1. Check service health (public endpoint)
+curl -s https://codechef.appsmithery.co/health | jq .
 
-# 2. View recent logs
-mcp_copilot_conta_logs_for_container("deploy-orchestrator-1")
+# 2. SSH to droplet and view logs
+ssh root@45.55.173.72 "docker logs deploy-orchestrator-1 --tail=100"
 
-# 3. Query database state
-docker exec -it deploy-state-persist-1 psql -U postgres -d codechef \
-  -c "SELECT * FROM checkpoints ORDER BY created_at DESC LIMIT 5;"
+# 3. Query database state (via SSH)
+ssh root@45.55.173.72 "docker exec -i deploy-state-persist-1 psql -U postgres -d codechef -c 'SELECT * FROM checkpoints ORDER BY created_at DESC LIMIT 5;'"
 
 # 4. Check LangSmith traces
 # Visit: https://smith.langchain.com
 # Filter: environment:"production" AND start_time > now-30m
 
-# 5. View metrics
-curl http://localhost:8001/metrics/tokens
+# 5. View metrics (via SSH)
+ssh root@45.55.173.72 "curl -s http://localhost:8001/metrics/tokens | jq ."
+
+# 6. Check resource usage on droplet
+ssh root@45.55.173.72 "free -h && docker stats --no-stream"
+
+# Or use VS Code tasks:
+# Ctrl+Shift+P → Tasks: Run Task → "View Droplet Logs"
+# Ctrl+Shift+P → Tasks: Run Task → "Check Droplet Services"
 ```
 
 ### Tool Activation Patterns
@@ -745,32 +768,59 @@ git log -1 --format="%H" -- "agent_orchestrator/graph.py"
 
 ### Deployment Validation
 
-**Always validate after deploys**:
+**Always validate after deploys to droplet**:
 
 ```bash
-# 1. Health checks
-curl http://localhost:8001/health
-curl http://localhost:8007/health
-curl http://localhost:8008/health
-curl http://localhost:8009/health
-curl http://localhost:8010/health
+# 1. Push changes from local
+cd D:\APPS\code-chef
+git add -A
+git commit -m "<describe changes>"
+git push origin main
 
-# 2. Container status
-docker compose ps
-mcp_copilot_conta_list_containers
+# 2. Pull and restart on droplet
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull && docker compose down && docker compose up -d"
 
-# 3. Test workflow routing
-curl -X POST http://localhost:8001/execute \
+# 3. Wait for services to start (30-60 seconds)
+sleep 60
+
+# 4. Health checks via SSH
+ssh root@45.55.173.72 "docker compose ps && curl -s http://localhost:8001/health | jq ."
+
+# 5. Public endpoint check
+curl -s https://codechef.appsmithery.co/health | jq .
+
+# 6. Test workflow routing (via extension or curl)
+curl -X POST https://codechef.appsmithery.co/execute \
   -H "Content-Type: application/json" \
   -d '{"message": "Implement hello world", "user_id": "test"}'
 
-# 4. Check metrics
-curl http://localhost:8001/metrics/tokens
+# 7. Check metrics and resource usage
+ssh root@45.55.173.72 "free -h && docker stats --no-stream"
+ssh root@45.55.173.72 "curl -s http://localhost:8001/metrics/tokens | jq ."
+
+# 8. Monitor logs for errors (first 5 minutes)
+ssh root@45.55.173.72 "docker compose logs -f --tail=50"
 ```
 
 ### Cleanup Protocol
 
-**Never leave partial stacks**:
+**Production Droplet** (⚠️ USE WITH CAUTION):
+
+```bash
+# Clean up orphaned resources (safe)
+ssh root@45.55.173.72 "docker system prune -f"
+
+# Restart specific service (minimal downtime)
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose restart orchestrator"
+
+# Full restart (30-60s downtime, use during off-hours)
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose down && docker compose up -d"
+
+# Nuclear option: Remove volumes (⚠️ DATA LOSS - backup first!)
+# ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose down -v"
+```
+
+**Local Development** (safe to experiment):
 
 ```bash
 # Full cleanup
@@ -778,17 +828,97 @@ docker compose down --remove-orphans --volumes
 
 # Restart clean
 docker compose up -d
-
-# Verify all running
-docker compose ps | grep "Up"
 ```
 
 **Docker Resource Management**:
 
-- Treat containers as disposable
-- Leave stacks **fully running** or **fully stopped**
-- Clean up orphaned volumes: `docker volume prune`
-- Monitor disk usage: `docker system df`
+- **Production**: Treat with care, monitor resource usage, schedule maintenance windows
+- **Local**: Treat containers as disposable, experiment freely
+- Leave stacks **fully running** or **fully stopped** (never partial)
+- Clean up orphaned volumes: `docker volume prune` (safe on droplet)
+- Monitor disk usage: `ssh root@45.55.173.72 "docker system df"`
+- **4GB RAM guideline**: Keep container total <2.5GB actual usage, leave 1.5GB for system
+
+---
+
+## Development Workflow (Public Beta → Commercial)
+
+### Current State (December 2025)
+
+- **Status**: Public Beta with single user (you)
+- **Deployment**: Production on 4GB DigitalOcean droplet (45.55.173.72)
+- **Architecture**: Cloud-first with optional local testing
+- **Extension**: In development, preparing for VSCE Marketplace
+- **Repository**: Public (Appsmithery/code-chef), will remain open-source
+
+### Local → Production Workflow
+
+```bash
+# 1. Make changes locally (Windows)
+cd D:\APPS\code-chef
+# Edit files in VS Code
+
+# 2. Test locally (optional)
+cd deploy
+docker compose up -d
+# Test changes
+docker compose down
+
+# 3. Commit and push
+git add -A
+git commit -m "<describe changes>"
+git push origin main
+
+# 4. Deploy to droplet
+ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull && docker compose down && docker compose up -d"
+
+# 5. Validate
+curl -s https://codechef.appsmithery.co/health | jq .
+```
+
+### VS Code Extension Development
+
+**Location**: `extensions/vscode-codechef/`
+
+```bash
+# Install dependencies
+cd extensions/vscode-codechef
+npm install
+
+# Run in debug mode (F5 or Run → Start Debugging)
+# Opens new VS Code window with extension loaded
+
+# Package for marketplace
+vsce package
+# Creates vscode-codechef-<version>.vsix
+
+# Future: Publish to VSCE Marketplace
+vsce publish
+```
+
+### Preparing for Commercial Launch
+
+**Checklist** (Future Work):
+
+- [ ] **Extension**: Polish UI/UX, add onboarding wizard
+- [ ] **Documentation**: User guides, video tutorials, API docs
+- [ ] **Infrastructure**: Multi-tenant support, user authentication
+- [ ] **Billing**: Stripe integration, tiered pricing model
+- [ ] **Support**: Help desk, community forum, status page
+- [ ] **Marketing**: Landing page, SEO, social media presence
+- [ ] **Legal**: Terms of service, privacy policy, GDPR compliance
+- [ ] **Monitoring**: Enhanced observability, uptime monitoring
+- [ ] **Security**: Penetration testing, vulnerability scanning
+- [ ] **Performance**: Load testing, auto-scaling, CDN
+
+**Business Model Options**:
+
+1. **Freemium**: Free tier (limited requests/month) + Paid tiers
+2. **Subscription**: Monthly/annual plans ($9.99, $29.99, $99.99/mo)
+3. **Usage-based**: Pay per LLM call/token (cost + markup)
+4. **Enterprise**: Custom pricing, SLA, dedicated support
+
+**Current Focus**: Stabilize single-user beta, optimize costs, refine UX
 
 ---
 
