@@ -3344,6 +3344,7 @@ class ChatStreamRequest(BaseModel):
 
 
 @app.post("/chat/stream", tags=["chat"])
+@traceable(name="chat_stream", tags=["api", "streaming", "sse"])
 async def chat_stream_endpoint(request: ChatStreamRequest):
     """
     Stream chat response via Server-Sent Events (SSE) for interactive conversations.
@@ -3411,10 +3412,13 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             from graph import WorkflowState, get_graph
             from langchain_core.messages import AIMessage, HumanMessage
 
+            logger.info(f"[Chat Stream] Initializing graph for session {session_id}")
             graph = get_graph()
             if not graph:
+                logger.error("[Chat Stream] Failed to get graph instance")
                 yield f"data: {json.dumps({'type': 'error', 'error': 'Graph not available'})}\n\n"
                 return
+            logger.info(f"[Chat Stream] Graph loaded successfully, streaming enabled")
 
             # Load conversation history from session if exists
             conversation_history = []
