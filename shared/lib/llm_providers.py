@@ -335,8 +335,12 @@ except Exception as e:
     logger.error("Check:")
     logger.error("  1. File exists: config/agents/models.yaml")
     logger.error("  2. File is valid YAML")
-    logger.error("  3. All agent configs present: orchestrator, feature_dev, code_review, infrastructure, cicd, documentation")
-    logger.error("  4. All agents have required fields: model, provider, temperature, max_tokens")
+    logger.error(
+        "  3. All agent configs present: orchestrator, feature_dev, code_review, infrastructure, cicd, documentation"
+    )
+    logger.error(
+        "  4. All agents have required fields: model, provider, temperature, max_tokens"
+    )
     raise RuntimeError(
         f"Configuration error: Cannot load config/agents/models.yaml. "
         f"Service cannot start without valid agent configuration. Error: {e}"
