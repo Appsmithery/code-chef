@@ -14,7 +14,6 @@ services:
     environment:
       - AGENT_NAME=orchestrator
       - PORT=8001
-      - GRADIENT_MODEL=llama3.3-70b-instruct
       - RAG_SERVICE_URL=http://rag-context:8007
       - STATE_SERVICE_URL=http://state-persistence:8008
       - AGENT_REGISTRY_URL=http://agent-registry:8009

@@ -191,10 +191,10 @@ error_recovery:
 
   # Fallback chain for LLM failures
   llm_fallback_chain:
-    - model: "llama3.3-70b"
-      provider: "gradient"
-    - model: "llama3-8b"
-      provider: "gradient"
+    - model: "google/gemini-2.0-flash-exp"
+      provider: "openrouter"
+    - model: "qwen/qwen-2.5-coder-14b"
+      provider: "openrouter"
     - model: "gpt-4o-mini"
       provider: "openai"
 

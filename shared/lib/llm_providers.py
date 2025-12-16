@@ -333,12 +333,24 @@ try:
 except Exception as e:
     # Backward compatibility: Fall back to hardcoded models if YAML unavailable
     logger.warning(f"Failed to load config from YAML, using hardcoded models: {e}")
-    orchestrator_llm = get_llm("orchestrator", model="anthropic/claude-3-5-sonnet", provider="openrouter")
-    feature_dev_llm = get_llm("feature-dev", model="qwen/qwen-2.5-coder-32b-instruct", provider="openrouter")
-    code_review_llm = get_llm("code-review", model="deepseek/deepseek-v3", provider="openrouter")
-    infrastructure_llm = get_llm("infrastructure", model="google/gemini-2.0-flash-exp", provider="openrouter")
-    cicd_llm = get_llm("cicd", model="google/gemini-2.0-flash-exp", provider="openrouter")
-    documentation_llm = get_llm("documentation", model="deepseek/deepseek-v3", provider="openrouter")
+    orchestrator_llm = get_llm(
+        "orchestrator", model="anthropic/claude-3-5-sonnet", provider="openrouter"
+    )
+    feature_dev_llm = get_llm(
+        "feature-dev", model="qwen/qwen-2.5-coder-32b-instruct", provider="openrouter"
+    )
+    code_review_llm = get_llm(
+        "code-review", model="deepseek/deepseek-v3", provider="openrouter"
+    )
+    infrastructure_llm = get_llm(
+        "infrastructure", model="google/gemini-2.0-flash-exp", provider="openrouter"
+    )
+    cicd_llm = get_llm(
+        "cicd", model="google/gemini-2.0-flash-exp", provider="openrouter"
+    )
+    documentation_llm = get_llm(
+        "documentation", model="deepseek/deepseek-v3", provider="openrouter"
+    )
 
 # Shared embeddings instance (OpenAI text-embedding-3-small)
 shared_embeddings = get_embeddings()

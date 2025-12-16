@@ -167,10 +167,10 @@ error_recovery:
 
   # Fallback chain for LLM failures
   llm_fallback_chain:
-    - model: "mistral-nemo-instruct-2407"
-      provider: "gradient"
-    - model: "llama3-8b"
-      provider: "gradient"
+    - model: "deepseek/deepseek-v3"
+      provider: "openrouter"
+    - model: "qwen/qwen-2.5-coder-14b"
+      provider: "openrouter"
 
 # Notifications
 notifications:
