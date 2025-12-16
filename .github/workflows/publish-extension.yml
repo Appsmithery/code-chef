@@ -104,6 +104,8 @@ jobs:
           git commit -m "chore(extension): bump version to ${VERSION}"
           # Create and push the tag NOW, before release creation
           git tag "v${VERSION}"
+          # Pull first in case of concurrent workflow changes, then push
+          git pull --rebase origin main
           git push origin main "v${VERSION}"
 
       - name: Get current version
