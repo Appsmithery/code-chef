@@ -361,31 +361,50 @@ This removes:
 | **Observability (removed)** | **180 MB**              | **1.28 GB**             | **0 MB** ✅                         |
 | **TOTAL**                   | **745 MB** → **565 MB** | **5.5 GB** → **4.2 GB** | **-180 MB actual, -1.28 GB limits** |
 
-**Droplet Status After Migration:**
+**Droplet Status After Migration (with 4GB upgrade):**
 
-- **Memory used**: 565MB containers + ~800MB system = **1.36GB / 1.9GB (72%)**
-- **Memory free**: ~540MB (vs 87MB currently)
-- **Swap usage**: Should drop to 0 (vs 192MB currently)
-- **Result**: ✅ **System no longer under memory pressure**
+- **Memory used**: 565MB containers + ~800MB system = **1.36GB / 3.8GB (36%)**
+- **Memory free**: ~2.4GB (vs 87MB on 2GB droplet)
+- **Swap usage**: Should remain at 0 (plenty of headroom)
+- **Result**: ✅ **Significant headroom for future growth**
 
-### Cost Comparison
+### Cost Comparison (REVISED)
 
-| Item                     | Current        | After Phase 1 Only | Change    |
-| ------------------------ | -------------- | ------------------ | --------- |
-| DigitalOcean Droplet 2GB | $18/mo         | $18/mo             | -         |
-| Qdrant Cloud             | $25/mo         | $25/mo             | -         |
-| LangSmith                | $99/mo         | $99/mo             | -         |
-| OpenRouter               | ~$50/mo        | ~$50/mo            | -         |
-| Grafana Cloud            | $0 (free tier) | $0 (free tier)     | -         |
-| Linear                   | $8/mo          | $8/mo              | -         |
-| **TOTAL**                | **$200/mo**    | **$200/mo**        | **$0** ✅ |
+**Current Actual Costs:**
+| Item | Current | Notes |
+| ------------------------ | ----------- | ------------------------------------------ |
+| DigitalOcean Droplet 2GB | $18/mo | Upgrading to 4GB |
+| Qdrant Cloud | TBD | Payment not set up (check actual usage) |
+| LangSmith | $0 (free) | ✅ Free tier (not $99/mo as initially assumed) |
+| OpenRouter | Usage-based | ~$50/mo estimated (self-serve account) |
+| Grafana Cloud | $0 (free) | Free tier |
+| Linear | $0 (free) | ✅ Free tier (not $8/mo as initially assumed) |
+| **CURRENT TOTAL** | **~$68/mo** | Much lower than initial $200/mo estimate |
+
+**After Optimization:**
+| Item | After Changes | Change | Notes |
+| ------------------------ | ------------- | ---------- | --------------------------------- |
+| DigitalOcean Droplet 4GB | $24/mo | +$6/mo | Upgrade for safety/headroom |
+| Qdrant Cloud | TBD | - | Need to verify actual cost |
+| LangSmith (free tier) | $0 | - | No change |
+| OpenRouter (usage-based) | ~$50/mo | - | No change |
+| Grafana Cloud (free) | $0 | - | No change (local stack removed) |
+| Linear (free tier) | $0 | - | No change |
+| **NEW TOTAL** | **~$74/mo** | **+$6/mo** | Just the droplet upgrade |
 
 **If also doing Phase 2 (storage migration):**
-| Item | Cost/mo |
-|------|---------|
-| Supabase Pro or Neon | +$0-25 |
-| Upstash Redis | +$0 (free) |
-| **TOTAL** | **$200-225/mo** |
+| Item | Cost/mo | Notes |
+| -------------------- | ------- | ------------------------------ |
+| Supabase Pro or Neon | +$0-25 | Optional for backup/DR |
+| Upstash Redis | +$0 | Free tier (256MB) |
+| **TOTAL (worst case)** | **~$99/mo** | Still well under initial estimate |
+
+**Key Findings:**
+
+- 🎉 **Actual cost is ~$68/mo, not $200/mo** (LangSmith & Linear are free tier!)
+- ✅ **4GB upgrade adds only $6/mo** but provides significant stability improvement
+- ✅ **Removing observability stack costs $0** (already using Grafana Cloud free tier)
+- ⚠️ **Need to verify Qdrant Cloud cost** (screenshot shows payment not set up)
 
 ## Further Considerations
 
