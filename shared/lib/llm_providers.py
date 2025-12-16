@@ -218,7 +218,7 @@ def get_llm(
 def get_embeddings(
     model: Optional[str] = None,
     chunk_size: int = 1000,
-    provider: Optional[Literal["gradient", "openai"]] = None,
+    provider: Optional[Literal["openai"]] = None,
 ) -> OpenAIEmbeddings:
     """
     Get LangChain embeddings for specified provider
@@ -232,43 +232,28 @@ def get_embeddings(
         Configured OpenAIEmbeddings instance
 
     Note:
-        DigitalOcean Serverless Inference does NOT support embeddings (as of Nov 2025).
+        OpenRouter does NOT support embeddings.
         Use OpenAI directly for embedding functionality.
-        When provider="gradient", this falls back to OpenAI if available.
     """
     provider = provider or EMBEDDING_PROVIDER
 
-    if provider == "gradient":
-        logger.warning(
-            "Gradient AI Serverless Inference does not support embeddings. Falling back to OpenAI."
+    # Default to OpenAI for embeddings
+    if not OPENAI_API_KEY:
+        logger.error(
+            "OPENAI_API_KEY not set, embeddings will fail. Please configure OpenAI."
         )
-        if not OPENAI_API_KEY:
-            logger.error(
-                "OPENAI_API_KEY not set, embeddings will fail. Please configure OpenAI or use provider='openai'"
-            )
-            return None
+        return None
 
-        return OpenAIEmbeddings(
-            api_key=OPENAI_API_KEY,
-            model=model or "text-embedding-3-small",
-            chunk_size=chunk_size,
-        )
+    # Only OpenAI supported for embeddings
+    if not OPENAI_API_KEY:
+        logger.warning("OPENAI_API_KEY not set, embeddings will fail")
+        return None
 
-    elif provider == "openai":
-        if not OPENAI_API_KEY:
-            logger.warning("OPENAI_API_KEY not set, embeddings will fail")
-            return None
-
-        return OpenAIEmbeddings(
-            api_key=OPENAI_API_KEY,
-            model=model or "text-embedding-3-small",
-            chunk_size=chunk_size,
-        )
-
-    else:
-        raise ValueError(
-            f"Unknown embedding provider: {provider}. Supported: gradient (falls back to openai), openai"
-        )
+    return OpenAIEmbeddings(
+        api_key=OPENAI_API_KEY,
+        model=model or "text-embedding-3-small",
+        chunk_size=chunk_size,
+    )
 
 
 # Backward compatibility aliases (deprecated - use get_llm/get_embeddings directly)
