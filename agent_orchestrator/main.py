@@ -3593,6 +3593,8 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
 
             # Track current node for filtering
             current_node = None
+            last_keepalive = asyncio.get_event_loop().time()
+            keepalive_interval = 15  # Send keepalive every 15 seconds
 
             # Stream events from LangGraph
             async for event in graph.astream_events(
@@ -3615,6 +3617,7 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                         # Check if this is from a specialist agent (not supervisor routing)
                         if current_node and current_node != "supervisor":
                             yield f"data: {json.dumps({'type': 'content', 'content': chunk.content})}\n\n"
+                            last_keepalive = asyncio.get_event_loop().time()
 
                 # Agent completed (for progress indication)
                 elif event_kind == "on_chain_end":
@@ -3622,12 +3625,20 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                     if any(agent in name.lower() for agent in SPECIALIST_AGENTS):
                         yield f"data: {json.dumps({'type': 'agent_complete', 'agent': name})}\n\n"
                         current_node = None  # Reset after completion
+                        last_keepalive = asyncio.get_event_loop().time()
 
                 # Tool calls from specialist agents only
                 elif event_kind == "on_tool_start":
                     if current_node and current_node != "supervisor":
                         tool_name = event.get("name", "unknown")
                         yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name})}\n\n"
+                        last_keepalive = asyncio.get_event_loop().time()
+
+                # Send keepalive comment to prevent connection timeout
+                current_time = asyncio.get_event_loop().time()
+                if current_time - last_keepalive > keepalive_interval:
+                    yield ": keepalive\n\n"
+                    last_keepalive = current_time
 
                 # Add small delay to prevent overwhelming the client
                 await asyncio.sleep(0.01)
@@ -3660,6 +3671,9 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
 
             # Stream complete
             yield f"data: {json.dumps({'type': 'done', 'session_id': session_id})}\n\n"
+
+            # Send terminal [DONE] signal per SSE spec
+            yield "data: [DONE]\n\n"
 
         except Exception as e:
             logger.error(f"Chat stream error: {e}", exc_info=True)

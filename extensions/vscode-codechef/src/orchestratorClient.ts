@@ -1,5 +1,4 @@
 import axios, { AxiosInstance } from 'axios';
-import EventSource from 'eventsource';
 
 export interface TaskRequest {
     description: string;
@@ -249,12 +248,38 @@ export class OrchestratorClient {
             buffer = messages.pop() || '';
 
             for (const message of messages) {
+                // Bug Fix 1: Skip SSE comment lines per OpenRouter spec
+                if (message.startsWith(':')) {
+                    continue;
+                }
+
                 if (message.startsWith('data: ')) {
+                    const data = message.slice(6);
+                    
+                    // Bug Fix 2: Handle [DONE] terminal signal
+                    if (data === '[DONE]') {
+                        console.log('Stream completed with [DONE] signal');
+                        return;
+                    }
+
                     try {
-                        const data = JSON.parse(message.slice(6));
-                        yield data as StreamChunk;
+                        const chunk = JSON.parse(data);
+                        
+                        // Bug Fix 3: Check for mid-stream errors
+                        if ('error' in chunk && chunk.error) {
+                            const errorMessage = typeof chunk.error === 'string' 
+                                ? chunk.error 
+                                : (chunk.error.message || JSON.stringify(chunk.error));
+                            throw new Error(`Stream error: ${errorMessage}`);
+                        }
+                        
+                        yield chunk as StreamChunk;
                     } catch (parseError) {
-                        console.warn('Failed to parse SSE message:', message);
+                        console.warn('Failed to parse SSE message:', message, parseError);
+                        // Re-throw errors to propagate them
+                        if (parseError instanceof Error && parseError.message.startsWith('Stream error:')) {
+                            throw parseError;
+                        }
                     }
                 }
             }
@@ -262,11 +287,31 @@ export class OrchestratorClient {
 
         // Process any remaining buffer
         if (buffer.startsWith('data: ')) {
+            const data = buffer.slice(6);
+            
+            // Check for [DONE] signal in final buffer
+            if (data === '[DONE]') {
+                console.log('Stream completed with [DONE] signal');
+                return;
+            }
+            
             try {
-                const data = JSON.parse(buffer.slice(6));
-                yield data as StreamChunk;
-            } catch {
-                // Ignore incomplete final message
+                const chunk = JSON.parse(data);
+                
+                // Check for errors in final chunk
+                if ('error' in chunk && chunk.error) {
+                    const errorMessage = typeof chunk.error === 'string' 
+                        ? chunk.error 
+                        : (chunk.error.message || JSON.stringify(chunk.error));
+                    throw new Error(`Stream error: ${errorMessage}`);
+                }
+                
+                yield chunk as StreamChunk;
+            } catch (parseError) {
+                // Only ignore incomplete final message if it's not an error
+                if (parseError instanceof Error && parseError.message.startsWith('Stream error:')) {
+                    throw parseError;
+                }
             }
         }
     }
