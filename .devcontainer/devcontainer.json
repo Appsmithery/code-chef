@@ -34,7 +34,8 @@
         "task.vscode-task",
         "hfloveyy.langgraphv",
         "appsmithery.vscode-devtools-copilot",
-        "ms-vscode.powershell"
+        "ms-vscode.powershell",
+        "appsmithery.vscode-codechef"
       ]
     }
   }
