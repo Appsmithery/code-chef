@@ -140,17 +140,19 @@ jobs:
           git commit -m "chore(extension): remove old VSIX files" || echo "No old files to remove"
           git push || echo "Nothing to push"
 
-      - name: Delete existing release and tag (if exists)
+      - name: Delete existing release (keep tag)
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          gh release delete "v${{ steps.get-version.outputs.version }}" --yes --cleanup-tag || echo "No existing release to delete"
+          # Delete release but NOT the tag (to avoid protected tag issues)
+          gh release delete "v${{ steps.get-version.outputs.version }}" --yes || echo "No existing release to delete"
+          # If tag exists and is blocking, delete it locally only
+          git tag -d "v${{ steps.get-version.outputs.version }}" 2>/dev/null || echo "Tag doesn't exist locally"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         if: github.event_name == 'workflow_dispatch'
-        continue-on-error: true
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.get-version.outputs.version }}
