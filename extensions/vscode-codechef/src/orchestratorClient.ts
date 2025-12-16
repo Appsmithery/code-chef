@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { createParser, EventSourceMessage } from 'eventsource-parser';
 
 export interface TaskRequest {
     description: string;
@@ -211,108 +212,199 @@ export class OrchestratorClient {
     }
 
     /**
-     * Stream chat response via Server-Sent Events (SSE)
-     * Yields chunks as they arrive for real-time token-by-token display
+     * Retry helper with exponential backoff for transient errors.
+     * Handles rate limits (429), service unavailable (503), and network errors.
+     */
+    private async retryWithBackoff<T>(
+        operation: () => Promise<T>,
+        maxRetries: number = 3,
+        initialDelay: number = 1000
+    ): Promise<T> {
+        let lastError: Error;
+        
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await operation();
+            } catch (error: any) {
+                lastError = error;
+                
+                // Only retry on transient errors
+                const isRetryable = 
+                    error.response?.status === 429 || // Rate limit
+                    error.response?.status === 503 || // Service unavailable
+                    error.code === 'ECONNRESET' ||    // Connection reset
+                    error.code === 'ETIMEDOUT';        // Timeout
+                
+                if (!isRetryable || attempt === maxRetries) {
+                    throw error;
+                }
+                
+                // Exponential backoff: 1s, 2s, 4s
+                const delay = initialDelay * Math.pow(2, attempt);
+                console.log(`[OrchestratorClient] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+        
+        throw lastError!;
+    }
+
+    /**
+     * Stream chat response via Server-Sent Events (SSE).
+     * Provides real-time token-by-token response for interactive conversations.
      * 
-     * @param request Chat stream request with message and optional session
-     * @yields StreamChunk events from the server
+     * Uses eventsource-parser for robust SSE parsing with automatic:
+     * - Comment line handling (: keepalive)
+     * - [DONE] signal detection
+     * - Multi-line event parsing
+     * - Event ID and retry field support
+     * 
+     * @param request - Chat stream request with message and context
+     * @param signal - Optional AbortSignal for cancellation support
+     * @returns AsyncGenerator yielding StreamChunk events
      * 
      * @example
      * ```typescript
-     * for await (const chunk of client.chatStream({ message: 'Hello' })) {
+     * const abortController = new AbortController();
+     * for await (const chunk of client.chatStream({ message: 'Hello' }, abortController.signal)) {
      *     if (chunk.type === 'content') {
      *         stream.markdown(chunk.content!);
      *     }
      * }
      * ```
      */
-    async *chatStream(request: ChatStreamRequest): AsyncGenerator<StreamChunk> {
+    async *chatStream(
+        request: ChatStreamRequest,
+        signal?: AbortSignal
+    ): AsyncGenerator<StreamChunk> {
         const url = `${this.client.defaults.baseURL}/chat/stream`;
         
-        // Use axios for Node.js compatibility (VS Code runs in Node.js, not browser)
-        const response = await this.client.post(url, request, {
-            responseType: 'stream',
-            headers: {
-                'Accept': 'text/event-stream',
-            }
-        });
-
-        // Process SSE stream
-        let buffer = '';
+        // LangSmith tracing metadata
+        const sessionStartTime = Date.now();
+        let chunkCount = 0;
+        let errorCount = 0;
+        let firstChunkTime: number | null = null;
         
-        for await (const chunk of response.data) {
-            buffer += chunk.toString();
-            
-            // Process complete SSE messages (separated by double newlines)
-            const messages = buffer.split('\n\n');
-            buffer = messages.pop() || '';
+        try {
+            // Retry wrapper for transient errors (429, 503)
+            const response = await this.retryWithBackoff(async () => {
+                return await this.client.post(url, request, {
+                    responseType: 'stream',
+                    headers: {
+                        'Accept': 'text/event-stream',
+                    },
+                    signal // Pass AbortSignal for cancellation
+                });
+            });
 
-            for (const message of messages) {
-                // Bug Fix 1: Skip SSE comment lines per OpenRouter spec
-                if (message.startsWith(':')) {
-                    continue;
-                }
+            // Track time to first byte (TTFB)
+            firstChunkTime = Date.now();
+            const ttfb = firstChunkTime - sessionStartTime;
+            console.log(`[Streaming] TTFB: ${ttfb}ms`);
 
-                if (message.startsWith('data: ')) {
-                    const data = message.slice(6);
-                    
-                    // Bug Fix 2: Handle [DONE] terminal signal
-                    if (data === '[DONE]') {
-                        console.log('Stream completed with [DONE] signal');
+            // Use eventsource-parser for robust SSE parsing
+            const chunks: StreamChunk[] = [];
+            let streamComplete = false;
+
+            const parser = createParser({
+                onEvent: (event: EventSourceMessage) => {
+                    // Handle [DONE] terminal signal
+                    if (event.data === '[DONE]') {
+                        console.log('[Streaming] Received [DONE] signal');
+                        streamComplete = true;
                         return;
                     }
 
                     try {
-                        const chunk = JSON.parse(data);
+                        const chunk = JSON.parse(event.data);
                         
-                        // Bug Fix 3: Check for mid-stream errors
+                        // Check for mid-stream errors
                         if ('error' in chunk && chunk.error) {
+                            errorCount++;
                             const errorMessage = typeof chunk.error === 'string' 
                                 ? chunk.error 
                                 : (chunk.error.message || JSON.stringify(chunk.error));
                             throw new Error(`Stream error: ${errorMessage}`);
                         }
                         
-                        yield chunk as StreamChunk;
+                        chunks.push(chunk as StreamChunk);
+                        chunkCount++;
                     } catch (parseError) {
-                        console.warn('Failed to parse SSE message:', message, parseError);
-                        // Re-throw errors to propagate them
+                        console.error('[Streaming] Parse error:', parseError);
                         if (parseError instanceof Error && parseError.message.startsWith('Stream error:')) {
                             throw parseError;
                         }
                     }
+                },
+                onComment: (comment: string) => {
+                    // Log keepalive comments for debugging
+                    console.log(`[Streaming] Keepalive: ${comment}`);
+                },
+                onError: (error) => {
+                    console.error('[Streaming] Parser error:', error);
                 }
-            }
-        }
+            });
 
-        // Process any remaining buffer
-        if (buffer.startsWith('data: ')) {
-            const data = buffer.slice(6);
-            
-            // Check for [DONE] signal in final buffer
-            if (data === '[DONE]') {
-                console.log('Stream completed with [DONE] signal');
-                return;
-            }
-            
-            try {
-                const chunk = JSON.parse(data);
-                
-                // Check for errors in final chunk
-                if ('error' in chunk && chunk.error) {
-                    const errorMessage = typeof chunk.error === 'string' 
-                        ? chunk.error 
-                        : (chunk.error.message || JSON.stringify(chunk.error));
-                    throw new Error(`Stream error: ${errorMessage}`);
+            // Stream processing with cancellation support
+            for await (const data of response.data) {
+                // Check for cancellation
+                if (signal?.aborted) {
+                    console.log('[Streaming] Cancelled by user');
+                    throw new DOMException('Stream cancelled by user', 'AbortError');
                 }
-                
-                yield chunk as StreamChunk;
-            } catch (parseError) {
-                // Only ignore incomplete final message if it's not an error
-                if (parseError instanceof Error && parseError.message.startsWith('Stream error:')) {
-                    throw parseError;
+
+                const text = data.toString();
+                parser.feed(text);
+
+                // Yield accumulated chunks
+                while (chunks.length > 0) {
+                    yield chunks.shift()!;
+                }
+
+                // Check if stream completed
+                if (streamComplete) {
+                    break;
                 }
             }
+
+            // Yield any remaining chunks
+            while (chunks.length > 0) {
+                yield chunks.shift()!;
+            }
+
+        } catch (error: any) {
+            // Track error in metrics
+            errorCount++;
+            
+            // Re-throw with context
+            if (error.name === 'AbortError') {
+                console.log('[Streaming] User cancelled stream');
+            } else {
+                console.error('[Streaming] Error:', error.message);
+            }
+            throw error;
+            
+        } finally {
+            // LangSmith trace metadata
+            const duration = Date.now() - sessionStartTime;
+            const ttfb = firstChunkTime ? firstChunkTime - sessionStartTime : null;
+            
+            const traceMetadata = {
+                trace_type: 'streaming_session',
+                session_id: request.session_id,
+                duration_ms: duration,
+                ttfb_ms: ttfb,
+                chunk_count: chunkCount,
+                error_count: errorCount,
+                cancelled: signal?.aborted || false,
+                avg_chunk_time_ms: chunkCount > 0 ? duration / chunkCount : null
+            };
+            
+            console.log('[Streaming] Session metrics:', traceMetadata);
+            
+            // TODO: Send to LangSmith when tracing SDK is available in extension context
+            // For now, metrics are logged to console for debugging
+            // Future: await langsmith.trace('streaming_session', traceMetadata);
         }
     }
 

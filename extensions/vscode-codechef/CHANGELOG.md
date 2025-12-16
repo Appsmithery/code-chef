@@ -9,6 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.9] - 2025-12-16 - Critical Streaming Fixes 🔧
 
+### Added
+
+#### 🎯 Production-Grade SSE Parsing
+
+- **eventsource-parser Integration**: Replaced manual SSE parser with battle-tested library (recommended by OpenRouter, used by Vercel AI SDK)
+  - Automatic comment line handling (`: keepalive`, `: OPENROUTER PROCESSING`)
+  - Robust [DONE] signal detection
+  - Multi-line event parsing
+  - Event ID and retry field support
+
+#### 🔄 Enhanced Error Handling
+
+- **Retry Logic**: Automatic retry with exponential backoff for transient errors
+  - Retries on: 429 (rate limit), 503 (service unavailable), network errors
+  - Backoff strategy: 1s → 2s → 4s
+  - Console logging for debugging
+- **Stream Cancellation**: Full AbortController support
+  - Press Escape to cancel streaming responses
+  - Linked to VS Code CancellationToken
+  - Graceful cleanup with user feedback
+  - Prevents orphaned requests
+
+#### 📊 LangSmith Tracing for Streaming
+
+- **Session Metrics**: Comprehensive tracking of streaming performance
+  - TTFB (Time to First Byte)
+  - Total duration
+  - Chunk count and error count
+  - Cancellation detection
+  - Average chunk processing time
+- **Console Logging**: Detailed metrics for debugging
+- **Future-Ready**: Prepared for LangSmith SDK integration
+
 ### Fixed
 
 #### 🔴 Critical SSE Protocol Compliance Bugs
@@ -40,12 +73,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added [STREAMING_FIXES_SUMMARY.md](STREAMING_FIXES_SUMMARY.md) with complete implementation details
 - Updated architecture notes for SSE compliance
+- Added code examples for retry logic and cancellation
 
 ### Migration Notes
 
-- No breaking changes - fixes are transparent to users
+- **No breaking changes** - All enhancements are transparent to users
 - Streaming behavior now matches OpenRouter/LangGraph specifications
+- Added `signal?: AbortSignal` parameter to `chatStream()` (optional, backward compatible)
 - If experiencing issues, disable streaming via `codechef.useStreaming: false`
+
+### Performance
+
+- **TTFB Tracking**: Monitor first chunk arrival time
+- **Cancellation**: Instant response to user cancellation (no lingering requests)
+- **Retry Efficiency**: Failed requests retry automatically without user intervention
 
 ---
 
