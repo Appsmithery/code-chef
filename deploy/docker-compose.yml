@@ -24,7 +24,6 @@ services:
       - LINEAR_WEBHOOK_SIGNING_SECRET_FILE=/run/secrets/linear_webhook_secret
       - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-true}
       - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-code-chef-production}
-      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
       - TRACE_ENVIRONMENT=${TRACE_ENVIRONMENT:-production}
       - EXPERIMENT_GROUP=${EXPERIMENT_GROUP:-code-chef}
     env_file:
