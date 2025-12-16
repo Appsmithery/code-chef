@@ -138,8 +138,8 @@ class FallbackModelConfig(BaseModel):
         ...,
         description="Model name (e.g., 'llama3.3-70b-instruct', 'anthropic/claude-3-5-sonnet')",
     )
-    provider: Literal["gradient", "openai", "claude", "mistral", "openrouter"] = Field(
-        default="gradient", description="Model provider"
+    provider: Literal["openai", "claude", "mistral", "openrouter"] = Field(
+        default="openrouter", description="Model provider"
     )
     timeout_seconds: int = Field(
         default=60, ge=10, le=300, description="Timeout for this fallback model"
@@ -193,8 +193,8 @@ class AgentConfig(BaseModel):
         ...,
         description="LLM model name (e.g., 'llama3.3-70b-instruct', 'anthropic/claude-3-5-sonnet')",
     )
-    provider: Literal["gradient", "claude", "mistral", "openai", "openrouter"] = Field(
-        default="gradient", description="LLM provider to use"
+    provider: Literal["claude", "mistral", "openai", "openrouter"] = Field(
+        default="openrouter", description="LLM provider to use"
     )
     temperature: float = Field(
         ...,
@@ -226,12 +226,11 @@ class AgentConfig(BaseModel):
     @field_validator("max_tokens")
     @classmethod
     def validate_max_tokens_for_gradient(cls, v: int, info) -> int:
-        """Gradient AI requires max_tokens >= 256. OpenRouter has no minimum."""
-        provider = info.data.get("provider", "gradient")
-        if provider == "gradient" and v < 256:
+        """OpenRouter and other providers have flexible max_tokens requirements."""
+        # No minimum validation needed for OpenRouter
+        if v < 1:
             raise ValueError(
-                f"Gradient AI requires max_tokens >= 256, got {v}. "
-                "See: https://docs.digitalocean.com/products/gen-ai-platform/reference/supported-models/"
+                f"max_tokens must be at least 1, got {v}"
             )
         return v
 
@@ -278,8 +277,8 @@ class ModelsConfig(BaseModel):
     """Root configuration schema for models.yaml."""
 
     version: str = Field(..., description="Config schema version (semantic versioning)")
-    provider: Literal["gradient", "claude", "mistral", "openai", "openrouter"] = Field(
-        default="gradient", description="Default LLM provider for all agents"
+    provider: Literal["claude", "mistral", "openai", "openrouter"] = Field(
+        default="openrouter", description="Default LLM provider for all agents"
     )
     agents: Dict[str, AgentConfig] = Field(
         ..., description="Agent configurations keyed by agent name"
