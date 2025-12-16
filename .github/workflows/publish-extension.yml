@@ -28,8 +28,6 @@ jobs:
       contents: write
       packages: write
       id-token: write
-      # Required for bypassing org-level tag restrictions
-      repository-projects: write
     outputs:
       version: ${{ steps.get-version.outputs.version }}
 
@@ -99,10 +97,14 @@ jobs:
         working-directory: ${{ env.EXTENSION_DIR }}
         run: |
           npm version ${{ github.event.inputs.version_bump }} --no-git-tag-version
+          VERSION=$(node -p 'require("./package.json").version')
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add package.json package-lock.json
-          git commit -m "chore(extension): bump version to $(node -p 'require(\"./package.json\").version')" || echo "No changes to commit"
+          git commit -m "chore(extension): bump version to ${VERSION}"
+          # Create and push the tag NOW, before release creation
+          git tag "v${VERSION}"
+          git push origin main "v${VERSION}"
 
       - name: Get current version
         id: get-version
@@ -142,14 +144,12 @@ jobs:
           git commit -m "chore(extension): remove old VSIX files" || echo "No old files to remove"
           git push || echo "Nothing to push"
 
-      - name: Delete existing release (keep tag)
+      - name: Delete existing release (if exists)
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
         run: |
-          # Delete release but NOT the tag (to avoid protected tag issues)
-          gh release delete "v${{ steps.get-version.outputs.version }}" --yes || echo "No existing release to delete"
-          # If tag exists and is blocking, delete it locally only
-          git tag -d "v${{ steps.get-version.outputs.version }}" 2>/dev/null || echo "Tag doesn't exist locally"
+          # Only delete the release, tag already exists from version bump
+          gh release delete "v${{ steps.get-version.outputs.version }}" --yes 2>/dev/null || echo "No existing release to delete"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -162,6 +162,7 @@ jobs:
           generate_release_notes: true
           draft: false
           prerelease: false
+          files: ${{ env.EXTENSION_DIR }}/*.vsix
           body: |
             ![Version](https://img.shields.io/badge/version-${{ steps.get-version.outputs.version }}-blue)
 
@@ -221,15 +222,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload VSIX to Release
-        if: github.event_name == 'workflow_dispatch'
-        continue-on-error: true
-        working-directory: ${{ env.EXTENSION_DIR }}
-        run: |
-          gh release upload "v${{ steps.get-version.outputs.version }}" *.vsix --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Publish Release
         if: github.event_name == 'workflow_dispatch'
         continue-on-error: true
@@ -275,9 +267,8 @@ jobs:
 
       - name: Push version bump
         if: github.event.inputs.version_bump != 'none' && github.event.inputs.version_bump != ''
-        working-directory: ${{ env.EXTENSION_DIR }}
         run: |
-          git push || echo "Nothing to push"
+          echo "Version bump and tag already pushed in bump step"
 
   notify:
     needs: build-and-publish
