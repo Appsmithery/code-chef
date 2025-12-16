@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.9] - 2025-12-16 - Critical Streaming Fixes 🔧
+
+### Fixed
+
+#### 🔴 Critical SSE Protocol Compliance Bugs
+
+- **SSE Comment Parsing**: Fixed parser crash on OpenRouter/LangGraph keepalive comments (`: OPENROUTER PROCESSING`, `: keepalive`)
+  - Added proper comment line filtering per SSE specification
+  - Parser no longer attempts to JSON.parse() comment lines
+- **Terminal Signal Detection**: Fixed streams hanging indefinitely
+  - Added `[DONE]` signal detection to cleanly terminate streams
+  - Streams now exit properly instead of waiting for timeout
+- **Mid-Stream Error Handling**: Fixed silent error failures
+  - Added error field checking in SSE chunks
+  - Errors thrown during streaming are now properly caught and displayed to users
+  - User-friendly error messages shown in chat interface
+
+#### 🔧 Orchestrator Improvements
+
+- **Keepalive Comments**: Added 15-second keepalive interval to prevent connection timeouts on long-running operations
+- **Terminal Signal**: Orchestrator now sends `data: [DONE]\n\n` per SSE protocol
+- **Error Propagation**: Mid-stream errors include proper error field in SSE chunks
+
+### Removed
+
+- **Deprecated Code**: Removed `package/` directory containing outdated fetch-based streaming implementation
+  - Extension now uses single axios-based implementation in `src/`
+  - Eliminates confusion and ensures SSE protocol compliance
+
+### Documentation
+
+- Added [STREAMING_FIXES_SUMMARY.md](STREAMING_FIXES_SUMMARY.md) with complete implementation details
+- Updated architecture notes for SSE compliance
+
+### Migration Notes
+
+- No breaking changes - fixes are transparent to users
+- Streaming behavior now matches OpenRouter/LangGraph specifications
+- If experiencing issues, disable streaming via `codechef.useStreaming: false`
+
+---
+
 ## [1.0.0] - 2025-12-11 - MVP Release 🎉
 
 ### Overview
