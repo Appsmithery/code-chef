@@ -10,7 +10,12 @@ codechef.appsmithery.co {
 	}
 
 	# Execute endpoint (orchestrator workflows)
-	handle /execute {
+	handle /execute* {
+		reverse_proxy orchestrator:8001
+	}
+
+	# Chat stream endpoint (SSE streaming)
+	handle /chat/stream {
 		reverse_proxy orchestrator:8001
 	}
 
