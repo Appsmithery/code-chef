@@ -255,7 +255,14 @@ export class CodeChefChatParticipant {
             let chunkCount = 0;  // Track chunks received
             const BUFFER_CHUNKS = 3;  // Buffer first N chunks to detect supervisor responses
 
-            // Stream response token by token
+            // Create AbortController linked to VS Code CancellationToken
+            const abortController = new AbortController();
+            token.onCancellationRequested(() => {
+                console.log('[ChatParticipant] User cancelled stream via CancellationToken');
+                abortController.abort();
+            });
+
+            // Stream response token by token with cancellation support
             for await (const chunk of this.client.chatStream({
                 message: finalPrompt,  // Use enhanced prompt
                 session_id: sessionId,
@@ -267,8 +274,8 @@ export class CodeChefChatParticipant {
                     enhancement_error: enhancementError  // NEW
                 },
                 workspace_config: buildWorkspaceConfig()
-            })) {
-                // Check for cancellation
+            }, abortController.signal)) {
+                // Check for cancellation (redundant with AbortController but safe)
                 if (token.isCancellationRequested) {
                     stream.markdown('\n\n*Response cancelled*');
                     break;
@@ -346,6 +353,17 @@ export class CodeChefChatParticipant {
             };
 
         } catch (error: any) {
+            // Handle cancellation separately from errors
+            if (error.name === 'AbortError') {
+                stream.markdown('\n\n_Stream cancelled by user_\n');
+                return { 
+                    metadata: { 
+                        status: 'cancelled',
+                        streaming: true 
+                    } 
+                };
+            }
+            
             // Fallback to non-streaming on error
             console.error('Streaming failed, error:', error.message);
             stream.markdown(`\n\n❌ **Streaming Error**: ${error.message}\n\n`);
@@ -354,9 +372,7 @@ export class CodeChefChatParticipant {
                 errorDetails: { message: error.message } 
             };
         }
-    }
-
-    /**
+    }    /**
      * Extract only the REASONING portion from supervisor routing responses.
      * Filters out NEXT_AGENT and REQUIRES_APPROVAL metadata for cleaner UX.
      * Full trace data is still captured in LangSmith for evaluation.
