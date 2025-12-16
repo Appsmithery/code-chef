@@ -254,15 +254,16 @@ jobs:
         continue-on-error: true
         run: |
           echo "📦 Publishing to VS Code Marketplace..."
-          if [ -z "${{ secrets.VSCE_TOKEN }}" ]; then
+          # Check if VSCE_PAT is set (via env var)
+          if [ -z "$VSCE_PAT" ]; then
             echo "⚠️ VSCE_TOKEN not configured - skipping marketplace publish"
             echo "ℹ️ Add VSCE_TOKEN secret to enable marketplace publishing"
             exit 0
           fi
           # Install vsce if not available
           npm install -g @vscode/vsce
-          # Publish to marketplace
-          vsce publish --no-git-tag-version --pat ${{ secrets.VSCE_TOKEN }} || echo "⚠️ Marketplace publish failed - may already exist at this version"
+          # Publish to marketplace using env var (vsce reads VSCE_PAT automatically)
+          vsce publish --no-git-tag-version || echo "⚠️ Marketplace publish failed - may already exist at this version"
         env:
           VSCE_PAT: ${{ secrets.VSCE_TOKEN }}
 
