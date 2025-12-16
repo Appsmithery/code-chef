@@ -16,20 +16,21 @@ Usage:
     print(f"Model: {orchestrator_config.model}, Temp: {orchestrator_config.temperature}")
 """
 
-import os
-import yaml
 import logging
-from pathlib import Path
-from typing import Dict, Optional
-from threading import Lock
+import os
 from datetime import datetime, timedelta
+from pathlib import Path
+from threading import Lock
+from typing import Dict, Optional
+
+import yaml
+from watchdog.events import FileModifiedEvent, FileSystemEventHandler
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileModifiedEvent
 
 try:
-    from lib.agent_config_schema import ModelsConfig, AgentConfig
+    from lib.agent_config_schema import AgentConfig, ModelsConfig
 except ModuleNotFoundError:
-    from agent_config_schema import ModelsConfig, AgentConfig
+    from agent_config_schema import AgentConfig, ModelsConfig
 
 
 logger = logging.getLogger(__name__)
@@ -108,16 +109,18 @@ class ConfigLoader:
         # In Docker: /app/lib/config_loader.py (copied from shared/lib/)
         # Locally: <repo>/shared/lib/config_loader.py
         # repo_root should be /app in Docker, <repo> locally
-        file_path = Path(__file__)  # /app/lib/config_loader.py or <repo>/shared/lib/config_loader.py
-        
+        file_path = Path(
+            __file__
+        )  # /app/lib/config_loader.py or <repo>/shared/lib/config_loader.py
+
         # Check if running in Docker (file is in /app/lib instead of <repo>/shared/lib)
-        if file_path.parts[-3:-1] == ('app', 'lib'):
+        if file_path.parts[-3:-1] == ("app", "lib"):
             # Docker: /app/lib/config_loader.py → repo_root = /app
             repo_root = file_path.parent.parent
         else:
             # Local: <repo>/shared/lib/config_loader.py → repo_root = <repo>
             repo_root = file_path.parent.parent.parent
-            
+
         config_path = repo_root / "config" / "agents" / "models.yaml"
 
         if not config_path.exists():
