@@ -162,7 +162,8 @@ export const CHAT_COMMANDS = {
     APPROVE: 'approve',
     TOOLS: 'tools',
     WORKFLOW: 'workflow',
-    WORKFLOWS: 'workflows'
+    WORKFLOWS: 'workflows',
+    EXECUTE: 'execute'
 } as const;
 
 // ============================================================================

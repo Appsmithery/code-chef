@@ -431,6 +431,77 @@ export class CodeChefChatParticipant {
         return reasoningLines.join('\n').trim();
     }
 
+    /**
+     * Handle /execute command: Submit task to orchestrator for Agent mode execution.
+     * This bypasses conversational mode and directly creates a task with workflow execution.
+     */
+    private async handleExecuteCommand(
+        userMessage: string,
+        stream: vscode.ChatResponseStream,
+        _token: vscode.CancellationToken
+    ): Promise<vscode.ChatResult> {
+        stream.progress('Analyzing workspace context...');
+
+        try {
+            // Extract workspace context
+            const workspaceContext = await this.contextExtractor.extract();
+            
+            // Get session (not used for execute, but maintains consistency)
+            const sessionId = this.sessionManager.getOrCreateSession({} as vscode.ChatContext);
+            
+            stream.progress('Submitting to code/chef orchestrator...');
+            
+            // Submit to orchestrator (Agent mode)
+            const response = await this.client.orchestrate({
+                description: userMessage,
+                priority: 'medium',
+                project_context: workspaceContext,
+                workspace_config: buildWorkspaceConfig(),
+                session_id: sessionId
+            });
+
+            this.lastTaskId = response.task_id;
+
+            // Log Linear project creation
+            if (response.linear_project?.id) {
+                console.log(`code/chef: Created Linear project ${response.linear_project.id}`);
+                renderLinearProjectCreated(response.linear_project, stream);
+            }
+
+            // Check if approval is required
+            if (response.status === 'approval_pending' || response.approval_request_id) {
+                stream.markdown('\n⚠️ **Approval Required**\n\n');
+                if (response.risk_level) {
+                    stream.markdown(`Risk Level: ${response.risk_level}\n\n`);
+                }
+                if (response.approval_request_id) {
+                    stream.markdown(`Approval ID: ${response.approval_request_id}\n\n`);
+                    stream.markdown('This task requires approval before execution. Approve in Linear or use:\n');
+                    stream.markdown(`\`@chef /approve ${response.task_id} ${response.approval_request_id}\`\n`);
+                }
+                return { metadata: { taskId: response.task_id, requiresApproval: true } };
+            }
+
+            // Execute workflow automatically
+            stream.progress('Executing workflow...');
+            try {
+                await this.client.execute(response.task_id);
+                stream.markdown('\n✅ **Workflow execution started!**\n\n');
+                stream.markdown(`Monitor progress: \`@chef /status ${response.task_id}\`\n\n`);
+            } catch (executeError: any) {
+                stream.markdown('\n⚠️ **Task planned but execution failed to start**\n\n');
+                stream.markdown(`Error: ${executeError.message}\n\n`);
+            }
+
+            // Stream response
+            return renderTaskSubmitted(response, stream);
+
+        } catch (error: any) {
+            renderError(error, stream);
+            return { errorDetails: { message: error.message } };
+        }
+    }
+
     private async handleCommand(
         command: string,
         args: string,
@@ -453,9 +524,12 @@ export class CodeChefChatParticipant {
             case CHAT_COMMANDS.WORKFLOWS:
                 return await this.workflowHandler.handleWorkflowsList(stream);
             
+            case CHAT_COMMANDS.EXECUTE:
+                return await this.handleExecuteCommand(args, stream, _token);
+            
             default:
                 stream.markdown(`Unknown command: ${command}\n\n`);
-                stream.markdown('Available commands: status, approve, tools, workflow, workflows\n');
+                stream.markdown('Available commands: status, approve, tools, workflow, workflows, execute\n');
                 return {};
         }
     }
