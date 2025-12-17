@@ -196,11 +196,31 @@ export class CodeChefChatParticipant {
         token: vscode.CancellationToken,
         request: vscode.ChatRequest  // ADD parameter
     ): Promise<vscode.ChatResult> {
-        stream.progress('Connecting to code/chef...');
-
+        const overallStartTime = Date.now();
+        
         try {
-            // Extract workspace context
+            // Step 1: Pre-flight health check
+            stream.progress('Checking orchestrator connection...');
+            try {
+                await this.client.health();
+                const healthCheckTime = Date.now() - overallStartTime;
+                console.log(`[ChatParticipant] Health check passed in ${healthCheckTime}ms`);
+            } catch (healthError: any) {
+                const errorMsg = `Cannot reach orchestrator at ${this.client['client'].defaults.baseURL}. ${healthError.message || 'Connection failed'}`;
+                console.error(`[ChatParticipant] Health check failed:`, healthError);
+                stream.markdown(`❌ **Connection Error**\n\n${errorMsg}\n\nPlease check:\n- Orchestrator URL in settings\n- Network connectivity\n- API key configuration`);
+                return { metadata: { error: errorMsg } };
+            }
+            
+            // Step 2: Extract workspace context
+            stream.progress('Extracting workspace context...');
+            const contextStartTime = Date.now();
             const workspaceContext = await this.contextExtractor.extract();
+            const contextDuration = Date.now() - contextStartTime;
+            console.log(`[ChatParticipant] Context extraction completed in ${contextDuration}ms`);
+            
+            // Step 3: Prepare for streaming
+            stream.progress('Connecting to orchestrator...');
             
             // Get or create session
             const sessionId = this.sessionManager.getOrCreateSession(context);
