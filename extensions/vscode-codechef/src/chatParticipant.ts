@@ -201,13 +201,22 @@ export class CodeChefChatParticipant {
         try {
             // Step 1: Pre-flight health check
             stream.progress('Checking orchestrator connection...');
+            const clientBaseURL = this.client['client'].defaults.baseURL;
+            console.log(`[ChatParticipant] 🏥 Pre-flight health check starting`);
+            console.log(`[ChatParticipant] Target URL: ${clientBaseURL}/health`);
             try {
                 await this.client.health();
                 const healthCheckTime = Date.now() - overallStartTime;
-                console.log(`[ChatParticipant] Health check passed in ${healthCheckTime}ms`);
+                console.log(`[ChatParticipant] ✅ Health check passed in ${healthCheckTime}ms`);
             } catch (healthError: any) {
-                const errorMsg = `Cannot reach orchestrator at ${this.client['client'].defaults.baseURL}. ${healthError.message || 'Connection failed'}`;
-                console.error(`[ChatParticipant] Health check failed:`, healthError);
+                const errorMsg = `Cannot reach orchestrator at ${clientBaseURL}. ${healthError.message || 'Connection failed'}`;
+                console.error(`[ChatParticipant] ❌ Health check failed:`, healthError);
+                console.error(`[ChatParticipant] Error details:`, {
+                    status: healthError.response?.status,
+                    statusText: healthError.response?.statusText,
+                    data: healthError.response?.data,
+                    message: healthError.message
+                });
                 stream.markdown(`❌ **Connection Error**\n\n${errorMsg}\n\nPlease check:\n- Orchestrator URL in settings\n- Network connectivity\n- API key configuration`);
                 return { metadata: { error: errorMsg } };
             }

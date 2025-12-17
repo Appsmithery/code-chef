@@ -188,6 +188,10 @@ export class OrchestratorClient {
                 ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {})
             }
         });
+        
+        console.log(`[OrchestratorClient] ✅ Initialized with baseURL: ${baseUrl}`);
+        console.log(`[OrchestratorClient] Full health check URL will be: ${baseUrl}/health`);
+        console.log(`[OrchestratorClient] Full chat/stream URL will be: ${baseUrl}/chat/stream`);
     }
 
     /**
@@ -271,10 +275,22 @@ export class OrchestratorClient {
                 // Log detailed error information
                 const status = error.response?.status || 'NO_RESPONSE';
                 const statusText = error.response?.statusText || error.code || 'UNKNOWN';
-                console.error(`[OrchestratorClient] Request failed (attempt ${attempt + 1}/${maxRetries + 1}): ${status} ${statusText}`);
+                console.error(`[OrchestratorClient] ❌ Request failed (attempt ${attempt + 1}/${maxRetries + 1}): ${status} ${statusText}`);
                 if (url) {
                     console.error(`[OrchestratorClient] Failed URL: ${url}`);
                 }
+                if (error.response?.data) {
+                    console.error(`[OrchestratorClient] Response data:`, error.response.data);
+                }
+                console.error(`[OrchestratorClient] Full error:`, {
+                    message: error.message,
+                    config: {
+                        method: error.config?.method,
+                        url: error.config?.url,
+                        baseURL: error.config?.baseURL,
+                        fullURL: error.config?.baseURL + error.config?.url
+                    }
+                });
                 
                 // Only retry on transient errors
                 const isRetryable = 
@@ -332,7 +348,10 @@ export class OrchestratorClient {
         signal?: AbortSignal
     ): AsyncGenerator<StreamChunk> {
         const url = `${this.client.defaults.baseURL}/chat/stream`;
-        console.log(`[OrchestratorClient] Streaming to: ${url}`);
+        console.log(`[OrchestratorClient] 🚀 Starting chat stream`);
+        console.log(`[OrchestratorClient] BaseURL: ${this.client.defaults.baseURL}`);
+        console.log(`[OrchestratorClient] Full streaming URL: ${url}`);
+        console.log(`[OrchestratorClient] Request payload:`, JSON.stringify(request, null, 2));
         
         // LangSmith tracing metadata
         const sessionStartTime = Date.now();
