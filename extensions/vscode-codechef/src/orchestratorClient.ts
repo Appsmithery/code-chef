@@ -78,15 +78,22 @@ export interface ChatResponse {
 }
 
 /**
- * Stream chunk types from /chat/stream SSE endpoint
+ * Stream chunk types from /chat/stream and /execute/stream SSE endpoints
  */
 export interface StreamChunk {
-    type: 'content' | 'agent_complete' | 'tool_call' | 'done' | 'error';
+    type: 'content' | 'agent_complete' | 'tool_call' | 'done' | 'error' | 'redirect' | 'workflow_status' | 'approval_required';
     content?: string;
     agent?: string;
     tool?: string;
     session_id?: string;
     error?: string;
+    endpoint?: string;  // For redirect events
+    reason?: string;    // For redirect events
+    workflow?: string;  // For workflow_status events
+    confidence?: number;  // For workflow_status events
+    method?: string;    // For workflow_status events
+    approval_id?: string;  // For approval_required events
+    risk_level?: string;   // For approval_required events
 }
 
 /**
@@ -342,6 +349,138 @@ export class OrchestratorClient {
      *     }
      * }
      * ```
+     */
+    /**
+     * Execute task via Agent mode with workflow orchestration.
+     * 
+     * This method targets /execute/stream which handles:
+     * - Workflow router integration
+     * - Risk assessment and HITL approvals
+     * - Full multi-agent coordination (no filtering)
+     * - Linear issue creation
+     * 
+     * Use this for task execution like:
+     * - "Implement feature X"
+     * - "Deploy to production"
+     * - "Fix bug Y"
+     * 
+     * @param request - Execution request with task description
+     * @param signal - Optional AbortSignal for cancellation
+     * @returns AsyncGenerator yielding StreamChunk events
+     */
+    async *executeStream(
+        request: ChatStreamRequest,
+        signal?: AbortSignal
+    ): AsyncGenerator<StreamChunk> {
+        const url = `${this.client.defaults.baseURL}/execute/stream`;
+        console.log(`[OrchestratorClient] 🚀 Starting Agent mode execution stream`);
+        console.log(`[OrchestratorClient] Full URL: ${url}`);
+        console.log(`[OrchestratorClient] Request:`, JSON.stringify(request, null, 2));
+        
+        const sessionStartTime = Date.now();
+        let chunkCount = 0;
+        let errorCount = 0;
+        let firstChunkTime: number | null = null;
+        
+        try {
+            console.log(`[OrchestratorClient] Initiating POST request...`);
+            const response = await this.retryWithBackoff(async () => {
+                return await this.client.post(url, request, {
+                    responseType: 'stream',
+                    headers: {
+                        'Accept': 'text/event-stream',
+                    },
+                    signal
+                });
+            }, 3, 1000, url);
+
+            firstChunkTime = Date.now();
+            const ttfb = firstChunkTime - sessionStartTime;
+            console.log(`[Execute Stream] TTFB: ${ttfb}ms`);
+
+            const chunks: StreamChunk[] = [];
+            let streamComplete = false;
+
+            const parser = createParser({
+                onEvent: (event: EventSourceMessage) => {
+                    if (event.data === '[DONE]') {
+                        console.log('[Execute Stream] Received [DONE] signal');
+                        streamComplete = true;
+                        return;
+                    }
+
+                    try {
+                        const chunk = JSON.parse(event.data);
+                        
+                        if ('error' in chunk && chunk.error) {
+                            errorCount++;
+                            const errorMessage = typeof chunk.error === 'string' 
+                                ? chunk.error 
+                                : (chunk.error.message || JSON.stringify(chunk.error));
+                            throw new Error(`Stream error: ${errorMessage}`);
+                        }
+                        
+                        chunks.push(chunk as StreamChunk);
+                        chunkCount++;
+                    } catch (parseError) {
+                        console.error('[Execute Stream] Parse error:', parseError);
+                        if (parseError instanceof Error && parseError.message.startsWith('Stream error:')) {
+                            throw parseError;
+                        }
+                    }
+                },
+                onComment: (comment: string) => {
+                    console.log(`[Execute Stream] Keepalive: ${comment}`);
+                },
+                onError: (error) => {
+                    console.error('[Execute Stream] Parser error:', error);
+                }
+            });
+
+            for await (const data of response.data) {
+                if (signal?.aborted) {
+                    console.log('[Execute Stream] Cancelled by user');
+                    throw new DOMException('Stream cancelled by user', 'AbortError');
+                }
+
+                const text = data.toString();
+                parser.feed(text);
+
+                while (chunks.length > 0) {
+                    yield chunks.shift()!;
+                }
+
+                if (streamComplete) {
+                    break;
+                }
+            }
+
+            while (chunks.length > 0) {
+                yield chunks.shift()!;
+            }
+
+        } catch (error: any) {
+            console.error('[Execute Stream] Error:', error);
+            if (error.name === 'AbortError') {
+                throw error;
+            }
+            throw new Error(`Agent execution failed: ${error.message}`);
+        }
+    }
+
+    /**
+     * Stream chat response via Server-Sent Events (SSE) for Ask mode.
+     * 
+     * This is for conversational queries, not task execution:
+     * - "What can you do?"
+     * - "What's the status of task X?"
+     * - General questions
+     * 
+     * For task execution, use executeStream() instead.
+     * 
+     * @param request - Chat stream request with message and context
+     * @param signal - Optional AbortSignal for cancellation support
+     * @returns AsyncGenerator yielding StreamChunk events
      */
     async *chatStream(
         request: ChatStreamRequest,

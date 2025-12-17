@@ -283,6 +283,7 @@ export class CodeChefChatParticipant {
             let isSuprevisorResponse = false;  // Track if we're in supervisor mode
             let chunkCount = 0;  // Track chunks received
             const BUFFER_CHUNKS = 3;  // Buffer first N chunks to detect supervisor responses
+            let sessionMode: 'ask' | 'agent' = 'ask';  // Default to Ask mode
 
             // Create AbortController linked to VS Code CancellationToken
             const abortController = new AbortController();
@@ -311,6 +312,51 @@ export class CodeChefChatParticipant {
                 }
 
                 switch (chunk.type) {
+                    case 'redirect':
+                        // Backend detected task submission, switch to Agent mode
+                        console.log(`code/chef: Backend redirecting to ${chunk.endpoint} - reason: ${chunk.reason}`);
+                        if (chunk.endpoint === '/execute/stream') {
+                            sessionMode = 'agent';
+                            stream.markdown('\n\n🔄 **Switching to Agent mode for task execution...**\n\n');
+                            
+                            // Re-invoke with executeStream
+                            for await (const agentChunk of this.client.executeStream({
+                                message: finalPrompt,
+                                session_id: sessionId,
+                                context: {
+                                    ...workspaceContext,
+                                    chat_references: chatReferences,
+                                    copilot_model: copilotModel,
+                                    prompt_enhanced: enhancePrompts,
+                                    enhancement_error: enhancementError,
+                                    session_mode: 'agent'
+                                },
+                                workspace_config: buildWorkspaceConfig()
+                            }, abortController.signal)) {
+                                // Handle agent mode chunks
+                                if (agentChunk.type === 'content' && agentChunk.content) {
+                                    stream.markdown(agentChunk.content);
+                                } else if (agentChunk.type === 'workflow_status') {
+                                    console.log(`code/chef: Workflow selected: ${agentChunk.workflow}`);
+                                } else if (agentChunk.type === 'agent_complete' && agentChunk.agent) {
+                                    console.log(`code/chef: Agent ${agentChunk.agent} completed`);
+                                } else if (agentChunk.type === 'error') {
+                                    stream.markdown(`\n\n❌ **Error**: ${agentChunk.error}`);
+                                } else if (agentChunk.type === 'done' && agentChunk.session_id) {
+                                    sessionIdFromStream = agentChunk.session_id;
+                                }
+                            }
+                            return {
+                                metadata: {
+                                    status: 'success',
+                                    streaming: true,
+                                    sessionId: sessionIdFromStream,
+                                    mode: 'agent'
+                                }
+                            };
+                        }
+                        break;
+                        
                     case 'content':
                         // Accumulate content for parsing
                         if (chunk.content) {
@@ -377,7 +423,8 @@ export class CodeChefChatParticipant {
                     streaming: true,
                     sessionId: sessionIdFromStream,
                     promptEnhanced: enhancePrompts,
-                    enhancementError
+                    enhancementError,
+                    mode: sessionMode  // Track session mode (ask or agent)
                 } 
             };
 

@@ -274,6 +274,117 @@ def _collect_agent_insights(
 
 # Define agent nodes with error recovery decorators (CHEF-Error-Handling)
 # @with_recovery handles Tier 0-1 errors locally with configurable retry counts
+
+
+@traceable(
+    name="conversational_handler_node",
+    tags=["langgraph", "node", "conversational", "ask-mode"],
+)
+async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
+    """Conversational handler for Ask mode - simple Q&A without task execution.
+
+    This node provides direct LLM responses for questions, status queries,
+    and clarifications without routing to specialized agents or loading tools.
+
+    Use Cases:
+    - "What can you do?"
+    - "What's the status of task-123?"
+    - "How does feature X work?"
+    - General questions about the platform
+
+    Does NOT handle:
+    - Task execution (use supervisor_node → agent routing)
+    - Tool invocations
+    - Multi-agent coordination
+    """
+    from langchain_core.messages import AIMessage, HumanMessage
+    from lib.llm_client import get_llm_client
+
+    try:
+        # Get simple LLM client without tool loading
+        llm_client = get_llm_client()
+
+        # Extract last user message
+        last_message = state["messages"][-1] if state["messages"] else None
+        if not last_message:
+            return {
+                "messages": [
+                    AIMessage(
+                        content="I didn't receive any message. How can I help you?"
+                    )
+                ],
+                "current_agent": "conversational",
+                "next_agent": None,
+                "task_result": {"agent": "conversational", "completed": True},
+            }
+
+        user_query = (
+            last_message.content
+            if hasattr(last_message, "content")
+            else str(last_message)
+        )
+
+        # Build system prompt for conversational mode
+        system_prompt = """You are a helpful AI assistant for the code-chef DevOps platform.
+
+You can answer questions about:
+- Platform capabilities and features
+- Task status and workflow information  
+- How to use the platform
+- General development questions
+
+You are in "Ask mode" - you provide information but don't execute tasks.
+For task execution, users should use "Agent mode" or explicit commands.
+
+Keep responses concise, helpful, and friendly."""
+
+        # Generate response using simple completion (no tools)
+        response_text = await llm_client.complete(
+            prompt=user_query,
+            system_prompt=system_prompt,
+            temperature=0.7,
+            max_tokens=1000,
+        )
+
+        # Extract content from response dict
+        content = (
+            response_text.get("content", "")
+            if isinstance(response_text, dict)
+            else str(response_text)
+        )
+
+        logger.info(
+            f"[LangGraph] Conversational handler completed. Response length: {len(content)}"
+        )
+
+        return {
+            "messages": [AIMessage(content=content)],
+            "current_agent": "conversational",
+            "next_agent": None,  # Terminal node
+            "task_result": {
+                "agent": "conversational",
+                "completed": True,
+                "output_length": len(content),
+            },
+        }
+    except Exception as e:
+        logger.error(f"[LangGraph] Conversational handler failed: {e}", exc_info=True)
+        return {
+            "messages": [
+                AIMessage(
+                    content=f"I encountered an error: {str(e)}. Please try rephrasing your question."
+                )
+            ],
+            "current_agent": "conversational",
+            "next_agent": None,
+            "task_result": {
+                "agent": "conversational",
+                "completed": False,
+                "error": str(e),
+            },
+        }
+
+
 @traceable(name="supervisor_node", tags=["langgraph", "node", "supervisor"])
 @with_recovery(
     max_retries=2,
