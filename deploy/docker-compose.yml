@@ -43,6 +43,7 @@ services:
       - ../config/hitl:/app/config/hitl:ro
       - ../config/linear:/app/config/linear:ro
       - ../config/env:/app/config/env:ro
+      - ../config/error-handling.yaml:/app/config/error-handling.yaml:ro
       - ../config/mcp-agent-tool-mapping.yaml:/app/config/mcp-agent-tool-mapping.yaml:ro
       - ../config/agents/models.yaml:/app/config/agents/models.yaml:ro
       - ../config/agents:/app/config/agents:ro
