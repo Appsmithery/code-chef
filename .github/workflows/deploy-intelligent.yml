@@ -86,7 +86,7 @@ jobs:
           # Merge secrets into .env, replacing duplicates (secrets override template)
           while IFS='=' read -r key value; do
             # Skip comments (lines starting with #) and empty lines
-            [[ "$key" =~ ^[[:space:]]*# ]] || [[ -z "$key" ]] && continue
+            [[ "$key" =~ ^[[:space:]]*# || -z "$key" ]] && continue
             # Remove existing key from .env (prevents duplicates)
             sed -i "/^${key}=/d" config/env/.env
           done < /tmp/secrets.env
