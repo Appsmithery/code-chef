@@ -3411,7 +3411,33 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             # Import the graph for streaming
             from graph import WorkflowState, get_graph
             from langchain_core.messages import AIMessage, HumanMessage
+            
+            # STEP 1: Recognize intent to determine if this is Ask or Agent mode
+            intent_recognizer = get_intent_recognizer()
+            try:
+                intent = await intent_recognizer.recognize(request.message)
+                logger.info(f"[Chat Stream] Recognized intent: {intent.type} (confidence: {intent.confidence:.2f})")
+                
+                # If this is a task submission, redirect to /execute/stream
+                if intent.type == IntentType.TASK_SUBMISSION:
+                    logger.info(f"[Chat Stream] Task submission detected, redirecting to Agent mode")
+                    yield f"data: {json.dumps({{'type': 'content', 'content': '🔄 Switching to Agent mode for task execution...\n\n'})}\n\n"
+                    
+                    # Stream a note about mode switch
+                    task_desc = intent.task_description or request.message
+                    yield f"data: {json.dumps({{'type': 'content', 'content': f'**Task:** {task_desc}\n\n'})}\n\n"
+                    yield f"data: {json.dumps({{'type': 'redirect', 'endpoint': '/execute/stream', 'reason': 'task_submission'})}\n\n"
+                    yield f"data: {json.dumps({{'type': 'done', 'session_id': session_id})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
+            except Exception as intent_error:
+                logger.warning(f"[Chat Stream] Intent recognition failed: {intent_error}, proceeding with Ask mode")
 
+            logger.info(f"[Chat Stream] Proceeding with Ask mode (conversational)")
+            
+            # STEP 2: For non-task intents, use conversational handler
+            from graph import conversational_handler_node
+            
             logger.info(f"[Chat Stream] Initializing graph for session {session_id}")
             graph = get_graph()
             if not graph:
@@ -3731,6 +3757,253 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",  # Disable nginx buffering
+            "Access-Control-Allow-Origin": "*",
+        },
+    )
+
+
+@app.post("/execute/stream", tags=["execution"])
+@traceable(name="execute_stream", tags=["api", "streaming", "sse", "agent-mode"])
+async def execute_stream_endpoint(request: ChatStreamRequest):
+    """
+    Execute task via Agent mode with workflow routing and full orchestration.
+
+    This endpoint is for task execution (not conversational chat). It uses:
+    - Workflow router to select appropriate template
+    - Risk assessment for high-risk operations
+    - HITL approval flow via Linear integration
+    - Full multi-agent orchestration (no filtering)
+
+    **Request Body:**
+    ```json
+    {
+      "message": "Implement JWT authentication",
+      "session_id": "optional-session-id",
+      "user_id": "user-123",
+      "project_context": {...},
+      "workspace_config": {...}
+    }
+    ```
+
+    **SSE Event Types:**
+    - `content`: Agent output (all agents, not just specialists)
+    - `agent_complete`: Agent finished processing
+    - `tool_call`: MCP tool invocation
+    - `workflow_status`: Workflow progress updates
+    - `approval_required`: HITL approval needed
+    - `done`: Stream complete with session_id
+    - `error`: Error occurred
+    """
+    session_id = request.session_id or f"exec-{uuid.uuid4()}"
+
+    async def event_generator():
+        """Generate SSE events from workflow execution."""
+        try:
+            from graph import WorkflowState, get_graph
+            from langchain_core.messages import AIMessage, HumanMessage
+
+            logger.info(f"[Execute Stream] Initializing workflow for session {session_id}")
+            graph = get_graph()
+            if not graph:
+                logger.error("[Execute Stream] Failed to get graph instance")
+                yield f"data: {json.dumps({'type': 'error', 'error': 'Graph not available'})}\n\n"
+                return
+
+            # Create/load session
+            try:
+                existing_session = await session_manager.get_session(session_id)
+                if not existing_session:
+                    await session_manager.create_session(
+                        session_id=session_id,
+                        user_id=request.user_id,
+                        metadata={
+                            "mode": "agent",
+                            "project_context": request.project_context,
+                            "workspace_root": request.workspace_root,
+                        },
+                    )
+                    logger.info(f"[Execute Stream] Created new agent-mode session {session_id}")
+            except Exception as e:
+                logger.warning(f"[Execute Stream] Could not create session: {e}")
+
+            # Extract project context
+            project_context = None
+            if request.project_context:
+                project_context = {
+                    "project_id": request.project_context.get("linear_project_id")
+                    or request.project_context.get("github_repo_url"),
+                    "repository_url": request.project_context.get("github_repo_url"),
+                    "workspace_name": request.project_context.get("workspace_name"),
+                    "branch": request.project_context.get("branch", "main"),
+                    "directory": request.project_context.get("directory", "."),
+                }
+                if request.workspace_root:
+                    project_context["workspace_path"] = request.workspace_root
+
+            # Read file attachments using MCP filesystem
+            file_contents_text = ""
+            files_read = []
+            try:
+                mcp_tool_client = get_mcp_tool_client("feature_dev")
+                if request.active_file and request.workspace_root:
+                    try:
+                        file_result = await mcp_tool_client.call_tool(
+                            server_name="rust-mcp-filesystem",
+                            tool_name="read_file",
+                            arguments={"path": request.active_file},
+                        )
+                        if file_result and not file_result.get("isError"):
+                            file_content = file_result.get("content", [])
+                            if file_content and len(file_content) > 0:
+                                content_text = file_content[0].get("text", "")
+                                files_read.append(request.active_file)
+                                file_contents_text += f"\n\n**Active File: `{request.active_file}`**\n```\n{content_text}\n```\n"
+                    except Exception as e:
+                        logger.warning(f"Could not read active file: {e}")
+
+                if request.file_attachments:
+                    for file_path in request.file_attachments:
+                        try:
+                            file_result = await mcp_tool_client.call_tool(
+                                server_name="rust-mcp-filesystem",
+                                tool_name="read_file",
+                                arguments={"path": file_path},
+                            )
+                            if file_result and not file_result.get("isError"):
+                                file_content = file_result.get("content", [])
+                                if file_content and len(file_content) > 0:
+                                    content_text = file_content[0].get("text", "")
+                                    files_read.append(file_path)
+                                    file_contents_text += f"\n\n**Attached File: `{file_path}`**\n```\n{content_text}\n```\n"
+                        except Exception as e:
+                            logger.warning(f"Could not read file {file_path}: {e}")
+                if files_read:
+                    logger.info(f"[Execute Stream] Read {len(files_read)} file(s)")
+            except Exception as e:
+                logger.warning(f"[Execute Stream] Error reading files: {e}")
+
+            # Enrich message with file contents
+            enriched_message = request.message
+            if file_contents_text:
+                enriched_message = f"{request.message}\n\n**Context from workspace:**{file_contents_text}"
+
+            # Use workflow router to select appropriate workflow
+            workflow_selection = None
+            try:
+                workflow_router = get_workflow_router()
+                workflow_selection = await workflow_router.select_workflow(
+                    task_description=request.message,
+                    project_context=project_context or {},
+                )
+                logger.info(
+                    f"[Execute Stream] Selected workflow: {workflow_selection.workflow_name} "
+                    f"(confidence: {workflow_selection.confidence:.2f}, method: {workflow_selection.method})"
+                )
+                
+                # Send workflow status event
+                yield f"data: {json.dumps({{'type': 'workflow_status', 'workflow': workflow_selection.workflow_name, 'confidence': workflow_selection.confidence, 'method': workflow_selection.method})}\n\n"
+            except Exception as e:
+                logger.warning(f"[Execute Stream] Workflow routing failed, using default: {e}")
+
+            # Build initial state
+            initial_state: WorkflowState = {
+                "messages": [HumanMessage(content=enriched_message)],
+                "current_agent": "orchestrator",
+                "next_agent": None,
+                "task_result": None,
+                "approvals": [],
+                "requires_approval": False,
+                "workflow_id": session_id,
+                "thread_id": session_id,
+                "pending_operation": None,
+                "project_context": project_context,
+            }
+
+            # Add workflow template if selected
+            if workflow_selection:
+                initial_state["workflow_template"] = workflow_selection.workflow_name
+                initial_state["workflow_context"] = workflow_selection.context_variables
+                initial_state["use_template_engine"] = True
+
+            config = {"configurable": {"thread_id": session_id}}
+
+            last_keepalive = asyncio.get_event_loop().time()
+            keepalive_interval = 15
+
+            # Stream ALL agent events (no filtering for Agent mode)
+            async for event in graph.astream_events(
+                initial_state, config, version="v2"
+            ):
+                event_kind = event.get("event", "")
+                event_name = event.get("name", "")
+
+                # Stream all LLM tokens (including supervisor reasoning)
+                if event_kind == "on_chat_model_stream":
+                    chunk = event.get("data", {}).get("chunk")
+                    if chunk and hasattr(chunk, "content") and chunk.content:
+                        yield f"data: {json.dumps({'type': 'content', 'content': chunk.content})}\n\n"
+                        last_keepalive = asyncio.get_event_loop().time()
+
+                # Agent completed
+                elif event_kind == "on_chain_end":
+                    name = event.get("name", "")
+                    if any(agent in name.lower() for agent in ["supervisor", "feature_dev", "feature-dev", "code_review", "code-review", "infrastructure", "cicd", "documentation"]):
+                        yield f"data: {json.dumps({'type': 'agent_complete', 'agent': name})}\n\n"
+                        last_keepalive = asyncio.get_event_loop().time()
+
+                # Tool calls
+                elif event_kind == "on_tool_start":
+                    tool_name = event.get("name", "unknown")
+                    yield f"data: {json.dumps({'type': 'tool_call', 'tool': tool_name})}\n\n"
+                    last_keepalive = asyncio.get_event_loop().time()
+
+                # Keepalive
+                current_time = asyncio.get_event_loop().time()
+                if current_time - last_keepalive > keepalive_interval:
+                    yield ": keepalive\n\n"
+                    last_keepalive = current_time
+
+                await asyncio.sleep(0.01)
+
+            # Save to session history
+            try:
+                await session_manager.add_message(
+                    session_id=session_id,
+                    role="user",
+                    content=request.message,
+                    metadata={"mode": "agent", "workflow": workflow_selection.workflow_name if workflow_selection else None},
+                )
+                await session_manager.add_message(
+                    session_id=session_id,
+                    role="assistant",
+                    content="[Agent execution streamed to client]",
+                    metadata={"workflow_id": session_id},
+                )
+            except Exception as e:
+                logger.warning(f"[Execute Stream] Could not save to session: {e}")
+
+            yield f"data: {json.dumps({'type': 'done', 'session_id': session_id})}\n\n"
+            yield "data: [DONE]\n\n"
+
+        except Exception as e:
+            logger.error(f"Execute stream error: {e}", exc_info=True)
+            error_message = str(e)
+            if "API key" in error_message or "401" in error_message:
+                error_message = "Authentication failed. Please check your API configuration."
+            elif "429" in error_message or "rate limit" in error_message.lower():
+                error_message = "Rate limit exceeded. Please wait a moment and try again."
+            elif "timeout" in error_message.lower():
+                error_message = "Request timed out. Please try a simpler task or try again."
+            
+            yield f"data: {json.dumps({'type': 'error', 'error': error_message, 'session_id': session_id})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
             "Access-Control-Allow-Origin": "*",
         },
     )
