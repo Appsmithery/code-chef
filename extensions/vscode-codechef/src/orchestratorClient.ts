@@ -167,16 +167,51 @@ export class OrchestratorClient {
             this.apiKey = configOrBaseUrl.apiKey;
         }
 
+        // Normalize URL: ensure it ends with /api
+        baseUrl = this.normalizeBaseUrl(baseUrl);
+        
+        // Log final URL for diagnostics (mask sensitive data)
+        const maskedUrl = baseUrl.replace(/\/\/([^@]+@)?/, '//***@');
+        console.log(`[OrchestratorClient] Initializing with baseURL: ${maskedUrl}`);
+
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (this.apiKey) {
-            headers['X-API-Key'] = this.apiKey;
+            headers['X-API-Key'] = this.maskApiKey(this.apiKey);
+            console.log(`[OrchestratorClient] API Key configured: ${this.maskApiKey(this.apiKey)}`);
         }
 
         this.client = axios.create({
             baseURL: baseUrl,
             timeout: timeoutMs,
-            headers
+            headers: {
+                'Content-Type': 'application/json',
+                ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {})
+            }
         });
+    }
+
+    /**
+     * Normalize base URL to ensure it ends with /api
+     */
+    private normalizeBaseUrl(url: string): string {
+        // Remove trailing slashes
+        url = url.replace(/\/+$/, '');
+        
+        // Check if already ends with /api
+        if (!url.endsWith('/api')) {
+            url = `${url}/api`;
+            console.log(`[OrchestratorClient] Auto-appended /api to URL`);
+        }
+        
+        return url;
+    }
+
+    /**
+     * Mask API key for safe logging
+     */
+    private maskApiKey(key: string): string {
+        if (key.length <= 8) return '***';
+        return `${key.substring(0, 4)}...${key.substring(key.length - 4)}`;
     }
 
     /**
@@ -218,15 +253,28 @@ export class OrchestratorClient {
     private async retryWithBackoff<T>(
         operation: () => Promise<T>,
         maxRetries: number = 3,
-        initialDelay: number = 1000
+        initialDelay: number = 1000,
+        url?: string
     ): Promise<T> {
         let lastError: Error;
         
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                return await operation();
+                const startTime = Date.now();
+                const result = await operation();
+                const duration = Date.now() - startTime;
+                console.log(`[OrchestratorClient] Request succeeded in ${duration}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+                return result;
             } catch (error: any) {
                 lastError = error;
+                
+                // Log detailed error information
+                const status = error.response?.status || 'NO_RESPONSE';
+                const statusText = error.response?.statusText || error.code || 'UNKNOWN';
+                console.error(`[OrchestratorClient] Request failed (attempt ${attempt + 1}/${maxRetries + 1}): ${status} ${statusText}`);
+                if (url) {
+                    console.error(`[OrchestratorClient] Failed URL: ${url}`);
+                }
                 
                 // Only retry on transient errors
                 const isRetryable = 
@@ -235,13 +283,19 @@ export class OrchestratorClient {
                     error.code === 'ECONNRESET' ||    // Connection reset
                     error.code === 'ETIMEDOUT';        // Timeout
                 
-                if (!isRetryable || attempt === maxRetries) {
+                if (!isRetryable) {
+                    console.error(`[OrchestratorClient] Non-retryable error: ${status}`);
+                    throw error;
+                }
+                
+                if (attempt === maxRetries) {
+                    console.error(`[OrchestratorClient] Max retries exhausted`);
                     throw error;
                 }
                 
                 // Exponential backoff: 1s, 2s, 4s
                 const delay = initialDelay * Math.pow(2, attempt);
-                console.log(`[OrchestratorClient] Retry attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+                console.log(`[OrchestratorClient] Retrying request after ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
                 await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
@@ -278,6 +332,7 @@ export class OrchestratorClient {
         signal?: AbortSignal
     ): AsyncGenerator<StreamChunk> {
         const url = `${this.client.defaults.baseURL}/chat/stream`;
+        console.log(`[OrchestratorClient] Streaming to: ${url}`);
         
         // LangSmith tracing metadata
         const sessionStartTime = Date.now();
@@ -287,6 +342,7 @@ export class OrchestratorClient {
         
         try {
             // Retry wrapper for transient errors (429, 503)
+            console.log(`[OrchestratorClient] Initiating POST request with retry logic...`);
             const response = await this.retryWithBackoff(async () => {
                 return await this.client.post(url, request, {
                     responseType: 'stream',
@@ -295,7 +351,7 @@ export class OrchestratorClient {
                     },
                     signal // Pass AbortSignal for cancellation
                 });
-            });
+            }, 3, 1000, url); // Pass url for logging
 
             // Track time to first byte (TTFB)
             firstChunkTime = Date.now();
