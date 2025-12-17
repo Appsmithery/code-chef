@@ -88,7 +88,9 @@ jobs:
             # Skip comments (lines starting with #) and empty lines
             [[ "$key" =~ ^[[:space:]]*# || -z "$key" ]] && continue
             # Remove existing key from .env (prevents duplicates)
-            sed -i "/^${key}=/d" config/env/.env
+            # Escape special regex characters in key name
+            escaped_key=$(printf '%s\n' "$key" | sed 's:[][\\/.^$*]:\\&:g')
+            sed -i "/^${escaped_key}=/d" config/env/.env
           done < /tmp/secrets.env
 
           # Append all secrets
