@@ -85,8 +85,8 @@ jobs:
 
           # Merge secrets into .env, replacing duplicates (secrets override template)
           while IFS='=' read -r key value; do
-            # Skip comments and empty lines
-            [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+            # Skip comments (lines starting with #) and empty lines
+            [[ "$key" =~ ^[[:space:]]*# ]] || [[ -z "$key" ]] && continue
             # Remove existing key from .env (prevents duplicates)
             sed -i "/^${key}=/d" config/env/.env
           done < /tmp/secrets.env
@@ -233,7 +233,7 @@ jobs:
           # Verify upload and check for duplicates on droplet
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
             echo '🔍 Verifying uploaded .env...' && \
-            duplicates=\$(grep -v '^#' .env | grep -v '^\$' | cut -d= -f1 | sort | uniq -d) && \
+            duplicates=\$(grep -v '^#' .env | grep -v '^$' | cut -d= -f1 | sort | uniq -d) && \
             if [ -n \"\$duplicates\" ]; then \
               echo '❌ DUPLICATE KEYS FOUND ON DROPLET:'; \
               echo \"\$duplicates\"; \
@@ -330,7 +330,7 @@ jobs:
           # Verify upload and check for duplicates on droplet
           ssh ${{ env.DROPLET_HOST }} "cd ${{ env.DEPLOY_PATH }}/config/env && \
             echo '🔍 Verifying uploaded .env...' && \
-            duplicates=\$(grep -v '^#' .env | grep -v '^\$' | cut -d= -f1 | sort | uniq -d) && \
+            duplicates=\$(grep -v '^#' .env | grep -v '^$' | cut -d= -f1 | sort | uniq -d) && \
             if [ -n \"\$duplicates\" ]; then \
               echo '❌ DUPLICATE KEYS FOUND ON DROPLET:'; \
               echo \"\$duplicates\"; \
