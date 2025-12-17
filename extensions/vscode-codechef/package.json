@@ -116,6 +116,10 @@
           {
             "name": "workflows",
             "description": "List available workflow templates"
+          },
+          {
+            "name": "execute",
+            "description": "Execute a task with the orchestrator (Agent mode)"
           }
         ]
       }
