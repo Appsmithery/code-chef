@@ -132,7 +132,7 @@ ssh root@45.55.173.72 "curl -s http://localhost:8010/health | jq ."
 curl -s https://codechef.appsmithery.co/health | jq .
 
 # Container status on droplet
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose ps"
+ssh root@45.55.173.72 "cd /opt/code-chef && docker compose ps"
 
 # Local testing (optional, not production)
 docker compose ps  # D:\APPS\code-chef\deploy
@@ -171,7 +171,7 @@ ssh root@45.55.173.72 "docker logs deploy-rag-context-1 --tail=100 -f"
 ssh root@45.55.173.72 "docker logs deploy-langgraph-1 --tail=100 -f"
 
 # All services at once
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose logs -f --tail=50"
+ssh root@45.55.173.72 "cd /opt/code-chef && docker compose logs -f --tail=50"
 
 # Local testing (if running local stack)
 docker logs deploy-orchestrator-1 --tail=100 -f  # Windows local only
@@ -387,7 +387,7 @@ tools = await loader.get_tools_for_task(
 ```
 Production (codechef.appsmithery.co → 45.55.173.72)
 ├── Droplet Specs: 4GB RAM, 50GB SSD, 2 vCPUs, Ubuntu 22.04, NYC3
-├── Git Repo: /opt/Dev-Tools (Appsmithery/code-chef)
+├── Git Repo: /opt/code-chef (Appsmithery/code-chef)
 ├── Status: Public Beta (single user) → Future: VSCE Marketplace
 │
 ├── Core Services (on droplet):
@@ -417,7 +417,7 @@ Production (codechef.appsmithery.co → 45.55.173.72)
 curl -s https://codechef.appsmithery.co/health | jq .
 
 # Detailed checks via SSH
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose ps"
+ssh root@45.55.173.72 "cd /opt/code-chef && docker compose ps"
 ssh root@45.55.173.72 "docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}'"
 
 # Individual service health
@@ -456,7 +456,7 @@ ssh root@45.55.173.72 "curl -s http://localhost:8007/health | jq ."
 
 | Symptom                  | Check (Droplet)                                               | Resolution                                                                               |
 | ------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| 503 Service Unavailable  | `ssh root@45.55.173.72 "docker compose ps"`                   | SSH in, `cd /opt/Dev-Tools && docker compose up -d <service>`                            |
+| 503 Service Unavailable  | `ssh root@45.55.173.72 "docker compose ps"`                   | SSH in, `cd /opt/code-chef && docker compose up -d <service>`                            |
 | Extension not connecting | Droplet health, Caddy logs                                    | Check SSL cert, verify orchestrator running, test direct curl to 8001                    |
 | Connection refused       | Firewall rules on droplet                                     | `ufw status`, ensure ports 80/443 open, check Caddy config                               |
 | Slow response            | Droplet memory pressure                                       | `ssh root@45.55.173.72 "free -h"`, check swap usage, review LangSmith traces             |
@@ -752,7 +752,7 @@ mcp_linear_create_issue(
 # Update issue with GitHub permalink
 mcp_linear_update_issue(
     issue_id="CHEF-123",
-    description="Fix implemented in https://github.com/Appsmithery/Dev-Tools/blob/abc123/agent_orchestrator/graph.py#L45"
+    description="Fix implemented in https://github.com/Appsmithery/code-chef/blob/abc123/agent_orchestrator/graph.py#L45"
 )
 ```
 
@@ -762,8 +762,8 @@ mcp_linear_update_issue(
 # Get commit SHA
 git log -1 --format="%H" -- "agent_orchestrator/graph.py"
 
-# Format: https://github.com/Appsmithery/Dev-Tools/blob/<commit-sha>/<path>#L<line>
-# Example: https://github.com/Appsmithery/Dev-Tools/blob/abc123def456/agent_orchestrator/graph.py#L45
+# Format: https://github.com/Appsmithery/code-chef/blob/<commit-sha>/<path>#L<line>
+# Example: https://github.com/Appsmithery/code-chef/blob/abc123def456/agent_orchestrator/graph.py#L45
 ```
 
 ### Deployment Validation
@@ -778,7 +778,7 @@ git commit -m "<describe changes>"
 git push origin main
 
 # 2. Pull and restart on droplet
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull && docker compose down && docker compose up -d"
+ssh root@45.55.173.72 "cd /opt/code-chef && git pull && docker compose down && docker compose up -d"
 
 # 3. Wait for services to start (30-60 seconds)
 sleep 60
@@ -811,13 +811,13 @@ ssh root@45.55.173.72 "docker compose logs -f --tail=50"
 ssh root@45.55.173.72 "docker system prune -f"
 
 # Restart specific service (minimal downtime)
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose restart orchestrator"
+ssh root@45.55.173.72 "cd /opt/code-chef && docker compose restart orchestrator"
 
 # Full restart (30-60s downtime, use during off-hours)
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose down && docker compose up -d"
+ssh root@45.55.173.72 "cd /opt/code-chef && docker compose down && docker compose up -d"
 
 # Nuclear option: Remove volumes (⚠️ DATA LOSS - backup first!)
-# ssh root@45.55.173.72 "cd /opt/Dev-Tools && docker compose down -v"
+# ssh root@45.55.173.72 "cd /opt/code-chef && docker compose down -v"
 ```
 
 **Local Development** (safe to experiment):
@@ -870,7 +870,7 @@ git commit -m "<describe changes>"
 git push origin main
 
 # 4. Deploy to droplet
-ssh root@45.55.173.72 "cd /opt/Dev-Tools && git pull && docker compose down && docker compose up -d"
+ssh root@45.55.173.72 "cd /opt/code-chef && git pull && docker compose down && docker compose up -d"
 
 # 5. Validate
 curl -s https://codechef.appsmithery.co/health | jq .
