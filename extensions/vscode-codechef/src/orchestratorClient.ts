@@ -162,7 +162,7 @@ export class OrchestratorClient {
 
     constructor(config: OrchestratorClientConfig);
     constructor(baseUrl: string, timeout?: number);
-    constructor(configOrBaseUrl: OrchestratorClientConfig | string, timeout: number = 30000) {
+    constructor(configOrBaseUrl: OrchestratorClientConfig | string, timeout: number = 60000) {
         let baseUrl: string;
         let timeoutMs: number = timeout;
         
@@ -171,7 +171,7 @@ export class OrchestratorClient {
             this.apiKey = undefined;
         } else {
             baseUrl = configOrBaseUrl.baseUrl;
-            timeoutMs = configOrBaseUrl.timeout ?? 30000;
+            timeoutMs = configOrBaseUrl.timeout ?? 60000;
             this.apiKey = configOrBaseUrl.apiKey;
         }
 
@@ -180,7 +180,7 @@ export class OrchestratorClient {
         
         // Log final URL for diagnostics (mask sensitive data)
         const maskedUrl = baseUrl.replace(/\/\/([^@]+@)?/, '//***@');
-        console.log(`[OrchestratorClient] Initializing with baseURL: ${maskedUrl}`);
+        console.log(`[OrchestratorClient] Initializing with baseURL: ${maskedUrl}, timeout: ${timeoutMs}ms`);
 
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (this.apiKey) {
@@ -188,11 +188,15 @@ export class OrchestratorClient {
             console.log(`[OrchestratorClient] API Key configured: ${this.maskApiKey(this.apiKey)}`);
         }
 
-        // Create HTTPS agent to handle SSL properly
+        // Create HTTPS agent with longer timeouts
         const httpsAgent = new https.Agent({
             rejectUnauthorized: true, // Keep certificate validation for security
             keepAlive: true,
-            timeout: timeoutMs
+            timeout: timeoutMs,
+            // Add socket timeout
+            maxSockets: 10,
+            maxFreeSockets: 5,
+            scheduling: 'lifo'
         });
 
         this.client = axios.create({
@@ -204,10 +208,13 @@ export class OrchestratorClient {
             },
             httpsAgent: httpsAgent,
             // Add better error details
-            validateStatus: (status) => status < 500 // Don't throw on 4xx errors
+            validateStatus: (status) => status < 500, // Don't throw on 4xx errors
+            // Add more detailed request config
+            maxRedirects: 5,
+            decompress: true
         });
         
-        console.log(`[OrchestratorClient] ✅ Initialized with baseURL: ${baseUrl}`);
+        console.log(`[OrchestratorClient] ✅ Initialized with baseURL: ${baseUrl}, timeout: ${timeoutMs}ms`);
         console.log(`[OrchestratorClient] Full health check URL will be: ${baseUrl}/health`);
         console.log(`[OrchestratorClient] Full chat/stream URL will be: ${baseUrl}/chat/stream`);
     }
