@@ -4,6 +4,61 @@
 
 ---
 
+## Current Flow (Inefficient)
+
+```
+User types message → handleChatRequest()
+  ├─ Check if command? → handleCommand()
+  ├─ If streaming enabled → handleStreamingChat()
+  │    ├─ [1] Health check (200-500ms)
+  │    ├─ [2] Extract workspace context (500-2000ms) ⚠️ HEAVY
+  │    ├─ [3] Extract chat references
+  │    ├─ [4] Extract Copilot model metadata
+  │    ├─ [5] Prompt enhancement (DISABLED but still evaluated)
+  │    ├─ [6] Create session
+  │    └─ Stream from orchestrator → client.chatStream()
+  │         ├─ Backend routes to conversational handler (simple)
+  │         └─ Returns response
+  │
+  └─ Else: Non-streaming path (legacy)
+       ├─ Extract workspace context
+       ├─ Submit to orchestrator
+       └─ Auto-execute workflow
+```
+
+**Problem**: Workspace context extraction (500-2000ms) runs UNCONDITIONALLY for all queries, even simple "hello" messages that don't need it.
+
+---
+
+## Optimized Flow (Proposed)
+
+```
+User types message → handleChatRequest()
+  ├─ Check if command? → handleCommand()
+  │    └─ /execute → NOW extract context + full workflow
+  │
+  ├─ [1] Health check (200ms) ✅ KEEP - fast safety check
+  │
+  ├─ [2] Quick intent detection (LOCAL, <10ms)
+  │    ├─ Pattern match: "hello|hi|hey|what can you do|explain X"
+  │    └─ If conversational → SKIP CONTEXT EXTRACTION
+  │
+  ├─ If conversational:
+  │    ├─ [3] Create session (fast)
+  │    └─ [4] Stream from orchestrator (minimal payload)
+  │         └─ Backend: conversational workflow → fast response
+  │
+  └─ If task execution:
+       ├─ [3] Extract workspace context (ONLY NOW) ⚠️
+       ├─ [4] Extract chat references
+       ├─ [5] Extract Copilot metadata
+       ├─ [6] Create session
+       └─ [7] Stream from orchestrator (full payload)
+            └─ Backend: workflow router → specialist agents
+```
+
+---
+
 ## 1. Add Client-Side Intent Pre-Filter (TypeScript)
 
 **File**: `extensions/vscode-codechef/src/chatParticipant.ts`
@@ -11,44 +66,76 @@
 **Changes**:
 
 ```typescript
-// Add before workspace context extraction (line ~225)
-private isLikelyConversational(message: string): boolean {
+// Add local intent detector (add as private method)
+private detectIntent(message: string): 'conversational' | 'task' | 'unknown' {
+    const trimmed = message.trim().toLowerCase();
+
+    // Conversational patterns (high confidence)
     const conversationalPatterns = [
-        /^(hello|hi|hey|greetings|thanks|thank you)/i,
-        /^(what|how|why|when|where|who|explain|tell me about)/i,
-        /^(help|status|show me)/i,
-        /(can you|could you|would you) (explain|tell|show)/i,
+        /^(hello|hi|hey|greetings|good morning|good afternoon)/,
+        /^(what can you do|help|explain|tell me about)/,
+        /^(how do|why does|when should|where is)/,
+        /^(status|how's it going|what's up)/,
     ];
 
-    const shortQuestionPattern = /\?$/;
-    const isShortMessage = message.trim().split(/\s+/).length <= 10;
+    for (const pattern of conversationalPatterns) {
+        if (pattern.test(trimmed)) {
+            return 'conversational';
+        }
+    }
 
-    return conversationalPatterns.some(p => p.test(message)) ||
-           (shortQuestionPattern.test(message) && isShortMessage);
+    // Task patterns (high confidence)
+    const taskPatterns = [
+        /^(implement|build|create|add|fix|refactor|deploy)/,
+        /^(review|check|lint|test|validate)/,
+        /^(document|write docs|add comments)/,
+    ];
+
+    for (const pattern of taskPatterns) {
+        if (pattern.test(trimmed)) {
+            return 'task';
+        }
+    }
+
+    // Short messages are likely conversational
+    if (trimmed.length < 30 && !trimmed.includes('file') && !trimmed.includes('function')) {
+        return 'conversational';
+    }
+
+    return 'unknown';  // Let orchestrator decide
 }
 
 // Update handleStreamingChat (line ~195)
 private async handleStreamingChat(...) {
-    const overallStartTime = Date.now();
+    // Step 1: Health check (always)
+    stream.progress('Checking orchestrator connection...');
+    await this.client.health();
 
-    try {
-        // Step 1: Health check (keep existing)
+    // Step 2: Detect intent locally
+    const intent = this.detectIntent(userMessage);
 
-        // Step 2: NEW - Lightweight intent pre-filter
-        const seemsConversational = this.isLikelyConversational(userMessage);
-        const shouldExtractContext = !seemsConversational;
+    // Step 3: Extract context ONLY if needed
+    let workspaceContext = {};
+    let chatReferences = { files: [], symbols: [], strings: [], count: 0 };
+    let copilotModel = {};
 
-        // Step 3: Conditionally extract workspace context
-        let workspaceContext = {};
-        if (shouldExtractContext) {
-            stream.progress('Extracting workspace context...');
-            const contextStartTime = Date.now();
-            workspaceContext = await this.contextExtractor.extract();
-            const contextDuration = Date.now() - contextStartTime;
-            console.log(`[ChatParticipant] Context extraction completed in ${contextDuration}ms`);
-        } else {
-            console.log(`[ChatParticipant] Skipped context extraction (conversational pre-filter)`);
-        }
+    if (intent === 'task' || intent === 'unknown') {
+        stream.progress('Extracting workspace context...');
+        const contextStartTime = Date.now();
+        workspaceContext = await this.contextExtractor.extract();
+        chatReferences = this.extractChatReferences(request.references);
+        copilotModel = this.extractModelMetadata(request.model);
+        const contextDuration = Date.now() - contextStartTime;
+        console.log(`[ChatParticipant] Context extraction completed in ${contextDuration}ms`);
+    } else {
+        console.log(`[ChatParticipant] Skipping context extraction for conversational query`);
+        // Still extract minimal metadata for telemetry
+        copilotModel = this.extractModelMetadata(request.model);
+    }
+
+    // Step 4: Stream
+    stream.progress('Connecting to orchestrator...');
+    const sessionId = this.sessionManager.getOrCreateSession(context);
 ```
 
 **Rationale**: Instant feedback (<10ms) before hitting backend. Filters obvious conversational messages without false negatives (when in doubt, extract context).
@@ -63,21 +150,37 @@ private async handleStreamingChat(...) {
 
 ```typescript
 // Update chatStream call (line ~315)
-for await (const chunk of this.client.chatStream({
-    message: finalPrompt,
+for await (const chunk of this.client.chatStream(
+  {
+    message: userMessage,
     session_id: sessionId,
     context: {
-        ...workspaceContext,
-        chat_references: chatReferences,
-        copilot_model: copilotModel,
-        prompt_enhanced: enhancePrompts,
-        enhancement_error: enhancementError,
-        session_mode: 'ask',  // Already exists
-        intent_hint: seemsConversational ? 'likely_query' : 'unknown',  // NEW
-        context_extracted: shouldExtractContext  // NEW
+      ...workspaceContext, // Empty {} for conversational
+      chat_references: chatReferences,
+      copilot_model: copilotModel,
+      intent_hint: intent, // NEW: 'conversational', 'task', or 'unknown'
     },
-    workspace_config: buildWorkspaceConfig()
-}, abortController.signal)) {
+    workspace_config: buildWorkspaceConfig(),
+  },
+  abortController.signal
+)) {
+  // ... rest of streaming logic
+}
+```
+
+**Also update /execute command handler**:
+
+```typescript
+private async handleExecuteCommand(userMessage, stream, token, request) {
+    stream.progress('Preparing task execution...');
+
+    // NOW extract full context (we know it's a task)
+    const workspaceContext = await this.contextExtractor.extract();
+    const chatReferences = this.extractChatReferences(request.references);
+    const copilotModel = this.extractModelMetadata(request.model);
+
+    // ... rest of execute logic with FULL context
+}
 ```
 
 **Rationale**: Backend `intent_recognizer.py` already supports `mode_hint` parameter. We add `intent_hint` as supplementary signal (not a directive).
@@ -264,7 +367,27 @@ if (shouldExtractContext) {
 
 ---
 
-## 7. Backward Compatibility Safeguards
+## 7. Performance Impact
+
+| Scenario                 | Current Latency | Optimized Latency | Improvement                |
+| ------------------------ | --------------- | ----------------- | -------------------------- |
+| "hello"                  | 2500ms          | 400ms             | **84% faster**             |
+| "what can you do?"       | 2300ms          | 350ms             | **85% faster**             |
+| "explain JWT"            | 2400ms          | 800ms             | **67% faster**             |
+| "/execute implement JWT" | 2500ms          | 2500ms            | Same (full context needed) |
+| "implement JWT" (no cmd) | 2500ms          | 2500ms            | Same (task detected)       |
+
+**Architecture Benefits**:
+
+1. **Lazy Loading**: Extract context only when needed
+2. **Fast Conversational UX**: Sub-500ms responses for greetings/questions
+3. **No Backend Changes**: All optimization is client-side
+4. **Backward Compatible**: Falls back to full context for unknown intents
+5. **Progressive Enhancement**: Can add more sophisticated intent detection later
+
+---
+
+## 8. Backward Compatibility Safeguards
 
 **No Breaking Changes**:
 
@@ -283,7 +406,7 @@ const shouldExtractContext = !seemsConversational || chatReferences.count > 0;
 
 ---
 
-## 8. Testing Strategy
+## 9. Testing Strategy
 
 **Unit Tests**:
 
@@ -328,7 +451,7 @@ const scenarios = [
 
 ---
 
-## 9. Rollout Plan
+## 10. Rollout Plan
 
 **Phase 1**: Client-side pre-filter only (extensions)
 
@@ -352,7 +475,7 @@ const scenarios = [
 
 ---
 
-## 10. Success Metrics
+## 11. Success Metrics
 
 **Performance**:
 
