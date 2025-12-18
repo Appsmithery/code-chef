@@ -246,11 +246,19 @@ export class CodeChefChatParticipant {
 
             // === PROMPT ENHANCEMENT (NEW) ===
             const config = vscode.workspace.getConfiguration('codechef');
-            const enhancePrompts = config.get('enhancePrompts', false);
+            // TEMPORARY FIX: Force disable prompt enhancement to avoid hanging
+            // const enhancePrompts = config.get('enhancePrompts', false);
+            const enhancePrompts = false;  // Disabled until Copilot API stability improves
             let finalPrompt = userMessage;
             let enhancementError: string | undefined;
 
-            if (enhancePrompts) {
+            // Skip enhancement for conversational messages (greetings, questions, status checks)
+            const conversationalPatterns = /^(hello|hi|hey|greetings|what can you do|help|status|explain|how|why|where|when|who)/i;
+            const isConversational = conversationalPatterns.test(userMessage.trim()) || userMessage.trim().length < 20;
+
+            console.log(`code/chef: enhancePrompts=${enhancePrompts}, isConversational=${isConversational}, message="${userMessage}"`);
+
+            if (enhancePrompts && !isConversational) {
                 stream.progress('Enhancing task description with Copilot...');
                 
                 const template = config.get<'detailed' | 'structured' | 'minimal'>(
@@ -274,6 +282,8 @@ export class CodeChefChatParticipant {
                 } else {
                     console.log(`code/chef: Enhanced prompt from ${userMessage.length} to ${finalPrompt.length} chars`);
                 }
+            } else if (enhancePrompts && isConversational) {
+                console.log(`code/chef: Skipping prompt enhancement for conversational message: "${userMessage}"`);
             }
             // === END ENHANCEMENT ===
             
