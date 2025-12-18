@@ -3529,7 +3529,10 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                     logger.info(
                         f"[Chat Stream] Task submission detected, redirecting to Agent mode"
                     )
-                    mode_switch_msg = {'type': 'content', 'content': '🔄 Switching to Agent mode for task execution...\n\n'}
+                    mode_switch_msg = {
+                        "type": "content",
+                        "content": "🔄 Switching to Agent mode for task execution...\n\n",
+                    }
                     yield f"data: {json.dumps(mode_switch_msg)}\n\n"
 
                     # Stream a note about mode switch
