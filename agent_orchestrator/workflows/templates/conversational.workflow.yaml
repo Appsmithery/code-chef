@@ -11,9 +11,9 @@ steps:
     payload:
       message: "{{ context.task_description }}"
       user_id: "{{ context.user_id }}"
-    
+
     on_success: "end"
-    
+
   - id: "end"
     type: "terminal"
     deterministic: true
