@@ -19,6 +19,49 @@ default_confirm_threshold: 0.7
 
 rules:
   # ============================================================================
+  # Conversational Chat (Highest Priority)
+  # ============================================================================
+  - id: "conversational-greeting"
+    workflow: "conversational"
+    priority: 110
+    keywords:
+      - "hello"
+      - "hi"
+      - "hey"
+      - "greetings"
+      - "good morning"
+      - "good afternoon"
+      - "good evening"
+    confidence_boost: 0.3
+
+  - id: "conversational-question"
+    workflow: "conversational"
+    priority: 105
+    keywords:
+      - "what can you do"
+      - "what are you"
+      - "who are you"
+      - "help"
+      - "capabilities"
+      - "features"
+      - "how do i"
+      - "how does"
+      - "what is"
+    confidence_boost: 0.25
+
+  - id: "conversational-status"
+    workflow: "conversational"
+    priority: 100
+    keywords:
+      - "status"
+      - "progress"
+      - "how's"
+      - "what's happening"
+      - "tell me about"
+      - "explain"
+    confidence_boost: 0.2
+
+  # ============================================================================
   # PR Deployment Workflow
   # ============================================================================
   - id: "pr-deploy-explicit"
@@ -210,3 +253,6 @@ aliases:
   doc: "docs-update"
   docs: "docs-update"
   readme: "docs-update"
+  chat: "conversational"
+  ask: "conversational"
+  question: "conversational"
