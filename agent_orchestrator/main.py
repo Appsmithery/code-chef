@@ -326,9 +326,12 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 api_key = auth_header[7:]
 
         # Validate API key using constant-time comparison
-        if not api_key or not secrets.compare_digest(api_key, ORCHESTRATOR_API_KEY):
+        if not api_key or not secrets.compare_digest(
+            api_key, ORCHESTRATOR_API_KEY or ""
+        ):
+            client_host = request.client.host if request.client else "unknown"
             logger.warning(
-                f"🔒 Unauthorized API request to {request.url.path} from {request.client.host}"
+                f"🔒 Unauthorized API request to {request.url.path} from {client_host}"
             )
             from fastapi.responses import JSONResponse
 
@@ -396,6 +399,11 @@ session_manager = get_session_manager()
 # Event bus for notifications (Phase 5.2)
 event_bus = get_event_bus()
 
+# State client for workflow event sourcing
+from lib.state_client import get_state_client
+
+state_client = get_state_client()
+
 # Agent registry client (Phase 6)
 registry_client: Optional[RegistryClient] = None
 
@@ -461,20 +469,20 @@ rag_query_latency = Histogram(
 intent_recognition_total = Counter(
     "orchestrator_intent_recognition_total",
     "Total intent recognition attempts",
-    ["session_mode", "intent_type", "mode_hint_source"]
+    ["session_mode", "intent_type", "mode_hint_source"],
 )
 
 intent_recognition_confidence = Histogram(
     "orchestrator_intent_recognition_confidence",
     "Intent recognition confidence scores",
     ["session_mode", "mode_hint_source"],
-    buckets=[0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    buckets=[0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
 )
 
 mode_switch_total = Counter(
     "orchestrator_mode_switch_total",
     "Total mode switches per session",
-    ["from_mode", "to_mode"]
+    ["from_mode", "to_mode"],
 )
 
 # Track approval-pending tasks awaiting resumption
@@ -2154,7 +2162,7 @@ async def get_all_tools():
 @traceable(
     name="api_get_progressive_tools", tags=["api", "mcp", "tools", "progressive"]
 )
-async def get_progressive_tools(task: str = None):
+async def get_progressive_tools(task: Optional[str] = None):
     """Get task-filtered MCP tools using progressive disclosure.
 
     Returns only tools relevant to the specified task (10-30 tools vs 150+).
@@ -2565,7 +2573,7 @@ async def update_phase_completion(request: Dict[str, Any]):
 
 @app.post("/execute/{task_id}")
 @traceable(name="execute_task_workflow", tags=["orchestrator", "execution", "agents"])
-async def execute_workflow(task_id: str):
+async def execute_task_by_id(task_id: str):
     """Execute workflow using LangGraph agents (not HTTP microservices).
 
     This endpoint invokes agents in-process via the LangGraph StateGraph,
@@ -3149,6 +3157,7 @@ async def chat_endpoint(request: ChatRequest):
                 return ChatResponse(
                     message=response_message,
                     session_id=session_id,
+                    task_id=None,
                     intent=intent.type,
                     confidence=intent.confidence,
                     suggestions=[
@@ -3158,6 +3167,7 @@ async def chat_endpoint(request: ChatRequest):
                         "cicd",
                         "documentation",
                     ],
+                    metadata={},
                 )
 
             # Convert intent to task request
@@ -3198,6 +3208,7 @@ async def chat_endpoint(request: ChatRequest):
                     task_id=task_id,
                     intent=intent.type,
                     confidence=intent.confidence,
+                    suggestions=None,
                     metadata={
                         "subtasks_count": len(orchestrate_response.subtasks),
                         "guardrail_status": orchestrate_response.guardrail_report.status,
@@ -3215,8 +3226,11 @@ async def chat_endpoint(request: ChatRequest):
                 return ChatResponse(
                     message=error_message,
                     session_id=session_id,
+                    task_id=None,
                     intent=intent.type,
                     confidence=intent.confidence,
+                    suggestions=None,
+                    metadata={},
                 )
 
         elif intent.type == IntentType.STATUS_QUERY:
@@ -3251,8 +3265,11 @@ async def chat_endpoint(request: ChatRequest):
             return ChatResponse(
                 message=response_message,
                 session_id=session_id,
+                task_id=None,
                 intent=intent.type,
                 confidence=intent.confidence,
+                suggestions=None,
+                metadata={},
             )
 
         elif intent.type == IntentType.APPROVAL_DECISION:
@@ -3267,24 +3284,40 @@ async def chat_endpoint(request: ChatRequest):
             if approval_id:
                 # Submit decision
                 if intent.decision == "approve":
-                    await approve_task(
-                        approval_id,
-                        {
-                            "reason": "User approval via chat",
-                            "user_id": request.user_id,
-                        },
-                    )
+                    # Call approve endpoint
+                    import httpx
+
+                    async with httpx.AsyncClient() as client:
+                        try:
+                            await client.post(
+                                f"http://localhost:8001/approve/{approval_id}",
+                                params={
+                                    "approver_id": request.user_id or "chat-user",
+                                    "approver_role": "developer",
+                                    "justification": "User approval via chat",
+                                },
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to approve: {e}")
                     response_message = (
                         f"✓ Approved request {approval_id}. Resuming workflow..."
                     )
                 else:
-                    await reject_task(
-                        approval_id,
-                        {
-                            "reason": "User rejection via chat",
-                            "user_id": request.user_id,
-                        },
-                    )
+                    # Call reject endpoint
+                    import httpx
+
+                    async with httpx.AsyncClient() as client:
+                        try:
+                            await client.post(
+                                f"http://localhost:8001/reject/{approval_id}",
+                                params={
+                                    "approver_id": request.user_id or "chat-user",
+                                    "approver_role": "developer",
+                                    "reason": "User rejection via chat",
+                                },
+                            )
+                        except Exception as e:
+                            logger.error(f"Failed to reject: {e}")
                     response_message = (
                         f"✗ Rejected request {approval_id}. Workflow canceled."
                     )
@@ -3298,8 +3331,11 @@ async def chat_endpoint(request: ChatRequest):
             return ChatResponse(
                 message=response_message,
                 session_id=session_id,
+                task_id=None,
                 intent=intent.type,
                 confidence=intent.confidence,
+                suggestions=None,
+                metadata={"approval_id": approval_id} if approval_id else {},
             )
 
         else:
@@ -3322,9 +3358,11 @@ What would you like to do?"""
             return ChatResponse(
                 message=response_message,
                 session_id=session_id,
+                task_id=None,
                 intent=intent.type,
                 confidence=intent.confidence,
                 suggestions=["Create a task", "Check task status", "Approve a request"],
+                metadata={},
             )
 
     except Exception as e:
@@ -3367,10 +3405,7 @@ class ChatStreamRequest(BaseModel):
 @traceable(
     name="chat_stream",
     tags=["api", "streaming", "sse", "ask-mode"],
-    metadata={
-        "session_mode": "ask",
-        "supports_mode_hints": True
-    }
+    metadata={"session_mode": "ask", "supports_mode_hints": True},
 )
 async def chat_stream_endpoint(request: ChatStreamRequest):
     """
@@ -3438,52 +3473,71 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             # Import the graph for streaming
             from graph import WorkflowState, get_graph
             from langchain_core.messages import AIMessage, HumanMessage
-            
+
             # STEP 1: Recognize intent to determine if this is Ask or Agent mode
-            intent_recognizer = get_intent_recognizer()
+            # Use module-level intent_recognizer (initialized with llm_client)
+            intent_error = None
             try:
                 # Extract mode hint from request context
                 mode_hint = None
                 if request.context:
                     mode_hint = request.context.get("session_mode")  # 'ask' or 'agent'
-                
+
                 logger.debug(f"[Chat Stream] Mode hint from context: {mode_hint}")
-                intent = await intent_recognizer.recognize(request.message, mode_hint=mode_hint)
-                logger.info(f"[Chat Stream] Recognized intent: {intent.type} (confidence: {intent.confidence:.2f})")
-                
+                intent = await intent_recognizer.recognize(
+                    request.message, mode_hint=mode_hint
+                )
+                logger.info(
+                    f"[Chat Stream] Recognized intent: {intent.type} (confidence: {intent.confidence:.2f})"
+                )
+
                 # Record intent recognition metrics
                 mode_hint_source = "context" if mode_hint else "none"
                 intent_recognition_total.labels(
                     session_mode=mode_hint or "unknown",
                     intent_type=intent.type,
-                    mode_hint_source=mode_hint_source
+                    mode_hint_source=mode_hint_source,
                 ).inc()
-                
+
                 intent_recognition_confidence.labels(
                     session_mode=mode_hint or "unknown",
-                    mode_hint_source=mode_hint_source
+                    mode_hint_source=mode_hint_source,
                 ).observe(intent.confidence)
-                
+
                 # If this is a task submission, redirect to /execute/stream
                 if intent.type == IntentType.TASK_SUBMISSION:
-                    logger.info(f"[Chat Stream] Task submission detected, redirecting to Agent mode")
-                    yield f"data: {json.dumps({{'type': 'content', 'content': '🔄 Switching to Agent mode for task execution...\n\n'})}\n\n"
-                    
+                    logger.info(
+                        f"[Chat Stream] Task submission detected, redirecting to Agent mode"
+                    )
+                    yield f"data: {json.dumps({'type': 'content', 'content': '🔄 Switching to Agent mode for task execution...\n\n'})}\n\n"
+
                     # Stream a note about mode switch
                     task_desc = intent.task_description or request.message
-                    yield f"data: {json.dumps({{'type': 'content', 'content': f'**Task:** {task_desc}\n\n'})}\n\n"
-                    yield f"data: {json.dumps({{'type': 'redirect', 'endpoint': '/execute/stream', 'reason': 'task_submission'})}\n\n"
-                    yield f"data: {json.dumps({{'type': 'done', 'session_id': session_id})}\n\n"
+                    task_data = {
+                        "type": "content",
+                        "content": f"**Task:** {task_desc}\n\n",
+                    }
+                    yield f"data: {json.dumps(task_data)}\n\n"
+                    redirect_data = {
+                        "type": "redirect",
+                        "endpoint": "/execute/stream",
+                        "reason": "task_submission",
+                    }
+                    yield f"data: {json.dumps(redirect_data)}\n\n"
+                    done_data = {"type": "done", "session_id": session_id}
+                    yield f"data: {json.dumps(done_data)}\n\n"
                     yield "data: [DONE]\n\n"
                     return
             except Exception as intent_error:
-                logger.warning(f"[Chat Stream] Intent recognition failed: {intent_error}, proceeding with Ask mode")
+                logger.warning(
+                    f"[Chat Stream] Intent recognition failed: {intent_error}, proceeding with Ask mode"
+                )
 
             logger.info(f"[Chat Stream] Proceeding with Ask mode (conversational)")
-            
+
             # STEP 2: For non-task intents, use conversational handler
             from graph import conversational_handler_node
-            
+
             logger.info(f"[Chat Stream] Initializing graph for session {session_id}")
             graph = get_graph()
             if not graph:
@@ -3543,13 +3597,14 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                         "[Chat Stream] project_context provided but missing all identifiers"
                     )
 
+                proj_ctx = request.project_context
                 project_context = {
-                    "project_id": request.project_context.get("linear_project_id")
-                    or request.project_context.get("github_repo_url"),
-                    "repository_url": request.project_context.get("github_repo_url"),
-                    "workspace_name": request.project_context.get("workspace_name"),
-                    "branch": request.project_context.get("branch", "main"),
-                    "directory": request.project_context.get("directory", "."),
+                    "project_id": proj_ctx.get("linear_project_id")
+                    or proj_ctx.get("github_repo_url"),
+                    "repository_url": proj_ctx.get("github_repo_url"),
+                    "workspace_name": proj_ctx.get("workspace_name"),
+                    "branch": proj_ctx.get("branch", "main"),
+                    "directory": proj_ctx.get("directory", "."),
                 }
 
                 # Add workspace root if available
@@ -3562,9 +3617,10 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                 )
             elif request.workspace_config:
                 # Fallback to workspace config for project identification
+                workspace_cfg = request.workspace_config
                 project_context = {
-                    "workspace_name": request.workspace_config.get("name"),
-                    "workspace_path": request.workspace_config.get("path")
+                    "workspace_name": workspace_cfg.get("name"),
+                    "workspace_path": workspace_cfg.get("path")
                     or request.workspace_root,
                 }
                 logger.info(
@@ -3848,12 +3904,24 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
             from graph import WorkflowState, get_graph
             from langchain_core.messages import AIMessage, HumanMessage
 
-            logger.info(f"[Execute Stream] Initializing workflow for session {session_id}")
+            logger.info(
+                f"[Execute Stream] Initializing workflow for session {session_id}"
+            )
             graph = get_graph()
             if not graph:
                 logger.error("[Execute Stream] Failed to get graph instance")
                 yield f"data: {json.dumps({'type': 'error', 'error': 'Graph not available'})}\n\n"
                 return
+        except ImportError as e:
+            logger.error(f"[Execute Stream] Failed to import graph: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'error': 'Graph module not available'})}\n\n"
+            return
+        except Exception as e:
+            logger.error(f"[Execute Stream] Initialization error: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"
+            return
+
+        try:
 
             # Create/load session
             try:
@@ -3868,7 +3936,9 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                             "workspace_root": request.workspace_root,
                         },
                     )
-                    logger.info(f"[Execute Stream] Created new agent-mode session {session_id}")
+                    logger.info(
+                        f"[Execute Stream] Created new agent-mode session {session_id}"
+                    )
             except Exception as e:
                 logger.warning(f"[Execute Stream] Could not create session: {e}")
 
@@ -3945,11 +4015,19 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                     f"[Execute Stream] Selected workflow: {workflow_selection.workflow_name} "
                     f"(confidence: {workflow_selection.confidence:.2f}, method: {workflow_selection.method})"
                 )
-                
+
                 # Send workflow status event
-                yield f"data: {json.dumps({{'type': 'workflow_status', 'workflow': workflow_selection.workflow_name, 'confidence': workflow_selection.confidence, 'method': workflow_selection.method})}\n\n"
+                workflow_data = {
+                    "type": "workflow_status",
+                    "workflow": workflow_selection.workflow_name,
+                    "confidence": workflow_selection.confidence,
+                    "method": workflow_selection.method,
+                }
+                yield f"data: {json.dumps(workflow_data)}\n\n"
             except Exception as e:
-                logger.warning(f"[Execute Stream] Workflow routing failed, using default: {e}")
+                logger.warning(
+                    f"[Execute Stream] Workflow routing failed, using default: {e}"
+                )
 
             # Build initial state
             initial_state: WorkflowState = {
@@ -3993,7 +4071,19 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                 # Agent completed
                 elif event_kind == "on_chain_end":
                     name = event.get("name", "")
-                    if any(agent in name.lower() for agent in ["supervisor", "feature_dev", "feature-dev", "code_review", "code-review", "infrastructure", "cicd", "documentation"]):
+                    if any(
+                        agent in name.lower()
+                        for agent in [
+                            "supervisor",
+                            "feature_dev",
+                            "feature-dev",
+                            "code_review",
+                            "code-review",
+                            "infrastructure",
+                            "cicd",
+                            "documentation",
+                        ]
+                    ):
                         yield f"data: {json.dumps({'type': 'agent_complete', 'agent': name})}\n\n"
                         last_keepalive = asyncio.get_event_loop().time()
 
@@ -4017,7 +4107,14 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                     session_id=session_id,
                     role="user",
                     content=request.message,
-                    metadata={"mode": "agent", "workflow": workflow_selection.workflow_name if workflow_selection else None},
+                    metadata={
+                        "mode": "agent",
+                        "workflow": (
+                            workflow_selection.workflow_name
+                            if workflow_selection
+                            else None
+                        ),
+                    },
                 )
                 await session_manager.add_message(
                     session_id=session_id,
@@ -4035,12 +4132,18 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
             logger.error(f"Execute stream error: {e}", exc_info=True)
             error_message = str(e)
             if "API key" in error_message or "401" in error_message:
-                error_message = "Authentication failed. Please check your API configuration."
+                error_message = (
+                    "Authentication failed. Please check your API configuration."
+                )
             elif "429" in error_message or "rate limit" in error_message.lower():
-                error_message = "Rate limit exceeded. Please wait a moment and try again."
+                error_message = (
+                    "Rate limit exceeded. Please wait a moment and try again."
+                )
             elif "timeout" in error_message.lower():
-                error_message = "Request timed out. Please try a simpler task or try again."
-            
+                error_message = (
+                    "Request timed out. Please try a simpler task or try again."
+                )
+
             yield f"data: {json.dumps({'type': 'error', 'error': error_message, 'session_id': session_id})}\n\n"
 
     return StreamingResponse(
