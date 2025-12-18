@@ -325,26 +325,49 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function checkOrchestratorHealth(url: string, apiKey?: string) {
     try {
-        const client = new OrchestratorClient({ baseUrl: url, apiKey });
+        console.log(`[Extension] Checking orchestrator health at: ${url}`);
+        const client = new OrchestratorClient({ baseUrl: url, apiKey, timeout: 60000 });
+        console.log(`[Extension] OrchestratorClient created, calling health()...`);
         const health = await client.health();
+        console.log(`[Extension] Health check succeeded:`, health);
         
         if (health.status === 'ok') {
             statusBarItem.text = '$(check) code/chef';
-            statusBarItem.tooltip = `Connected to ${url}`;
+            statusBarItem.tooltip = `Connected to ${url} (${health.version || 'unknown version'})`;
+            console.log(`[Extension] ✅ Status bar updated: Connected`);
         } else {
             statusBarItem.text = '$(warning) code/chef';
             statusBarItem.tooltip = 'Orchestrator unhealthy';
+            console.warn(`[Extension] ⚠️ Orchestrator unhealthy:`, health);
         }
-    } catch (error) {
+    } catch (error: any) {
+        console.error(`[Extension] ❌ Health check failed:`, {
+            message: error.message,
+            code: error.code,
+            errno: error.errno,
+            syscall: error.syscall,
+            address: error.address,
+            port: error.port,
+            isAxiosError: error.isAxiosError,
+            response: error.response ? {
+                status: error.response.status,
+                statusText: error.response.statusText,
+                data: error.response.data
+            } : undefined
+        });
+        
         statusBarItem.text = '$(error) code/chef';
-        statusBarItem.tooltip = `Cannot reach orchestrator at ${url}`;
+        statusBarItem.tooltip = `Cannot reach orchestrator at ${url}. ${error.code || error.message}`;
         
         vscode.window.showErrorMessage(
-            'Cannot connect to code/chef orchestrator. Check configuration.',
-            'Configure'
+            `Cannot connect to code/chef orchestrator: ${error.code || error.message}. Check configuration.`,
+            'Configure',
+            'Show Logs'
         ).then(selection => {
             if (selection === 'Configure') {
                 vscode.commands.executeCommand('codechef.configure');
+            } else if (selection === 'Show Logs') {
+                vscode.commands.executeCommand('workbench.action.toggleDevTools');
             }
         });
     }
