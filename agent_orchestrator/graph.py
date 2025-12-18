@@ -407,7 +407,7 @@ async def supervisor_node(state: WorkflowState) -> WorkflowState:
     supervisor = get_agent("supervisor", project_context=project_context)
 
     # Add routing instruction to messages
-    routing_prompt = """You're having a conversation with a developer who needs help. Based on their message, decide:
+    routing_prompt = """You're having a conversation with a developer. Based on their message, decide:
 
 1. Which specialist should help them:
    - feature-dev: Writing/fixing code, implementing features
@@ -415,13 +415,14 @@ async def supervisor_node(state: WorkflowState) -> WorkflowState:
    - infrastructure: Cloud setup, Docker, Kubernetes, IaC
    - cicd: Build pipelines, deployments, automation
    - documentation: README, API docs, code comments
+   - conversational: General questions, greetings, status queries, "what can you do?"
 
 2. Is this risky enough to need human approval?
    - Production deployments, infrastructure changes, DB migrations, destructive operations → YES
-   - Code generation, reviews, docs, local testing → NO
+   - Code generation, reviews, docs, local testing, conversations → NO
 
 Provide:
-- agent_name: The specialist agent name (or 'end' if conversation is done)
+- agent_name: The specialist name (or 'conversational' for chat, or 'end' if done)
 - requires_approval: true/false for HITL approval
 - reasoning: Brief explanation in conversational tone
 
@@ -1198,7 +1199,7 @@ def route_from_supervisor(state: WorkflowState) -> str:
     if state.get("requires_approval", False):
         return "approval"
 
-    # Route to next agent or end
+    # Route to specialized agents
     if next_agent in [
         "feature-dev",
         "code-review",
@@ -1207,6 +1208,10 @@ def route_from_supervisor(state: WorkflowState) -> str:
         "documentation",
     ]:
         return next_agent
+
+    # Route general queries to conversational handler
+    if next_agent == "conversational":
+        return "conversational"
 
     return "end"
 
@@ -1290,6 +1295,7 @@ def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
 
     # Add all agent nodes
     workflow.add_node("supervisor", supervisor_node)
+    workflow.add_node("conversational", conversational_handler_node)
     workflow.add_node("feature-dev", feature_dev_node)
     workflow.add_node("code-review", code_review_node)
     workflow.add_node("infrastructure", infrastructure_node)
@@ -1346,6 +1352,7 @@ def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
             "infrastructure": "infrastructure",
             "cicd": "cicd",
             "documentation": "documentation",
+            "conversational": "conversational",
             "approval": "approval",
             "end": END,
         },
@@ -1379,6 +1386,9 @@ def create_workflow(checkpoint_conn_string: str = None) -> StateGraph:
     workflow.add_edge("code-review", "supervisor")
     workflow.add_edge("documentation", "supervisor")
     workflow.add_edge("approval", "supervisor")
+
+    # Conversational handler is terminal - goes directly to END
+    workflow.add_edge("conversational", END)
 
     # Compile workflow with checkpointing
     if checkpoint_conn_string:
