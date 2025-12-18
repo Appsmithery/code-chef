@@ -1,0 +1,276 @@
+{
+  "dashboard": {
+    "title": "Intent Recognition - Mode Analysis",
+    "description": "Monitor intent recognition performance and mode hint effectiveness",
+    "tags": ["intent-recognition", "mode-hints", "observability"],
+    "timezone": "browser",
+    "schemaVersion": 38,
+    "version": 1,
+    "refresh": "30s",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Intent Recognition by Mode",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_total{session_mode=\"ask\"}[5m])) by (intent_type)",
+            "legendFormat": "Ask Mode - {{intent_type}}",
+            "refId": "A"
+          },
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_total{session_mode=\"agent\"}[5m])) by (intent_type)",
+            "legendFormat": "Agent Mode - {{intent_type}}",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "drawStyle": "line",
+              "lineInterpolation": "smooth",
+              "fillOpacity": 10
+            },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "Mode Hint Utilization",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_total{mode_hint_source!=\"none\"}[5m])) / sum(rate(orchestrator_intent_recognition_total[5m])) * 100",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 50, "color": "yellow"},
+                {"value": 80, "color": "green"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"]
+          },
+          "text": {
+            "titleSize": 14,
+            "valueSize": 32
+          },
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "center"
+        }
+      },
+      {
+        "id": 3,
+        "title": "Mode Switch Frequency",
+        "type": "timeseries",
+        "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_mode_switch_total[5m])) by (from_mode, to_mode)",
+            "legendFormat": "{{from_mode}} → {{to_mode}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "switches/s",
+            "custom": {
+              "drawStyle": "bars",
+              "fillOpacity": 80
+            }
+          }
+        }
+      },
+      {
+        "id": 4,
+        "title": "Confidence Distribution by Mode (Ask)",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_confidence_bucket{session_mode=\"ask\"}[5m])) by (le)",
+            "format": "heatmap",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "calculation": {
+            "xBuckets": {
+              "mode": "size",
+              "value": "1m"
+            }
+          },
+          "color": {
+            "mode": "scheme",
+            "scheme": "Spectral",
+            "steps": 128
+          },
+          "yAxis": {
+            "unit": "short",
+            "decimals": 1
+          }
+        }
+      },
+      {
+        "id": 5,
+        "title": "Confidence Distribution by Mode (Agent)",
+        "type": "heatmap",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_confidence_bucket{session_mode=\"agent\"}[5m])) by (le)",
+            "format": "heatmap",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "calculate": true,
+          "calculation": {
+            "xBuckets": {
+              "mode": "size",
+              "value": "1m"
+            }
+          },
+          "color": {
+            "mode": "scheme",
+            "scheme": "Spectral",
+            "steps": 128
+          },
+          "yAxis": {
+            "unit": "short",
+            "decimals": 1
+          }
+        }
+      },
+      {
+        "id": 6,
+        "title": "Average Confidence by Mode",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 6, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "avg(rate(orchestrator_intent_recognition_confidence_sum{session_mode=\"ask\"}[5m])) / avg(rate(orchestrator_intent_recognition_confidence_count{session_mode=\"ask\"}[5m]))",
+            "legendFormat": "Ask Mode",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 0.7, "color": "yellow"},
+                {"value": 0.85, "color": "green"}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area"
+        }
+      },
+      {
+        "id": 7,
+        "title": "Intent Type Distribution (Ask Mode)",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_total{session_mode=\"ask\"}[1h])) by (intent_type)",
+            "legendFormat": "{{intent_type}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "pieType": "donut",
+          "displayLabels": ["name", "percent"],
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        }
+      },
+      {
+        "id": 8,
+        "title": "Intent Type Distribution (Agent Mode)",
+        "type": "piechart",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_total{session_mode=\"agent\"}[1h])) by (intent_type)",
+            "legendFormat": "{{intent_type}}",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "pieType": "donut",
+          "displayLabels": ["name", "percent"],
+          "legend": {
+            "displayMode": "table",
+            "placement": "right",
+            "values": ["value", "percent"]
+          }
+        }
+      },
+      {
+        "id": 9,
+        "title": "Mode Hint Source Breakdown",
+        "type": "barchart",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 16},
+        "targets": [
+          {
+            "expr": "sum(rate(orchestrator_intent_recognition_total[1h])) by (mode_hint_source)",
+            "legendFormat": "{{mode_hint_source}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps"
+          }
+        },
+        "options": {
+          "orientation": "horizontal",
+          "xTickLabelRotation": 0,
+          "showValue": "always"
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "-- Grafana --",
+          "enable": true,
+          "iconColor": "blue",
+          "tags": ["deployment", "mode-hint"]
+        }
+      ]
+    }
+  }
+}

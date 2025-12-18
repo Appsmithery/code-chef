@@ -301,7 +301,8 @@ export class CodeChefChatParticipant {
                     chat_references: chatReferences,  // NEW
                     copilot_model: copilotModel,      // NEW
                     prompt_enhanced: enhancePrompts,  // NEW
-                    enhancement_error: enhancementError  // NEW
+                    enhancement_error: enhancementError,  // NEW
+                    session_mode: 'ask'  // Explicitly mark as Ask mode
                 },
                 workspace_config: buildWorkspaceConfig()
             }, abortController.signal)) {

@@ -457,6 +457,26 @@ rag_query_latency = Histogram(
     buckets=[0.1, 0.5, 1.0, 2.0, 5.0],
 )
 
+# Intent recognition metrics by mode
+intent_recognition_total = Counter(
+    "orchestrator_intent_recognition_total",
+    "Total intent recognition attempts",
+    ["session_mode", "intent_type", "mode_hint_source"]
+)
+
+intent_recognition_confidence = Histogram(
+    "orchestrator_intent_recognition_confidence",
+    "Intent recognition confidence scores",
+    ["session_mode", "mode_hint_source"],
+    buckets=[0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+)
+
+mode_switch_total = Counter(
+    "orchestrator_mode_switch_total",
+    "Total mode switches per session",
+    ["from_mode", "to_mode"]
+)
+
 # Track approval-pending tasks awaiting resumption
 pending_approval_registry: Dict[str, Dict[str, Any]] = {}
 
@@ -3344,7 +3364,14 @@ class ChatStreamRequest(BaseModel):
 
 
 @app.post("/chat/stream", tags=["chat"])
-@traceable(name="chat_stream", tags=["api", "streaming", "sse"])
+@traceable(
+    name="chat_stream",
+    tags=["api", "streaming", "sse", "ask-mode"],
+    metadata={
+        "session_mode": "ask",
+        "supports_mode_hints": True
+    }
+)
 async def chat_stream_endpoint(request: ChatStreamRequest):
     """
     Stream chat response via Server-Sent Events (SSE) for interactive conversations.
@@ -3415,8 +3442,27 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             # STEP 1: Recognize intent to determine if this is Ask or Agent mode
             intent_recognizer = get_intent_recognizer()
             try:
-                intent = await intent_recognizer.recognize(request.message)
+                # Extract mode hint from request context
+                mode_hint = None
+                if request.context:
+                    mode_hint = request.context.get("session_mode")  # 'ask' or 'agent'
+                
+                logger.debug(f"[Chat Stream] Mode hint from context: {mode_hint}")
+                intent = await intent_recognizer.recognize(request.message, mode_hint=mode_hint)
                 logger.info(f"[Chat Stream] Recognized intent: {intent.type} (confidence: {intent.confidence:.2f})")
+                
+                # Record intent recognition metrics
+                mode_hint_source = "context" if mode_hint else "none"
+                intent_recognition_total.labels(
+                    session_mode=mode_hint or "unknown",
+                    intent_type=intent.type,
+                    mode_hint_source=mode_hint_source
+                ).inc()
+                
+                intent_recognition_confidence.labels(
+                    session_mode=mode_hint or "unknown",
+                    mode_hint_source=mode_hint_source
+                ).observe(intent.confidence)
                 
                 # If this is a task submission, redirect to /execute/stream
                 if intent.type == IntentType.TASK_SUBMISSION:
