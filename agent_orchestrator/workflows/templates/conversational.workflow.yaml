@@ -1,0 +1,39 @@
+name: "Conversational Chat"
+version: "1.0"
+description: "Handle general questions, greetings, and informational queries without task execution"
+
+# Simple conversational chat without complex workflow orchestration
+steps:
+  - id: "respond"
+    type: "agent_call"
+    agent: "conversational"
+    deterministic: true
+    payload:
+      message: "{{ context.task_description }}"
+      user_id: "{{ context.user_id }}"
+    
+    on_success: "end"
+    
+  - id: "end"
+    type: "terminal"
+    deterministic: true
+
+# Error handling (minimal for conversational)
+error_handling:
+  - step: "respond"
+    on_error: "notify_failure"
+    recovery_tier: TIER_0 # No retry for conversational
+    max_retries: 0
+    circuit_breaker:
+      enabled: false
+    escalation_path: []
+
+# Top-level error recovery configuration
+error_recovery:
+  enabled: false # No recovery needed for simple chat
+  default_tier: TIER_0
+  max_workflow_retries: 0
+  fail_fast: true
+
+# No notifications for conversational queries
+notifications: []
