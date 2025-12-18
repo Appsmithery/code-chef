@@ -178,6 +178,53 @@ prompt_enhanced:
     Used to measure adoption and correlate with task success rates.
 
 # ==============================================================================
+# INTERACTION MODE TRACKING (New in v1.1.0)
+# ==============================================================================
+
+session_mode:
+  type: enum
+  values:
+    - ask # Conversational queries (general Q&A)
+    - agent # Task execution mode (orchestrated workflows)
+  required: false
+  description: |
+    User-selected interaction mode or inferred from behavior.
+    Used to analyze mode-specific performance and user preferences.
+
+mode_hint_source:
+  type: enum
+  values:
+    - explicit # User explicitly selected mode (e.g., /execute command)
+    - inferred # Frontend tracked session mode
+    - context # Extracted from conversation context
+    - none # No hint provided (backward compatible)
+  required: false
+  description: |
+    Source of the mode hint used for intent recognition.
+    Helps measure hint accuracy and identify improvement areas.
+
+intent_type:
+  type: string
+  required: false
+  description: |
+    Recognized intent from IntentRecognizer (task_submission, status_query, etc.)
+    Used to measure intent recognition accuracy with/without mode hints.
+
+intent_confidence:
+  type: float
+  required: false
+  description: |
+    Confidence score (0-1) from intent recognition.
+    Used to identify ambiguous cases where mode hint had most impact.
+
+mode_switch_count:
+  type: integer
+  required: false
+  description: |
+    Number of times mode switched during this session.
+    High values may indicate confusion or mode mismatch.
+
+# ==============================================================================
 # ADDITIONAL CONTEXT
 # ==============================================================================
 # Optional metadata for enhanced analysis

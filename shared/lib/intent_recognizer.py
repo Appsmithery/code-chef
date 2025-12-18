@@ -76,7 +76,8 @@ class IntentRecognizer:
     async def recognize(
         self, 
         message: str, 
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        mode_hint: Optional[str] = None
     ) -> Intent:
         """
         Recognize intent from user message.
@@ -84,13 +85,17 @@ class IntentRecognizer:
         Args:
             message: User's message
             conversation_history: Previous messages (for context)
+            mode_hint: Optional mode hint ('ask' or 'agent') to bias classification
+                      - 'ask': Bias toward general_query, higher threshold for task_submission
+                      - 'agent': Bias toward task_submission, lower threshold
+                      - None: No bias, pure text analysis (default)
             
         Returns:
             Intent with type, confidence, and extracted parameters
         """
         if not self.gradient_client.is_enabled():
             logger.warning("Gradient client not enabled - using fallback intent recognition")
-            return self._fallback_recognize(message)
+            return self._fallback_recognize(message, mode_hint)
         
         # Build context from conversation history
         context = ""
@@ -102,7 +107,7 @@ class IntentRecognizer:
             ])
         
         # Construct prompt for intent recognition
-        prompt = self._build_intent_prompt(message, context)
+        prompt = self._build_intent_prompt(message, context, mode_hint)
         
         try:
             # Use JSON mode for structured output
@@ -120,7 +125,7 @@ class IntentRecognizer:
             
             if not content or not content.strip():
                 logger.warning("Empty response from LLM, using fallback")
-                return self._fallback_recognize(message)
+                return self._fallback_recognize(message, mode_hint)
             
             intent_data = json.loads(content)
             
@@ -133,16 +138,37 @@ class IntentRecognizer:
             
         except Exception as e:
             logger.error(f"Intent recognition failed: {e}", exc_info=True)
-            return self._fallback_recognize(message)
+            return self._fallback_recognize(message, mode_hint)
     
-    def _build_intent_prompt(self, message: str, context: str) -> str:
+    def _build_intent_prompt(self, message: str, context: str, mode_hint: Optional[str] = None) -> str:
         """Build prompt for intent recognition."""
+        
+        # Add mode-specific guidance
+        mode_guidance = ""
+        if mode_hint == "ask":
+            mode_guidance = """
+**Mode Context: ASK MODE** (Conversational)
+- User is in Ask/Chat mode, typically asking questions or seeking information
+- Bias toward "general_query" for informational questions
+- Only classify as "task_submission" if EXPLICITLY requesting work (e.g., "implement X", "add feature Y")
+- Confidence threshold for task_submission should be HIGHER (>0.8)
+"""
+        elif mode_hint == "agent":
+            mode_guidance = """
+**Mode Context: AGENT MODE** (Task Execution)
+- User has explicitly triggered Agent mode for task execution
+- Bias toward "task_submission" for action-oriented messages
+- Confidence threshold for task_submission can be LOWER (>0.6)
+- User expects task routing and execution
+"""
         
         prompt = f"""You are an intent recognition system for a DevOps AI agent platform.
 
 Your task: Classify the user's message into ONE of these intent categories:
 
 {chr(10).join(f"- {cat}" for cat in self.INTENT_CATEGORIES)}
+
+{mode_guidance}
 
 If the intent is "task_submission", also identify the task type:
 
@@ -180,7 +206,7 @@ Respond ONLY with the JSON object, no other text."""
         
         return prompt
     
-    def _fallback_recognize(self, message: str) -> Intent:
+    def _fallback_recognize(self, message: str, mode_hint: Optional[str] = None) -> Intent:
         """Simple keyword-based fallback when LLM is unavailable."""
         
         message_lower = message.lower()
@@ -204,6 +230,29 @@ Respond ONLY with the JSON object, no other text."""
                 suggested_response="Rejection recorded. Canceling workflow..."
             )
         
+        # Mode-aware fallback logic
+        if mode_hint == "ask":
+            # In Ask mode, bias toward general_query for short/ambiguous messages
+            if len(message.split()) <= 5:  # Short messages
+                return Intent(
+                    type=IntentType.GENERAL_QUERY,
+                    confidence=0.7,
+                    reasoning="Fallback (Ask mode): Short message, likely informational query",
+                    suggested_response="I can help you with:\n- Creating tasks (feature development, code review, infrastructure, CI/CD, documentation)\n- Checking task status\n- Approving/rejecting requests\n\nWhat would you like to do?"
+                )
+
+        elif mode_hint == "agent":
+            # In Agent mode, bias toward task_submission for action-oriented messages
+            action_words = ["add", "implement", "create", "fix", "update", "deploy", "build", "refactor", "test"]
+            if any(word in message_lower for word in action_words):
+                return Intent(
+                    type=IntentType.TASK_SUBMISSION,
+                    confidence=0.75,  # Higher confidence in Agent mode
+                    task_description=message,
+                    reasoning="Fallback (Agent mode): Action verb detected, user expects task execution",
+                    suggested_response=None
+                )
+        
         # Status query keywords
         if any(word in message_lower for word in ["status", "progress", "what's happening", "update"]):
             # Try to extract task ID
@@ -221,13 +270,17 @@ Respond ONLY with the JSON object, no other text."""
         
         # Task submission (default for most messages)
         if len(message.split()) > 3:  # More than 3 words suggests a task description
+            # Adjust confidence based on mode
+            confidence = 0.7 if mode_hint == "agent" else 0.6
+            needs_clarification = mode_hint != "agent"  # Less clarification needed in Agent mode
+            
             return Intent(
                 type=IntentType.TASK_SUBMISSION,
-                confidence=0.6,
-                needs_clarification=True,
-                clarification_question="Which agent should handle this? (feature-dev, code-review, infrastructure, cicd, documentation)",
+                confidence=confidence,
+                needs_clarification=needs_clarification,
+                clarification_question="Which agent should handle this? (feature-dev, code-review, infrastructure, cicd, documentation)" if needs_clarification else None,
                 task_description=message,
-                reasoning="Fallback: message looks like a task description",
+                reasoning=f"Fallback: message looks like a task description (mode_hint={mode_hint})",
                 suggested_response=None
             )
         
