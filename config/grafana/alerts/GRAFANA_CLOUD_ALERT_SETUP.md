@@ -23,18 +23,17 @@ These alerts monitor the effectiveness of mode hint integration and detect issue
 2. Click "New alert rule"
 3. Configure:
    - **Rule name**: `LowIntentConfidenceAskMode`
-   - **Query A**: 
+   - **Query A**:
      ```promql
      avg(orchestrator_intent_recognition_confidence{session_mode="ask"})
      ```
    - **Condition**: `WHEN avg() OF A IS BELOW 0.7`
    - **For**: `10m` (Alert after 10 minutes below threshold)
-   
 4. **Annotations**:
    - **Summary**: `Intent recognition confidence dropped in Ask mode`
    - **Description**: `Average confidence: {{ $values.A.Value }}`
-   
 5. **Labels**:
+
    - `severity`: `warning`
    - `component`: `intent_recognition`
    - `mode`: `ask`
@@ -67,12 +66,11 @@ These alerts monitor the effectiveness of mode hint integration and detect issue
      ```
    - **Condition**: `WHEN last() OF C IS ABOVE 20`
    - **For**: `15m`
-   
 4. **Annotations**:
    - **Summary**: `20%+ of Ask mode queries classified as tasks (likely false positives)`
    - **Description**: `False positive rate: {{ $values.C.Value | humanizePercentage }}`
-   
 5. **Labels**:
+
    - `severity`: `warning`
    - `component`: `intent_recognition`
    - `mode`: `ask`
@@ -98,12 +96,11 @@ These alerts monitor the effectiveness of mode hint integration and detect issue
      ```
    - **Condition**: `WHEN avg() OF A IS ABOVE 2` (More than 2 switches per second)
    - **For**: `5m`
-   
 4. **Annotations**:
    - **Summary**: `Unusually high mode switching detected`
    - **Description**: `Mode switches per second: {{ $values.A.Value | printf "%.2f" }}`
-   
 5. **Labels**:
+
    - `severity`: `info`
    - `component`: `intent_recognition`
    - `issue_type`: `ux_confusion`
@@ -136,12 +133,11 @@ These alerts monitor the effectiveness of mode hint integration and detect issue
      ```
    - **Condition**: `WHEN last() OF C IS ABOVE 30`
    - **For**: `30m`
-   
 4. **Annotations**:
    - **Summary**: `30%+ of requests missing mode hints`
    - **Description**: `Requests without hints: {{ $values.C.Value | humanizePercentage }}`
-   
 5. **Labels**:
+
    - `severity`: `info`
    - `component`: `intent_recognition`
    - `issue_type`: `adoption`
@@ -202,5 +198,6 @@ After configuration, test each alert:
 ## Support
 
 For issues with alert configuration:
+
 - **Grafana Cloud Support**: https://grafana.com/support
 - **Internal**: Create Linear issue with label `observability`
