@@ -505,6 +505,26 @@ mode_switch_total = Counter(
     ["from_mode", "to_mode"],
 )
 
+# Context extraction optimization metrics
+context_extraction_skipped_total = Counter(
+    "orchestrator_context_extraction_skipped_total",
+    "Total context extractions skipped due to intent pre-filtering",
+    ["intent_hint", "backend_intent_type"],
+)
+
+context_extraction_duration = Histogram(
+    "orchestrator_context_extraction_duration_seconds",
+    "Time spent extracting workspace context",
+    ["context_extracted"],
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
+)
+
+intent_override_total = Counter(
+    "orchestrator_intent_override_total",
+    "Times client intent hint overrode backend classification",
+    ["client_hint", "backend_intent", "final_intent"],
+)
+
 # Track approval-pending tasks awaiting resumption
 pending_approval_registry: Dict[str, Dict[str, Any]] = {}
 
@@ -3498,18 +3518,55 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             # Use module-level intent_recognizer (initialized with llm_client)
             intent_error = None
             try:
-                # Extract mode hint from request context
+                # Extract mode hint and intent hint from request context
                 mode_hint = None
+                intent_hint = None
+                context_extracted = True  # Default to true (assume full context)
                 if request.context:
                     mode_hint = request.context.get("session_mode")  # 'ask' or 'agent'
+                    intent_hint = request.context.get(
+                        "intent_hint"
+                    )  # 'conversational', 'task', or 'unknown'
+                    context_extracted = request.context.get("context_extracted", True)
 
-                logger.debug(f"[Chat Stream] Mode hint from context: {mode_hint}")
+                logger.debug(
+                    f"[Chat Stream] Mode hint: {mode_hint}, Intent hint: {intent_hint}, Context extracted: {context_extracted}"
+                )
                 intent = await intent_recognizer.recognize(
                     request.message, mode_hint=mode_hint
                 )
                 logger.info(
                     f"[Chat Stream] Recognized intent: {intent.type} (confidence: {intent.confidence:.2f})"
                 )
+
+                # NEW: Override intent if client-side pre-filter was confident
+                original_intent = intent.type
+                if (
+                    intent_hint == "conversational"
+                    and intent.type == IntentType.TASK_SUBMISSION
+                    and intent.confidence < 0.85
+                ):
+                    logger.info(
+                        f"[Chat Stream] Client pre-filter suggests conversational, LLM confidence low ({intent.confidence:.2f}), treating as general query"
+                    )
+                    intent.type = IntentType.GENERAL_QUERY
+                    intent.confidence = 0.75
+                    # Record override metric
+                    intent_override_total.labels(
+                        client_hint=intent_hint,
+                        backend_intent=str(original_intent),
+                        final_intent=str(intent.type),
+                    ).inc()
+
+                # Record context skip metric if applicable
+                if not context_extracted:
+                    context_extraction_skipped_total.labels(
+                        intent_hint=intent_hint or "none",
+                        backend_intent_type=str(intent.type),
+                    ).inc()
+                    logger.info(
+                        f"[Chat Stream] Context extraction was skipped by client (estimated 500-2000ms saved)"
+                    )
 
                 # Record intent recognition metrics
                 mode_hint_source = "context" if mode_hint else "none"
