@@ -3741,6 +3741,7 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                 "infrastructure",
                 "cicd",
                 "documentation",
+                "conversational",
             ]
 
             # Track current node for filtering
