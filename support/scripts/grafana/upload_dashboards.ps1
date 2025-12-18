@@ -1,25 +1,3 @@
-#!/usr/bin/env pwsh
-<#
-.SYNOPSIS
-    Upload Grafana dashboards to Grafana Cloud via API
-.DESCRIPTION
-    Reads dashboard JSON files from config/grafana/dashboards/ and uploads
-    them to Grafana Cloud using the REST API. Requires GRAFANA_CLOUD_API_TOKEN
-    environment variable or pass via -ApiKey parameter.
-.PARAMETER ApiKey
-    Grafana Cloud API key (overrides environment variable)
-.PARAMETER GrafanaUrl
-    Grafana Cloud instance URL (default: https://appsmithery.grafana.net)
-.PARAMETER DashboardDir
-    Directory containing dashboard JSON files (default: config/grafana/dashboards)
-.PARAMETER DryRun
-    Preview what would be uploaded without actually uploading
-.EXAMPLE
-    .\upload_dashboards.ps1
-.EXAMPLE
-    .\upload_dashboards.ps1 -ApiKey "glsa_xyz123..." -DryRun
-#>
-
 param(
     [Parameter(Mandatory = $false)]
     [string]$ApiKey = $env:GRAFANA_CLOUD_API_TOKEN,
@@ -34,35 +12,19 @@ param(
     [switch]$DryRun
 )
 
-# ANSI color codes
-$ColorReset = "`e[0m"
-$ColorGreen = "`e[32m"
-$ColorYellow = "`e[33m"
-$ColorRed = "`e[31m"
-$ColorBlue = "`e[34m"
-$ColorCyan = "`e[36m"
-
-function Write-Status {
-    param([string]$Message, [string]$Color = $ColorReset)
-    Write-Host "${Color}${Message}${ColorReset}"
-}
-
-function Write-Success { param([string]$Message) Write-Status $Message $ColorGreen }
-function Write-Warning { param([string]$Message) Write-Status $Message $ColorYellow }
-function Write-Error { param([string]$Message) Write-Status $Message $ColorRed }
-function Write-Info { param([string]$Message) Write-Status $Message $ColorBlue }
-function Write-Detail { param([string]$Message) Write-Status $Message $ColorCyan }
+$ErrorActionPreference = "Stop"
 
 # Validate API key
 if ([string]::IsNullOrWhiteSpace($ApiKey)) {
-    Write-Error "❌ Error: GRAFANA_CLOUD_API_TOKEN not set"
-    Write-Info "Set it via environment variable or pass -ApiKey parameter"
-    Write-Info ""
-    Write-Info "To create an API key:"
-    Write-Info "1. Go to $GrafanaUrl"
-    Write-Info "2. Settings → API Keys → Add API Key"
-    Write-Info "3. Name: 'Dashboard Upload', Role: Editor"
-    Write-Info "4. Copy the key and set: `$env:GRAFANA_CLOUD_API_TOKEN='glsa_...'"
+    Write-Host ""
+    Write-Host "ERROR: GRAFANA_CLOUD_API_TOKEN not set" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "To create an API key:" -ForegroundColor Cyan
+    Write-Host "1. Go to $GrafanaUrl"
+    Write-Host "2. Settings -> API Keys -> Add API Key"
+    Write-Host "3. Name: 'Dashboard Upload', Role: Editor"
+    Write-Host "4. Copy the key and set: `$env:GRAFANA_CLOUD_API_TOKEN='glsa_...'"
+    Write-Host ""
     exit 1
 }
 
@@ -71,7 +33,7 @@ $RepoRoot = Split-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) -
 $DashboardPath = Join-Path $RepoRoot $DashboardDir
 
 if (-not (Test-Path $DashboardPath)) {
-    Write-Error "❌ Error: Dashboard directory not found: $DashboardPath"
+    Write-Host "ERROR: Dashboard directory not found: $DashboardPath" -ForegroundColor Red
     exit 1
 }
 
@@ -80,27 +42,28 @@ $DashboardFiles = Get-ChildItem -Path $DashboardPath -Filter "*.json" |
 Where-Object { $_.Name -ne "dashboard-provider.yml" }
 
 if ($DashboardFiles.Count -eq 0) {
-    Write-Warning "⚠️  No dashboard JSON files found in $DashboardPath"
+    Write-Host "WARNING: No dashboard JSON files found in $DashboardPath" -ForegroundColor Yellow
     exit 0
 }
 
-Write-Info "╔══════════════════════════════════════════════════════════════╗"
-Write-Info "║         Grafana Cloud Dashboard Upload                      ║"
-Write-Info "╚══════════════════════════════════════════════════════════════╝"
-Write-Info ""
-Write-Info "Grafana URL:    $GrafanaUrl"
-Write-Info "Dashboard Dir:  $DashboardPath"
-Write-Info "Dashboards:     $($DashboardFiles.Count)"
-if ($DryRun) { Write-Warning "Mode:           DRY RUN (no changes will be made)" }
-Write-Info ""
+Write-Host ""
+Write-Host "================================================================" -ForegroundColor Cyan
+Write-Host "         Grafana Cloud Dashboard Upload" -ForegroundColor Cyan
+Write-Host "================================================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Grafana URL:    $GrafanaUrl" -ForegroundColor White
+Write-Host "Dashboard Dir:  $DashboardPath" -ForegroundColor White
+Write-Host "Dashboards:     $($DashboardFiles.Count)" -ForegroundColor White
+if ($DryRun) { Write-Host "Mode:           DRY RUN (no changes)" -ForegroundColor Yellow }
+Write-Host ""
 
 $SuccessCount = 0
 $FailCount = 0
 $SkipCount = 0
 
 foreach ($File in $DashboardFiles) {
-    Write-Detail "──────────────────────────────────────────────────────────────"
-    Write-Info "📊 Processing: $($File.Name)"
+    Write-Host "----------------------------------------------------------------" -ForegroundColor Gray
+    Write-Host "Processing: $($File.Name)" -ForegroundColor Cyan
     
     try {
         # Read and parse dashboard JSON
@@ -108,10 +71,10 @@ foreach ($File in $DashboardFiles) {
         
         # Extract title for display
         $Title = $DashboardJson.dashboard.title
-        Write-Detail "   Title: $Title"
+        Write-Host "   Title: $Title" -ForegroundColor White
         
         if ($DryRun) {
-            Write-Warning "   [DRY RUN] Would upload to $GrafanaUrl/api/dashboards/db"
+            Write-Host "   [DRY RUN] Would upload to $GrafanaUrl/api/dashboards/db" -ForegroundColor Yellow
             $SkipCount++
             continue
         }
@@ -131,26 +94,25 @@ foreach ($File in $DashboardFiles) {
         
         $ApiEndpoint = "$GrafanaUrl/api/dashboards/db"
         
-        Write-Detail "   Uploading..."
+        Write-Host "   Uploading..." -ForegroundColor Gray
         $Response = Invoke-RestMethod -Uri $ApiEndpoint `
             -Method Post `
             -Headers $Headers `
             -Body $Payload `
             -ErrorAction Stop
         
-        Write-Success "   ✅ Uploaded successfully"
-        Write-Detail "   Dashboard ID: $($Response.id)"
-        Write-Detail "   URL: $GrafanaUrl$($Response.url)"
+        Write-Host "   SUCCESS: Uploaded successfully" -ForegroundColor Green
+        Write-Host "   Dashboard ID: $($Response.id)" -ForegroundColor Gray
+        Write-Host "   URL: $GrafanaUrl$($Response.url)" -ForegroundColor Gray
         $SuccessCount++
         
     }
     catch {
-        Write-Error "   ❌ Failed to upload"
-        Write-Error "   Error: $($_.Exception.Message)"
+        Write-Host "   FAILED: $($_.Exception.Message)" -ForegroundColor Red
         if ($_.ErrorDetails.Message) {
             $ErrorDetail = $_.ErrorDetails.Message | ConvertFrom-Json -ErrorAction SilentlyContinue
             if ($ErrorDetail) {
-                Write-Error "   Details: $($ErrorDetail.message)"
+                Write-Host "   Details: $($ErrorDetail.message)" -ForegroundColor Red
             }
         }
         $FailCount++
@@ -160,29 +122,29 @@ foreach ($File in $DashboardFiles) {
 }
 
 # Summary
-Write-Info "══════════════════════════════════════════════════════════════"
-Write-Info "📈 Upload Summary"
-Write-Info "══════════════════════════════════════════════════════════════"
+Write-Host "================================================================" -ForegroundColor Cyan
+Write-Host "Upload Summary" -ForegroundColor Cyan
+Write-Host "================================================================" -ForegroundColor Cyan
 if ($DryRun) {
-    Write-Warning "Would upload: $SkipCount dashboards"
+    Write-Host "Would upload: $SkipCount dashboards" -ForegroundColor Yellow
 }
 else {
-    Write-Success "✅ Success: $SuccessCount"
+    Write-Host "Success: $SuccessCount" -ForegroundColor Green
     if ($FailCount -gt 0) {
-        Write-Error "❌ Failed:  $FailCount"
+        Write-Host "Failed:  $FailCount" -ForegroundColor Red
     }
     if ($SkipCount -gt 0) {
-        Write-Warning "⏭️  Skipped: $SkipCount"
+        Write-Host "Skipped: $SkipCount" -ForegroundColor Yellow
     }
 }
-Write-Info "══════════════════════════════════════════════════════════════"
+Write-Host "================================================================" -ForegroundColor Cyan
 
 if ($FailCount -gt 0) {
     exit 1
 }
 
 if (-not $DryRun) {
-    Write-Info ""
-    Write-Success "🎉 All dashboards uploaded successfully!"
-    Write-Info "View them at: $GrafanaUrl/dashboards"
+    Write-Host ""
+    Write-Host "All dashboards uploaded successfully!" -ForegroundColor Green
+    Write-Host "View them at: $GrafanaUrl/dashboards" -ForegroundColor Cyan
 }
