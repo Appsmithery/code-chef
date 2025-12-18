@@ -59,7 +59,20 @@ from lib.registry_client import AgentCapability, RegistryClient
 from lib.risk_assessor import get_risk_assessor
 from lib.session_manager import get_session_manager
 from prometheus_client import Counter, Histogram
-from prometheus_fastapi_instrumentator import Instrumentator
+
+try:
+    from prometheus_fastapi_instrumentator import Instrumentator
+
+    INSTRUMENTATOR_AVAILABLE = True
+except ImportError:
+    import logging as _logging
+
+    _logging.warning(
+        "prometheus-fastapi-instrumentator not installed, metrics disabled"
+    )
+    INSTRUMENTATOR_AVAILABLE = False
+    Instrumentator = None  # type: ignore
+
 from pydantic import BaseModel, Field
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -231,7 +244,7 @@ async def lifespan(app: FastAPI):
                                         content="HITL approval granted (via polling). Resuming workflow."
                                     )
 
-                                    await workflow_app.ainvoke(
+                                    await workflow_app.ainvoke(  # type: ignore
                                         {"messages": [resume_message]},
                                         config=config,
                                     )
@@ -362,7 +375,11 @@ app = FastAPI(
 app.add_middleware(APIKeyMiddleware)
 
 # Enable Prometheus metrics collection
-Instrumentator().instrument(app).expose(app)
+if INSTRUMENTATOR_AVAILABLE and Instrumentator:
+    Instrumentator().instrument(app).expose(app)
+    logger.info("Prometheus instrumentation enabled")
+else:
+    logger.warning("Prometheus instrumentation disabled")
 
 # State Persistence Layer URL
 STATE_SERVICE_URL = os.getenv("STATE_SERVICE_URL", "http://state-persistence:8008")
@@ -403,6 +420,9 @@ event_bus = get_event_bus()
 from lib.state_client import get_state_client
 
 state_client = get_state_client()
+
+# Workflow router for smart workflow selection
+from workflows.workflow_router import get_workflow_router
 
 # Agent registry client (Phase 6)
 registry_client: Optional[RegistryClient] = None
@@ -2323,7 +2343,7 @@ async def invoke_tool(tool_name: str, request: ToolInvocationRequest):
                 )
 
         # Invoke the tool via MCP client
-        result = await mcp_client.call_tool(
+        result = await mcp_client.call_tool(  # type: ignore
             server=server_name,
             tool=actual_tool,
             params=request.arguments,
@@ -4006,7 +4026,9 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
             # Use workflow router to select appropriate workflow
             workflow_selection = None
             try:
-                workflow_router = get_workflow_router()
+                from workflows.workflow_router import get_workflow_router as _get_router
+
+                workflow_router = _get_router()
                 workflow_selection = await workflow_router.select_workflow(
                     task_description=request.message,
                     project_context=project_context or {},
@@ -4291,9 +4313,13 @@ Return JSON array of subtasks with:
             "status": "healthy",
             "pending_approvals": len(pending_approval_registry),
             "active_sessions": (
-                session_manager.get_session_count() if session_manager else 0
+                len(getattr(session_manager, "_sessions", {})) if session_manager else 0
             ),
-            "mcp_tools_loaded": len(progressive_loader.get_loaded_tools()),
+            "mcp_tools_loaded": (
+                len(getattr(progressive_loader, "_loaded_tools", []))
+                if progressive_loader
+                else 0
+            ),
             "registry_connected": registry_client is not None,
         }
 
@@ -4760,9 +4786,24 @@ Workflow resumed after human approval.
                         metric_row = await cursor.fetchone()
                         if metric_row:
                             agent_name_metric, created_at = metric_row
+                            # Cast action to ApprovalStatus
+                            from lib.hitl_manager import ApprovalStatus
+
+                            approval_status = (
+                                action
+                                if action
+                                in [
+                                    "approved",
+                                    "rejected",
+                                    "pending",
+                                    "expired",
+                                    "cancelled",
+                                ]
+                                else "approved"
+                            )  # type: ApprovalStatus
                             await hitl_manager.record_approval_resolution(
                                 request_id=approval_request_id,
-                                status=action,
+                                status=approval_status,  # type: ignore
                                 agent_name=agent_name_metric,
                                 risk_level=risk_level,
                                 created_at=created_at,
@@ -5031,7 +5072,9 @@ async def smart_execute_workflow(request: SmartWorkflowRequest):
 
     # Execute the workflow
     try:
-        engine = WorkflowEngine(llm_client=llm_client)
+        from workflows.workflow_engine import WorkflowEngine
+
+        engine = WorkflowEngine(llm_client=llm_client, state_client=state_client)
         template_name = f"{selection.workflow_name}.workflow.yaml"
 
         # Merge extracted context with provided context
@@ -5094,8 +5137,8 @@ async def execute_workflow(request: WorkflowExecuteRequest):
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        llm_client=get_llm_client(),
-        state_client=registry_client,
+        llm_client=get_llm_client("orchestrator"),
+        state_client=state_client,
     )
 
     try:
@@ -5215,8 +5258,8 @@ async def resume_workflow(workflow_id: str, request: WorkflowResumeRequest):
     from workflows.workflow_engine import WorkflowEngine
 
     engine = WorkflowEngine(
-        llm_client=get_llm_client(),
-        state_client=registry_client,
+        llm_client=get_llm_client("orchestrator"),
+        state_client=state_client,
     )
 
     if request.approval_decision not in ["approved", "rejected"]:
