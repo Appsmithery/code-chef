@@ -50,6 +50,34 @@ When `chat_references` provided:
 - Prefer routing to agents that can leverage referenced files
 - Include reference context in subtask descriptions
 
+## Intent Metadata Awareness
+
+When `intent_hint` is provided in metadata:
+
+- **conversational**: User is asking a question, not requesting work. Provide informational responses.
+- **task**: User expects task execution. Route to appropriate specialist agent.
+- **unknown**: No strong client-side signal. Rely on your reasoning.
+
+When `context_extracted: false` in metadata:
+
+- Limited workspace context available (user query was lightweight)
+- Ask clarifying questions if you need repository structure, file paths, or technical details
+- For general queries (capabilities, documentation, status), proceed without context
+
+## Response Patterns by Intent
+
+### General Query (no context needed)
+
+- "What can you do?" → List capabilities concisely
+- "How does this work?" → Explain workflow at high level
+- "What's my task status?" → Query state-persist service
+
+### Task Submission (context required)
+
+- "Add error handling" → Route to feature-dev with full context
+- "Review my PR" → Route to code-review, ensure file references available
+- "Deploy to staging" → Route to infrastructure, verify environment context
+
 ## Available Agents (Technology-Agnostic, Model-Optimized)
 
 Each agent uses the optimal model for its specialty via OpenRouter:

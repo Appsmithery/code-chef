@@ -90,6 +90,49 @@ export class CodeChefChatParticipant {
     }
 
     /**
+     * Detect user intent locally (pre-filter optimization).
+     * Enables skipping expensive context extraction for conversational queries.
+     * Returns 'conversational', 'task', or 'unknown'.
+     */
+    private detectIntent(message: string): 'conversational' | 'task' | 'unknown' {
+        const trimmed = message.trim().toLowerCase();
+
+        // Conversational patterns (high confidence)
+        const conversationalPatterns = [
+            /^(hello|hi|hey|greetings|good morning|good afternoon)/,
+            /^(what can you do|help|explain|tell me about)/,
+            /^(how do|why does|when should|where is)/,
+            /^(status|how's it going|what's up)/,
+        ];
+
+        for (const pattern of conversationalPatterns) {
+            if (pattern.test(trimmed)) {
+                return 'conversational';
+            }
+        }
+
+        // Task patterns (high confidence)
+        const taskPatterns = [
+            /^(implement|build|create|add|fix|refactor|deploy)/,
+            /^(review|check|lint|test|validate)/,
+            /^(document|write docs|add comments)/,
+        ];
+
+        for (const pattern of taskPatterns) {
+            if (pattern.test(trimmed)) {
+                return 'task';
+            }
+        }
+
+        // Short messages are likely conversational
+        if (trimmed.length < 30 && !trimmed.includes('file') && !trimmed.includes('function')) {
+            return 'conversational';
+        }
+
+        return 'unknown';  // Let orchestrator decide
+    }
+
+    /**
      * Extract Copilot model metadata for telemetry.
      * Tracks which models users prefer for different task types.
      */
@@ -221,28 +264,43 @@ export class CodeChefChatParticipant {
                 return { metadata: { error: errorMsg } };
             }
             
-            // Step 2: Extract workspace context
-            stream.progress('Extracting workspace context...');
-            const contextStartTime = Date.now();
-            const workspaceContext = await this.contextExtractor.extract();
-            const contextDuration = Date.now() - contextStartTime;
-            console.log(`[ChatParticipant] Context extraction completed in ${contextDuration}ms`);
+            // Step 2: Detect intent locally
+            const intent = this.detectIntent(userMessage);
+            console.log(`[ChatParticipant] Detected intent: ${intent}`);
             
-            // Step 3: Prepare for streaming
+            // Step 3: Extract context ONLY if needed
+            let workspaceContext: any = {};
+            let chatReferences: any;
+            let copilotModel: any;
+            let contextExtracted = false;
+
+            if (intent === 'task' || intent === 'unknown') {
+                stream.progress('Extracting workspace context...');
+                const contextStartTime = Date.now();
+                workspaceContext = await this.contextExtractor.extract();
+                chatReferences = this.extractChatReferences(request.references);
+                copilotModel = this.extractModelMetadata(request.model);
+                const contextDuration = Date.now() - contextStartTime;
+                contextExtracted = true;
+                console.log(`[ChatParticipant] Context extraction completed in ${contextDuration}ms`);
+            } else {
+                console.log(`[ChatParticipant] Skipping context extraction for conversational query`);
+                // Still extract minimal metadata for telemetry
+                chatReferences = { files: [], symbols: [], strings: [], count: 0 };
+                copilotModel = this.extractModelMetadata(request.model);
+            }
+            
+            // Step 4: Prepare for streaming
             stream.progress('Connecting to orchestrator...');
             
             // Get or create session
             const sessionId = this.sessionManager.getOrCreateSession(context);
-            
-            // === COPILOT CONTEXT ENHANCEMENT ===
-            const chatReferences = this.extractChatReferences(request.references);
-            const copilotModel = this.extractModelMetadata(request.model);
 
-            // Log for debugging (remove after UAT)
+            // Log for debugging
             if (chatReferences.count > 0) {
-                console.log(`code/chef: Captured ${chatReferences.count} chat references`, chatReferences);
+                console.log(`[ChatParticipant] Captured ${chatReferences.count} chat references`, chatReferences);
             }
-            console.log(`code/chef: Using Copilot model ${copilotModel.family}`, copilotModel);
+            console.log(`[ChatParticipant] Using Copilot model ${copilotModel.family}`, copilotModel);
 
             // === PROMPT ENHANCEMENT (NEW) ===
             const config = vscode.workspace.getConfiguration('codechef');
@@ -308,10 +366,12 @@ export class CodeChefChatParticipant {
                 session_id: sessionId,
                 context: {
                     ...workspaceContext,
-                    chat_references: chatReferences,  // NEW
-                    copilot_model: copilotModel,      // NEW
-                    prompt_enhanced: enhancePrompts,  // NEW
-                    enhancement_error: enhancementError,  // NEW
+                    chat_references: chatReferences,
+                    copilot_model: copilotModel,
+                    prompt_enhanced: enhancePrompts,
+                    enhancement_error: enhancementError,
+                    intent_hint: intent,  // NEW: Client-side intent pre-filter
+                    context_extracted: contextExtracted,  // NEW: Whether full context was extracted
                     session_mode: 'ask'  // Explicitly mark as Ask mode
                 },
                 workspace_config: buildWorkspaceConfig()
@@ -340,6 +400,8 @@ export class CodeChefChatParticipant {
                                     copilot_model: copilotModel,
                                     prompt_enhanced: enhancePrompts,
                                     enhancement_error: enhancementError,
+                                    intent_hint: intent,
+                                    context_extracted: contextExtracted,
                                     session_mode: 'agent'
                                 },
                                 workspace_config: buildWorkspaceConfig()
