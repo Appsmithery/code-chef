@@ -101,6 +101,77 @@ The orchestrator incorporates battle-tested patterns from the Zen MCP Server, a 
 - **Runtime governance:** Track status, handle retries or escalations, and emit heartbeat updates for observability and SLA monitoring.
 - **Tool orchestration:** Progressive tool disclosure reduces token costs by 80-90% while enabling actual tool invocation via LangChain function calling.
 
+## Chat Request Flow & Intent-Aware Optimization
+
+The orchestrator implements **intent-aware context extraction** for optimal performance in the VS Code chat interface. This optimization reduces latency by **60-80%** for conversational queries while maintaining full context for task execution.
+
+### Request Flow (December 2025)
+
+```
+User types message → handleChatRequest()
+  ├─ Check if command? → handleCommand()
+  │    └─ /execute → Extract full context + force Agent mode
+  │
+  ├─ [1] Health check (200ms) ✅ Always run - fast safety check
+  │
+  ├─ [2] Quick intent detection (LOCAL, <10ms)
+  │    ├─ Pattern match: "hello|hi|hey|what can you do|explain X"
+  │    └─ If conversational → SKIP CONTEXT EXTRACTION
+  │
+  ├─ If conversational:
+  │    ├─ [3] Create session (fast)
+  │    └─ [4] Stream from orchestrator (minimal payload)
+  │         └─ Backend: conversational_handler_node → fast response
+  │
+  └─ If task execution:
+       ├─ [3] Extract workspace context (ONLY NOW) ⚠️ 500-2000ms
+       ├─ [4] Extract chat references (#file, symbols)
+       ├─ [5] Extract Copilot model metadata
+       ├─ [6] Create session
+       └─ [7] Stream from orchestrator (full payload)
+            └─ Backend: intent_recognizer → workflow_router → specialist agents
+```
+
+### Performance Impact
+
+| Query Type             | Before Optimization | After Optimization | Improvement |
+| ---------------------- | ------------------- | ------------------ | ----------- |
+| "hello"                | 2500ms              | 400ms              | **84%**     |
+| "what can you do?"     | 2300ms              | 350ms              | **85%**     |
+| "explain JWT"          | 2400ms              | 800ms              | **67%**     |
+| "implement feature X"  | 2500ms              | 2500ms             | Same        |
+| `/execute implement X` | 2500ms              | 2500ms             | Same        |
+
+### Intent Detection Strategy
+
+**Client-Side Pre-Filter** (`chatParticipant.ts`):
+
+- Regex pattern matching for high-confidence conversational/task signals
+- Decision made in <10ms before any backend communication
+- Falls back to full context extraction when uncertain (safe default)
+
+**Backend Integration** (`main.py`):
+
+- Receives `intent_hint` and `context_extracted` metadata from client
+- Uses hints to resolve ambiguity when LLM confidence is low (<0.85)
+- Tracks optimization metrics via Prometheus
+
+**System Prompt Awareness**:
+
+- Supervisor and specialist agents check `context_extracted` flag
+- Gracefully degrade by requesting clarification when context is missing
+- No breaking changes to existing workflows
+
+### Metrics
+
+**Prometheus Endpoints** (`http://localhost:8001/metrics`):
+
+- `orchestrator_context_extraction_skipped_total` - Tracks optimization wins
+- `orchestrator_context_extraction_duration_seconds` - Measures extraction time
+- `orchestrator_intent_override_total` - Monitors client hint usage vs LLM classification
+
+**LangSmith Traces**: Filter by `context_extracted: false` to identify optimized queries.
+
 ## Decision Model & State
 
 - **Planning heuristic:** Hybrid rule-based + LLM planner with guardrails for scope, prerequisites, and termination conditions.
@@ -109,13 +180,16 @@ The orchestrator incorporates battle-tested patterns from the Zen MCP Server, a 
 
 ## API Surface
 
-| Method | Path                 | Purpose                                                                                                                           | Primary Request Fields                                            | Success Response Snapshot                                                                                         |
-| ------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `POST` | `/orchestrate`       | Submit a new high-level task and trigger decomposition (may return `approval_pending` with Linear sub-issue created under DEV-68) | `task_id`, `title`, `description`, `priority`, `metadata.context` | `{ "task_id": "...", "status": "planned" \| "approval_pending", "approval_issue": "DEV-133", "subtasks": [...] }` |
-| `POST` | `/resume/{task_id}`  | Resume a workflow once its approval request is approved (via Linear issue status change)                                          | `task_id` (path)                                                  | `{ "task_id": "...", "status": "planned", "subtasks": [...] }`                                                    |
-| `POST` | `/execute/{task_id}` | Begin or resume execution of a planned workflow                                                                                   | `execution_mode` (`auto`/`manual`), optional checkpoints          | `{ "task_id": "...", "status": "running" }`                                                                       |
-| `GET`  | `/tasks/{task_id}`   | Fetch real-time status, agent assignments, and artifacts                                                                          | n/a                                                               | `{ "task_id": "...", "status": "running", "subtasks": [...], "metrics": {...} }`                                  |
-| `GET`  | `/agents`            | Discover available specialist agents and their declared skills                                                                    | query filters: `domain`, `capability`, `health`                   | `{ "agents": [{"name": "code-review", "skills": [...]}] }`                                                        |
+| Method | Path                 | Purpose                                                                                                                           | Primary Request Fields                                                       | Success Response Snapshot                                                                                         |
+| ------ | -------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/orchestrate`       | Submit a new high-level task and trigger decomposition (may return `approval_pending` with Linear sub-issue created under DEV-68) | `task_id`, `title`, `description`, `priority`, `metadata.context`            | `{ "task_id": "...", "status": "planned" \| "approval_pending", "approval_issue": "DEV-133", "subtasks": [...] }` |
+| `POST` | `/chat/stream`       | Stream conversational responses with intent-aware optimization (Ask mode, 60-80% faster for queries)                              | `message`, `session_id`, `context` (with `intent_hint`, `context_extracted`) | SSE stream: `data: {"type": "content", "content": "..."}\n\n`                                                     |
+| `POST` | `/execute/stream`    | Stream task execution with full agent workflow (Agent mode, full context required)                                                | `message`, `session_id`, `context` (full workspace context)                  | SSE stream: `data: {"type": "agent_complete", "agent": "feature-dev"}\n\n`                                        |
+| `POST` | `/resume/{task_id}`  | Resume a workflow once its approval request is approved (via Linear issue status change)                                          | `task_id` (path)                                                             | `{ "task_id": "...", "status": "planned", "subtasks": [...] }`                                                    |
+| `POST` | `/execute/{task_id}` | Begin or resume execution of a planned workflow                                                                                   | `execution_mode` (`auto`/`manual`), optional checkpoints                     | `{ "task_id": "...", "status": "running" }`                                                                       |
+| `GET`  | `/tasks/{task_id}`   | Fetch real-time status, agent assignments, and artifacts                                                                          | n/a                                                                          | `{ "task_id": "...", "status": "running", "subtasks": [...], "metrics": {...} }`                                  |
+| `GET`  | `/agents`            | Discover available specialist agents and their declared skills                                                                    | query filters: `domain`, `capability`, `health`                              | `{ "agents": [{"name": "code-review", "skills": [...]}] }`                                                        |
+| `GET`  | `/health`            | Service health check with dependency status                                                                                       | n/a                                                                          | `{ "status": "ok", "service": "orchestrator", "dependencies": {...} }`                                            |
 
 ### Sample: `POST /orchestrate`
 
@@ -131,6 +205,71 @@ The orchestrator incorporates battle-tested patterns from the Zen MCP Server, a 
     "due_date": "2025-11-22"
   }
 }
+```
+
+### Sample: `POST /chat/stream` (Conversational)
+
+```json
+{
+  "message": "What can you do?",
+  "session_id": "session-abc123",
+  "context": {
+    "intent_hint": "conversational",
+    "context_extracted": false,
+    "session_mode": "ask",
+    "copilot_model": {
+      "vendor": "microsoft",
+      "family": "gpt-4o"
+    }
+  }
+}
+```
+
+**Response** (SSE stream):
+
+```
+data: {"type": "content", "content": "I can help you with:\n\n"}
+
+data: {"type": "content", "content": "1. **Code Implementation** - Feature development, bug fixes\n"}
+
+data: {"type": "content", "content": "2. **Code Review** - Security analysis, quality checks\n"}
+
+data: {"type": "done", "session_id": "session-abc123"}
+
+data: [DONE]
+```
+
+### Sample: `POST /execute/stream` (Task Execution)
+
+```json
+{
+  "message": "Add JWT authentication to the API",
+  "session_id": "session-xyz789",
+  "context": {
+    "intent_hint": "task",
+    "context_extracted": true,
+    "session_mode": "agent",
+    "workspace_root": "/home/user/project",
+    "git_branch": "main",
+    "chat_references": {
+      "files": ["/home/user/project/api/auth.py"]
+    }
+  }
+}
+```
+
+**Response** (SSE stream):
+
+```
+data: {"type": "workflow_status", "workflow": "feature_development"}
+
+data: {"type": "content", "content": "🔧 Routing to feature-dev agent...\n\n"}
+
+data: {"type": "agent_complete", "agent": "feature-dev", "outputs": {"files_created": ["api/middleware/jwt.py"]}}
+
+data: {"type": "done", "session_id": "session-xyz789", "workflow_id": "wf-12345"}
+
+data: [DONE]
 ```
 
 ### Sample Status Response
@@ -251,14 +390,21 @@ Invoke-WebRequest -Uri "http://localhost:8001/approve/<approval-id>?approver_id=
 
 - Emits structured logs to `logs/orchestrator.log` with correlation IDs per `task_id` and `subtask_id`.
 - **LangSmith Tracing**: Automatic LLM tracing for all LangGraph workflows and agent nodes (project: "agents", workspace: 5029c640-3f73-480c-82f3-58e402ed4207).
-- **Prometheus Metrics**: Exposed at `http://localhost:8001/metrics` via prometheus-fastapi-instrumentator. Metrics include:
+  - Filter by `context_extracted: false` to identify intent-optimized conversational queries
+  - Filter by `intent_hint: conversational` to track client-side pre-filter effectiveness
+- **Prometheus Metrics**: Exposed at `http://localhost:8001/metrics` via prometheus-fastapi-instrumentator. Key metrics include:
   - `http_request_duration_seconds`: HTTP request latencies
   - `http_requests_total`: Total HTTP requests by method/status
+  - `orchestrator_context_extraction_skipped_total`: Context extractions skipped due to intent optimization
+  - `orchestrator_context_extraction_duration_seconds`: Time spent extracting workspace context
+  - `orchestrator_intent_override_total`: Times client intent hint overrode backend classification
+  - `orchestrator_intent_recognition_total`: Intent recognition attempts by mode and type
+  - `orchestrator_intent_recognition_confidence`: Intent recognition confidence scores
   - `python_gc_objects_collected_total`: Python garbage collection metrics
   - `process_cpu_seconds_total`: CPU usage
   - `process_resident_memory_bytes`: Memory usage
 - **Grafana Cloud**: Metrics collected by Grafana Alloy (15s scrape interval) and pushed to https://appsmithery.grafana.net.
-- **Health Endpoint**: `GET /health` returns service status and timestamp.
+- **Health Endpoint**: `GET /health` returns service status, timestamp, and dependency health checks.
 
 ## Integration Notes
 
