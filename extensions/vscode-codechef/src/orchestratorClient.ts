@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { createParser, EventSourceMessage } from 'eventsource-parser';
+import * as https from 'https';
 
 export interface TaskRequest {
     description: string;
@@ -187,13 +188,23 @@ export class OrchestratorClient {
             console.log(`[OrchestratorClient] API Key configured: ${this.maskApiKey(this.apiKey)}`);
         }
 
+        // Create HTTPS agent to handle SSL properly
+        const httpsAgent = new https.Agent({
+            rejectUnauthorized: true, // Keep certificate validation for security
+            keepAlive: true,
+            timeout: timeoutMs
+        });
+
         this.client = axios.create({
             baseURL: baseUrl,
             timeout: timeoutMs,
             headers: {
                 'Content-Type': 'application/json',
                 ...(this.apiKey ? { 'X-API-Key': this.apiKey } : {})
-            }
+            },
+            httpsAgent: httpsAgent,
+            // Add better error details
+            validateStatus: (status) => status < 500 // Don't throw on 4xx errors
         });
         
         console.log(`[OrchestratorClient] ✅ Initialized with baseURL: ${baseUrl}`);
@@ -643,8 +654,23 @@ export class OrchestratorClient {
     }
 
     async health(): Promise<{ status: string; service: string; version?: string }> {
-        const response = await this.client.get('/health');
-        return response.data;
+        try {
+            console.log(`[OrchestratorClient] Making health check request to ${this.client.defaults.baseURL}/health`);
+            const response = await this.client.get('/health');
+            console.log(`[OrchestratorClient] Health check response:`, response.status, response.data);
+            return response.data;
+        } catch (error: any) {
+            console.error(`[OrchestratorClient] Health check failed:`, {
+                message: error.message,
+                code: error.code,
+                errno: error.errno,
+                syscall: error.syscall,
+                address: error.address,
+                port: error.port,
+                stack: error.stack?.split('\n').slice(0, 3)
+            });
+            throw error;
+        }
     }
 
     async metrics(): Promise<string> {
