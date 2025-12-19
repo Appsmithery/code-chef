@@ -2,6 +2,25 @@ import axios, { AxiosInstance } from 'axios';
 import { createParser, EventSourceMessage } from 'eventsource-parser';
 import * as https from 'https';
 
+/**
+ * Utility to convert ReadableStream to AsyncIterable for streaming
+ * Compatible with Electron/VS Code extension environment
+ */
+async function* streamAsyncIterable(stream: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+    const reader = stream.getReader();
+    const decoder = new TextDecoder();
+    
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            yield decoder.decode(value, { stream: true });
+        }
+    } finally {
+        reader.releaseLock();
+    }
+}
+
 export interface TaskRequest {
     description: string;
     priority: 'low' | 'medium' | 'high' | 'critical';
@@ -255,6 +274,18 @@ export class OrchestratorClient {
         }
     }
 
+    /**
+     * Get authentication headers for fetch requests
+     * @private
+     */
+    private getAuthHeaders(): Record<string, string> {
+        const headers: Record<string, string> = {};
+        if (this.apiKey) {
+            headers['X-API-Key'] = this.apiKey;
+        }
+        return headers;
+    }
+
     async orchestrate(request: TaskRequest): Promise<TaskResponse> {
         const response = await this.client.post('/orchestrate', request);
         return response.data;
@@ -401,16 +432,27 @@ export class OrchestratorClient {
         let firstChunkTime: number | null = null;
         
         try {
-            console.log(`[OrchestratorClient] Initiating POST request...`);
-            const response = await this.retryWithBackoff(async () => {
-                return await this.client.post(url, request, {
-                    responseType: 'stream',
-                    headers: {
-                        'Accept': 'text/event-stream',
-                    },
-                    signal
-                });
-            }, 3, 1000, url);
+            console.log(`[OrchestratorClient] Initiating fetch POST request...`);
+            
+            // Use native fetch with ReadableStream (Electron-compatible)
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream',
+                    ...this.getAuthHeaders()
+                },
+                body: JSON.stringify(request),
+                signal
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            if (!response.body) {
+                throw new Error('Response body is null');
+            }
 
             firstChunkTime = Date.now();
             const ttfb = firstChunkTime - sessionStartTime;
@@ -455,13 +497,13 @@ export class OrchestratorClient {
                 }
             });
 
-            for await (const data of response.data) {
+            // Process ReadableStream with native fetch
+            for await (const text of streamAsyncIterable(response.body)) {
                 if (signal?.aborted) {
                     console.log('[Execute Stream] Cancelled by user');
                     throw new DOMException('Stream cancelled by user', 'AbortError');
                 }
 
-                const text = data.toString();
                 parser.feed(text);
 
                 while (chunks.length > 0) {
@@ -517,17 +559,27 @@ export class OrchestratorClient {
         let firstChunkTime: number | null = null;
         
         try {
-            // Retry wrapper for transient errors (429, 503)
-            console.log(`[OrchestratorClient] Initiating POST request with retry logic...`);
-            const response = await this.retryWithBackoff(async () => {
-                return await this.client.post(url, request, {
-                    responseType: 'stream',
-                    headers: {
-                        'Accept': 'text/event-stream',
-                    },
-                    signal // Pass AbortSignal for cancellation
-                });
-            }, 3, 1000, url); // Pass url for logging
+            console.log(`[OrchestratorClient] Initiating fetch POST request...`);
+            
+            // Use native fetch with ReadableStream (Electron-compatible)
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/event-stream',
+                    ...this.getAuthHeaders()
+                },
+                body: JSON.stringify(request),
+                signal // Pass AbortSignal for cancellation
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            if (!response.body) {
+                throw new Error('Response body is null');
+            }
 
             // Track time to first byte (TTFB)
             firstChunkTime = Date.now();
@@ -577,15 +629,14 @@ export class OrchestratorClient {
                 }
             });
 
-            // Stream processing with cancellation support
-            for await (const data of response.data) {
+            // Stream processing with native fetch ReadableStream
+            for await (const text of streamAsyncIterable(response.body)) {
                 // Check for cancellation
                 if (signal?.aborted) {
                     console.log('[Streaming] Cancelled by user');
                     throw new DOMException('Stream cancelled by user', 'AbortError');
                 }
 
-                const text = data.toString();
                 parser.feed(text);
 
                 // Yield accumulated chunks
