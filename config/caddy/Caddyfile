@@ -27,6 +27,17 @@ codechef.appsmithery.co {
 		}
 	}
 
+	# Test stream endpoint (diagnostic SSE streaming)
+	handle /test/stream {
+		reverse_proxy orchestrator:8001 {
+			flush_interval -1      # Disable buffering for SSE
+			transport http {
+				read_timeout 5m
+				write_timeout 5m
+			}
+		}
+	}
+
 	# Execute endpoint (orchestrator workflows - non-streaming)
 	handle /execute* {
 		reverse_proxy orchestrator:8001
