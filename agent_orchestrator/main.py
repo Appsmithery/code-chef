@@ -311,6 +311,7 @@ PUBLIC_PATHS = {
     "/openapi.json",
     "/redoc",
     "/",  # Root path (if exists)
+    "/test/stream",  # Diagnostic endpoint for infrastructure testing
 }
 
 # API Key header definition
