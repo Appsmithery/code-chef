@@ -426,7 +426,7 @@ Provide:
 - requires_approval: true/false for HITL approval
 - reasoning: Brief explanation in conversational tone
 
-If the request is unclear, set agent_name='supervisor' and ask for clarification in reasoning.
+If the request is unclear, set agent_name='conversational' and ask for clarification in reasoning.
 """
 
     messages = state["messages"] + [HumanMessage(content=routing_prompt)]
@@ -1210,7 +1210,7 @@ def route_from_supervisor(state: WorkflowState) -> str:
         return next_agent
 
     # Route general queries to conversational handler
-    if next_agent == "conversational":
+    if next_agent in ["conversational", "supervisor"]:  # Handle supervisor as conversational
         return "conversational"
 
     return "end"
