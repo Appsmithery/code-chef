@@ -1,44 +1,64 @@
-# Streaming Chat Diagnosis & Fix Plan
+# Streaming Chat Diagnosis & Resolution
 
 **Date**: December 19, 2025  
-**Status**: 🔴 CRITICAL - Streaming stalling/timing out  
-**Priority**: P0 - Blocking user experience
+**Status**: ✅ **RESOLVED** - Root cause identified and fixed  
+**Priority**: P0 - Was blocking user experience
 
 ---
 
-## Problem Statement
+## Resolution Summary
 
-Streaming chat responses are stalling/timing out despite multiple attempted fixes:
+**Root Cause**: Caddy reverse proxy was buffering SSE responses by default.
+
+**Fix Implemented**:
+1. ✅ Added `flush_interval -1` to Caddy configuration (disables buffering)
+2. ✅ Added `/test/stream` diagnostic endpoint to validate infrastructure
+3. ✅ Migrated VS Code extension from Axios to native `fetch()` with ReadableStream
+4. ✅ Extended timeouts to 5 minutes for long-running conversations
+
+**Testing Results**:
+- ✅ `/test/stream` endpoint: Streams 10 chunks in real-time (10 seconds total)
+- ✅ Direct to orchestrator: Works perfectly
+- ✅ Via Caddy: Works perfectly with `flush_interval -1`
+
+---
+
+## Problem Statement (Historical)
+
+Streaming chat responses were stalling/timing out despite multiple attempted fixes:
 
 - ✅ eventsource-parser integration (handles SSE comments)
 - ✅ Axios retry logic with backoff
 - ✅ FastAPI SSE headers (X-Accel-Buffering: no)
 - ✅ Keepalive comments every 15s
-- ❌ **Still experiencing timeouts/stalls**
+- ✅ **Caddy `flush_interval -1` configuration** (FINAL FIX)
+- ✅ **Axios → fetch() migration for Electron compatibility**
 
 ---
 
 ## Architecture Overview
 
 ```
-VS Code Extension (Client)
+VS Code Extension (Client with fetch + ReadableStream)
     ↓ HTTPS
-Caddy Reverse Proxy :443
+Caddy Reverse Proxy :443 [flush_interval -1]
     ↓ HTTP
-FastAPI orchestrator:8001
+FastAPI orchestrator:8001 (StreamingResponse with SSE)
     ↓ LangGraph streaming
 OpenRouter API (LLM providers)
 ```
 
-**Key Insight**: Caddy is a **critical bottleneck** - missing SSE-specific configuration!
+**Key Insights**: 
+1. Caddy was the **primary bottleneck** - missing SSE-specific configuration
+2. Axios with `responseType: 'stream'` doesn't work in Electron (VS Code extensions)
 
 ---
 
 ## Root Cause Analysis
 
-### 1. ❌ **Caddy Missing SSE Directives** (LIKELY PRIMARY CAUSE)
+### 1. ✅ **Caddy Missing SSE Directives** (PRIMARY CAUSE - FIXED)
 
-**Current Config** (`config/caddy/Caddyfile`):
+**Original Config** (`config/caddy/Caddyfile`):
 
 ```caddy
 handle /chat/stream {
@@ -46,18 +66,20 @@ handle /chat/stream {
 }
 ```
 
-**Problem**: Missing these CRITICAL directives for SSE:
+**Problem**: Missing CRITICAL directive for SSE - Caddy buffers responses by default.
 
-- `flush_interval 0` - Disable buffering, send chunks immediately
-- `request_buffering off` - Don't buffer client request
-- `response_buffering size 0` - Don't buffer upstream response
-
-**Evidence**: Caddy by default buffers responses for performance. SSE requires immediate flushing.
-
-**Fix Required**:
+**Fix Implemented** (commit 580bfad):
 
 ```caddy
 handle /chat/stream {
+    reverse_proxy orchestrator:8001 {
+        flush_interval -1      # CRITICAL: Disables buffering for SSE
+        transport http {
+            read_timeout 5m    # Allow long-running LLM conversations
+            write_timeout 5m   # Prevent premature connection close
+        }
+    }
+}
     reverse_proxy orchestrator:8001 {
         flush_interval -1      # Disable response buffering (critical for SSE)
         request_buffering off  # Don't buffer request body
@@ -133,9 +155,9 @@ if current_time - last_keepalive > keepalive_interval:
 
 ---
 
-### 4. ⚠️ **Axios Streaming Configuration**
+### 4. ✅ **Axios → fetch() Migration** (SECONDARY FIX - IMPLEMENTED)
 
-**Current Setup** (orchestratorClient.ts):
+**Original Setup** (orchestratorClient.ts):
 
 ```typescript
 const response = await this.client.post(url, request, {
@@ -147,31 +169,53 @@ const response = await this.client.post(url, request, {
 });
 ```
 
-**Potential Issue**: Axios `responseType: 'stream'` expects Node.js environment, but VS Code extensions run in Electron/Chromium.
+**Problem**: Axios `responseType: 'stream'` uses Node.js-specific APIs (like `stream.Readable`) that don't work properly in Electron's hybrid environment. VS Code extensions run in Electron, which is a mix of Node.js and Chromium browser contexts. When Axios detects a browser-like environment, it uses the XMLHttpRequest adapter, which **doesn't support** the `'stream'` response type.
 
-**Better Approach**: Use native `fetch()` with ReadableStream:
+**Fix Implemented** (commit fccb904):
 
 ```typescript
+// Use native fetch with ReadableStream (Electron-compatible)
 const response = await fetch(url, {
   method: "POST",
   headers: {
-    Accept: "text/event-stream",
     "Content-Type": "application/json",
+    Accept: "text/event-stream",
+    ...this.getAuthHeaders() // Extract API key from axios client
   },
   body: JSON.stringify(request),
   signal,
 });
 
-const reader = response.body.getReader();
-const decoder = new TextDecoder();
+// Convert ReadableStream to AsyncIterable
+async function* streamAsyncIterable(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      yield decoder.decode(value, { stream: true });
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 // Feed to eventsource-parser
-while (true) {
-  const { done, value } = await reader.read();
-  if (done) break;
-  parser.feed(decoder.decode(value));
+for await (const text of streamAsyncIterable(response.body)) {
+  parser.feed(text);
+  // Yield chunks as they arrive
 }
 ```
+
+**Why This Works**:
+- `fetch()` with `ReadableStream` uses the WHATWG Streams API
+- Works consistently across Node.js and browser-like environments (including Electron)
+- Native browser API, no adapter layer needed
+- Simpler implementation with fewer dependencies
+
+**Verdict**: Implemented in commit fccb904. Applied to both `chatStream()` and `executeStream()` methods.
 
 ---
 
