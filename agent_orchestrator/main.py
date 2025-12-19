@@ -1080,20 +1080,21 @@ async def readiness_check():
 async def test_stream_endpoint():
     """
     Diagnostic SSE endpoint - streams simple counter to test infrastructure.
-    
+
     This endpoint bypasses LangGraph, OpenRouter, and all application logic
-    to isolate whether streaming issues are infrastructure (Caddy, Docker) 
+    to isolate whether streaming issues are infrastructure (Caddy, Docker)
     or application-level (FastAPI, LangGraph, OpenRouter).
-    
+
     Expected behavior:
     - Streams 10 events at 1-second intervals
     - Each event: {"count": N, "timestamp": "..."}
     - Completes with [DONE] signal
-    
+
     Test via:
         curl -N https://codechef.appsmithery.co/test/stream
         curl -N http://localhost:8001/test/stream  # Direct to container
     """
+
     async def count_generator():
         """Generate simple counting events."""
         logger.info("[Test Stream] Starting diagnostic stream")
@@ -1102,12 +1103,12 @@ async def test_stream_endpoint():
                 event_data = {
                     "count": i,
                     "timestamp": datetime.utcnow().isoformat(),
-                    "message": f"Chunk {i+1}/10"
+                    "message": f"Chunk {i+1}/10",
                 }
                 yield f"data: {json.dumps(event_data)}\n\n"
                 logger.debug(f"[Test Stream] Sent chunk {i}")
                 await asyncio.sleep(1)  # 1 second between chunks
-            
+
             # Send completion signal
             yield "data: [DONE]\n\n"
             logger.info("[Test Stream] Diagnostic stream completed successfully")
@@ -1115,7 +1116,7 @@ async def test_stream_endpoint():
             logger.error(f"[Test Stream] Error: {e}", exc_info=True)
             error_data = {"type": "error", "error": str(e)}
             yield f"data: {json.dumps(error_data)}\n\n"
-    
+
     return StreamingResponse(
         count_generator(),
         media_type="text/event-stream",

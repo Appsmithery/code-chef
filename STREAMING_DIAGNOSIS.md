@@ -9,6 +9,7 @@
 ## Problem Statement
 
 Streaming chat responses are stalling/timing out despite multiple attempted fixes:
+
 - ✅ eventsource-parser integration (handles SSE comments)
 - ✅ Axios retry logic with backoff
 - ✅ FastAPI SSE headers (X-Accel-Buffering: no)
@@ -38,6 +39,7 @@ OpenRouter API (LLM providers)
 ### 1. ❌ **Caddy Missing SSE Directives** (LIKELY PRIMARY CAUSE)
 
 **Current Config** (`config/caddy/Caddyfile`):
+
 ```caddy
 handle /chat/stream {
     reverse_proxy orchestrator:8001
@@ -45,6 +47,7 @@ handle /chat/stream {
 ```
 
 **Problem**: Missing these CRITICAL directives for SSE:
+
 - `flush_interval 0` - Disable buffering, send chunks immediately
 - `request_buffering off` - Don't buffer client request
 - `response_buffering size 0` - Don't buffer upstream response
@@ -52,6 +55,7 @@ handle /chat/stream {
 **Evidence**: Caddy by default buffers responses for performance. SSE requires immediate flushing.
 
 **Fix Required**:
+
 ```caddy
 handle /chat/stream {
     reverse_proxy orchestrator:8001 {
@@ -83,16 +87,20 @@ handle /execute/stream {
 ### 2. ⚠️ **OpenRouter Keepalive Comments Not Visible**
 
 **OpenRouter Behavior**:
+
 - Sends `: OPENROUTER PROCESSING` keepalive comments
 - Prevents connection timeout during slow LLM processing
 
 **Current Code** (orchestratorClient.ts):
+
 ```typescript
 const parser = createParser({
-    onEvent: (event: EventSourceMessage) => { /* handles events */ },
-    onComment: (comment: string) => {
-        console.log(`[Streaming] Keepalive: ${comment}`);  // ✅ Correct
-    }
+  onEvent: (event: EventSourceMessage) => {
+    /* handles events */
+  },
+  onComment: (comment: string) => {
+    console.log(`[Streaming] Keepalive: ${comment}`); // ✅ Correct
+  },
 });
 ```
 
@@ -103,6 +111,7 @@ const parser = createParser({
 ### 3. ✅ **FastAPI SSE Implementation** (Likely OK)
 
 **Current Headers**:
+
 ```python
 headers={
     "Cache-Control": "no-cache",
@@ -113,6 +122,7 @@ headers={
 ```
 
 **Keepalive Logic**:
+
 ```python
 keepalive_interval = 15  # Send keepalive every 15 seconds
 if current_time - last_keepalive > keepalive_interval:
@@ -126,28 +136,30 @@ if current_time - last_keepalive > keepalive_interval:
 ### 4. ⚠️ **Axios Streaming Configuration**
 
 **Current Setup** (orchestratorClient.ts):
+
 ```typescript
 const response = await this.client.post(url, request, {
-    responseType: 'stream',
-    headers: {
-        'Accept': 'text/event-stream',
-    },
-    signal  // ✅ AbortSignal for cancellation
+  responseType: "stream",
+  headers: {
+    Accept: "text/event-stream",
+  },
+  signal, // ✅ AbortSignal for cancellation
 });
 ```
 
 **Potential Issue**: Axios `responseType: 'stream'` expects Node.js environment, but VS Code extensions run in Electron/Chromium.
 
 **Better Approach**: Use native `fetch()` with ReadableStream:
+
 ```typescript
 const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-        'Accept': 'text/event-stream',
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request),
-    signal
+  method: "POST",
+  headers: {
+    Accept: "text/event-stream",
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(request),
+  signal,
 });
 
 const reader = response.body.getReader();
@@ -155,9 +167,9 @@ const decoder = new TextDecoder();
 
 // Feed to eventsource-parser
 while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    parser.feed(decoder.decode(value));
+  const { done, value } = await reader.read();
+  if (done) break;
+  parser.feed(decoder.decode(value));
 }
 ```
 
@@ -166,6 +178,7 @@ while (true) {
 ### 5. ⚠️ **Container Resource Limits**
 
 **Current Limits** (docker-compose.yml):
+
 ```yaml
 deploy:
   resources:
@@ -179,6 +192,7 @@ deploy:
 **Concern**: If orchestrator hits memory limit during streaming, could cause stalls.
 
 **Check**:
+
 ```bash
 ssh root@45.55.173.72 "docker stats --no-stream"
 ```
@@ -221,7 +235,7 @@ async def test_stream():
             yield f"data: {json.dumps({'count': i})}\n\n"
             await asyncio.sleep(1)
         yield "data: [DONE]\n\n"
-    
+
     return StreamingResponse(
         count_generator(),
         media_type="text/event-stream",
@@ -234,6 +248,7 @@ async def test_stream():
 ```
 
 Test:
+
 ```bash
 # Via Caddy (public endpoint)
 curl -N https://codechef.appsmithery.co/test/stream
@@ -265,7 +280,7 @@ async def test_openrouter_streaming():
         "messages": [{"role": "user", "content": "Hello"}],
         "stream": True
     }
-    
+
     async with httpx.AsyncClient(timeout=30.0) as client:
         async with client.stream("POST", url, headers=headers, json=payload) as response:
             async for line in response.aiter_lines():
@@ -279,11 +294,13 @@ async def test_openrouter_streaming():
 **Changes Required**:
 
 1. **Update `config/caddy/Caddyfile`**:
+
    - Add `flush_interval -1` to `/chat/stream` and `/execute/stream`
    - Add `request_buffering off`
    - Increase read/write timeouts to 5m
 
 2. **Restart Caddy**:
+
    ```bash
    ssh root@45.55.173.72 "cd /opt/code-chef/deploy && docker compose restart caddy"
    ```
@@ -302,16 +319,18 @@ async def test_openrouter_streaming():
 Axios in browser context doesn't handle SSE well. Native `fetch()` + ReadableStream is better.
 
 **Benefits**:
+
 - Native browser API (no polyfill needed)
 - Better memory management with backpressure
 - Simpler cancellation with AbortController
 - More predictable behavior in Electron/VS Code
 
 **Example**:
+
 ```typescript
 async *chatStream(request: ChatStreamRequest, signal?: AbortSignal) {
     const url = `${this.baseURL}/chat/stream`;
-    
+
     const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -322,15 +341,15 @@ async *chatStream(request: ChatStreamRequest, signal?: AbortSignal) {
         body: JSON.stringify(request),
         signal
     });
-    
+
     if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${await response.text()}`);
     }
-    
+
     const reader = response.body!.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
-    
+
     const parser = createParser({
         onEvent: (event) => {
             if (event.data === '[DONE]') return;
@@ -338,11 +357,11 @@ async *chatStream(request: ChatStreamRequest, signal?: AbortSignal) {
             // Yield chunk via async generator
         }
     });
-    
+
     while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
         parser.feed(buffer);
         buffer = '';  // Clear after feeding
@@ -355,19 +374,23 @@ async *chatStream(request: ChatStreamRequest, signal?: AbortSignal) {
 ## Implementation Plan
 
 ### ✅ **Step 1: Fix Caddy Configuration** (15 min)
+
 - Update Caddyfile with SSE directives
 - Deploy to droplet
 - Test `/test/stream` endpoint
 
 ### ✅ **Step 2: Add Diagnostic Endpoint** (10 min)
+
 - Add `/test/stream` to main.py
 - Deploy and test direct vs via Caddy
 
 ### 🔄 **Step 3: Test OpenRouter Direct** (10 min)
+
 - Isolate if issue is upstream vs our infrastructure
 - Run test script on droplet
 
 ### 🔄 **Step 4: Optimize Client** (30 min)
+
 - Consider switching Axios → Fetch
 - Implement proper backpressure handling
 - Test in VS Code extension
