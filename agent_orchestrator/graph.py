@@ -1210,7 +1210,10 @@ def route_from_supervisor(state: WorkflowState) -> str:
         return next_agent
 
     # Route general queries to conversational handler
-    if next_agent in ["conversational", "supervisor"]:  # Handle supervisor as conversational
+    if next_agent in [
+        "conversational",
+        "supervisor",
+    ]:  # Handle supervisor as conversational
         return "conversational"
 
     return "end"
