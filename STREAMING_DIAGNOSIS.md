@@ -11,12 +11,14 @@
 **Root Cause**: Caddy reverse proxy was buffering SSE responses by default.
 
 **Fix Implemented**:
+
 1. ✅ Added `flush_interval -1` to Caddy configuration (disables buffering)
 2. ✅ Added `/test/stream` diagnostic endpoint to validate infrastructure
 3. ✅ Migrated VS Code extension from Axios to native `fetch()` with ReadableStream
 4. ✅ Extended timeouts to 5 minutes for long-running conversations
 
 **Testing Results**:
+
 - ✅ `/test/stream` endpoint: Streams 10 chunks in real-time (10 seconds total)
 - ✅ Direct to orchestrator: Works perfectly
 - ✅ Via Caddy: Works perfectly with `flush_interval -1`
@@ -48,7 +50,8 @@ FastAPI orchestrator:8001 (StreamingResponse with SSE)
 OpenRouter API (LLM providers)
 ```
 
-**Key Insights**: 
+**Key Insights**:
+
 1. Caddy was the **primary bottleneck** - missing SSE-specific configuration
 2. Axios with `responseType: 'stream'` doesn't work in Electron (VS Code extensions)
 
@@ -180,7 +183,7 @@ const response = await fetch(url, {
   headers: {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
-    ...this.getAuthHeaders() // Extract API key from axios client
+    ...this.getAuthHeaders(), // Extract API key from axios client
   },
   body: JSON.stringify(request),
   signal,
@@ -190,7 +193,7 @@ const response = await fetch(url, {
 async function* streamAsyncIterable(stream: ReadableStream<Uint8Array>) {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
-  
+
   try {
     while (true) {
       const { done, value } = await reader.read();
@@ -210,6 +213,7 @@ for await (const text of streamAsyncIterable(response.body)) {
 ```
 
 **Why This Works**:
+
 - `fetch()` with `ReadableStream` uses the WHATWG Streams API
 - Works consistently across Node.js and browser-like environments (including Electron)
 - Native browser API, no adapter layer needed
