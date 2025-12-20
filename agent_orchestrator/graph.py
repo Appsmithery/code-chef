@@ -34,7 +34,7 @@ from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.graph import END, StateGraph
 from langgraph.types import interrupt
 from langsmith import traceable
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +144,15 @@ class RoutingDecision(BaseModel):
     reasoning: str = Field(
         description="Brief explanation of routing decision in conversational tone"
     )
+
+    @model_validator(mode='before')
+    @classmethod
+    def handle_aliases(cls, data: Any) -> Any:
+        """Handle hallucinated field names from LLM (e.g. next_agent instead of agent_name)."""
+        if isinstance(data, dict):
+            if "next_agent" in data and "agent_name" not in data:
+                data["agent_name"] = data["next_agent"]
+        return data
     routing_metadata: Optional[Dict[str, Any]] = Field(
         default=None, description="Internal routing metadata (not shown to user)"
     )
@@ -436,10 +445,45 @@ If the request is unclear, set agent_name='conversational' and ask for clarifica
         from langchain_core.output_parsers import PydanticOutputParser
 
         # Configure LLM to return structured output
-        llm_with_structure = supervisor.llm.with_structured_output(RoutingDecision)
+        # CHEF-208: Use more robust parsing for supervisor routing
+        try:
+            llm_with_structure = supervisor.llm.with_structured_output(RoutingDecision)
+            routing_decision: RoutingDecision = await llm_with_structure.ainvoke(messages)
+        except Exception as e:
+            logger.warning(
+                f"[LangGraph] Structured output failed for supervisor, attempting manual parse: {e}"
+            )
+            # Fallback: get raw output and parse manually
+            raw_res = await supervisor.llm.ainvoke(messages)
+            content = raw_res.content
 
-        # Invoke with structured output
-        routing_decision: RoutingDecision = await llm_with_structure.ainvoke(messages)
+            # Simple JSON extraction
+            import json
+            import re
+
+            json_match = re.search(r"\{.*\}", content, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                # Fix common issues like trailing braces
+                try:
+                    data = json.loads(json_str)
+                except json.JSONDecodeError:
+                    # Try to fix trailing characters (common with some models)
+                    if json_str.count("{") < json_str.count("}"):
+                        json_str = json_str.rsplit("}", 1)[0]
+                        data = json.loads(json_str)
+                    else:
+                        raise
+
+                routing_decision = RoutingDecision(**data)
+            else:
+                # Last resort: default to conversational
+                logger.error(f"[LangGraph] Failed to parse supervisor output: {content}")
+                routing_decision = RoutingDecision(
+                    agent_name="conversational",
+                    requires_approval=False,
+                    reasoning="I encountered an error processing your request. How can I help you?",
+                )
 
         logger.info(
             f"[LangGraph] Supervisor routed to: {routing_decision.agent_name}, "
