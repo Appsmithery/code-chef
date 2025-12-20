@@ -4036,6 +4036,12 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
 
     async def event_generator():
         """Generate SSE events from workflow execution."""
+        # Yield immediate heartbeat to prevent UI hang
+        init_msg = json.dumps(
+            {"type": "content", "content": "⚙️ *Initializing agent workflow...*\n\n"}
+        )
+        yield f"data: {init_msg}\n\n"
+
         try:
             from graph import WorkflowState, get_graph
             from langchain_core.messages import AIMessage, HumanMessage

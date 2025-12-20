@@ -21,8 +21,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
-from pydantic import BaseModel, Field
 from langsmith import traceable
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -502,8 +502,9 @@ Respond in JSON format:
 }}"""
 
         try:
-            response = await self.llm_client.chat_async(
-                messages=[{"role": "user", "content": prompt}],
+            # Use complete() instead of non-existent chat_async()
+            response = await self.llm_client.complete(
+                prompt=prompt,
                 max_tokens=200,
                 temperature=0.1,
             )
