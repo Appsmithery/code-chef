@@ -145,7 +145,7 @@ class RoutingDecision(BaseModel):
         description="Brief explanation of routing decision in conversational tone"
     )
 
-    @model_validator(mode='before')
+    @model_validator(mode="before")
     @classmethod
     def handle_aliases(cls, data: Any) -> Any:
         """Handle hallucinated field names from LLM (e.g. next_agent instead of agent_name)."""
@@ -153,6 +153,7 @@ class RoutingDecision(BaseModel):
             if "next_agent" in data and "agent_name" not in data:
                 data["agent_name"] = data["next_agent"]
         return data
+
     routing_metadata: Optional[Dict[str, Any]] = Field(
         default=None, description="Internal routing metadata (not shown to user)"
     )
@@ -448,7 +449,9 @@ If the request is unclear, set agent_name='conversational' and ask for clarifica
         # CHEF-208: Use more robust parsing for supervisor routing
         try:
             llm_with_structure = supervisor.llm.with_structured_output(RoutingDecision)
-            routing_decision: RoutingDecision = await llm_with_structure.ainvoke(messages)
+            routing_decision: RoutingDecision = await llm_with_structure.ainvoke(
+                messages
+            )
         except Exception as e:
             logger.warning(
                 f"[LangGraph] Structured output failed for supervisor, attempting manual parse: {e}"
@@ -478,7 +481,9 @@ If the request is unclear, set agent_name='conversational' and ask for clarifica
                 routing_decision = RoutingDecision(**data)
             else:
                 # Last resort: default to conversational
-                logger.error(f"[LangGraph] Failed to parse supervisor output: {content}")
+                logger.error(
+                    f"[LangGraph] Failed to parse supervisor output: {content}"
+                )
                 routing_decision = RoutingDecision(
                     agent_name="conversational",
                     requires_approval=False,
