@@ -302,7 +302,7 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
 
     try:
         # Get simple LLM client without tool loading
-        llm_client = get_llm_client()
+        llm_client = get_llm_client("conversational")
 
         # Extract last user message
         last_message = state["messages"][-1] if state["messages"] else None
