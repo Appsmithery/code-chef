@@ -9,6 +9,7 @@ codechef.appsmithery.co {
 	handle /chat/stream {
 		reverse_proxy orchestrator:8001 {
 			flush_interval -1      # Disable buffering - send SSE chunks immediately
+			request_buffering off  # Disable request buffering for large contexts
 			transport http {
 				read_timeout 5m    # Allow long-running LLM conversations
 				write_timeout 5m   # Prevent premature connection close
@@ -20,6 +21,7 @@ codechef.appsmithery.co {
 	handle /execute/stream {
 		reverse_proxy orchestrator:8001 {
 			flush_interval -1      # Disable buffering for SSE
+			request_buffering off  # Disable request buffering
 			transport http {
 				read_timeout 5m
 				write_timeout 5m
@@ -31,6 +33,7 @@ codechef.appsmithery.co {
 	handle /test/stream {
 		reverse_proxy orchestrator:8001 {
 			flush_interval -1      # Disable buffering for SSE
+			request_buffering off  # Disable request buffering
 			transport http {
 				read_timeout 5m
 				write_timeout 5m

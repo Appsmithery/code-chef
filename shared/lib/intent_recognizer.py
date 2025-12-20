@@ -170,9 +170,10 @@ class IntentRecognizer:
             mode_guidance = """
 **Mode Context: ASK MODE** (Conversational)
 - User is in Ask/Chat mode, typically asking questions or seeking information
-- Bias toward "general_query" for informational questions
-- Only classify as "task_submission" if EXPLICITLY requesting work (e.g., "implement X", "add feature Y")
-- Confidence threshold for task_submission should be HIGHER (>0.8)
+- Bias heavily toward "general_query" for greetings (hi, hello) and informational questions
+- Only classify as "task_submission" if there is a CLEAR ACTIONABLE REQUEST (e.g., "implement X", "fix Y")
+- If the message is just a greeting or a short question, it is ALWAYS "general_query"
+- Confidence threshold for task_submission should be VERY HIGH (>0.9)
 """
         elif mode_hint == "agent":
             mode_guidance = """
