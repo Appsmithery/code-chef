@@ -25,6 +25,8 @@ openrouter:
   # Agent-specific model preferences (used when provider=openrouter)
   agent_models:
     orchestrator: anthropic/claude-3-5-sonnet # Routing needs top-tier reasoning
+    supervisor: anthropic/claude-3-5-sonnet # Supervisor needs top-tier reasoning
+    conversational: anthropic/claude-3-5-sonnet # Conversational handler
     feature_dev: qwen/qwen-2.5-coder-32b-instruct # Purpose-built for code gen ($0.07/M)
     code_review: deepseek/deepseek-chat # DeepSeek V3 excels at code analysis ($0.75/M)
     infrastructure: google/gemini-2.0-flash-001 # Fast, 1M context, great function calling ($0.25/M)
