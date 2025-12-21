@@ -81,10 +81,10 @@ codechef.appsmithery.co {
 		file_server
 	}
 
-	# HTTPS with Buypass (fallback for Let's Encrypt rate limit)
+	# HTTPS with ZeroSSL (fallback for Let's Encrypt rate limit)
 	tls {
 		issuer acme {
-			dir https://api.buypass.com/acme/directory
+			dir https://acme.zerossl.com/v2/DV90
 			email alex@appsmithery.co
 		}
 	}
