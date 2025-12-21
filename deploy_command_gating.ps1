@@ -16,19 +16,7 @@ $HEALTH_CHECK_URL = "https://codechef.appsmithery.co/health"
 # Step 1: Commit and push changes
 Write-Host "📝 Step 1: Committing and pushing changes..." -ForegroundColor Yellow
 git add -A
-$commitMessage = "feat: implement execute command gating with Linear orchestration
-
-- Add command parser for /execute, /help, /status, /cancel
-- Remove automatic intent detection from /chat/stream
-- Make /chat/stream purely conversational
-- Add Linear parent issue creation to /execute/stream
-- Implement supervisor routing and subissue creation
-- Add Linear state updates (In Progress → Done)
-- Add user hints for task-like messages
-- Create comprehensive tests (29 unit tests, all passing)
-- Add migration guide and documentation"
-
-git commit -m $commitMessage
+git commit -m "feat: implement execute command gating with Linear orchestration"
 git push origin main
 
 Write-Host "✅ Changes committed and pushed" -ForegroundColor Green
