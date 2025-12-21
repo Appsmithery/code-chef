@@ -11,12 +11,49 @@ code/chef is an AI-powered development team that lives in VS Code. Just type `@c
 
 ---
 
+## 🎮 Command Structure
+
+code/chef supports two interaction modes:
+
+### 💬 Ask Mode (Conversational)
+
+Chat naturally with the AI—no commands needed. Great for questions, explanations, and discussions.
+
+```
+@chef how does authentication work in this codebase?
+@chef what's the best way to structure this feature?
+@chef explain this code to me
+```
+
+### ⚡ Agent Mode (Task Execution)
+
+Use `/execute` for tasks that require actual work. Creates Linear issues for tracking.
+
+```
+@chef /execute implement JWT authentication
+@chef /execute review security of auth/login.py
+@chef /execute deploy to staging environment
+```
+
+**Available Commands**:
+
+- `/execute <task>` — Submit task for agent execution (creates Linear issue)
+- `/help` — Show command reference
+- `/status <workflow_id>` — Check workflow status
+- `/cancel <workflow_id>` — Cancel running workflow
+
+💡 **Tip**: If you forget to use `/execute` for a task, code/chef will remind you!
+
+**Migration Guide**: [Command Gating Migration](support/docs/COMMAND-GATING-MIGRATION.md)
+
+---
+
 ## ✨ What Can code/chef Do?
 
 ### 🚀 Build Features
 
 ```
-@chef Add user authentication with JWT tokens and password reset
+@chef /execute Add user authentication with JWT tokens and password reset
 ```
 
 The Feature Dev agent writes production-ready code with tests.
@@ -24,7 +61,7 @@ The Feature Dev agent writes production-ready code with tests.
 ### 🔍 Review Code
 
 ```
-@chef Review this PR for security vulnerabilities
+@chef /execute Review this PR for security vulnerabilities
 ```
 
 The Code Review agent analyzes for security issues, performance, and best practices.
@@ -32,7 +69,7 @@ The Code Review agent analyzes for security issues, performance, and best practi
 ### 🏗️ Set Up Infrastructure
 
 ```
-@chef Create a Docker Compose setup for my Node.js app with PostgreSQL
+@chef /execute Create a Docker Compose setup for my Node.js app with PostgreSQL
 ```
 
 The Infrastructure agent generates Dockerfiles, compose files, and Terraform configs.
@@ -40,7 +77,7 @@ The Infrastructure agent generates Dockerfiles, compose files, and Terraform con
 ### ⚡ Automate Pipelines
 
 ```
-@chef Create a GitHub Actions workflow for testing and deployment
+@chef /execute Create a GitHub Actions workflow for testing and deployment
 ```
 
 The CI/CD agent builds your pipelines across GitHub Actions, GitLab CI, Jenkins, and more.
@@ -48,7 +85,7 @@ The CI/CD agent builds your pipelines across GitHub Actions, GitLab CI, Jenkins,
 ### 📚 Write Documentation
 
 ```
-@chef Document the API endpoints in this codebase
+@chef /execute Document the API endpoints in this codebase
 ```
 
 The Documentation agent creates README files, API docs, and architecture diagrams.
@@ -56,7 +93,7 @@ The Documentation agent creates README files, API docs, and architecture diagram
 ### 🤖 Train & Deploy Models (ModelOps)
 
 ```
-@chef Train a fine-tuned model for the Feature Dev agent
+@chef /execute Train a fine-tuned model for the Feature Dev agent
 ```
 
 The Infrastructure agent handles the complete model lifecycle:
