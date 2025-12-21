@@ -81,8 +81,12 @@ codechef.appsmithery.co {
 		file_server
 	}
 
-	# HTTPS with ZeroSSL (Primary) and Let's Encrypt (Fallback)
+	# HTTPS with multiple issuers for redundancy
 	tls {
+		issuer acme {
+			dir https://api.buypass.com/acme/directory
+			email alex@appsmithery.co
+		}
 		issuer acme {
 			dir https://acme.zerossl.com/v2/DV90
 			email alex@appsmithery.co
