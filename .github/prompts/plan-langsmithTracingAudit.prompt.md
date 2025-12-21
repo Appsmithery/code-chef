@@ -9,12 +9,14 @@
 - Wrap `/chat`, `/chat/stream`, `/execute/stream` with `@traceable` decorators (lines 3192, 3499, 3966)
 - Add metadata: `user_id`, `command_type`, `thread_id` to trace context
 - Tag with `["http", "entrypoint", "streaming"]` for filtering
+- **Structure as root spans**: HTTP requests become parent traces with agent → LLM → tool as children (Option A for maximum visibility during UAT)
 
 ### 2. Instrument LLM client in `shared/lib/llm_client.py`
 
 - Add `@traceable` to `acomplete()`, `acomplete_structured()` methods (~lines 100-250)
 - Capture model name, token counts, latency in trace metadata
 - Enables cost tracking and performance analysis per model
+- **Use LangSmith's automatic error detection** (no manual try/except wrappers needed)
 
 ### 3. Trace agent invocations in `agent_orchestrator/agents/_shared/base_agent.py`
 
@@ -33,6 +35,7 @@
 - Confirm `LANGCHAIN_TRACING_V2=true` in `deploy/docker-compose.yml` for orchestrator ✅
 - Add tracing env vars to `rag-context`, `state-persistence`, `agent-registry` services if they make LLM calls
 - Test with `curl` to orchestrator health endpoint, verify traces appear in LangSmith
+- **Keep sampling at 100%** for agent invocations during UAT to measure actual costs before optimization
 
 ### 6. Enrich trace metadata using `config/observability/tracing-schema.yaml`
 
@@ -40,23 +43,36 @@
 - Enables A/B testing comparison (baseline vs trained models)
 - Use `longitudinal_tracker` for regression detection across extension versions
 
-## Further Considerations
+## Implementation Decisions
 
-### 1. Sampling strategy
+### 1. Sampling Strategy ✅
 
-Currently set to 100% for agent invocations, 10% for HITL polling (`config/observability/tracing.yaml`). Should we reduce production sampling to 50% to minimize LangSmith costs while maintaining visibility?
+**Decision**: Keep at **100% for agent invocations** during UAT phase to establish cost baseline. Currently set to 100% for agent invocations, 10% for HITL polling (`config/observability/tracing.yaml`).
 
-### 2. Trace relationships
+**Rationale**: Need actual usage data to make informed decisions about production sampling rates. Will reassess after measuring LangSmith costs during testing.
 
-How should we structure parent-child relationships?
+### 2. Trace Relationships ✅
 
-- **Option A**: HTTP request as root span, with agent → LLM → tool as children
-- **Option B**: Separate top-level traces for each layer (easier filtering but loses causality)
-- **Option C**: Hybrid - use `run_tree` context manager for explicit parent linking
+**Decision**: **Option A** - HTTP request as root span, with agent → LLM → tool as children
 
-### 3. Error capture
+**Rationale**: Maximum visibility needed during UAT. This structure provides:
 
-Should we add try/except wrappers with `traceable(capture_exceptions=True)` or rely on LangSmith's automatic error detection?
+- End-to-end causality tracking from VS Code extension → production results
+- Easy debugging of multi-hop workflows
+- Clear parent-child relationships in LangSmith UI
+
+**Implementation**: Use LangSmith's automatic context propagation through `@traceable` decorators. No manual `run_tree` context managers required.
+
+### 3. Error Capture ✅
+
+**Decision**: Use **LangSmith's native automatic error detection**
+
+**Rationale**:
+
+- LangSmith automatically captures exceptions from `@traceable` decorated functions
+- No need for manual try/except wrappers with `traceable(capture_exceptions=True)`
+- Cleaner code with less boilerplate
+- Automatic error categorization and stack traces in LangSmith UI
 
 ---
 
