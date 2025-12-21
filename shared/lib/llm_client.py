@@ -27,6 +27,7 @@ from typing import Any, Dict, Optional
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
+from langsmith import traceable
 from lib.config_loader import get_config_loader
 from lib.llm_providers import get_llm
 from lib.token_tracker import token_tracker
@@ -109,6 +110,11 @@ class LLMClient:
             )
         return llm
 
+    @traceable(
+        name="llm_complete",
+        tags=["llm", "completion", "langchain"],
+        metadata={"operation": "complete"},
+    )
     async def complete(
         self,
         prompt: str,
@@ -150,6 +156,11 @@ class LLMClient:
             "finish_reason": response.response_metadata.get("finish_reason", "stop"),
         }
 
+    @traceable(
+        name="llm_complete_structured",
+        tags=["llm", "structured", "json", "langchain"],
+        metadata={"operation": "complete_structured"},
+    )
     async def complete_structured(
         self,
         prompt: str,
