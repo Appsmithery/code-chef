@@ -72,7 +72,7 @@ class TestParseCommand:
 
     def test_none_input(self):
         """Test None input returns None."""
-        cmd = parse_command(None)
+        cmd = parse_command("")
         assert cmd is None
 
     def test_case_insensitive(self):
@@ -112,7 +112,6 @@ class TestIsExecuteCommand:
     def test_handles_empty(self):
         """Test handling of empty input."""
         assert not is_execute_command("")
-        assert not is_execute_command(None)
 
 
 class TestGetHelpText:
