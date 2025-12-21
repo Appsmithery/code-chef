@@ -82,7 +82,7 @@ codechef.appsmithery.co {
 	}
 
 	# HTTPS with ZeroSSL (fallback for Let's Encrypt rate limit)
-	tls alex@appsmithery.co {
+	tls {
 		issuer zerossl
 	}
 }
