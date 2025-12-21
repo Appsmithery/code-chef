@@ -11,6 +11,7 @@ Write-Host ""
 $DROPLET_IP = "45.55.173.72"
 $DROPLET_USER = "root"
 $DEPLOY_PATH = "/opt/code-chef"
+$COMPOSE_PATH = "/opt/code-chef/deploy"
 $HEALTH_CHECK_URL = "https://codechef.appsmithery.co/health"
 
 # Step 1: Commit and push changes
@@ -33,7 +34,7 @@ Write-Host ""
 Write-Host "🔄 Step 3: Restarting services..." -ForegroundColor Yellow
 Write-Host "This will cause ~30s of downtime" -ForegroundColor Gray
 
-ssh ${DROPLET_USER}@${DROPLET_IP} "cd ${DEPLOY_PATH} && docker compose down && docker compose up -d"
+ssh ${DROPLET_USER}@${DROPLET_IP} "cd ${COMPOSE_PATH} && docker compose down && docker compose up -d"
 
 Write-Host "✅ Services restarted" -ForegroundColor Green
 Write-Host ""
