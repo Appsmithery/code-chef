@@ -83,6 +83,9 @@ codechef.appsmithery.co {
 
 	# HTTPS with ZeroSSL (fallback for Let's Encrypt rate limit)
 	tls {
-		issuer zerossl
+		issuer acme {
+			dir https://acme.zerossl.com/v2/DV90
+			email alex@appsmithery.co
+		}
 	}
 }
