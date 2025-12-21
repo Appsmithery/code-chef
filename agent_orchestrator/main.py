@@ -25,6 +25,7 @@ from fastapi import Depends, FastAPI, HTTPException, Request, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from langsmith import traceable
+from lib.command_parser import get_help_text, looks_like_task_request, parse_command
 from lib.event_bus import Event, get_event_bus
 from lib.github_permalink_generator import enrich_markdown_with_permalinks_stateless
 from lib.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatus
@@ -3568,107 +3569,69 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
             from graph import WorkflowState, get_graph
             from langchain_core.messages import AIMessage, HumanMessage
 
-            # STEP 1: Recognize intent to determine if this is Ask or Agent mode
-            # Use module-level intent_recognizer (initialized with llm_client)
-            intent_error = None
-            try:
-                # Extract mode hint and intent hint from request context
-                mode_hint = None
-                intent_hint = None
-                context_extracted = True  # Default to true (assume full context)
-                if request.context:
-                    mode_hint = request.context.get("session_mode")  # 'ask' or 'agent'
-                    intent_hint = request.context.get(
-                        "intent_hint"
-                    )  # 'conversational', 'task', or 'unknown'
-                    context_extracted = request.context.get("context_extracted", True)
+            # STEP 1: Check for explicit /execute command
+            # /chat/stream is now PURELY conversational - no automatic intent detection
+            command = parse_command(request.message)
 
-                logger.debug(
-                    f"[Chat Stream] Mode hint: {mode_hint}, Intent hint: {intent_hint}, Context extracted: {context_extracted}"
-                )
-                intent = await intent_recognizer.recognize(
-                    request.message, mode_hint=mode_hint
-                )
+            if command and command["command"] == "execute":
                 logger.info(
-                    f"[Chat Stream] Recognized intent: {intent.type} (confidence: {intent.confidence:.2f})"
+                    f"[Chat Stream] /execute command detected, redirecting to Agent mode"
                 )
 
-                # NEW: Override intent if client-side pre-filter was confident
-                original_intent = intent.type
-                if (
-                    intent_hint == "conversational"
-                    and intent.type == IntentType.TASK_SUBMISSION
-                    and intent.confidence < 0.85
-                ):
-                    logger.info(
-                        f"[Chat Stream] Client pre-filter suggests conversational, LLM confidence low ({intent.confidence:.2f}), treating as general query"
-                    )
-                    intent.type = IntentType.GENERAL_QUERY
-                    intent.confidence = 0.75
-                    # Record override metric
-                    intent_override_total.labels(
-                        client_hint=intent_hint,
-                        backend_intent=str(original_intent),
-                        final_intent=str(intent.type),
-                    ).inc()
+                # Notify user about redirect
+                redirect_msg = {
+                    "type": "content",
+                    "content": "🔄 Redirecting to Agent mode for task execution...\n\n",
+                }
+                yield f"data: {json.dumps(redirect_msg)}\n\n"
 
-                # Record context skip metric if applicable
-                if not context_extracted:
-                    context_extraction_skipped_total.labels(
-                        intent_hint=intent_hint or "none",
-                        backend_intent_type=str(intent.type),
-                    ).inc()
-                    logger.info(
-                        f"[Chat Stream] Context extraction was skipped by client (estimated 500-2000ms saved)"
-                    )
+                # Show task description
+                task_desc = command["args"]
+                task_data = {
+                    "type": "content",
+                    "content": f"**Task:** {task_desc}\n\n",
+                }
+                yield f"data: {json.dumps(task_data)}\n\n"
 
-                # Record intent recognition metrics
-                mode_hint_source = "context" if mode_hint else "none"
-                intent_recognition_total.labels(
-                    session_mode=mode_hint or "unknown",
-                    intent_type=intent.type,
-                    mode_hint_source=mode_hint_source,
-                ).inc()
+                # Redirect to /execute/stream
+                redirect_data = {
+                    "type": "redirect",
+                    "endpoint": "/execute/stream",
+                    "reason": "explicit_command",
+                    "task": task_desc,
+                }
+                yield f"data: {json.dumps(redirect_data)}\n\n"
 
-                intent_recognition_confidence.labels(
-                    session_mode=mode_hint or "unknown",
-                    mode_hint_source=mode_hint_source,
-                ).observe(intent.confidence)
+                done_data = {"type": "done", "session_id": session_id}
+                yield f"data: {json.dumps(done_data)}\n\n"
+                yield "data: [DONE]\n\n"
+                return
 
-                # If this is a task submission, redirect to /execute/stream
-                if intent.type == IntentType.TASK_SUBMISSION:
-                    logger.info(
-                        f"[Chat Stream] Task submission detected, redirecting to Agent mode"
-                    )
-                    mode_switch_msg = {
-                        "type": "content",
-                        "content": "🔄 Switching to Agent mode for task execution...\n\n",
-                    }
-                    yield f"data: {json.dumps(mode_switch_msg)}\n\n"
+            # STEP 2: Handle /help command
+            if command and command["command"] == "help":
+                logger.info(f"[Chat Stream] /help command detected")
+                help_text = get_help_text()
+                help_msg = {
+                    "type": "content",
+                    "content": help_text + "\n\n",
+                }
+                yield f"data: {json.dumps(help_msg)}\n\n"
+                done_data = {"type": "done", "session_id": session_id}
+                yield f"data: {json.dumps(done_data)}\n\n"
+                yield "data: [DONE]\n\n"
+                return
 
-                    # Stream a note about mode switch
-                    task_desc = intent.task_description or request.message
-                    task_data = {
-                        "type": "content",
-                        "content": f"**Task:** {task_desc}\n\n",
-                    }
-                    yield f"data: {json.dumps(task_data)}\n\n"
-                    redirect_data = {
-                        "type": "redirect",
-                        "endpoint": "/execute/stream",
-                        "reason": "task_submission",
-                    }
-                    yield f"data: {json.dumps(redirect_data)}\n\n"
-                    done_data = {"type": "done", "session_id": session_id}
-                    yield f"data: {json.dumps(done_data)}\n\n"
-                    yield "data: [DONE]\n\n"
-                    return
-            except Exception as intent_error:
-                logger.warning(
-                    f"[Chat Stream] Intent recognition failed: {intent_error}, proceeding with Ask mode"
-                )
+            # STEP 3: Provide hint if message looks like a task but no /execute used
+            if looks_like_task_request(request.message):
+                hint_msg = {
+                    "type": "content",
+                    "content": "💡 *Tip: Use `/execute <task>` to submit tasks for agent execution*\n\n",
+                }
+                yield f"data: {json.dumps(hint_msg)}\n\n"
 
-            logger.info(f"[Chat Stream] Proceeding with Ask mode (conversational)")
+            logger.info(
+                f"[Chat Stream] Proceeding with conversational mode (no task execution)"
+            )
 
             # STEP 2: For non-task intents, use conversational handler
             from graph import conversational_handler_node
@@ -4173,6 +4136,68 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                     f"[Execute Stream] Workflow routing failed, using default: {e}"
                 )
 
+            # PHASE 2: Create parent Linear issue for task tracking
+            parent_issue_id = None
+            parent_issue_url = None
+            try:
+                # Get Linear client and project manager
+                linear_client = get_linear_client()
+                project_manager = get_project_manager()
+
+                # Determine Linear project from context
+                linear_project_id = None
+                if project_context and project_context.get("project_id"):
+                    # Try to extract project identifier
+                    proj_id = project_context.get("project_id")
+                    # Could be Linear project ID or GitHub URL
+                    if proj_id.startswith("http"):
+                        # GitHub URL - use default project or map
+                        linear_project_id = "CHEF"  # Default
+                    else:
+                        linear_project_id = proj_id
+                else:
+                    # Fallback to default project
+                    linear_project_id = "CHEF"
+
+                # Truncate title to reasonable length
+                issue_title = request.message[:80]
+                if len(request.message) > 80:
+                    issue_title += "..."
+
+                # Create parent issue
+                logger.info(
+                    f"[Execute Stream] Creating parent Linear issue in project {linear_project_id}"
+                )
+                parent_issue = await linear_client.create_issue(
+                    project_id=linear_project_id,
+                    title=f"Task: {issue_title}",
+                    description=f"**User Request**: {request.message}\n\n"
+                    f"**Workflow**: {workflow_selection.workflow_name if workflow_selection else 'default'}\n"
+                    f"**Session**: {session_id}\n\n"
+                    f"**Status**: Initializing and routing to agents...\n",
+                    labels=["orchestrator", "in-progress"],
+                )
+
+                if parent_issue:
+                    parent_issue_id = parent_issue.get("id")
+                    parent_issue_url = parent_issue.get("url")
+                    logger.info(
+                        f"[Execute Stream] Created parent issue: {parent_issue_id}"
+                    )
+
+                    # Send event to UI
+                    issue_event = {
+                        "type": "workflow_status",
+                        "status": "issue_created",
+                        "issue_id": parent_issue_id,
+                        "issue_url": parent_issue_url,
+                    }
+                    yield f"data: {json.dumps(issue_event)}\n\n"
+
+            except Exception as e:
+                logger.warning(f"[Execute Stream] Could not create Linear issue: {e}")
+                # Continue execution even if Linear fails
+
             # Build initial state
             initial_state: WorkflowState = {
                 "messages": [HumanMessage(content=enriched_message)],
@@ -4193,10 +4218,89 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                 initial_state["workflow_context"] = workflow_selection.context_variables
                 initial_state["use_template_engine"] = True
 
+            # PHASE 2: Use supervisor to determine agent routing and create subissues
+            try:
+                from graph import supervisor_node
+
+                # Invoke supervisor to get routing decision
+                logger.info(f"[Execute Stream] Invoking supervisor for agent routing")
+                supervisor_state = await supervisor_node(initial_state)
+                next_agent = supervisor_state.get("next_agent", "")
+                routing_decision = supervisor_state.get("routing_decision", {})
+
+                logger.info(f"[Execute Stream] Supervisor routed to: {next_agent}")
+
+                # Send routing event to UI
+                routing_event = {
+                    "type": "workflow_status",
+                    "status": "agent_routed",
+                    "agent": next_agent,
+                    "reasoning": routing_decision.get("reasoning", ""),
+                }
+                yield f"data: {json.dumps(routing_event)}\n\n"
+
+                # Create Linear subissue for the assigned agent (if not end/conversational)
+                if (
+                    next_agent
+                    and next_agent not in ["end", "conversational", ""]
+                    and parent_issue_id
+                ):
+                    try:
+                        # Truncate task for subissue title
+                        task_snippet = request.message[:50]
+                        if len(request.message) > 50:
+                            task_snippet += "..."
+
+                        logger.info(
+                            f"[Execute Stream] Creating Linear subissue for {next_agent}"
+                        )
+                        subissue = await linear_client.create_issue(
+                            project_id=linear_project_id,
+                            title=f"[{next_agent.upper()}] {task_snippet}",
+                            description=f"**Agent**: {next_agent}\n"
+                            f"**Parent Task**: {parent_issue_id}\n\n"
+                            f"**Routing Reasoning**:\n{routing_decision.get('reasoning', 'No reasoning provided')}\n\n"
+                            f"**Task Description**:\n{request.message}\n",
+                            labels=[next_agent, "subtask"],
+                            parent_id=parent_issue_id,
+                        )
+
+                        if subissue:
+                            subissue_id = subissue.get("id")
+                            subissue_url = subissue.get("url")
+                            logger.info(
+                                f"[Execute Stream] Created subissue: {subissue_id} for {next_agent}"
+                            )
+
+                            # Send event to UI
+                            subissue_event = {
+                                "type": "workflow_status",
+                                "status": "subissue_created",
+                                "agent": next_agent,
+                                "issue_id": subissue_id,
+                                "issue_url": subissue_url,
+                            }
+                            yield f"data: {json.dumps(subissue_event)}\n\n"
+
+                            # Store subissue ID in state for updates later
+                            initial_state["current_agent_issue_id"] = subissue_id
+
+                    except Exception as e:
+                        logger.warning(
+                            f"[Execute Stream] Could not create Linear subissue: {e}"
+                        )
+
+            except Exception as e:
+                logger.warning(f"[Execute Stream] Supervisor routing failed: {e}")
+
             config = {"configurable": {"thread_id": session_id}}
 
             last_keepalive = asyncio.get_event_loop().time()
             keepalive_interval = 15
+
+            # Track current executing agent for Linear updates
+            current_executing_agent = None
+            current_agent_issue_id = initial_state.get("current_agent_issue_id")
 
             # Stream ALL agent events (no filtering for Agent mode)
             async for event in graph.astream_events(
@@ -4204,6 +4308,35 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
             ):
                 event_kind = event.get("event", "")
                 event_name = event.get("name", "")
+
+                # Detect when agent starts (for Linear updates)
+                if event_kind == "on_chain_start":
+                    agent_names = [
+                        "feature_dev",
+                        "feature-dev",
+                        "code_review",
+                        "code-review",
+                        "infrastructure",
+                        "cicd",
+                        "documentation",
+                    ]
+                    for agent in agent_names:
+                        if agent in event_name.lower():
+                            current_executing_agent = agent
+                            # Update Linear issue to "In Progress" when agent starts
+                            if current_agent_issue_id:
+                                try:
+                                    await linear_client.update_issue(
+                                        current_agent_issue_id, state="In Progress"
+                                    )
+                                    logger.info(
+                                        f"[Execute Stream] Updated Linear issue {current_agent_issue_id} to In Progress"
+                                    )
+                                except Exception as e:
+                                    logger.warning(
+                                        f"[Execute Stream] Could not update Linear issue: {e}"
+                                    )
+                            break
 
                 # Stream all LLM tokens (including supervisor reasoning)
                 if event_kind == "on_chat_model_stream":
@@ -4230,6 +4363,72 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                     ):
                         yield f"data: {json.dumps({'type': 'agent_complete', 'agent': name})}\n\n"
                         last_keepalive = asyncio.get_event_loop().time()
+
+                        # Update Linear issue to "Done" when agent completes
+                        if current_executing_agent and current_agent_issue_id:
+                            agent_match = any(
+                                agent in name.lower()
+                                for agent in [
+                                    "feature_dev",
+                                    "feature-dev",
+                                    "code_review",
+                                    "code-review",
+                                    "infrastructure",
+                                    "cicd",
+                                    "documentation",
+                                ]
+                            )
+                            if agent_match:
+                                try:
+                                    # Get the result from event data
+                                    result_preview = "Agent execution completed"
+                                    event_data = event.get("data", {})
+                                    if event_data and "output" in event_data:
+                                        output = event_data["output"]
+                                        if (
+                                            isinstance(output, dict)
+                                            and "messages" in output
+                                        ):
+                                            messages = output["messages"]
+                                            if messages:
+                                                last_msg = messages[-1]
+                                                if hasattr(last_msg, "content"):
+                                                    content = last_msg.content
+                                                    result_preview = (
+                                                        content[:500] + "..."
+                                                        if len(content) > 500
+                                                        else content
+                                                    )
+
+                                    await linear_client.update_issue(
+                                        current_agent_issue_id,
+                                        state="Done",
+                                        description=f"**Agent**: {current_executing_agent}\n"
+                                        f"**Status**: Completed\n\n"
+                                        f"**Result**:\n{result_preview}\n",
+                                    )
+                                    logger.info(
+                                        f"[Execute Stream] Updated Linear issue {current_agent_issue_id} to Done"
+                                    )
+
+                                    # Also update parent issue
+                                    if parent_issue_id:
+                                        try:
+                                            await linear_client.update_issue(
+                                                parent_issue_id,
+                                                description=f"**User Request**: {request.message}\n\n"
+                                                f"**Status**: {current_executing_agent} completed ✅\n",
+                                            )
+                                        except Exception as e:
+                                            logger.warning(
+                                                f"[Execute Stream] Could not update parent issue: {e}"
+                                            )
+
+                                    current_executing_agent = None
+                                except Exception as e:
+                                    logger.warning(
+                                        f"[Execute Stream] Could not update Linear issue: {e}"
+                                    )
 
                 # Tool calls
                 elif event_kind == "on_tool_start":
@@ -4268,6 +4467,25 @@ async def execute_stream_endpoint(request: ChatStreamRequest):
                 )
             except Exception as e:
                 logger.warning(f"[Execute Stream] Could not save to session: {e}")
+
+            # PHASE 2: Mark parent Linear issue as complete
+            if parent_issue_id:
+                try:
+                    await linear_client.update_issue(
+                        parent_issue_id,
+                        state="Done",
+                        description=f"**User Request**: {request.message}\n\n"
+                        f"**Workflow**: {workflow_selection.workflow_name if workflow_selection else 'default'}\n"
+                        f"**Session**: {session_id}\n\n"
+                        f"**Status**: Workflow completed successfully ✅\n",
+                    )
+                    logger.info(
+                        f"[Execute Stream] Marked parent issue {parent_issue_id} as Done"
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"[Execute Stream] Could not update parent issue: {e}"
+                    )
 
             yield f"data: {json.dumps({'type': 'done', 'session_id': session_id})}\n\n"
             yield "data: [DONE]\n\n"
