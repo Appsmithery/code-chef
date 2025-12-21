@@ -81,11 +81,8 @@ codechef.appsmithery.co {
 		file_server
 	}
 
-	# HTTPS with ZeroSSL (fallback for Let's Encrypt rate limit)
-	tls {
-		issuer acme {
-			dir https://acme.zerossl.com/v2/DV90
-			email alex@appsmithery.co
-		}
+	# HTTPS with Let's Encrypt Staging (TEMPORARY - bypass production rate limit)
+	tls alex@appsmithery.co {
+		ca https://acme-staging-v02.api.letsencrypt.org/directory
 	}
 }
