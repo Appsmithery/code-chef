@@ -81,8 +81,8 @@ codechef.appsmithery.co {
 		file_server
 	}
 
-	# HTTPS with Let's Encrypt (fallback to ZeroSSL)
+	# HTTPS with ZeroSSL (fallback for Let's Encrypt rate limit)
 	tls alex@appsmithery.co {
-		ca https://acme-staging-v02.api.letsencrypt.org/directory
+		issuer zerossl
 	}
 }
