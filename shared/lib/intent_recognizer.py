@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 try:
     from langsmith import Client as LangSmithClient
     from langsmith import get_current_run_tree
+
     LANGSMITH_AVAILABLE = True
 except ImportError:
     LANGSMITH_AVAILABLE = False
@@ -116,34 +117,33 @@ Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer ta
         """
         # Check if LLM client is available
         has_llm = self.llm_client is not None and (
-            hasattr(self.llm_client, 'is_enabled') and self.llm_client.is_enabled()
-            or not hasattr(self.llm_client, 'is_enabled')
+            hasattr(self.llm_client, "is_enabled")
+            and self.llm_client.is_enabled()
+            or not hasattr(self.llm_client, "is_enabled")
         )
-        
+
         if not has_llm:
-            logger.warning(
-                "LLM client not enabled - using fallback intent recognition"
-            )
+            logger.warning("LLM client not enabled - using fallback intent recognition")
             return self._fallback_recognize(message, mode_hint)
 
         # First pass: No history (fast)
         intent = await self._classify(message, history=None, mode_hint=mode_hint)
-        
+
         # Second pass: Include history only if confidence < 0.8
         if intent.confidence < 0.8 or intent.needs_clarification:
             if conversation_history:
                 intent = await self._classify(
                     message,
                     history=conversation_history[-3:],  # Last 3 turns only
-                    mode_hint=mode_hint
+                    mode_hint=mode_hint,
                 )
-        
+
         # Uncertainty sampling for active learning (Phase 5)
         if intent.confidence < 0.8 and LANGSMITH_AVAILABLE and self.langsmith_client:
             await self._flag_for_review(intent, message)
-        
+
         return intent
-    
+
     async def _classify(
         self,
         message: str,
@@ -152,28 +152,26 @@ Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer ta
     ) -> Intent:
         """
         Internal classification method with optional history.
-        
+
         Args:
             message: User's message
             history: Optional conversation history (limited to recent turns)
             mode_hint: Optional mode hint
-            
+
         Returns:
             Intent with classification results
         """
         # Build context from conversation history
         context = ""
         if history:
-            context = "\n".join(
-                [f"{msg['role']}: {msg['content']}" for msg in history]
-            )
+            context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
 
         # Construct compressed prompt
         prompt = self._build_intent_prompt(message, context, mode_hint)
 
         try:
             # Use JSON mode for structured output
-            if hasattr(self.llm_client, 'complete'):
+            if hasattr(self.llm_client, "complete"):
                 # Gradient client or compatible interface
                 response = await self.llm_client.complete(
                     prompt=prompt,
@@ -185,8 +183,10 @@ Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer ta
             else:
                 # Assume OpenRouter-compatible client
                 response = await self.llm_client.chat(
-                    messages=[{"role": "system", "content": self.INTENT_SCHEMA},
-                              {"role": "user", "content": prompt}],
+                    messages=[
+                        {"role": "system", "content": self.INTENT_SCHEMA},
+                        {"role": "user", "content": prompt},
+                    ],
                     temperature=0.1,
                     max_tokens=512,
                 )
@@ -217,18 +217,18 @@ Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer ta
         except Exception as e:
             logger.error(f"Intent recognition failed: {e}", exc_info=True)
             return self._fallback_recognize(message, mode_hint)
-    
+
     async def _flag_for_review(self, intent: Intent, message: str):
         """
         Flag low-confidence predictions for manual review (Phase 5: Active Learning).
-        
+
         Args:
             intent: Recognized intent with low confidence
             message: Original user message
         """
         try:
             current_trace = get_current_run_tree()
-            
+
             if current_trace and self.langsmith_client:
                 self.langsmith_client.create_feedback(
                     run_id=current_trace.id,
@@ -236,13 +236,17 @@ Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer ta
                     value=True,
                     comment=f"Low confidence ({intent.confidence:.2f}) - prioritize for annotation",
                     metadata={
-                        "review_priority": "high" if intent.confidence < 0.6 else "medium",
+                        "review_priority": (
+                            "high" if intent.confidence < 0.6 else "medium"
+                        ),
                         "intent_type": intent.type,
                         "add_to_training": True,
-                        "message_preview": message[:100]
-                    }
+                        "message_preview": message[:100],
+                    },
                 )
-                logger.debug(f"Flagged trace for review (confidence: {intent.confidence:.2f})")
+                logger.debug(
+                    f"Flagged trace for review (confidence: {intent.confidence:.2f})"
+                )
         except Exception as e:
             logger.warning(f"Failed to flag trace for review: {e}")
 
@@ -256,7 +260,9 @@ Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer ta
         if mode_hint == "ask":
             mode_guidance = "Mode: ASK (bias general_query for greetings/questions, task_submission needs >0.9 confidence)\n"
         elif mode_hint == "agent":
-            mode_guidance = "Mode: AGENT (bias task_submission, accept >0.6 confidence)\n"
+            mode_guidance = (
+                "Mode: AGENT (bias task_submission, accept >0.6 confidence)\n"
+            )
 
         # Minimal context (only if provided)
         context_str = f"Context:\n{context}\n" if context else ""
@@ -266,33 +272,6 @@ Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer ta
 
 Classify intent. Extract task-ID patterns. Return JSON:
 {{"type": "...", "confidence": 0.95, "needs_clarification": false, "task_type": "...", "task_description": "...", "entity_id": null, "decision": null, "reasoning": "brief", "suggested_response": null}}"""
-
-User's message:
-"{message}"
-
-Analyze the message and respond with a JSON object following this schema:
-
-{{
-  "type": "task_submission|status_query|clarification|approval_decision|general_query",
-  "confidence": 0.95,
-  "needs_clarification": false,
-  "clarification_question": null,
-  "task_type": "feature-dev|code-review|infrastructure|cicd|documentation|null",
-  "task_description": "normalized task description or null",
-  "entity_id": "extracted task ID, approval ID, or null",
-  "decision": "approve|reject|null (only for approval_decision)",
-  "reasoning": "brief explanation of why this intent was chosen",
-  "suggested_response": "suggested response to the user or null"
-}}
-
-Guidelines:
-- Set confidence to 0.9+ if very clear, 0.5-0.9 if ambiguous
-- Set needs_clarification=true if critical information is missing
-- Extract entity_id from patterns like "task-abc123", "PR-56", "approval-xyz"
-- For task_submission, normalize the description to be clear and actionable
-- For approval_decision, look for keywords like "approve", "reject", "yes", "no", "go ahead", "cancel"
-
-Respond ONLY with the JSON object, no other text."""
 
         return prompt
 
@@ -462,11 +441,11 @@ async def intent_to_task(
 
 def get_intent_recognizer(llm_client=None, gradient_client=None) -> IntentRecognizer:
     """Get intent recognizer singleton.
-    
+
     Args:
         llm_client: LLM client from config (preferred)
         gradient_client: Legacy Gradient client (fallback)
-    
+
     Returns:
         IntentRecognizer instance
     """
