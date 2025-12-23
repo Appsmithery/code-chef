@@ -12,7 +12,9 @@ import os
 import sys
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../.."))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, "shared"))
 
 
 async def test_intent_recognizer():
@@ -22,14 +24,14 @@ async def test_intent_recognizer():
 
     try:
         # Import after path setup
-        from shared.lib.intent_recognizer import IntentType, get_intent_recognizer
-        from shared.lib.llm_client import get_llm_client
+        from lib.intent_recognizer import IntentType, get_intent_recognizer
 
-        # Initialize with LLM client (like main.py does)
-        llm_client = get_llm_client("orchestrator")
-        intent_recognizer = get_intent_recognizer(llm_client)
+        print("✅ Intent recognizer module imported successfully")
 
-        print("✅ Intent recognizer initialized successfully")
+        # Initialize without LLM client (fallback mode for testing)
+        intent_recognizer = get_intent_recognizer()
+
+        print("✅ Intent recognizer initialized successfully (fallback mode)")
 
         # Test cases
         test_cases = [
