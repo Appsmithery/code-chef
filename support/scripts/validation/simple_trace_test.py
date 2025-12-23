@@ -50,16 +50,19 @@ except Exception as e:
     exit(1)
 
 
-@traceable(
-    name="test_scenario",
-    metadata=lambda *args, **kwargs: {
-        **TRACE_METADATA,
-        "scenario_name": kwargs.get("scenario_name", "unknown"),
-        "message": kwargs.get("message", "")
-    }
-)
+@traceable(name="test_scenario")
 def run_test_scenario(scenario_name: str, message: str):
     """Simulate intent recognition scenario."""
+    # Attach metadata to run
+    from langsmith import get_current_run_tree
+    run = get_current_run_tree()
+    if run:
+        run.extra = {
+            **TRACE_METADATA,
+            "scenario_name": scenario_name,
+            "message": message
+        }
+    
     print(f"\n{'='*80}")
     print(f"Testing: {scenario_name}")
     print(f"Message: {message}")
