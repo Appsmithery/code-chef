@@ -5,8 +5,9 @@ Handles automatic Linear project creation for new workspaces.
 Projects are auto-created based on workspace name and GitHub repo URL.
 """
 
-from typing import Optional, Dict, List
 import logging
+from typing import Dict, List, Optional
+
 from langsmith import traceable
 from lib.linear_workspace_client import LinearWorkspaceClient
 
@@ -28,7 +29,16 @@ class LinearProjectManager:
         self.default_team_id = default_team_id
         logger.info(f"Initialized LinearProjectManager with team: {default_team_id}")
 
-    @traceable(name="get_or_create_project", tags=["linear", "project-management"])
+    @traceable(
+        name="get_or_create_project",
+        tags=["linear", "project-management"],
+        metadata_fn=lambda self, workspace_name, github_repo_url=None, project_id=None, **kw: {
+            "workspace": workspace_name,
+            "has_github": github_repo_url is not None,
+            "has_project_id": project_id is not None,
+            "operation": "get_or_create",
+        },
+    )
     async def get_or_create_project(
         self,
         workspace_name: str,

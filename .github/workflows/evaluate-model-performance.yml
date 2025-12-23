@@ -1,0 +1,88 @@
+name: Evaluate Model Performance
+
+on:
+    schedule:
+        - cron: "0 0 * * 0" # Weekly on Sunday at midnight UTC
+    workflow_dispatch: {} # Manual trigger
+
+jobs:
+    evaluate:
+        runs-on: ubuntu-latest
+
+        services:
+            postgres:
+                image: postgres:15
+                env:
+                    POSTGRES_PASSWORD: postgres
+                    POSTGRES_DB: devtools_test
+                options: >-
+                    --health-cmd pg_isready
+                    --health-interval 10s
+                    --health-timeout 5s
+                    --health-retries 5
+                ports:
+                    - 5432:5432
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Install dependencies
+              run: |
+                  pip install -r support/tests/requirements.txt
+                  pip install scipy datasets
+
+            - name: Run evaluation suite
+              env:
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  LANGSMITH_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/devtools_test
+                  TRACE_ENVIRONMENT: evaluation
+              run: |
+                  pytest support/tests/evaluation/test_intent_recognition_eval.py -v --tb=short
+
+            - name: Generate regression report
+              if: failure()
+              run: |
+                  echo "# Model Performance Regression Detected" > regression_report.md
+                  echo "" >> regression_report.md
+                  echo "**Date**: $(date -u +"%Y-%m-%d %H:%M UTC")" >> regression_report.md
+                  echo "**Branch**: ${{ github.ref_name }}" >> regression_report.md
+                  echo "**Commit**: ${{ github.sha }}" >> regression_report.md
+                  echo "" >> regression_report.md
+                  echo "## Details" >> regression_report.md
+                  echo "Model evaluation tests failed. Check the workflow logs for details." >> regression_report.md
+
+            - name: Upload regression report
+              if: failure()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: regression-report
+                  path: regression_report.md
+                  retention-days: 30
+
+            - name: Create Linear issue on regression
+              if: failure()
+              env:
+                  LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+              run: |
+                  # Create Linear issue for regression
+                  curl -X POST https://api.linear.app/graphql \
+                    -H "Authorization: $LINEAR_API_KEY" \
+                    -H "Content-Type: application/json" \
+                    -d '{
+                      "query": "mutation CreateIssue($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier title } } }",
+                      "variables": {
+                        "input": {
+                          "teamId": "'${{ secrets.LINEAR_TEAM_ID }}'",
+                          "title": "Model Performance Regression Detected",
+                          "description": "Automated evaluation detected performance regression in model evaluation tests.\n\n**Workflow**: ${{ github.workflow }}\n**Run**: ${{ github.run_id }}\n**Branch**: ${{ github.ref_name }}\n**Commit**: ${{ github.sha }}\n\nCheck the workflow logs for details.",
+                          "priority": 1,
+                          "labelIds": ["regression", "high-priority"]
+                        }
+                      }
+                    }'

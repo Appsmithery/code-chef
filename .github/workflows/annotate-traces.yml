@@ -1,0 +1,35 @@
+name: Annotate Production Traces
+
+on:
+    schedule:
+        - cron: "0 2 * * *" # Daily at 2 AM UTC
+    workflow_dispatch: {} # Manual trigger
+
+jobs:
+    annotate:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Install dependencies
+              run: |
+                  pip install langsmith datasets httpx
+
+            - name: Annotate traces
+              env:
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  LANGSMITH_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+              run: |
+                  python support/scripts/evaluation/auto_annotate_traces.py --days 1
+
+            - name: Upload annotations
+              uses: actions/upload-artifact@v4
+              with:
+                  name: annotated-traces
+                  path: support/data/training/annotated_traces/
+                  retention-days: 30

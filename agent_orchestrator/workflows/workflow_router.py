@@ -267,7 +267,17 @@ class WorkflowRouter:
             return "medium"
         return "low"
 
-    @traceable(name="workflow_select", tags=["workflow", "routing"])
+    @traceable(
+        name="workflow_select",
+        tags=["workflow", "routing"],
+        metadata_fn=lambda self, task_description, context=None, explicit_workflow=None, dry_run=False, **kw: {
+            "task_length": len(task_description),
+            "has_context": context is not None,
+            "context_keys": list(context.keys()) if context else [],
+            "explicit_workflow": explicit_workflow,
+            "dry_run": dry_run,
+        },
+    )
     async def select_workflow(
         self,
         task_description: str,
