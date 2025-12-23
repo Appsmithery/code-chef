@@ -32,6 +32,87 @@ from lib.guardrail import GuardrailOrchestrator, GuardrailReport, GuardrailStatu
 from lib.hitl_manager import get_hitl_manager
 from lib.intent_recognizer import IntentType, get_intent_recognizer, intent_to_task
 
+# Hard Negative Mining: Track intent prediction accuracy
+try:
+    from langsmith import Client as LangSmithClient
+    from langsmith import get_current_run_tree
+
+    LANGSMITH_MINING_AVAILABLE = True
+except ImportError:
+    LANGSMITH_MINING_AVAILABLE = False
+    logger.warning("LangSmith not available - hard negative mining disabled")
+
+
+async def evaluate_intent_accuracy(
+    predicted_intent: str, task_id: str, trace_id: Optional[str] = None
+):
+    """
+    Evaluate if predicted intent matched actual user action (Phase 5: Hard Negative Mining).
+
+    Compares predicted intent with actual task outcome:
+    - If task was created and completed → intent was correct
+    - If task was created but not completed → user needed clarification
+    - If no task created → likely general query
+
+    Flags mismatches as false positives for training dataset.
+
+    Args:
+        predicted_intent: Intent predicted by intent recognizer
+        task_id: Task ID created from intent
+        trace_id: LangSmith trace ID to annotate
+    """
+    if not LANGSMITH_MINING_AVAILABLE:
+        return
+
+    # Wait for task to complete or timeout
+    await asyncio.sleep(300)  # 5 minute delay
+
+    try:
+        # Check if task was actually created and completed
+        task_status = await get_task_status(task_id)
+
+        if task_status and isinstance(task_status, dict):
+            actual_intent = "task_submission"
+
+            # Check subtask completion
+            if "subtasks" in task_status:
+                completed_count = sum(
+                    1
+                    for st in task_status["subtasks"]
+                    if st.get("status") == "completed"
+                )
+                total_count = len(task_status["subtasks"])
+
+                if completed_count == 0:
+                    actual_intent = "clarification"  # User needed more info
+                elif completed_count < total_count:
+                    actual_intent = "task_submission"  # Partial success
+
+        else:
+            actual_intent = "general_query"  # No task created
+
+        # Flag mismatches as false positives
+        if actual_intent != predicted_intent and trace_id:
+            langsmith_client = LangSmithClient()
+            langsmith_client.create_feedback(
+                run_id=trace_id,
+                key="false_positive",
+                score=0.0,
+                comment=f"Predicted {predicted_intent}, actual was {actual_intent}",
+                metadata={
+                    "add_to_training": True,
+                    "priority": "high",
+                    "task_id": task_id,
+                    "mismatch_type": f"{predicted_intent}_vs_{actual_intent}",
+                },
+            )
+            logger.info(
+                f"Flagged false positive: predicted={predicted_intent}, actual={actual_intent}, task={task_id}"
+            )
+    except Exception as e:
+        logger.warning(f"Failed to evaluate intent accuracy: {e}")
+
+
 # HybridMemory removed - deprecated langchain_memory.py replaced by agent_memory.py
 from lib.langgraph_base import (
     BaseAgentState,
@@ -3274,6 +3355,22 @@ async def chat_endpoint(request: ChatRequest):
                 orchestrate_response = await orchestrate_task(task_request)
 
                 task_id = orchestrate_response.task_id
+
+                # Schedule async task to evaluate intent accuracy (Phase 5: Hard Negative Mining)
+                if LANGSMITH_MINING_AVAILABLE:
+                    try:
+                        current_trace = get_current_run_tree()
+                        trace_id = str(current_trace.id) if current_trace else None
+                        asyncio.create_task(
+                            evaluate_intent_accuracy(
+                                predicted_intent=intent.type,
+                                task_id=task_id,
+                                trace_id=trace_id,
+                            )
+                        )
+                    except Exception as e:
+                        logger.debug(f"Could not schedule intent evaluation: {e}")
+
                 response_message = f"✓ Task created: {task_id}\n\n"
                 response_message += f"Breaking down into {len(orchestrate_response.subtasks)} subtasks:\n"
                 for i, subtask in enumerate(orchestrate_response.subtasks[:3], 1):

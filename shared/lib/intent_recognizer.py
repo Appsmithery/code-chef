@@ -2,7 +2,7 @@
 Intent Recognition for Conversational AI
 
 Classifies user messages into actionable intents and extracts key parameters.
-Uses Gradient AI for natural language understanding with structured output.
+Uses LLM with structured output for natural language understanding.
 """
 
 import logging
@@ -12,6 +12,15 @@ from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
+
+# Import for config-based model selection
+try:
+    from langsmith import Client as LangSmithClient
+    from langsmith import get_current_run_tree
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    LANGSMITH_AVAILABLE = False
+    logger.warning("LangSmith not available - uncertainty sampling disabled")
 
 
 class IntentType(str, Enum):
@@ -59,32 +68,30 @@ class IntentRecognizer:
     Classify user messages into actionable intents using LLM.
 
     Uses structured output (JSON mode) for reliable parsing.
+    Optimized for low latency with compressed prompts and conditional history.
     """
 
-    INTENT_CATEGORIES = [
-        "task_submission - User wants to create a new task (e.g., 'Add error handling to login')",
-        "status_query - User wants to check task status (e.g., 'What's the status of task-abc123?')",
-        "clarification - User is responding to an agent's question (e.g., 'Use PostgreSQL')",
-        "approval_decision - User is approving/rejecting a request (e.g., 'Approve', 'Yes, go ahead')",
-        "general_query - User has a general question (e.g., 'What can you do?', 'How does this work?')",
-    ]
+    # Compressed intent categories (schema-first approach)
+    INTENT_SCHEMA = """
+JSON API. Schema:
+{type: enum[task_submission|status_query|clarification|approval_decision|general_query],
+ confidence: float[0-1], needs_clarification: bool, 
+ task_type: enum[feature-dev|code-review|infrastructure|cicd|documentation],
+ reasoning: str}
 
-    TASK_TYPES = [
-        "feature-dev - New features, bug fixes, code changes",
-        "code-review - Pull request reviews, code quality checks",
-        "infrastructure - Deployments, scaling, configuration",
-        "cicd - Pipeline updates, workflow automation",
-        "documentation - README updates, API docs, guides",
-    ]
+Rules: confidence 0.9+ if clear, extract IDs from "task-xyz" patterns, prefer task_type=feature-dev for code
+"""
 
-    def __init__(self, gradient_client):
+    def __init__(self, llm_client=None):
         """
         Initialize intent recognizer.
 
         Args:
-            gradient_client: Gradient AI client for LLM inference
+            llm_client: LLM client (from config) or Gradient client (legacy)
         """
-        self.gradient_client = gradient_client
+        # Support both new config-based client and legacy gradient_client
+        self.llm_client = llm_client
+        self.langsmith_client = LangSmithClient() if LANGSMITH_AVAILABLE else None
 
     async def recognize(
         self,
@@ -93,49 +100,101 @@ class IntentRecognizer:
         mode_hint: Optional[str] = None,
     ) -> Intent:
         """
-        Recognize intent from user message.
+        Recognize intent from user message with adaptive context loading.
+
+        Two-pass approach:
+        1. First pass: No history (fast, low tokens)
+        2. Second pass: Include history only if confidence < 0.8
 
         Args:
             message: User's message
             conversation_history: Previous messages (for context)
             mode_hint: Optional mode hint ('ask' or 'agent') to bias classification
-                      - 'ask': Bias toward general_query, higher threshold for task_submission
-                      - 'agent': Bias toward task_submission, lower threshold
-                      - None: No bias, pure text analysis (default)
 
         Returns:
             Intent with type, confidence, and extracted parameters
         """
-        if not self.gradient_client.is_enabled():
+        # Check if LLM client is available
+        has_llm = self.llm_client is not None and (
+            hasattr(self.llm_client, 'is_enabled') and self.llm_client.is_enabled()
+            or not hasattr(self.llm_client, 'is_enabled')
+        )
+        
+        if not has_llm:
             logger.warning(
-                "Gradient client not enabled - using fallback intent recognition"
+                "LLM client not enabled - using fallback intent recognition"
             )
             return self._fallback_recognize(message, mode_hint)
 
+        # First pass: No history (fast)
+        intent = await self._classify(message, history=None, mode_hint=mode_hint)
+        
+        # Second pass: Include history only if confidence < 0.8
+        if intent.confidence < 0.8 or intent.needs_clarification:
+            if conversation_history:
+                intent = await self._classify(
+                    message,
+                    history=conversation_history[-3:],  # Last 3 turns only
+                    mode_hint=mode_hint
+                )
+        
+        # Uncertainty sampling for active learning (Phase 5)
+        if intent.confidence < 0.8 and LANGSMITH_AVAILABLE and self.langsmith_client:
+            await self._flag_for_review(intent, message)
+        
+        return intent
+    
+    async def _classify(
+        self,
+        message: str,
+        history: Optional[List[Dict[str, str]]] = None,
+        mode_hint: Optional[str] = None,
+    ) -> Intent:
+        """
+        Internal classification method with optional history.
+        
+        Args:
+            message: User's message
+            history: Optional conversation history (limited to recent turns)
+            mode_hint: Optional mode hint
+            
+        Returns:
+            Intent with classification results
+        """
         # Build context from conversation history
         context = ""
-        if conversation_history:
-            recent_messages = conversation_history[-5:]  # Last 5 turns
+        if history:
             context = "\n".join(
-                [f"{msg['role']}: {msg['content']}" for msg in recent_messages]
+                [f"{msg['role']}: {msg['content']}" for msg in history]
             )
 
-        # Construct prompt for intent recognition
+        # Construct compressed prompt
         prompt = self._build_intent_prompt(message, context, mode_hint)
 
         try:
             # Use JSON mode for structured output
-            response = await self.gradient_client.complete(
-                prompt=prompt,
-                system_prompt="You are a JSON-only API. Respond ONLY with valid JSON, no markdown, no explanations.",
-                temperature=0.1,  # Low temperature for consistent classification
-                max_tokens=500,
-            )
+            if hasattr(self.llm_client, 'complete'):
+                # Gradient client or compatible interface
+                response = await self.llm_client.complete(
+                    prompt=prompt,
+                    system_prompt=self.INTENT_SCHEMA,
+                    temperature=0.1,  # Low temperature for consistent classification
+                    max_tokens=512,
+                )
+                content = response.get("content", "")
+            else:
+                # Assume OpenRouter-compatible client
+                response = await self.llm_client.chat(
+                    messages=[{"role": "system", "content": self.INTENT_SCHEMA},
+                              {"role": "user", "content": prompt}],
+                    temperature=0.1,
+                    max_tokens=512,
+                )
+                content = response.get("content", "")
 
             # Extract content from response dict and parse as JSON
             import json
 
-            content = response.get("content", "")
             logger.debug(
                 f"LLM response content: {content[:200]}..."
             )  # Log first 200 chars
@@ -158,46 +217,55 @@ class IntentRecognizer:
         except Exception as e:
             logger.error(f"Intent recognition failed: {e}", exc_info=True)
             return self._fallback_recognize(message, mode_hint)
+    
+    async def _flag_for_review(self, intent: Intent, message: str):
+        """
+        Flag low-confidence predictions for manual review (Phase 5: Active Learning).
+        
+        Args:
+            intent: Recognized intent with low confidence
+            message: Original user message
+        """
+        try:
+            current_trace = get_current_run_tree()
+            
+            if current_trace and self.langsmith_client:
+                self.langsmith_client.create_feedback(
+                    run_id=current_trace.id,
+                    key="needs_review",
+                    value=True,
+                    comment=f"Low confidence ({intent.confidence:.2f}) - prioritize for annotation",
+                    metadata={
+                        "review_priority": "high" if intent.confidence < 0.6 else "medium",
+                        "intent_type": intent.type,
+                        "add_to_training": True,
+                        "message_preview": message[:100]
+                    }
+                )
+                logger.debug(f"Flagged trace for review (confidence: {intent.confidence:.2f})")
+        except Exception as e:
+            logger.warning(f"Failed to flag trace for review: {e}")
 
     def _build_intent_prompt(
         self, message: str, context: str, mode_hint: Optional[str] = None
     ) -> str:
-        """Build prompt for intent recognition."""
+        """Build compressed prompt for intent recognition (schema-first approach)."""
 
-        # Add mode-specific guidance
+        # Compressed mode guidance
         mode_guidance = ""
         if mode_hint == "ask":
-            mode_guidance = """
-**Mode Context: ASK MODE** (Conversational)
-- User is in Ask/Chat mode, typically asking questions or seeking information
-- Bias heavily toward "general_query" for greetings (hi, hello) and informational questions
-- Only classify as "task_submission" if there is a CLEAR ACTIONABLE REQUEST (e.g., "implement X", "fix Y")
-- If the message is just a greeting or a short question, it is ALWAYS "general_query"
-- Confidence threshold for task_submission should be VERY HIGH (>0.9)
-"""
+            mode_guidance = "Mode: ASK (bias general_query for greetings/questions, task_submission needs >0.9 confidence)\n"
         elif mode_hint == "agent":
-            mode_guidance = """
-**Mode Context: AGENT MODE** (Task Execution)
-- User has explicitly triggered Agent mode for task execution
-- Bias toward "task_submission" for action-oriented messages
-- Confidence threshold for task_submission can be LOWER (>0.6)
-- User expects task routing and execution
-"""
+            mode_guidance = "Mode: AGENT (bias task_submission, accept >0.6 confidence)\n"
 
-        prompt = f"""You are an intent recognition system for a DevOps AI agent platform.
+        # Minimal context (only if provided)
+        context_str = f"Context:\n{context}\n" if context else ""
 
-Your task: Classify the user's message into ONE of these intent categories:
+        # Compressed prompt (60% token reduction)
+        prompt = f"""{mode_guidance}{context_str}Message: \"{message}\"
 
-{chr(10).join(f"- {cat}" for cat in self.INTENT_CATEGORIES)}
-
-{mode_guidance}
-
-If the intent is "task_submission", also identify the task type:
-
-{chr(10).join(f"- {ttype}" for ttype in self.TASK_TYPES)}
-
-Conversation context:
-{context if context else "(No prior conversation)"}
+Classify intent. Extract task-ID patterns. Return JSON:
+{{"type": "...", "confidence": 0.95, "needs_clarification": false, "task_type": "...", "task_description": "...", "entity_id": null, "decision": null, "reasoning": "brief", "suggested_response": null}}"""
 
 User's message:
 "{message}"
@@ -392,6 +460,15 @@ async def intent_to_task(
     return task_request
 
 
-def get_intent_recognizer(gradient_client) -> IntentRecognizer:
-    """Get intent recognizer singleton."""
-    return IntentRecognizer(gradient_client)
+def get_intent_recognizer(llm_client=None, gradient_client=None) -> IntentRecognizer:
+    """Get intent recognizer singleton.
+    
+    Args:
+        llm_client: LLM client from config (preferred)
+        gradient_client: Legacy Gradient client (fallback)
+    
+    Returns:
+        IntentRecognizer instance
+    """
+    client = llm_client if llm_client is not None else gradient_client
+    return IntentRecognizer(client)
