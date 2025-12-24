@@ -1,341 +1,355 @@
 # Code-Chef Chat Participant Test Prompts
 
-Test these prompts in the VS Code chat to generate rich LangSmith traces with system prompts, embeddings, and waterfalls.
+⚠️ **IMPORTANT**: These test prompts use hypothetical external projects to avoid modifying the code-chef repository itself.
+
+## Setup Instructions
+
+Create a test workspace with sample files:
+
+```bash
+# Create test workspace
+mkdir ~/code-chef-test-workspace
+cd ~/code-chef-test-workspace
+
+# Sample e-commerce project structure
+mkdir -p backend/api backend/models frontend/components tests
+touch backend/api/auth.js backend/api/orders.js backend/models/user.js
+touch frontend/components/LoginForm.tsx frontend/components/ProductCard.tsx
+touch tests/auth.test.js README.md
+
+# Add sample content
+echo "// Authentication API endpoints" > backend/api/auth.js
+echo "// Order management endpoints" > backend/api/orders.js
+echo "// User model definition" > backend/models/user.js
+```
+
+Open this workspace in VS Code before testing prompts.
+
+---
 
 ## 1. Task Submission Tests
 
 ### Simple Feature Request
-
 ```
-@code-chef implement JWT authentication middleware for our API
+@code-chef implement a shopping cart feature with add/remove items and checkout flow
 ```
-
 **Expected Trace:**
+- Intent: task_submission
+- Workflow: feature_development
+- Agent: feature_dev
+- Tool loading: PROGRESSIVE (30-60 tools)
 
-- Intent recognition (general_query → task_submission)
-- Workflow routing (feature_development)
-- Agent selection (feature_dev)
-- Tool loading (progressive disclosure)
-- RAG context retrieval (if relevant files exist)
-
-### Feature with Context
-
+### Feature with File Context
 ```
-@code-chef #file:agent_orchestrator/main.py add rate limiting to the /chat endpoint
+@code-chef #file:backend/api/auth.js add rate limiting to prevent brute force login attempts
 ```
-
 **Expected Trace:**
-
 - File reference extraction
-- RAG query with file context
-- Context7 library lookup (if enabled)
-- Semantic embedding search
-- Intent classification with high confidence
+- RAG query with file embeddings
+- Context7 library lookup (express-rate-limit)
+- High confidence intent classification
 
 ### Infrastructure Task
-
 ```
-@code-chef deploy the orchestrator service to Kubernetes with autoscaling
+@code-chef deploy our Node.js e-commerce API to AWS ECS with auto-scaling
 ```
-
 **Expected Trace:**
+- Workflow: deployment
+- Agent: infrastructure
+- IaC tools loaded (terraform, AWS CDK)
+- Risk: HIGH → HITL approval required
 
-- Infrastructure workflow selection
-- IaC tool loading (terraform, kubectl)
-- Risk assessment (should be HIGH)
-- HITL approval trigger (if configured)
+---
 
 ## 2. Status Query Tests
 
-### Simple Status Check
-
+### Check Last Task
 ```
 @code-chef what's the status of my last task?
 ```
-
 **Expected Trace:**
-
 - Intent: status_query
-- Session management
-- Task lookup via last_task_id
-- Minimal LLM usage (efficient)
+- Session lookup
+- Minimal LLM usage (database query only)
 
-### Specific Task Status
-
+### Specific Task ID
 ```
-@code-chef check the status of task-abc123
+@code-chef check status of task-abc123
 ```
-
 **Expected Trace:**
+- Intent: status_query
+- Direct task lookup (no LLM)
+- Subtask aggregation
 
-- Intent: status_query with explicit ID
-- Database query (no LLM needed)
-- Sub-task status aggregation
+---
 
 ## 3. Clarification Tests
 
 ### Ambiguous Request
-
 ```
-@code-chef fix the bug
+@code-chef fix the payment bug
 ```
-
 **Expected Trace:**
-
 - Intent: clarification_needed
-- LLM reasoning about missing context
-- Suggested clarification questions
-- No task creation
+- LLM asks: which payment provider? staging or production?
+- No task created
 
-### Follow-up Question
-
+### Follow-up with Context
 ```
-@code-chef use OAuth2 instead
+@code-chef use Stripe and only fix staging
 ```
-
 **Expected Trace:**
+- Session history loaded
+- Intent refined to task_submission
+- Task created with clarified context
 
-- Session history loading
-- Context from previous message
-- Intent refinement
-- Task update or new task creation
+---
 
 ## 4. Approval Tests
 
-### High-Risk Operation
-
+### High-Risk Database Operation
 ```
-@code-chef delete all staging databases
+@code-chef drop all staging database tables and recreate from migrations
 ```
-
 **Expected Trace:**
-
 - Risk assessment: CRITICAL
-- Approval request creation
-- Linear issue generation (if configured)
-- Workflow interruption
-- No execution without approval
+- Approval request created
+- Linear issue generated
+- Workflow interrupted (no execution)
 
 ### Production Deployment
-
 ```
-@code-chef deploy to production
+@code-chef deploy version 2.0.0 to production with blue-green deployment
 ```
-
 **Expected Trace:**
+- Risk: HIGH
+- HITL approval required
+- Guardrail checks executed
+- Waits for manual approval
 
-- Risk assessment: HIGH
-- HITL trigger
-- Guardrail checks
-- Approval required response
+---
 
 ## 5. Multi-Agent Workflow Tests
 
 ### End-to-End Feature
-
 ```
-@code-chef implement a user profile page with tests and documentation
+@code-chef create a blog post editor with rich text, image uploads, auto-save, unit tests, and API docs
 ```
-
 **Expected Trace:**
-
-- Workflow: feature_development + testing + documentation
-- Multiple agent invocations (feature_dev → cicd → documentation)
-- Parallel task execution (if configured)
+- Agents: feature_dev → cicd → documentation
+- Multiple subtasks created
 - State checkpointing between agents
+- Parallel execution (if configured)
 
-### Code Review Request
-
+### Code Review
 ```
-@code-chef review the security of our authentication implementation
+@code-chef #file:backend/api/auth.js review this authentication code for security vulnerabilities
 ```
-
 **Expected Trace:**
-
 - Workflow: code_review
 - Agent: code_review
-- Security-focused tool loading
-- Static analysis tool invocation
+- Security tools loaded (eslint, semgrep)
+- OWASP checks performed
+
+---
 
 ## 6. Context-Heavy Tests
 
-### With File References
-
+### Multiple File References
 ```
-@code-chef #file:shared/lib/progressive_mcp_loader.py #file:agent_orchestrator/graph.py optimize the tool loading strategy
+@code-chef #file:backend/api/auth.js #file:backend/models/user.js implement OAuth2 login with Google and GitHub
 ```
-
 **Expected Trace:**
-
 - Multiple file embeddings
-- RAG retrieval with high relevance
-- Context window management
-- Token optimization via progressive disclosure
+- RAG retrieval from both files
+- Context window optimization
+- Progressive disclosure active
 
-### With Symbol References
-
+### Library-Specific Implementation
 ```
-@code-chef @function:recognize_intent improve the confidence scoring
+@code-chef #file:backend/api/orders.js integrate Stripe webhooks for payment processing
 ```
-
 **Expected Trace:**
+- Context7 library lookup: stripe-node
+- RAG retrieval from Stripe docs
+- High relevance context injection
+- Token savings via context pruning
 
-- Symbol resolution
-- Function-level context extraction
-- Precise RAG query
-- Targeted code modification
+---
 
 ## 7. Streaming Tests
 
-### Long-Running Task
-
+### Long-Running Refactor
 ```
-@code-chef refactor the entire agent_orchestrator module to use async/await consistently
+@code-chef migrate our authentication system from sessions to JWT with refresh tokens
 ```
-
 **Expected Trace:**
-
 - Streaming response chunks
 - Agent progress updates
 - Tool call events
 - Partial completion markers
 
-### Multi-Step Workflow
-
+### Multi-Service Setup
 ```
-@code-chef create a new microservice for user authentication, write tests, and set up CI/CD
+@code-chef create a new payments microservice with Stripe, write tests, set up CI/CD, deploy to staging
 ```
-
 **Expected Trace:**
-
 - Workflow status events
-- Agent handoffs
-- Subtask creation
+- Agent handoffs (feature_dev → cicd → infrastructure)
+- Subtask progression
 - Parallel execution groups
+
+---
 
 ## 8. Error Handling Tests
 
-### Invalid Request
-
+### Nonsense Input
 ```
-@code-chef pqwoeirpqoweirupqoweiur
+@code-chef asdfghjkl qwertyuiop
 ```
-
 **Expected Trace:**
+- Intent: general_query (fallback)
+- LLM attempts understanding
+- Graceful clarification request
+- No errors thrown
 
-- Intent recognition failure
-- Fallback to general_query
-- Clarification response
-- Error handling gracefully
-
-### Tool Failure
-
+### Missing Context
 ```
-@code-chef use a tool that doesn't exist
+@code-chef deploy it now
 ```
-
 **Expected Trace:**
+- Intent: clarification_needed
+- LLM asks: deploy what? where?
+- No assumptions made
 
-- Tool resolution failure
-- Error propagation
-- Graceful degradation
-- Alternative suggestion
+---
 
 ## 9. RAG Context Tests
 
-### Library-Specific Query
-
+### Documentation Query
 ```
-@code-chef implement a LangGraph workflow with checkpointing to PostgreSQL
+@code-chef how do I implement rate limiting in Express.js?
 ```
-
 **Expected Trace:**
-
-- Context7 library lookup: langgraph, langchain
-- RAG retrieval from documentation
-- High-relevance context injection
-- Token savings from context pruning
-
-### Domain Knowledge Query
-
-```
-@code-chef how do I configure LangSmith tracing with a service key?
-```
-
-**Expected Trace:**
-
-- Documentation search
-- Internal knowledge retrieval
+- Intent: general_query
+- RAG search in documentation
+- Context7 library: express, express-rate-limit
 - Minimal LLM usage (RAG-powered)
+
+### Framework-Specific Task
+```
+@code-chef set up React Router v6 with protected routes and authentication
+```
+**Expected Trace:**
+- Context7 lookup: react-router-dom, react
+- RAG retrieval from React docs
+- Token optimization
+- Code examples from knowledge base
+
+---
 
 ## 10. Optimization Tests
 
-### Progressive Disclosure Validation
-
+### Minimal Complexity Task
 ```
-@code-chef create a simple hello world endpoint
+@code-chef create a GET /health endpoint that returns {status: 'ok'}
 ```
-
 **Expected Trace:**
+- Tool loading: MINIMAL (10-30 tools)
+- No RAG queries needed
+- Fast intent recognition
+- Total tokens < 500
 
-- MINIMAL tool loading (10-30 tools)
-- Efficient intent recognition
-- No unnecessary RAG queries
-- <500 tokens total
-
-### Maximum Context Test
-
+### Maximum Complexity Analysis
 ```
-@code-chef analyze the entire codebase and suggest architectural improvements
+@code-chef analyze our entire e-commerce application and suggest architectural improvements
 ```
-
 **Expected Trace:**
-
-- FULL tool loading (150+ tools)
+- Tool loading: FULL (150+ tools)
 - Extensive RAG retrieval
-- Multiple context sources
-- Token optimization still applied
+- Multiple file embeddings
+- Token optimization still active
+
+---
+
+## Real-World Scenarios
+
+### Bug Fix Request
+```
+@code-chef #file:backend/api/orders.js fix the race condition in concurrent order processing
+```
+
+### Feature Enhancement
+```
+@code-chef add email notifications when orders are shipped, include tracking links
+```
+
+### Performance Optimization
+```
+@code-chef optimize our product search API to handle 10k requests per second
+```
+
+### Database Migration
+```
+@code-chef create a migration to add a 'favorites' table with foreign keys to users and products
+```
+
+### Testing Request
+```
+@code-chef write integration tests for the entire checkout flow including payment processing
+```
 
 ---
 
 ## Testing Methodology
 
-1. **Open VS Code** with the code-chef extension installed
-2. **Open the chat panel** (Ctrl+Alt+I or Cmd+Opt+I)
-3. **Type prompts** using `@code-chef` prefix
+1. **Open Test Workspace** in VS Code (not code-chef repo!)
+2. **Open Chat Panel** (Ctrl+Alt+I or Cmd+Opt+I)
+3. **Type Prompts** using `@code-chef` prefix
 4. **Monitor LangSmith** at https://smith.langchain.com/projects/code-chef-production
-5. **Review traces** for:
-   - System prompts
-   - Token counts
-   - Latency metrics
-   - Tool invocations
-   - RAG context quality
-   - Waterfall visualization
+5. **Review Traces** for:
+   - System prompts (full visibility)
+   - Token counts (accurate)
+   - Latency metrics (P50/P95/P99)
+   - Tool invocations (what was loaded)
+   - RAG context quality (relevant docs retrieved)
+   - Waterfall visualization (nested calls)
+   - Error handling (graceful degradation)
 
-## Expected Metadata in Traces
+## Expected Trace Metadata
 
-Each trace should contain:
-
+Every trace should include:
 ```json
 {
   "environment": "production",
   "extension_version": "2.0.0",
   "experiment_group": "code-chef",
-  "model_version": "<model-name>",
-  "session_id": "<session-uuid>",
-  "user_id": "<vscode-machine-id>"
+  "model_version": "qwen-2.5-coder-32b",
+  "session_id": "session-uuid",
+  "user_id": "vscode-machine-id"
 }
 ```
 
 ## Validation Checklist
 
-- [ ] All traces appear in LangSmith without 403 errors
-- [ ] System prompts are visible and complete
-- [ ] Token counts are accurate
+- [ ] All traces visible in LangSmith (no 403 errors)
+- [ ] System prompts fully visible
+- [ ] Token counts accurate
 - [ ] Waterfall shows nested LLM calls
-- [ ] RAG context is included in traces
-- [ ] Intent recognition is logged
-- [ ] Tool invocations are traced
-- [ ] Error handling is captured
-- [ ] Streaming events are visible
-- [ ] Session continuity is maintained
+- [ ] RAG context included in traces
+- [ ] Intent recognition logged
+- [ ] Tool invocations traced
+- [ ] Error handling captured
+- [ ] Streaming events visible
+- [ ] Session continuity maintained
+- [ ] No code-chef repo modifications attempted!
+
+---
+
+## Notes
+
+- Always use a **separate test workspace** - never the code-chef repository
+- These prompts generate realistic traces without polluting the codebase
+- Monitor token costs in LangSmith metrics dashboard
+- Use different project types (e-commerce, blog, SaaS) to test variety
+- Check that progressive tool loading adapts to task complexity
