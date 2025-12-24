@@ -197,6 +197,21 @@ async def lifespan(app: FastAPI):
             )
             raise RuntimeError("LangSmith tracing enabled but API key missing")
 
+        # Configure LangSmith client to use blocking mode (no multipart batching)
+        # Service keys don't have permission for /runs/multipart endpoint
+        from langsmith import Client as LangSmithClient
+        import langsmith
+        
+        # Create a blocking client (disables auto-batching)
+        langsmith_client = LangSmithClient(
+            api_key=langsmith_api_key,
+            auto_batch_tracing=False  # Disable multipart batching
+        )
+        
+        # Set as the global tracing client
+        langsmith.utils.tracing.tracing_v2_client = langsmith_client
+        logger.info("[Tracing] ✓ Configured LangSmith client with blocking mode (no multipart batching)")
+
         # Test LangSmith connectivity
         try:
             async with httpx.AsyncClient() as client:
