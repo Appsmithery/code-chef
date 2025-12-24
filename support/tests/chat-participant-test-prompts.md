@@ -6,21 +6,21 @@
 
 Create a test workspace with sample files:
 
-```bash
+```powershell
 # Create test workspace
-mkdir ~/code-chef-test-workspace
-cd ~/code-chef-test-workspace
+New-Item -ItemType Directory -Force -Path "$HOME\code-chef-test-workspace"
+Set-Location "$HOME\code-chef-test-workspace"
 
 # Sample e-commerce project structure
-mkdir -p backend/api backend/models frontend/components tests
-touch backend/api/auth.js backend/api/orders.js backend/models/user.js
-touch frontend/components/LoginForm.tsx frontend/components/ProductCard.tsx
-touch tests/auth.test.js README.md
+New-Item -ItemType Directory -Force -Path backend\api, backend\models, frontend\components, tests
+New-Item -ItemType File -Force -Path backend\api\auth.js, backend\api\orders.js, backend\models\user.js
+New-Item -ItemType File -Force -Path frontend\components\LoginForm.tsx, frontend\components\ProductCard.tsx
+New-Item -ItemType File -Force -Path tests\auth.test.js, README.md
 
 # Add sample content
-echo "// Authentication API endpoints" > backend/api/auth.js
-echo "// Order management endpoints" > backend/api/orders.js
-echo "// User model definition" > backend/models/user.js
+"// Authentication API endpoints" | Out-File -FilePath backend\api\auth.js -Encoding utf8
+"// Order management endpoints" | Out-File -FilePath backend\api\orders.js -Encoding utf8
+"// User model definition" | Out-File -FilePath backend\models\user.js -Encoding utf8
 ```
 
 Open this workspace in VS Code before testing prompts.
