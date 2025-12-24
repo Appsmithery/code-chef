@@ -291,28 +291,32 @@ def _collect_agent_insights(
     tags=["langgraph", "node", "conversational", "ask-mode"],
 )
 async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
-    """Conversational handler for Ask mode - simple Q&A without task execution.
+    """Conversational handler for Ask mode - Q&A with information-gathering tools.
 
-    This node provides direct LLM responses for questions, status queries,
-    and clarifications without routing to specialized agents or loading tools.
+    This node provides responses for questions, status queries, and clarifications.
+    It CAN use read-only tools for accurate information (MCP servers, status checks).
 
     Use Cases:
-    - "What can you do?"
-    - "What's the status of task-123?"
-    - "How does feature X work?"
-    - General questions about the platform
+    - "What can you do?" → Lists available MCP tools and capabilities
+    - "What's the status of task-123?" → Queries database/Linear
+    - "Which files use authentication?" → Searches codebase via MCP
+    - General questions requiring workspace context
 
-    Does NOT handle:
+    Allows:
+    - Read-only tool invocations (MCP filesystem search, memory queries, status checks)
+    - Multi-turn conversations with context
+
+    Blocks:
     - Task execution (use supervisor_node → agent routing)
-    - Tool invocations
-    - Multi-agent coordination
+    - Write operations (file edits, deployments, Linear issue creation)
     """
     from langchain_core.messages import AIMessage, HumanMessage
     from lib.llm_client import get_llm_client
+    from agents.supervisor.supervisor import SupervisorAgent
 
     try:
-        # Get simple LLM client without tool loading
-        llm_client = get_llm_client("conversational")
+        # Get supervisor agent WITH tool access (read-only tools available)
+        supervisor = SupervisorAgent()
 
         # Extract last user message
         last_message = state["messages"][-1] if state["messages"] else None
@@ -334,47 +338,41 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
             else str(last_message)
         )
 
-        # Build system prompt for conversational mode
-        system_prompt = """You are a helpful AI assistant for the code-chef DevOps platform.
+        # Invoke supervisor with Ask mode constraints
+        # Supervisor will use its v4.0 system prompt which includes MCP awareness
+        response = await supervisor.ainvoke({
+            "messages": [HumanMessage(content=user_query)],
+            "mode": "ask",  # Signal read-only mode
+            "current_agent": "supervisor",
+        })
 
-You can answer questions about:
-- Platform capabilities and features
-- Task status and workflow information  
-- How to use the platform
-- General development questions
+        # Extract AI message from response
+        ai_message = response.get("messages", [])[-1] if response.get("messages") else None
+        if not ai_message:
+            ai_message = AIMessage(content="I apologize, but I couldn't process that request.")
 
-You are in "Ask mode" - you provide information but don't execute tasks.
-For task execution, users should use "Agent mode" or explicit commands.
+        response_content = ai_message.content if hasattr(ai_message, "content") else str(ai_message)
 
-Keep responses concise, helpful, and friendly."""
+        # Extract AI message from response
+        ai_message = response.get("messages", [])[-1] if response.get("messages") else None
+        if not ai_message:
+            ai_message = AIMessage(content="I apologize, but I couldn't process that request.")
 
-        # Generate response using simple completion (no tools)
-        response_text = await llm_client.complete(
-            prompt=user_query,
-            system_prompt=system_prompt,
-            temperature=0.7,
-            max_tokens=1000,
-        )
-
-        # Extract content from response dict
-        content = (
-            response_text.get("content", "")
-            if isinstance(response_text, dict)
-            else str(response_text)
-        )
+        response_content = ai_message.content if hasattr(ai_message, "content") else str(ai_message)
 
         logger.info(
-            f"[LangGraph] Conversational handler completed. Response length: {len(content)}"
+            f"[LangGraph] Conversational handler (Ask mode) completed. Response length: {len(response_content)}"
         )
 
         return {
-            "messages": [AIMessage(content=content)],
+            "messages": [ai_message],
             "current_agent": "conversational",
             "next_agent": None,  # Terminal node
             "task_result": {
                 "agent": "conversational",
                 "completed": True,
-                "output_length": len(content),
+                "output_length": len(response_content),
+                "mode": "ask",
             },
         }
     except Exception as e:
