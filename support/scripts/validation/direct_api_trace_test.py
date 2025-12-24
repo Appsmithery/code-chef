@@ -28,6 +28,23 @@ if not API_KEY:
 
 headers = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 
+# First, get the session ID for the project
+print(f"\nLooking up session ID for project '{PROJECT_NAME}'...")
+resp = requests.get(
+    f"{API_BASE}/sessions",
+    headers=headers,
+    params={"name": PROJECT_NAME, "limit": 1}
+)
+
+if resp.status_code != 200 or not resp.json():
+    print(f"❌ ERROR: Could not find project '{PROJECT_NAME}'")
+    print(f"Response: {resp.text[:200]}")
+    exit(1)
+
+SESSION_ID = resp.json()[0]["id"]
+print(f"✓ Found session ID: {SESSION_ID}")
+print("=" * 80)
+
 # Test scenarios
 scenarios = [
     "Implement JWT authentication middleware",
@@ -50,7 +67,7 @@ for i, scenario in enumerate(scenarios, 1):
         "id": run_id,
         "name": f"trace_test_{i}",
         "run_type": "chain",
-        "project_name": PROJECT_NAME,
+        "session_id": SESSION_ID,  # Use session ID, not name
         "inputs": {"message": scenario},
         "outputs": {
             "intent": "task_submission",
@@ -74,10 +91,8 @@ for i, scenario in enumerate(scenarios, 1):
 
     try:
         # POST to /runs endpoint (not multipart)
-        # Use session_name parameter for project targeting
         response = requests.post(
             f"{API_BASE}/runs",
-            params={"session_name": PROJECT_NAME},
             headers=headers,
             json=run_data,
             timeout=10,
