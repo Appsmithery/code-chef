@@ -74,8 +74,13 @@ for i, scenario in enumerate(scenarios, 1):
 
     try:
         # POST to /runs endpoint (not multipart)
+        # Use session_name parameter for project targeting
         response = requests.post(
-            f"{API_BASE}/runs", headers=headers, json=run_data, timeout=10
+            f"{API_BASE}/runs",
+            params={"session_name": PROJECT_NAME},
+            headers=headers,
+            json=run_data,
+            timeout=10
         )
 
         if response.status_code in [200, 201, 202]:
