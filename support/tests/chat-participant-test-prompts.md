@@ -32,7 +32,7 @@ Open this workspace in VS Code before testing prompts.
 ### Simple Feature Request
 
 ```
-@code-chef implement a shopping cart feature with add/remove items and checkout flow
+@chef implement a shopping cart feature with add/remove items and checkout flow
 ```
 
 **Expected Trace:**
@@ -45,7 +45,7 @@ Open this workspace in VS Code before testing prompts.
 ### Feature with File Context
 
 ```
-@code-chef #file:backend/api/auth.js add rate limiting to prevent brute force login attempts
+@chef #file:backend/api/auth.js add rate limiting to prevent brute force login attempts
 ```
 
 **Expected Trace:**
@@ -58,7 +58,7 @@ Open this workspace in VS Code before testing prompts.
 ### Infrastructure Task
 
 ```
-@code-chef deploy our Node.js e-commerce API to AWS ECS with auto-scaling
+@chef deploy our Node.js e-commerce API to AWS ECS with auto-scaling
 ```
 
 **Expected Trace:**
@@ -75,7 +75,7 @@ Open this workspace in VS Code before testing prompts.
 ### Check Last Task
 
 ```
-@code-chef what's the status of my last task?
+@chef what's the status of my last task?
 ```
 
 **Expected Trace:**
@@ -87,7 +87,7 @@ Open this workspace in VS Code before testing prompts.
 ### Specific Task ID
 
 ```
-@code-chef check status of task-abc123
+@chef check status of task-abc123
 ```
 
 **Expected Trace:**
@@ -103,7 +103,7 @@ Open this workspace in VS Code before testing prompts.
 ### Ambiguous Request
 
 ```
-@code-chef fix the payment bug
+@chef fix the payment bug
 ```
 
 **Expected Trace:**
@@ -115,7 +115,7 @@ Open this workspace in VS Code before testing prompts.
 ### Follow-up with Context
 
 ```
-@code-chef use Stripe and only fix staging
+@chef use Stripe and only fix staging
 ```
 
 **Expected Trace:**
@@ -131,7 +131,7 @@ Open this workspace in VS Code before testing prompts.
 ### High-Risk Database Operation
 
 ```
-@code-chef drop all staging database tables and recreate from migrations
+@chef drop all staging database tables and recreate from migrations
 ```
 
 **Expected Trace:**
