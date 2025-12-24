@@ -340,7 +340,7 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
 
         # Invoke supervisor with Ask mode constraints
         # Supervisor will use its v4.0 system prompt which includes MCP awareness
-        response = await supervisor.ainvoke(
+        response = await supervisor.invoke(
             {
                 "messages": [HumanMessage(content=user_query)],
                 "mode": "ask",  # Signal read-only mode
