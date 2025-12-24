@@ -56,7 +56,7 @@ class TestDropletHealth:
 
         # Parse output - simple check for service names
         output = result.stdout.lower()
-        
+
         # Expected 8 services
         expected_services = [
             "orchestrator",
@@ -68,7 +68,7 @@ class TestDropletHealth:
             "agent-registry",
             "langgraph",
         ]
-        
+
         for service in expected_services:
             assert service in output, f"Service {service} not found in running services"
 
