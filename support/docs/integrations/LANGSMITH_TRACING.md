@@ -2,9 +2,10 @@
 
 > **📘 Complete LLM Operations Guide**: For model selection, training, evaluation, and deployment, see [LLM Operations Guide](../operations/llm-operations.md). This document focuses on tracing configuration and metadata standards.
 
-**Last Updated**: December 10, 2025  
+**Last Updated**: December 24, 2025  
 **Schema Version**: 1.0.0  
-**Clean Start Date**: December 10, 2025 (all historical traces deleted)
+**Clean Start Date**: December 10, 2025 (all historical traces deleted)  
+**Annotation Workflow**: Active (Phase 0 - collect before code changes)
 
 ## Overview
 
@@ -159,6 +160,114 @@ AGENT_NAME=infrastructure                # Current agent name
 | Personal Token | `lsv2_pt_*` | Development (user-level)      |
 
 **Note**: Service keys require `LANGSMITH_WORKSPACE_ID`.
+
+---
+
+## Annotation-First Testing Workflow
+
+**Philosophy**: Collect data → annotate → evaluate → tune models → **then** fix code
+
+### Phase 0: Data Collection (2-4 weeks)
+
+**Goal**: Accumulate 100+ annotated traces covering common failure modes
+
+**Process**:
+
+1. **Run test prompts** from [`support/tests/chat-participant-test-prompts.md`](../../tests/chat-participant-test-prompts.md)
+2. **Review traces** in LangSmith (code-chef-production project)
+3. **Annotate incorrect responses**:
+   - **Correctness score**: 0.0 (incorrect) to 1.0 (perfect)
+   - **Note field**: Explain what went wrong and what was expected
+4. **Add to datasets**: Create `code-chef-gold-standard-v1` dataset in LangSmith
+5. **Categorize failures**:
+   - MCP awareness (doesn't recognize "mcp" acronym)
+   - Tool discovery (can't list available MCP servers)
+   - Agent routing (wrong agent selected)
+   - Code generation (incorrect syntax/logic)
+   - Context understanding (misses file references)
+
+### Example Annotation
+
+**Trace**: https://smith.langchain.com/public/fb55af3a-821a-4a01-9245-fe18f3610142/r
+
+**User Query**: "which mcp servers do you have access to?"
+
+**Annotation**:
+
+- **Correctness**: 0.00 (completely incorrect)
+- **Note**: "Model didn't recognize 'mcp' acronym. Should list 15+ MCP servers from Docker MCP Toolkit: memory, github, rust-mcp-filesystem, mcp_huggingface, mcp_copilot_conta, brave-search, fetch, mcp_docs_by_langc, sequential-thinking, etc. Expected response: 'I have access to 178+ tools from 15+ MCP servers including...'"
+
+**Category**: MCP awareness
+
+### Evaluation Before Code Changes
+
+Before tweaking prompts or code:
+
+```bash
+# Run baseline evaluation on annotated dataset
+python support/scripts/evaluation/baseline_runner.py \
+  --mode baseline \
+  --dataset code-chef-gold-standard-v1 \
+  --output baseline-results.json
+
+# Review metrics
+cat baseline-results.json | jq '.metrics'
+# Example: {"accuracy": 0.72, "mcp_awareness": 0.35, "tool_discovery": 0.50}
+```
+
+If MCP awareness is <0.70, prioritize model training or prompt engineering for that category.
+
+### Building Evaluation Datasets
+
+**LangSmith UI**:
+
+1. Go to project: `code-chef-production`
+2. Filter annotated traces: `correctness <= 0.5` (failures)
+3. Click "Add to Dataset" → Create `code-chef-gold-standard-v1`
+4. Include both failures and successes (balanced dataset)
+
+**Programmatic**:
+
+```python
+from langsmith import Client
+
+client = Client()
+
+# Create dataset
+dataset = client.create_dataset(
+    dataset_name="code-chef-gold-standard-v1",
+    description="Annotated traces for model evaluation"
+)
+
+# Add examples
+for trace in annotated_traces:
+    client.create_example(
+        dataset_id=dataset.id,
+        inputs={"messages": trace.inputs},
+        outputs={"response": trace.outputs},
+        metadata={
+            "correctness": trace.feedback["correctness"],
+            "category": trace.metadata["category"],
+            "note": trace.feedback["note"]
+        }
+    )
+```
+
+### Model Improvement Thresholds
+
+| Improvement | Action        | Rationale                                 |
+| ----------- | ------------- | ----------------------------------------- |
+| >15%        | Deploy        | Significant improvement, safe to deploy   |
+| 5-15%       | Manual review | Moderate improvement, validate edge cases |
+| <5%         | Reject        | Insufficient improvement or regression    |
+
+**DO NOT** make code changes until:
+
+- ✅ 100+ traces annotated
+- ✅ Evaluation dataset created
+- ✅ Baseline metrics captured
+- ✅ Failure patterns identified
+- ✅ Model improvement path planned
 
 ---
 
@@ -364,6 +473,11 @@ def _get_trace_metadata() -> Dict[str, str]:
 5. **Set model_version** when training/deploying
 6. **Use baseline_runner.py** for proper A/B testing
 7. **Keep metadata schema current** (`config/observability/tracing-schema.yaml`)
+8. **Annotate failures immediately** (correctness + note fields)
+9. **Build datasets progressively** (aim for 100+ examples per category)
+10. **Evaluate before changing code** (data-driven improvements)
+11. **Test MCP awareness** (acronym recognition, tool listing)
+12. **Validate Docker MCP Toolkit integration** (178+ tools accessible)
 
 ---
 

@@ -10,6 +10,8 @@ objectives:
     - "Generate visual documentation automatically"
     - "Create reusable test scenarios for CI/CD"
     - "Establish baseline performance metrics"
+    - "Collect annotated traces for model improvement"
+    - "Build evaluation datasets from real usage"
 
 business_requirements:
   1: "Test all 6 agent types (supervisor, feature_dev, code_review, infrastructure, cicd, documentation)"
@@ -20,6 +22,10 @@ business_requirements:
   6: "Validate workflow templates (PR deployment, hotfix, feature, docs-update, infrastructure)"
   7: "Test multi-agent coordination and event bus"
   8: "Validate checkpoint/resume functionality"
+  9: "Annotate incorrect responses in LangSmith (correctness, note fields)"
+  10: "Build evaluation datasets from annotated traces"
+  11: "Validate MCP server awareness and tool discovery"
+  12: "Test Docker MCP Toolkit integration (178+ tools from 15+ servers)"
 
 technical_requirements:
   platform: "Windows + WSL2 + Docker"
@@ -38,6 +44,15 @@ technical_requirements:
     - OpenRouter (model testing)
 
 deliverables:
+  phase_0_annotation_first:
+    - "LangSmith annotation workflow documented"
+    - "Evaluation dataset creation from annotated traces"
+    - "Baseline model performance metrics captured"
+    - "Test prompts covering MCP server awareness"
+    - "Test prompts covering Docker MCP Toolkit integration"
+    - "Annotation guidelines (correctness scoring, note format)"
+    - "Dataset versioning strategy (gold-standard-v1, etc.)"
+
   phase_1_foundation:
     - "New GitHub repository: Appsmithery/code-chef-uat"
     - "Linear project: code-chef UAT"
@@ -71,6 +86,18 @@ success_criteria:
   - "Zero manual intervention required"
 
 action_plan:
+  step_0_annotation_workflow:
+    agent: "documentation"
+    tasks:
+      - "Document annotation-first testing workflow"
+      - "Create annotation guidelines (correctness: 0.0-1.0, notes format)"
+      - "Define test categories: MCP awareness, tool discovery, agent routing, code generation"
+      - "Create test prompt library (50+ scenarios)"
+      - "Set up LangSmith datasets: code-chef-gold-standard-v1"
+      - "Document evaluation metrics (accuracy, completeness, efficiency, latency, integration)"
+      - "Create baseline evaluation script"
+      - "Define model improvement thresholds (>15% deploy, 5-15% review, <5% reject)"
+
   step_1_repo_setup:
     agent: "infrastructure"
     tasks:
@@ -191,11 +218,13 @@ platforms_and_keys:
     create_if_missing: true
 
 expected_timeline:
-  total_duration: "4-6 hours"
+  total_duration: "6-8 hours"
+  phase_0: "90 minutes (annotation workflow setup)"
   phase_1: "45 minutes (repo setup)"
   phase_2: "90 minutes (test scenarios)"
   phase_3: "60 minutes (screenshot automation)"
   phase_4: "45 minutes (reporting)"
+  annotation_period: "2-4 weeks (collect 100+ annotated traces)"
   validation: "30 minutes"
 
 cost_estimate:
