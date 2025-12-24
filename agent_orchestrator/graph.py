@@ -310,7 +310,7 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
     - Task execution (use supervisor_node → agent routing)
     - Write operations (file edits, deployments, Linear issue creation)
     """
-    from agents.supervisor.supervisor import SupervisorAgent
+    from agents.supervisor import SupervisorAgent
     from langchain_core.messages import AIMessage, HumanMessage
     from lib.llm_client import get_llm_client
 
