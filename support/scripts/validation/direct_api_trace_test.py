@@ -80,7 +80,7 @@ for i, scenario in enumerate(scenarios, 1):
             params={"session_name": PROJECT_NAME},
             headers=headers,
             json=run_data,
-            timeout=10
+            timeout=10,
         )
 
         if response.status_code in [200, 201, 202]:
