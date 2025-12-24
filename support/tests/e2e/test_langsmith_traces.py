@@ -11,12 +11,13 @@ Linear Issue: DEV-195
 Test Project: https://github.com/Appsmithery/IB-Agent
 """
 
-import pytest
-from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional
 import os
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import pytest
 
 # Add project paths
 sys.path.insert(0, str(Path(__file__).parent / "../../../agent_orchestrator"))
@@ -338,6 +339,16 @@ class TestLangSmithDatasets:
 
 class TestTraceQuality:
     """Test trace quality metrics."""
+
+    @pytest.fixture
+    def recent_traces(self, langsmith_client, project_name):
+        """Get traces from the last hour."""
+        runs = langsmith_client.list_runs(
+            project_name=project_name,
+            start_time=datetime.now() - timedelta(hours=1),
+            run_type="chain",
+        )
+        return list(runs)
 
     @requires_langsmith
     def test_trace_success_rate(self, recent_traces):
