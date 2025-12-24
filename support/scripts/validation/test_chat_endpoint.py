@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Test the /chat endpoint to generate rich LangSmith traces."""
 import os
+
 import requests
 
 # Get API key from environment
@@ -10,24 +11,15 @@ if not API_KEY:
     exit(1)
 
 # Make chat request
-payload = {
-    "message": "Test trace with full LLM call details",
-    "user_id": "test-uat"
-}
+payload = {"message": "Test trace with full LLM call details", "user_id": "test-uat"}
 
-headers = {
-    "Content-Type": "application/json",
-    "X-API-Key": API_KEY
-}
+headers = {"Content-Type": "application/json", "X-API-Key": API_KEY}
 
 print("Making request to /chat endpoint...")
 print(f"API Key: {API_KEY[:20]}...")
 
 response = requests.post(
-    "http://localhost:8001/chat",
-    headers=headers,
-    json=payload,
-    timeout=60
+    "http://localhost:8001/chat", headers=headers, json=payload, timeout=60
 )
 
 print(f"\nStatus: {response.status_code}")
