@@ -310,9 +310,9 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
     - Task execution (use supervisor_node → agent routing)
     - Write operations (file edits, deployments, Linear issue creation)
     """
+    from agents.supervisor.supervisor import SupervisorAgent
     from langchain_core.messages import AIMessage, HumanMessage
     from lib.llm_client import get_llm_client
-    from agents.supervisor.supervisor import SupervisorAgent
 
     try:
         # Get supervisor agent WITH tool access (read-only tools available)
@@ -340,25 +340,39 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
 
         # Invoke supervisor with Ask mode constraints
         # Supervisor will use its v4.0 system prompt which includes MCP awareness
-        response = await supervisor.ainvoke({
-            "messages": [HumanMessage(content=user_query)],
-            "mode": "ask",  # Signal read-only mode
-            "current_agent": "supervisor",
-        })
+        response = await supervisor.ainvoke(
+            {
+                "messages": [HumanMessage(content=user_query)],
+                "mode": "ask",  # Signal read-only mode
+                "current_agent": "supervisor",
+            }
+        )
 
         # Extract AI message from response
-        ai_message = response.get("messages", [])[-1] if response.get("messages") else None
+        ai_message = (
+            response.get("messages", [])[-1] if response.get("messages") else None
+        )
         if not ai_message:
-            ai_message = AIMessage(content="I apologize, but I couldn't process that request.")
+            ai_message = AIMessage(
+                content="I apologize, but I couldn't process that request."
+            )
 
-        response_content = ai_message.content if hasattr(ai_message, "content") else str(ai_message)
+        response_content = (
+            ai_message.content if hasattr(ai_message, "content") else str(ai_message)
+        )
 
         # Extract AI message from response
-        ai_message = response.get("messages", [])[-1] if response.get("messages") else None
+        ai_message = (
+            response.get("messages", [])[-1] if response.get("messages") else None
+        )
         if not ai_message:
-            ai_message = AIMessage(content="I apologize, but I couldn't process that request.")
+            ai_message = AIMessage(
+                content="I apologize, but I couldn't process that request."
+            )
 
-        response_content = ai_message.content if hasattr(ai_message, "content") else str(ai_message)
+        response_content = (
+            ai_message.content if hasattr(ai_message, "content") else str(ai_message)
+        )
 
         logger.info(
             f"[LangGraph] Conversational handler (Ask mode) completed. Response length: {len(response_content)}"
