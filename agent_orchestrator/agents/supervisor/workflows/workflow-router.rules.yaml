@@ -23,7 +23,7 @@ rules:
   # ============================================================================
   - id: "conversational-greeting"
     workflow: "conversational"
-    priority: 110
+    priority: 100
     keywords:
       - "hello"
       - "hi"
@@ -36,7 +36,7 @@ rules:
 
   - id: "conversational-question"
     workflow: "conversational"
-    priority: 105
+    priority: 95
     keywords:
       - "what can you do"
       - "what are you"
