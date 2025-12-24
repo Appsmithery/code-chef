@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check for traces in LangSmith project."""
 import os
+
 import requests
 
 API_KEY = os.getenv("LANGCHAIN_API_KEY")
@@ -17,11 +18,12 @@ print("\n1. Checking sessions endpoint...")
 resp = requests.get(
     "https://api.smith.langchain.com/sessions",
     headers=headers,
-    params={"name": PROJECT, "limit": 10}
+    params={"name": PROJECT, "limit": 10},
 )
 print(f"   Status: {resp.status_code}")
 if resp.status_code == 200:
     import json
+
     data = resp.json()
     print(f"   Found {len(data)} sessions")
     if data:
@@ -31,18 +33,16 @@ if resp.status_code == 200:
 print("\n2. Checking runs/query endpoint with session UUID...")
 if resp.status_code == 200:
     import json
+
     data = resp.json()
     if data:
         session_id = data[0]["id"]
         print(f"   Using session ID: {session_id}")
-        
+
         resp2 = requests.post(
             "https://api.smith.langchain.com/runs/query",
             headers=headers,
-            json={
-                "session": [session_id],
-                "limit": 20
-            }
+            json={"session": [session_id], "limit": 20},
         )
         print(f"   Status: {resp2.status_code}")
         if resp2.status_code == 200:
@@ -53,7 +53,9 @@ if resp.status_code == 200:
                 if data2["runs"]:
                     print(f"\n   Recent run names:")
                     for run in data2["runs"][:5]:
-                        print(f"     - {run.get('name', 'unnamed')} at {run.get('start_time', 'unknown')}")
+                        print(
+                            f"     - {run.get('name', 'unnamed')} at {run.get('start_time', 'unknown')}"
+                        )
         else:
             print(f"   Error: {resp2.text[:500]}")
 

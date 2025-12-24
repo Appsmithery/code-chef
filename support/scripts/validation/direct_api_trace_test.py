@@ -31,9 +31,7 @@ headers = {"x-api-key": API_KEY, "Content-Type": "application/json"}
 # First, get the session ID for the project
 print(f"\nLooking up session ID for project '{PROJECT_NAME}'...")
 resp = requests.get(
-    f"{API_BASE}/sessions",
-    headers=headers,
-    params={"name": PROJECT_NAME, "limit": 1}
+    f"{API_BASE}/sessions", headers=headers, params={"name": PROJECT_NAME, "limit": 1}
 )
 
 if resp.status_code != 200 or not resp.json():
