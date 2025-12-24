@@ -80,7 +80,7 @@ IB_AGENT_ROUTING_PATTERNS: Dict[str, List[str]] = {
 @pytest.fixture
 def langsmith_client():
     """Get LangSmith client, skip if not configured."""
-    if not LANGSMITH_AVAILABLE:
+    if not LANGSMITH_AVAILABLE or Client is None:
         pytest.skip("LangSmith SDK not installed")
 
     api_key = os.getenv("LANGCHAIN_API_KEY") or os.getenv("LANGSMITH_API_KEY")
