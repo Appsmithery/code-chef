@@ -341,37 +341,13 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
         # Invoke supervisor with Ask mode constraints
         # Supervisor will use its v4.0 system prompt which includes MCP awareness
         response = await supervisor.invoke(
-            {
-                "messages": [HumanMessage(content=user_query)],
-                "mode": "ask",  # Signal read-only mode
-                "current_agent": "supervisor",
-            }
+            messages=[HumanMessage(content=user_query)],
+            config={"configurable": {"mode": "ask", "current_agent": "supervisor"}}
         )
 
-        # Extract AI message from response
-        ai_message = (
-            response.get("messages", [])[-1] if response.get("messages") else None
-        )
-        if not ai_message:
-            ai_message = AIMessage(
-                content="I apologize, but I couldn't process that request."
-            )
-
+        # Response is a BaseMessage (AIMessage from supervisor)
         response_content = (
-            ai_message.content if hasattr(ai_message, "content") else str(ai_message)
-        )
-
-        # Extract AI message from response
-        ai_message = (
-            response.get("messages", [])[-1] if response.get("messages") else None
-        )
-        if not ai_message:
-            ai_message = AIMessage(
-                content="I apologize, but I couldn't process that request."
-            )
-
-        response_content = (
-            ai_message.content if hasattr(ai_message, "content") else str(ai_message)
+            response.content if hasattr(response, "content") else str(response)
         )
 
         logger.info(
@@ -379,7 +355,7 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
         )
 
         return {
-            "messages": [ai_message],
+            "messages": [response],
             "current_agent": "conversational",
             "next_agent": None,  # Terminal node
             "task_result": {
