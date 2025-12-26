@@ -342,7 +342,7 @@ async def conversational_handler_node(state: WorkflowState) -> WorkflowState:
         # Supervisor will use its v4.0 system prompt which includes MCP awareness
         response = await supervisor.invoke(
             messages=[HumanMessage(content=user_query)],
-            config={"configurable": {"mode": "ask", "current_agent": "supervisor"}}
+            config={"configurable": {"mode": "ask", "current_agent": "supervisor"}},
         )
 
         # Response is a BaseMessage (AIMessage from supervisor)
