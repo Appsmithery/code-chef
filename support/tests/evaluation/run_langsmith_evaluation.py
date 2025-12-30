@@ -90,13 +90,27 @@ except ImportError:
 # CONFIGURATION
 # =============================================================================
 
-DEFAULT_DATASET = "code-chef-gold-standard-v1"
+# LangSmith Project Configuration
+# Production Project: code-chef-production (4c4a4e10-9d58-4ca1-a111-82893d6ad495)
+DEFAULT_PROJECT = "code-chef-production"
+PRODUCTION_PROJECT_ID = "4c4a4e10-9d58-4ca1-a111-82893d6ad495"
+EVALUATION_PROJECT = "code-chef-evaluation"
+
+# Dataset Configuration (use existing datasets)
+DEFAULT_DATASET = "ib-agent-scenarios-v1"  # Existing dataset with 15 examples
+GOLD_STANDARD_DATASET = "code-chef-gold-standard-v1"  # For future use
+
+# Infrastructure Configuration
 ORCHESTRATOR_URL = os.getenv("ORCHESTRATOR_URL", "https://codechef.appsmithery.co")
-DEFAULT_PROJECT = os.getenv("LANGCHAIN_PROJECT", "code-chef-evaluation")
+QDRANT_ENDPOINT = os.getenv("QDRANT_CLUSTER_ENDPOINT")
+HUGGINGFACE_SPACE = "alextorelli/code-chef-modelops-trainer"
 
 # Regression thresholds
 REGRESSION_THRESHOLD = 0.05  # 5% drop triggers alert
 DEPLOYMENT_THRESHOLD = 0.15  # 15% improvement triggers deploy recommendation
+
+# Metrics where lower values are better (need to invert improvement calculation)
+LOWER_IS_BETTER_METRICS = {"latency", "latency_p95", "latency_p99", "cost", "tokens"}
 
 
 # =============================================================================
@@ -385,6 +399,10 @@ async def run_evaluation(
 
     # Run code-chef evaluation
     logger.info(f"Running code-chef evaluation: {experiment_name}")
+    logger.info(f"Using project: {EVALUATION_PROJECT}")
+    logger.info(f"Dataset: {dataset_name}")
+    logger.info(f"Evaluators: {len(evaluators)}")
+
     codechef_results = await evaluate(
         code_chef_target,
         data=dataset_name,
@@ -395,6 +413,9 @@ async def run_evaluation(
             "environment": "evaluation",
             "extension_version": os.getenv("EXTENSION_VERSION", "1.0.0"),
             "model_version": os.getenv("MODEL_VERSION", "production"),
+            "project_id": PRODUCTION_PROJECT_ID,
+            "qdrant_endpoint": QDRANT_ENDPOINT,
+            "hf_space": HUGGINGFACE_SPACE,
         },
         max_concurrency=max_concurrency,
         client=client,
@@ -486,20 +507,32 @@ def calculate_improvement(
             codechef_score = codechef_metrics[metric_name]
 
             # Calculate percentage improvement
+            # For metrics where lower is better (latency, cost), invert the calculation
             if baseline_score > 0:
-                improvement_pct = (
+                raw_improvement_pct = (
                     (codechef_score - baseline_score) / baseline_score * 100
                 )
+
+                # Invert for "lower is better" metrics
+                if metric_name.lower() in LOWER_IS_BETTER_METRICS:
+                    improvement_pct = -raw_improvement_pct  # Lower is better
+                    winner = (
+                        "code-chef" if codechef_score < baseline_score else "baseline"
+                    )
+                else:
+                    improvement_pct = raw_improvement_pct  # Higher is better
+                    winner = (
+                        "code-chef" if codechef_score > baseline_score else "baseline"
+                    )
             else:
                 improvement_pct = 0.0
+                winner = "tie"
 
             comparison["per_metric"][metric_name] = {
                 "baseline": baseline_score,
                 "codechef": codechef_score,
                 "improvement_pct": round(improvement_pct, 2),
-                "winner": (
-                    "code-chef" if codechef_score > baseline_score else "baseline"
-                ),
+                "winner": winner,
             }
 
             improvements.append(improvement_pct)

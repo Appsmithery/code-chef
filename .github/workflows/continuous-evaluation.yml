@@ -72,9 +72,12 @@ jobs:
                   EXTENSION_VERSION: ${{ github.sha }}
                   TRACE_ENVIRONMENT: evaluation
                   LANGCHAIN_PROJECT: code-chef-evaluation
+                  QDRANT_CLUSTER_ENDPOINT: ${{ secrets.QDRANT_CLUSTER_ENDPOINT }}
+                  QDRANT_CLOUD_API_KEY: ${{ secrets.QDRANT_CLOUD_API_KEY }}
+                  HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
               run: |
-                  # Use input dataset if provided, otherwise default
-                  DATASET="${{ github.event.inputs.dataset || 'code-chef-gold-standard-v1' }}"
+                  # Use existing dataset (ib-agent-scenarios-v1 has 15 examples)
+                  DATASET="${{ github.event.inputs.dataset || 'ib-agent-scenarios-v1' }}"
                   COMPARE="${{ github.event.inputs.compare_baseline || 'true' }}"
 
                   COMPARE_FLAG=""
