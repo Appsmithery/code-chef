@@ -165,49 +165,136 @@ def get_prebuilt_evaluators() -> List:
     """
     evaluators = []
 
-    # Try to load LangChain evaluators, but don't fail if not available
+    # Exact match evaluator - Simple string comparison
+    def exact_match_evaluator(run: Run, example: Example) -> dict:
+        """Exact match evaluator for structured outputs."""
+        try:
+            prediction = str(run.outputs.get("output", "")).strip().lower()
+            reference = (
+                str(
+                    example.outputs.get(
+                        "expected_output", example.outputs.get("output", "")
+                    )
+                )
+                .strip()
+                .lower()
+            )
+
+            is_match = prediction == reference
+
+            return {
+                "key": "exact_match",
+                "score": 1.0 if is_match else 0.0,
+                "comment": "Exact match" if is_match else "No match",
+            }
+        except Exception as e:
+            return {"key": "exact_match", "score": 0.0, "comment": f"Error: {str(e)}"}
+
+    evaluators.append(exact_match_evaluator)
+    logger.info("Added exact_match evaluator")
+
+    # Regex match evaluator - Pattern matching
+    def regex_match_evaluator(run: Run, example: Example) -> dict:
+        """Regex pattern match evaluator for expected formats."""
+        import re
+
+        try:
+            output = str(run.outputs.get("output", ""))
+
+            # Patterns to check for code-chef specific content
+            patterns = [
+                (
+                    r"(?i)(agent|supervisor|feature[-_]dev|code[-_]review|infrastructure|cicd|documentation)",
+                    "Agent routing",
+                ),
+                (r"(?i)(mcp|tool|server)", "MCP awareness"),
+                (r"(?i)(workflow|task|execution)", "Workflow mention"),
+                (r"\d+\s*(token|ms|second)", "Metrics reported"),
+            ]
+
+            matches = []
+            for pattern, description in patterns:
+                if re.search(pattern, output):
+                    matches.append(description)
+
+            # Check for errors (should not match)
+            has_errors = bool(
+                re.search(r"(?i)(error|exception|failed|traceback)", output)
+            )
+
+            score = len(matches) / len(patterns)
+            if has_errors:
+                score *= 0.5  # Penalize errors
+
+            return {
+                "key": "regex_match",
+                "score": score,
+                "comment": f"Matched: {', '.join(matches) if matches else 'none'}"
+                + (" (has errors)" if has_errors else ""),
+            }
+        except Exception as e:
+            return {"key": "regex_match", "score": 0.0, "comment": f"Error: {str(e)}"}
+
+    evaluators.append(regex_match_evaluator)
+    logger.info("Added regex_match evaluator")
+
+    # Embedding distance evaluator - Semantic similarity
     try:
-        # Embedding distance for semantic similarity
-        try:
-            evaluators.append(
-                LangChainStringEvaluator(
-                    "embedding_distance",
-                    config={
-                        "embeddings": OpenAIEmbeddings(),
-                        "distance_metric": "cosine",
-                    },
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+
+        def embedding_distance_evaluator(run: Run, example: Example) -> dict:
+            """Embedding distance evaluator for semantic similarity."""
+            try:
+                prediction = str(run.outputs.get("output", ""))
+                reference = str(
+                    example.outputs.get(
+                        "expected_output", example.outputs.get("output", "")
+                    )
                 )
-            )
-        except Exception as e:
-            logger.warning(f"Could not create embedding_distance evaluator: {e}")
 
-        # Exact match for structured outputs
-        try:
-            evaluators.append(LangChainStringEvaluator("exact_match"))
-        except Exception as e:
-            logger.warning(f"Could not create exact_match evaluator: {e}")
+                if not prediction or not reference:
+                    return {
+                        "key": "embedding_distance",
+                        "score": 0.0,
+                        "comment": "Missing prediction or reference",
+                    }
 
-        # Regex match for expected patterns
-        try:
-            evaluators.append(
-                LangChainStringEvaluator(
-                    "regex_match",
-                    config={
-                        "patterns": [
-                            r"MCP server",
-                            r"tool",
-                            r"agent",
-                            r"workflow",
-                        ]
-                    },
+                # Get embeddings
+                pred_embedding = embeddings.embed_query(prediction)
+                ref_embedding = embeddings.embed_query(reference)
+
+                # Calculate cosine similarity
+                import numpy as np
+
+                pred_vec = np.array(pred_embedding)
+                ref_vec = np.array(ref_embedding)
+
+                similarity = np.dot(pred_vec, ref_vec) / (
+                    np.linalg.norm(pred_vec) * np.linalg.norm(ref_vec)
                 )
-            )
-        except Exception as e:
-            logger.warning(f"Could not create regex_match evaluator: {e}")
 
+                # Convert similarity to distance (0 = identical, 1 = completely different)
+                # Then invert for score (higher = better)
+                score = float(
+                    similarity
+                )  # Similarity is already 0-1 with 1 being identical
+
+                return {
+                    "key": "embedding_distance",
+                    "score": max(0.0, min(1.0, score)),
+                    "comment": f"Similarity: {score:.3f}",
+                }
+            except Exception as e:
+                return {
+                    "key": "embedding_distance",
+                    "score": 0.0,
+                    "comment": f"Error: {str(e)}",
+                }
+
+        evaluators.append(embedding_distance_evaluator)
+        logger.info("Added embedding_distance evaluator")
     except Exception as e:
-        logger.error(f"LangChain evaluators not available: {e}")
-        logger.info("Install langchain with: pip install langchain")
+        logger.warning(f"Could not create embedding_distance evaluator: {e}")
 
     return evaluators
 
@@ -223,48 +310,160 @@ def get_llm_evaluators() -> List:
 
     try:
         # Use GPT-4 for judge (higher quality, worth the cost for evals)
-        llm = ChatOpenAI(model_name="gpt-4", temperature=0.0)
+        llm = ChatOpenAI(model="gpt-4", temperature=0.0)
 
-        # Criteria-based evaluation
-        try:
-            evaluators.append(
-                LangChainStringEvaluator(
-                    "criteria",
-                    config={
-                        "criteria": {
-                            "helpfulness": "Is the response helpful and actionable?",
-                            "accuracy": "Is the response factually correct?",
-                            "completeness": "Does it address all parts of the question?",
-                        },
-                        "llm": llm,
-                    },
-                )
-            )
-        except Exception as e:
-            logger.warning(f"Could not create criteria evaluator: {e}")
+        # Helpfulness evaluator
+        def helpfulness_evaluator(run: Run, example: Example) -> dict:
+            """Evaluate helpfulness using GPT-4."""
+            try:
+                output = str(run.outputs.get("output", "") if run.outputs else "")
+                query = example.inputs.get("query", "") if example.inputs else ""
 
-        # Labeled criteria with rubric (for MCP awareness)
-        try:
-            evaluators.append(
-                LangChainStringEvaluator(
-                    "labeled_criteria",
-                    config={
-                        "criteria": {
-                            "mcp_awareness": {
-                                "0": "Doesn't mention MCP or tools",
-                                "1": "Mentions MCP but incorrectly",
-                                "2": "Correctly identifies MCP servers and tool count",
-                            }
-                        },
-                        "llm": llm,
-                    },
+                if not output or not query:
+                    return {
+                        "key": "helpfulness",
+                        "score": 0.0,
+                        "comment": "Missing output or query",
+                    }
+
+                prompt = f"""Rate the helpfulness of this response on a scale of 0.0 to 1.0.
+
+Query: {query}
+
+Response: {output}
+
+Is the response helpful and actionable? Respond with ONLY a number between 0.0 and 1.0."""
+
+                result = llm.invoke(prompt)
+                score_text = result.content.strip()
+
+                try:
+                    score = float(score_text)
+                    score = max(0.0, min(1.0, score))  # Clamp to [0, 1]
+                except ValueError:
+                    # Try to extract number from text
+                    import re
+
+                    match = re.search(r"(\d+\.?\d*)", score_text)
+                    score = float(match.group(1)) if match else 0.5
+                    score = max(0.0, min(1.0, score))
+
+                return {
+                    "key": "helpfulness",
+                    "score": score,
+                    "comment": f"Helpfulness: {score:.2f}",
+                }
+            except Exception as e:
+                return {
+                    "key": "helpfulness",
+                    "score": 0.0,
+                    "comment": f"Error: {str(e)}",
+                }
+
+        evaluators.append(helpfulness_evaluator)
+        logger.info("Added helpfulness evaluator")
+
+        # Accuracy evaluator
+        def accuracy_evaluator(run: Run, example: Example) -> dict:
+            """Evaluate technical accuracy using GPT-4."""
+            try:
+                output = str(run.outputs.get("output", "") if run.outputs else "")
+                query = example.inputs.get("query", "") if example.inputs else ""
+                expected = (
+                    example.outputs.get("expected_output", "")
+                    if example.outputs
+                    else ""
                 )
-            )
-        except Exception as e:
-            logger.warning(f"Could not create labeled_criteria evaluator: {e}")
+
+                if not output or not query:
+                    return {
+                        "key": "accuracy",
+                        "score": 0.0,
+                        "comment": "Missing output or query",
+                    }
+
+                expected_context = (
+                    f"\n\nExpected output: {expected}" if expected else ""
+                )
+
+                prompt = f"""Rate the technical accuracy of this response on a scale of 0.0 to 1.0.
+
+Query: {query}
+
+Response: {output}{expected_context}
+
+Is the response technically accurate and free of errors? Respond with ONLY a number between 0.0 and 1.0."""
+
+                result = llm.invoke(prompt)
+                score_text = result.content.strip()
+
+                try:
+                    score = float(score_text)
+                    score = max(0.0, min(1.0, score))
+                except ValueError:
+                    import re
+
+                    match = re.search(r"(\d+\.?\d*)", score_text)
+                    score = float(match.group(1)) if match else 0.5
+                    score = max(0.0, min(1.0, score))
+
+                return {
+                    "key": "accuracy",
+                    "score": score,
+                    "comment": f"Accuracy: {score:.2f}",
+                }
+            except Exception as e:
+                return {"key": "accuracy", "score": 0.0, "comment": f"Error: {str(e)}"}
+
+        evaluators.append(accuracy_evaluator)
+        logger.info("Added accuracy evaluator")
+
+        # MCP tool awareness evaluator
+        def mcp_awareness_evaluator(run: Run, example: Example) -> dict:
+            """Evaluate MCP tool usage awareness."""
+            try:
+                output = str(run.outputs.get("output", "") if run.outputs else "")
+
+                # Check for MCP tool mentions
+                import re
+
+                mcp_patterns = [
+                    r"(?i)(mcp[\s_-]?(server|tool|client))",
+                    r"(?i)(github|linear|filesystem|memory|docker)[\s_-]?(tool|server)",
+                    r"(?i)tool[\s_-]?(invoke|call|execution)",
+                    r"(?i)(progressive|dynamic)[\s_-]?tool[\s_-]?loading",
+                ]
+
+                mentions = sum(
+                    1 for pattern in mcp_patterns if re.search(pattern, output)
+                )
+
+                if mentions == 0:
+                    score = 0.0
+                    comment = "No MCP awareness (0/4 indicators)"
+                elif mentions == 1:
+                    score = 0.33
+                    comment = "Basic MCP awareness (1/4 indicators)"
+                elif mentions == 2:
+                    score = 0.66
+                    comment = "Good MCP awareness (2/4 indicators)"
+                else:
+                    score = 1.0
+                    comment = f"Advanced MCP awareness ({mentions}/4 indicators)"
+
+                return {"key": "mcp_awareness", "score": score, "comment": comment}
+            except Exception as e:
+                return {
+                    "key": "mcp_awareness",
+                    "score": 0.0,
+                    "comment": f"Error: {str(e)}",
+                }
+
+        evaluators.append(mcp_awareness_evaluator)
+        logger.info("Added mcp_awareness evaluator")
 
     except Exception as e:
-        logger.error(f"LLM evaluators not available: {e}")
+        logger.error(f"Error creating LLM evaluators: {e}")
         logger.info("Install langchain-openai with: pip install langchain-openai")
 
     return evaluators
