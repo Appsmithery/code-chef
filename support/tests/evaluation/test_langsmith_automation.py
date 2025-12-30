@@ -387,11 +387,9 @@ def test_get_prebuilt_evaluators(mock_embeddings):
     # Should have at least exact_match and regex_match
     assert len(evaluators) >= 2
 
-    # Check types
-    from langsmith.evaluation import LangChainStringEvaluator
-
+    # Check that they are callable (functions)
     for evaluator in evaluators:
-        assert isinstance(evaluator, LangChainStringEvaluator)
+        assert callable(evaluator), f"Evaluator {evaluator} is not callable"
 
 
 @patch("support.tests.evaluation.run_langsmith_evaluation.ChatOpenAI")
@@ -399,8 +397,12 @@ def test_get_llm_evaluators(mock_chatgpt):
     """Test LLM evaluator creation."""
     evaluators = get_llm_evaluators()
 
-    # Should have criteria and labeled_criteria
-    assert len(evaluators) >= 2
+    # Should have helpfulness, accuracy, and mcp_awareness
+    assert len(evaluators) >= 3
+
+    # Check that they are callable (functions)
+    for evaluator in evaluators:
+        assert callable(evaluator), f"Evaluator {evaluator} is not callable"
 
 
 # =============================================================================
