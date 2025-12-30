@@ -1,0 +1,161 @@
+name: Continuous Evaluation
+
+# Run evaluations on:
+# - Every push to main (after successful deployment)
+# - Weekly Sunday midnight (track performance over time)
+# - Manual trigger for ad-hoc evaluations
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "agent_orchestrator/**"
+            - "shared/**"
+            - "config/**"
+
+    schedule:
+        # Weekly Sunday at midnight UTC
+        - cron: "0 0 * * 0"
+
+    workflow_dispatch:
+        inputs:
+            dataset:
+                description: "Dataset name"
+                required: false
+                default: "code-chef-gold-standard-v1"
+            compare_baseline:
+                description: "Compare with baseline"
+                required: false
+                default: "true"
+
+jobs:
+    evaluate:
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+                  cache: "pip"
+
+            - name: Install dependencies
+              run: |
+                  pip install --upgrade pip
+                  pip install langsmith langchain-openai httpx loguru pytest
+                  pip install -r agent_orchestrator/requirements.txt
+
+            - name: Wait for deployment
+              if: github.event_name == 'push'
+              run: |
+                  echo "Waiting 60 seconds for droplet deployment to complete..."
+                  sleep 60
+
+            - name: Check orchestrator health
+              env:
+                  ORCHESTRATOR_URL: https://codechef.appsmithery.co
+              run: |
+                  curl -f -s https://codechef.appsmithery.co/health || {
+                    echo "ERROR: Orchestrator not healthy"
+                    exit 1
+                  }
+
+            - name: Run LangSmith evaluation
+              env:
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+                  ORCHESTRATOR_URL: https://codechef.appsmithery.co
+                  EXTENSION_VERSION: ${{ github.sha }}
+                  TRACE_ENVIRONMENT: evaluation
+                  LANGCHAIN_PROJECT: code-chef-evaluation
+              run: |
+                  # Use input dataset if provided, otherwise default
+                  DATASET="${{ github.event.inputs.dataset || 'code-chef-gold-standard-v1' }}"
+                  COMPARE="${{ github.event.inputs.compare_baseline || 'true' }}"
+
+                  COMPARE_FLAG=""
+                  if [ "$COMPARE" = "true" ]; then
+                    COMPARE_FLAG="--compare-baseline"
+                  fi
+
+                  python support/tests/evaluation/run_langsmith_evaluation.py \
+                    --dataset "$DATASET" \
+                    --experiment-prefix "ci-$(date +%Y%m%d)" \
+                    $COMPARE_FLAG \
+                    --output evaluation_results.json
+
+            - name: Check for regression
+              if: always()
+              env:
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  LINEAR_API_KEY: ${{ secrets.LINEAR_API_KEY }}
+              run: |
+                  if [ -f evaluation_results.json ]; then
+                    python support/scripts/evaluation/detect_regression.py \
+                      --results evaluation_results.json \
+                      --threshold 0.05 \
+                      --create-linear-issue
+                  else
+                    echo "WARNING: No evaluation results found"
+                  fi
+
+            - name: Upload results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: evaluation-results-${{ github.sha }}
+                  path: evaluation_results.json
+                  retention-days: 90
+
+            - name: Comment on PR
+              if: github.event_name == 'pull_request'
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const fs = require('fs');
+                      const results = JSON.parse(fs.readFileSync('evaluation_results.json', 'utf8'));
+
+                      const comparison = results.comparison || {};
+                      const improvement = comparison.overall_improvement_pct || 0;
+                      const recommendation = comparison.recommendation || 'unknown';
+
+                      let emoji = '✅';
+                      if (improvement < -5) emoji = '❌';
+                      else if (improvement < 5) emoji = '⚠️';
+
+                      const comment = `## ${emoji} Evaluation Results
+
+                      **Overall Improvement**: ${improvement.toFixed(1)}%
+                      **Recommendation**: ${recommendation}
+
+                      **Per-Metric Results**:
+                      \`\`\`json
+                      ${JSON.stringify(comparison.per_metric, null, 2)}
+                      \`\`\`
+
+                      **View traces**: [LangSmith](${results.code_chef.results.project_url})
+                      `;
+
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: comment
+                      });
+
+            - name: Fail on regression
+              if: always()
+              run: |
+                  if [ -f evaluation_results.json ]; then
+                    IMPROVEMENT=$(jq -r '.comparison.overall_improvement_pct // 0' evaluation_results.json)
+                    
+                    # Fail if regression > 5%
+                    if (( $(echo "$IMPROVEMENT < -5" | bc -l) )); then
+                      echo "ERROR: Regression detected: ${IMPROVEMENT}%"
+                      exit 1
+                    fi
+                  fi
