@@ -1666,6 +1666,10 @@ async def execute_orchestration_flow(
         subtasks = await decompose_with_llm(
             request, task_id, available_tools=available_tools_context
         )
+        # Fallback to rule-based if LLM failed (returns empty list)
+        if not subtasks:
+            logger.warning("[Orchestrator] LLM decomposition returned empty subtasks, falling back to rule-based")
+            subtasks = decompose_request(request)
     else:
         subtasks = decompose_request(request)
 
