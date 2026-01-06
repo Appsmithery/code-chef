@@ -3743,7 +3743,229 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                 f"[Chat Stream] Proceeding with conversational mode (no task execution)"
             )
 
-            # STEP 2: For non-task intents, use conversational handler
+            # STEP 4: Intent-based routing optimization
+            # Check feature flag for intent-based routing
+            enable_intent_routing = (
+                os.getenv("ENABLE_INTENT_ROUTING", "true").lower() == "true"
+            )
+
+            if enable_intent_routing:
+                # Import intent classifier
+                from shared.lib.intent_classifier import (
+                    IntentType,
+                    get_intent_classifier,
+                )
+
+                classifier = get_intent_classifier()
+
+                # Classify intent
+                intent, confidence, reasoning = classifier.classify(
+                    request.message,
+                    context={
+                        "has_file_attachments": bool(
+                            request.file_attachments or request.active_file
+                        ),
+                        "project_context": request.project_context,
+                    },
+                )
+
+                logger.info(
+                    f"[Chat Stream] Intent: {intent}, Confidence: {confidence:.2f}, Reasoning: {reasoning}"
+                )
+
+                # Fast path for simple queries (QA and SIMPLE_TASK)
+                if (
+                    intent in [IntentType.QA, IntentType.SIMPLE_TASK]
+                    and confidence > 0.75
+                ):
+                    logger.info(
+                        f"[Chat Stream] Using direct conversational routing (bypass supervisor)"
+                    )
+
+                    # Import conversational handler directly
+                    from graph import WorkflowState, conversational_handler_node
+
+                    # Load conversation history
+                    conversation_history = []
+                    try:
+                        existing_session = await session_manager.get_session(session_id)
+                        if existing_session:
+                            history = await session_manager.load_conversation_history(
+                                session_id, limit=10
+                            )
+                            for msg in history:
+                                role = msg.get("role", "user")
+                                content = msg.get("content", "")
+                                if role == "user":
+                                    conversation_history.append(
+                                        HumanMessage(content=content)
+                                    )
+                                elif role == "assistant":
+                                    conversation_history.append(
+                                        AIMessage(content=content)
+                                    )
+                            logger.info(
+                                f"[Chat Stream] Loaded {len(conversation_history)} messages from session"
+                            )
+                        else:
+                            # Create new session
+                            await session_manager.create_session(
+                                session_id=session_id,
+                                user_id=request.user_id,
+                                metadata={
+                                    "project_context": request.project_context,
+                                    "workspace_root": request.workspace_root,
+                                },
+                            )
+                    except Exception as e:
+                        logger.warning(f"[Chat Stream] Could not load session: {e}")
+
+                    # Read file attachments if any
+                    file_contents_text = ""
+                    files_read = []
+
+                    try:
+                        mcp_tool_client = get_mcp_tool_client("feature_dev")
+
+                        # Read active file
+                        if request.active_file and request.workspace_root:
+                            try:
+                                file_result = await mcp_tool_client.call_tool(
+                                    server_name="rust-mcp-filesystem",
+                                    tool_name="read_file",
+                                    arguments={"path": request.active_file},
+                                )
+                                if file_result and not file_result.get("isError"):
+                                    file_content = file_result.get("content", [])
+                                    if file_content and len(file_content) > 0:
+                                        content_text = file_content[0].get("text", "")
+                                        files_read.append(request.active_file)
+                                        file_contents_text += f"\\n\\n**Active File: `{request.active_file}`**\\n```\\n{content_text[:2000]}\\n```\\n"
+                            except Exception as e:
+                                logger.warning(f"Could not read active file: {e}")
+
+                        # Read additional attachments
+                        if request.file_attachments:
+                            for file_path in request.file_attachments[
+                                :3
+                            ]:  # Limit to 3 files
+                                try:
+                                    file_result = await mcp_tool_client.call_tool(
+                                        server_name="rust-mcp-filesystem",
+                                        tool_name="read_file",
+                                        arguments={"path": file_path},
+                                    )
+                                    if file_result and not file_result.get("isError"):
+                                        file_content = file_result.get("content", [])
+                                        if file_content and len(file_content) > 0:
+                                            content_text = file_content[0].get(
+                                                "text", ""
+                                            )
+                                            files_read.append(file_path)
+                                            file_contents_text += f"\\n\\n**Attached: `{file_path}`**\\n```\\n{content_text[:1000]}\\n```\\n"
+                                except Exception as e:
+                                    logger.warning(
+                                        f"Could not read file {file_path}: {e}"
+                                    )
+                    except Exception as e:
+                        logger.warning(f"Error reading files: {e}")
+
+                    # Enrich message with file context
+                    enriched_message = request.message
+                    if file_contents_text:
+                        enriched_message = f"{request.message}\\n\\n**Workspace Context:**{file_contents_text}"
+
+                    # Build state for direct invocation
+                    state: WorkflowState = {
+                        "messages": conversation_history
+                        + [HumanMessage(content=enriched_message)],
+                        "current_agent": "conversational",
+                        "next_agent": None,
+                        "task_result": None,
+                        "approvals": [],
+                        "requires_approval": False,
+                        "workflow_id": session_id,
+                        "thread_id": session_id,
+                        "pending_operation": None,
+                        "project_context": (
+                            {
+                                "project_id": (
+                                    request.project_context.get("linear_project_id")
+                                    if request.project_context
+                                    else None
+                                ),
+                                "repository_url": (
+                                    request.project_context.get("github_repo_url")
+                                    if request.project_context
+                                    else None
+                                ),
+                                "workspace_name": (
+                                    request.project_context.get("workspace_name")
+                                    if request.project_context
+                                    else None
+                                ),
+                            }
+                            if request.project_context
+                            else None
+                        ),
+                        "metadata": {
+                            "intent": intent.value,
+                            "confidence": confidence,
+                            "reasoning": reasoning,
+                            "routing_mode": "direct_conversational",
+                            "bypass_supervisor": True,
+                        },
+                    }
+
+                    # Call conversational handler directly (no graph orchestration)
+                    logger.info(
+                        "[Chat Stream] Invoking conversational handler directly"
+                    )
+                    result = await conversational_handler_node(state)
+
+                    # Extract response
+                    response_message = (
+                        result["messages"][-1] if result.get("messages") else None
+                    )
+                    if response_message:
+                        content = (
+                            response_message.content
+                            if hasattr(response_message, "content")
+                            else str(response_message)
+                        )
+
+                        # Stream response word-by-word for smooth UX
+                        words = content.split()
+                        for i, word in enumerate(words):
+                            yield f"data: {json.dumps({'type': 'content', 'content': word + ' '})}\n\n"
+                            await asyncio.sleep(0.03)  # Smooth streaming
+
+                        # Save to session history
+                        try:
+                            await session_manager.add_message(
+                                session_id=session_id,
+                                role="user",
+                                content=request.message,
+                                metadata={
+                                    "intent": intent.value,
+                                    "confidence": confidence,
+                                },
+                            )
+                            await session_manager.add_message(
+                                session_id=session_id,
+                                role="assistant",
+                                content=content,
+                                metadata={"routing_mode": "direct_conversational"},
+                            )
+                        except Exception as e:
+                            logger.warning(f"Could not save to session: {e}")
+
+                    # Done
+                    yield f"data: {json.dumps({'type': 'done', 'session_id': session_id, 'routing': 'direct_conversational', 'intent': intent.value})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
+
+            # STEP 5: Full orchestration for medium/high complexity (existing flow)
             from graph import conversational_handler_node
 
             logger.info(f"[Chat Stream] Initializing graph for session {session_id}")

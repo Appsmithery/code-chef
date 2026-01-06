@@ -84,8 +84,11 @@ class IntentClassifier:
         "optimize",
         "improve",
         "enhance",
+        "upgrade",
         "migrate",
         "deploy",
+        "setup",
+        "configure",
         "review",
         "test",
         "validate",
@@ -100,6 +103,7 @@ class IntentClassifier:
         "when",
         "where",
         "who",
+        "which",
         "explain",
         "describe",
         "tell me",
@@ -107,10 +111,14 @@ class IntentClassifier:
         "can you",
         "do you",
         "are you",
+        "is there",
+        "are there",
         "help",
         "hello",
         "hi",
         "hey",
+        "thanks",
+        "thank you",
     ]
 
     # Simple task keywords (tools but no multi-step)
@@ -119,6 +127,7 @@ class IntentClassifier:
         "search",
         "list",
         "show",
+        "show me",
         "get",
         "fetch",
         "read",
@@ -180,21 +189,21 @@ class IntentClassifier:
                 self._cache_result(message, intent, confidence)
                 return intent, confidence, reasoning
 
-        # Rule 3: Q&A patterns (start with question words)
-        for keyword in self.QA_KEYWORDS:
-            if message_lower.startswith(keyword):
-                intent = IntentType.QA
-                confidence = 0.90
-                reasoning = f"Question pattern: '{keyword}'"
-                self._cache_result(message, intent, confidence)
-                return intent, confidence, reasoning
-
-        # Rule 4: Simple task patterns
+        # Rule 3: Simple task patterns (check before Q&A since 'show me' in both)
         for keyword in self.SIMPLE_TASK_KEYWORDS:
             if message_lower.startswith(keyword):
                 intent = IntentType.SIMPLE_TASK
                 confidence = 0.85
                 reasoning = f"Simple task: '{keyword}'"
+                self._cache_result(message, intent, confidence)
+                return intent, confidence, reasoning
+
+        # Rule 4: Q&A patterns (start with question words)
+        for keyword in self.QA_KEYWORDS:
+            if message_lower.startswith(keyword):
+                intent = IntentType.QA
+                confidence = 0.90
+                reasoning = f"Question pattern: '{keyword}'"
                 self._cache_result(message, intent, confidence)
                 return intent, confidence, reasoning
 
@@ -319,4 +328,7 @@ def get_intent_classifier(llm_client=None) -> IntentClassifier:
     global _intent_classifier
     if _intent_classifier is None:
         _intent_classifier = IntentClassifier(llm_client)
+    elif llm_client is not None and _intent_classifier.llm_client is None:
+        # Update LLM client if not set
+        _intent_classifier.llm_client = llm_client
     return _intent_classifier
