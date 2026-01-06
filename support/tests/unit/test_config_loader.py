@@ -35,67 +35,67 @@ class TestConfigLoader:
         """Sample valid YAML config for testing"""
         return """
 version: "1.0"
-provider: gradient
+provider: openrouter
 
 agents:
   orchestrator:
-    model: llama3.3-70b-instruct
-    provider: gradient
+    model: anthropic/claude-3-5-sonnet
+    provider: openrouter
     temperature: 0.3
     max_tokens: 2000
-    cost_per_1m_tokens: 0.60
-    context_window: 128000
+    cost_per_1m_tokens: 3.00
+    context_window: 200000
     use_case: complex_reasoning
     tags: [routing, orchestration]
     langsmith_project: code-chef-orchestrator
 
   feature-dev:
-    model: codellama-13b
-    provider: gradient
+    model: qwen/qwen-2.5-coder-32b-instruct
+    provider: openrouter
     temperature: 0.7
     max_tokens: 2000
-    cost_per_1m_tokens: 0.30
-    context_window: 16000
+    cost_per_1m_tokens: 0.07
+    context_window: 131072
     use_case: code_generation
     tags: [feature-development, python]
     langsmith_project: code-chef-feature-dev
 
   code-review:
-    model: llama3.3-70b-instruct
-    provider: gradient
+    model: deepseek/deepseek-chat
+    provider: openrouter
     temperature: 0.3
     max_tokens: 4000
-    cost_per_1m_tokens: 0.60
-    context_window: 128000
+    cost_per_1m_tokens: 0.75
+    context_window: 64000
     use_case: code_analysis
     tags: [quality-assurance, security]
     langsmith_project: code-chef-code-review
 
   infrastructure:
-    model: llama3-8b-instruct
-    provider: gradient
+    model: google/gemini-2.0-flash-001
+    provider: openrouter
     temperature: 0.5
     max_tokens: 2000
-    cost_per_1m_tokens: 0.20
-    context_window: 128000
+    cost_per_1m_tokens: 0.25
+    context_window: 1000000
     use_case: infrastructure_config
     tags: [terraform, kubernetes, docker]
     langsmith_project: code-chef-infrastructure
 
   cicd:
-    model: llama3-8b-instruct
-    provider: gradient
+    model: google/gemini-2.0-flash-001
+    provider: openrouter
     temperature: 0.5
     max_tokens: 2000
-    cost_per_1m_tokens: 0.20
-    context_window: 128000
+    cost_per_1m_tokens: 0.25
+    context_window: 1000000
     use_case: pipeline_generation
     tags: [github-actions, jenkins]
     langsmith_project: code-chef-cicd
 
   documentation:
-    model: mistral-nemo-instruct-2407
-    provider: gradient
+    model: deepseek/deepseek-chat
+    provider: openrouter
     temperature: 0.7
     max_tokens: 2000
     cost_per_1m_tokens: 0.20
@@ -130,7 +130,7 @@ environments:
 
         assert loader._config is not None
         assert loader._config.version == "1.0"
-        assert loader._config.provider == "gradient"
+        assert loader._config.provider == "openrouter"
         assert len(loader._config.agents) == 6
 
     def test_get_agent_config(self, temp_config_file):
@@ -139,11 +139,11 @@ environments:
 
         orchestrator = loader.get_agent_config("orchestrator")
 
-        assert orchestrator.model == "llama3.3-70b-instruct"
+        assert orchestrator.model == "anthropic/claude-3-5-sonnet"
         assert orchestrator.temperature == 0.3
         assert orchestrator.max_tokens == 2000
-        assert orchestrator.cost_per_1m_tokens == 0.60
-        assert orchestrator.context_window == 128000
+        assert orchestrator.cost_per_1m_tokens == 3.00
+        assert orchestrator.context_window == 200000  # Claude 3.5 Sonnet context
         assert "routing" in orchestrator.tags
 
     def test_get_agent_config_not_found(self, temp_config_file):
@@ -176,8 +176,8 @@ environments:
             orchestrator = loader.get_agent_config("orchestrator")
 
             # Should use base config (no override)
-            assert orchestrator.model == "llama3.3-70b-instruct"
-            assert orchestrator.cost_per_1m_tokens == 0.60
+            assert orchestrator.model == "anthropic/claude-3-5-sonnet"
+            assert orchestrator.cost_per_1m_tokens == 3.00
 
     def test_environment_override_development(self, temp_config_file):
         """Test development environment applies overrides"""
@@ -203,8 +203,8 @@ environments:
             feature_dev = loader.get_agent_config("feature-dev")
 
             # Should use base config (no override available)
-            assert feature_dev.model == "codellama-13b"
-            assert feature_dev.cost_per_1m_tokens == 0.30
+            assert feature_dev.model == "qwen/qwen-2.5-coder-32b-instruct"
+            assert feature_dev.cost_per_1m_tokens == 0.07  # Qwen Coder cost via OpenRouter
 
     def test_invalid_yaml_syntax(self):
         """Test error handling for invalid YAML syntax"""
@@ -257,75 +257,75 @@ agents:
 
         # Get initial config
         original_model = loader.get_agent_config("orchestrator").model
-        assert original_model == "llama3.3-70b-instruct"
+        assert original_model == "anthropic/claude-3-5-sonnet"
 
         # Modify config file
         modified_config = """
 version: "1.0"
-provider: gradient
+provider: openrouter
 agents:
   orchestrator:
-    model: llama3-8b-instruct  # Changed model
-    provider: gradient
+    model: google/gemini-2.0-flash-001  # Changed model
+    provider: openrouter
     temperature: 0.3
     max_tokens: 2000
-    cost_per_1m_tokens: 0.20
-    context_window: 128000
+    cost_per_1m_tokens: 0.25
+    context_window: 1000000
     use_case: complex_reasoning
     tags: [routing, orchestration]
     langsmith_project: code-chef-orchestrator
 
   feature-dev:
-    model: codellama-13b
-    provider: gradient
+    model: qwen/qwen-2.5-coder-32b-instruct
+    provider: openrouter
     temperature: 0.7
     max_tokens: 2000
-    cost_per_1m_tokens: 0.30
-    context_window: 16000
+    cost_per_1m_tokens: 0.07
+    context_window: 131072
     use_case: code_generation
     tags: [feature-development, python]
     langsmith_project: code-chef-feature-dev
 
   code-review:
-    model: llama3.3-70b-instruct
-    provider: gradient
+    model: deepseek/deepseek-chat
+    provider: openrouter
     temperature: 0.3
     max_tokens: 4000
-    cost_per_1m_tokens: 0.60
-    context_window: 128000
+    cost_per_1m_tokens: 0.75
+    context_window: 64000
     use_case: code_analysis
     tags: [quality-assurance, security]
     langsmith_project: code-chef-code-review
 
   infrastructure:
-    model: llama3-8b-instruct
-    provider: gradient
+    model: google/gemini-2.0-flash-001
+    provider: openrouter
     temperature: 0.5
     max_tokens: 2000
-    cost_per_1m_tokens: 0.20
-    context_window: 128000
+    cost_per_1m_tokens: 0.25
+    context_window: 1000000
     use_case: infrastructure_config
     tags: [terraform, kubernetes, docker]
     langsmith_project: code-chef-infrastructure
 
   cicd:
-    model: llama3-8b-instruct
-    provider: gradient
+    model: google/gemini-2.0-flash-001
+    provider: openrouter
     temperature: 0.5
     max_tokens: 2000
-    cost_per_1m_tokens: 0.20
-    context_window: 128000
+    cost_per_1m_tokens: 0.25
+    context_window: 1000000
     use_case: pipeline_generation
     tags: [github-actions, jenkins]
     langsmith_project: code-chef-cicd
 
   documentation:
-    model: mistral-nemo-instruct-2407
-    provider: gradient
+    model: deepseek/deepseek-chat
+    provider: openrouter
     temperature: 0.7
     max_tokens: 2000
-    cost_per_1m_tokens: 0.20
-    context_window: 8192
+    cost_per_1m_tokens: 0.75
+    context_window: 64000
     use_case: documentation_generation
     tags: [markdown, technical-writing]
     langsmith_project: code-chef-documentation
@@ -338,14 +338,14 @@ agents:
 
         # Verify change
         new_model = loader.get_agent_config("orchestrator").model
-        assert new_model == "llama3-8b-instruct"
+        assert new_model == "google/gemini-2.0-flash-001"  # Changed to Gemini
 
     def test_get_provider(self, temp_config_file):
         """Test retrieving default provider"""
         loader = ConfigLoader(config_path=temp_config_file, hot_reload=False)
 
         provider = loader.get_provider()
-        assert provider == "gradient"
+        assert provider == "openrouter"
 
     def test_agent_name_normalization(self, temp_config_file):
         """Test underscore to hyphen normalization"""
@@ -356,7 +356,7 @@ agents:
         config2 = loader.get_agent_config("feature_dev")
 
         assert config1.model == config2.model
-        assert config1.model == "codellama-13b"
+        assert config1.model == "qwen/qwen-2.5-coder-32b-instruct"
 
     def test_singleton_pattern(self, temp_config_file):
         """Test ConfigLoader follows singleton pattern"""
@@ -389,7 +389,7 @@ agents:
 
         # All reads should succeed
         assert len(results) == 10
-        assert all(r == "llama3.3-70b-instruct" for r in results)
+        assert all(r == "anthropic/claude-3-5-sonnet" for r in results)
 
     @patch.dict(os.environ, {"NODE_ENV": "staging"})
     def test_unknown_environment(self, temp_config_file):
@@ -399,8 +399,8 @@ agents:
         orchestrator = loader.get_agent_config("orchestrator")
 
         # Should use base config (staging not defined)
-        assert orchestrator.model == "llama3.3-70b-instruct"
-        assert orchestrator.cost_per_1m_tokens == 0.60
+        assert orchestrator.model == "anthropic/claude-3-5-sonnet"
+        assert orchestrator.cost_per_1m_tokens == 3.00
 
 
 class TestGlobalConfigLoader:
