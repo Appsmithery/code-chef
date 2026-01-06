@@ -4,7 +4,6 @@ import { ContextExtractor } from './contextExtractor';
 import { StatusHandler } from './handlers/statusHandler';
 import { WorkflowHandler } from './handlers/workflowHandler';
 import { OrchestratorClient } from './orchestratorClient';
-import { PromptEnhancer } from './promptEnhancer';
 import {
     renderError,
     renderLinearProjectCreated,
@@ -17,7 +16,6 @@ export class CodeChefChatParticipant {
     private client: OrchestratorClient;
     private contextExtractor: ContextExtractor;
     private sessionManager: SessionManager;
-    private promptEnhancer: PromptEnhancer;
     private lastTaskId?: string;
     private useStreaming: boolean;
     
@@ -33,7 +31,6 @@ export class CodeChefChatParticipant {
         });
         this.contextExtractor = new ContextExtractor();
         this.sessionManager = new SessionManager(context);
-        this.promptEnhancer = new PromptEnhancer();
         
         // Enable streaming by default, can be configured
         this.useStreaming = config.get('useStreaming', true);
@@ -302,48 +299,8 @@ export class CodeChefChatParticipant {
             }
             console.log(`[ChatParticipant] Using Copilot model ${copilotModel.family}`, copilotModel);
 
-            // === PROMPT ENHANCEMENT (NEW) ===
-            const config = vscode.workspace.getConfiguration('codechef');
-            // TEMPORARY FIX: Force disable prompt enhancement to avoid hanging
-            // const enhancePrompts = config.get('enhancePrompts', false);
-            const enhancePrompts = false;  // Disabled until Copilot API stability improves
-            let finalPrompt = userMessage;
-            let enhancementError: string | undefined;
-
-            // Skip enhancement for conversational messages (greetings, questions, status checks)
-            const conversationalPatterns = /^(hello|hi|hey|greetings|what can you do|help|status|explain|how|why|where|when|who)/i;
-            const isConversational = conversationalPatterns.test(userMessage.trim()) || userMessage.trim().length < 20;
-
-            console.log(`code/chef: enhancePrompts=${enhancePrompts}, isConversational=${isConversational}, message="${userMessage}"`);
-
-            if (enhancePrompts && !isConversational) {
-                stream.progress('Enhancing task description with Copilot...');
-                
-                const template = config.get<'detailed' | 'structured' | 'minimal'>(
-                    'enhancementTemplate',
-                    'structured'
-                );
-                
-                const result = await this.promptEnhancer.enhance(
-                    userMessage,
-                    request.model,  // Use user's selected Copilot model
-                    template,
-                    token
-                );
-                
-                finalPrompt = result.enhanced;
-                enhancementError = result.error;
-
-                // Log enhancement for debugging
-                if (enhancementError) {
-                    console.warn(`code/chef: Prompt enhancement failed: ${enhancementError}`);
-                } else {
-                    console.log(`code/chef: Enhanced prompt from ${userMessage.length} to ${finalPrompt.length} chars`);
-                }
-            } else if (enhancePrompts && isConversational) {
-                console.log(`code/chef: Skipping prompt enhancement for conversational message: "${userMessage}"`);
-            }
-            // === END ENHANCEMENT ===
+            // Use raw user message - GitHub Copilot handles natural enhancement
+            const finalPrompt = userMessage;
             
             let currentAgent = '';
             let sessionIdFromStream = sessionId;
@@ -362,14 +319,12 @@ export class CodeChefChatParticipant {
 
             // Stream response token by token with cancellation support
             for await (const chunk of this.client.chatStream({
-                message: finalPrompt,  // Use enhanced prompt
+                message: finalPrompt,
                 session_id: sessionId,
                 context: {
                     ...workspaceContext,
                     chat_references: chatReferences,
                     copilot_model: copilotModel,
-                    prompt_enhanced: enhancePrompts,
-                    enhancement_error: enhancementError,
                     intent_hint: intent,  // NEW: Client-side intent pre-filter
                     context_extracted: contextExtracted,  // NEW: Whether full context was extracted
                     session_mode: 'ask'  // Explicitly mark as Ask mode
@@ -398,8 +353,6 @@ export class CodeChefChatParticipant {
                                     ...workspaceContext,
                                     chat_references: chatReferences,
                                     copilot_model: copilotModel,
-                                    prompt_enhanced: enhancePrompts,
-                                    enhancement_error: enhancementError,
                                     intent_hint: intent,
                                     context_extracted: contextExtracted,
                                     session_mode: 'agent'
@@ -495,8 +448,6 @@ export class CodeChefChatParticipant {
                     status: 'success',
                     streaming: true,
                     sessionId: sessionIdFromStream,
-                    promptEnhanced: enhancePrompts,
-                    enhancementError,
                     mode: sessionMode  // Track session mode (ask or agent)
                 } 
             };
