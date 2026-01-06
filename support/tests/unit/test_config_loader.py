@@ -4,20 +4,21 @@ Unit Tests for ConfigLoader
 Tests YAML loading, Pydantic validation, environment overrides, and hot-reload.
 """
 
-import pytest
-import sys
-import yaml
-import tempfile
 import os
+import sys
+import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
+import pytest
+import yaml
 
 # Add shared/lib to path
 repo_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(repo_root / "shared"))
 
-from lib.config_loader import ConfigLoader
 from lib.agent_config_schema import AgentConfig, ModelsConfig
+from lib.config_loader import ConfigLoader
 
 
 class TestConfigLoader:
@@ -204,7 +205,9 @@ environments:
 
             # Should use base config (no override available)
             assert feature_dev.model == "qwen/qwen-2.5-coder-32b-instruct"
-            assert feature_dev.cost_per_1m_tokens == 0.07  # Qwen Coder cost via OpenRouter
+            assert (
+                feature_dev.cost_per_1m_tokens == 0.07
+            )  # Qwen Coder cost via OpenRouter
 
     def test_invalid_yaml_syntax(self):
         """Test error handling for invalid YAML syntax"""
