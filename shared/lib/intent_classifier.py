@@ -179,7 +179,7 @@ class IntentClassifier:
             # User is in Ask mode - likely a question despite long prompt
             # Check if original intent appears conversational
             first_words = " ".join(message_lower.split()[:10])  # First 10 words
-            
+
             # If starts with question pattern, it's QA
             for keyword in self.QA_KEYWORDS:
                 if first_words.startswith(keyword):
@@ -188,7 +188,7 @@ class IntentClassifier:
                     reasoning = "Prompt-enhanced Q&A (session_mode: ask)"
                     self._cache_result(message, intent, confidence)
                     return intent, confidence, reasoning
-            
+
             # If starts with simple task pattern in Ask mode
             for keyword in self.SIMPLE_TASK_KEYWORDS:
                 if first_words.startswith(keyword):
