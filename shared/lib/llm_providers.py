@@ -97,31 +97,32 @@ def get_llm(
         agent_name: Agent identifier for tracing
         model: Model name (provider-specific)
         temperature: Sampling temperature
-        max_tokens: Max tokens to generate (min 256 for Gradient AI)
-        provider: Override LLM_PROVIDER env var
+        max_tokens: Max tokens to generate
+        provider: Override LLM_PROVIDER env var (default: openrouter)
         **kwargs: Additional provider-specific parameters
 
     Returns:
         Configured LLM instance
 
-    DigitalOcean Gradient AI Models (Serverless Inference):
-        - llama3-8b-instruct (default, fast, cheap)
-        - llama3.3-70b-instruct (best reasoning)
-        - mistral-nemo-instruct-2407
-        - See full list: https://inference.do-ai.run/v1/models
-
-    OpenRouter Models (Multi-Model Gateway):
-        - anthropic/claude-3-5-sonnet (recommended for code)
-        - openai/gpt-4o (good all-rounder)
-        - meta-llama/llama-3.1-70b-instruct (cost-effective)
-        - google/gemini-2.0-flash-exp:free (free tier)
+    OpenRouter Models (Primary Multi-Model Gateway):
+        - anthropic/claude-3-5-sonnet (supervisor, orchestrator - best reasoning)
+        - qwen/qwen-2.5-coder-32b-instruct (feature_dev - purpose-built for code)
+        - deepseek/deepseek-chat (code_review, documentation - strong analysis)
+        - google/gemini-2.0-flash-001 (infrastructure, cicd - fast, 1M context)
+        - google/gemini-2.0-flash-exp:free (dev tier - free)
         - See full list: https://openrouter.ai/models
+        - Cost optimized: 72% reduction vs. previous config
+
+    Alternative Providers (via provider override):
+        - provider="claude": Direct Anthropic API
+        - provider="mistral": Direct Mistral API
+        - provider="openai": Direct OpenAI API
 
     Examples:
-        # Use default (Gradient AI Serverless Inference)
-        llm = get_llm("orchestrator", model="llama3.3-70b-instruct")
+        # Default: OpenRouter (recommended)
+        llm = get_llm("orchestrator", model="anthropic/claude-3-5-sonnet")
 
-        # Override to Claude
+        # Override to direct Claude API
         llm = get_llm("code-review", model="claude-3-5-sonnet-20241022", provider="claude")
 
         # Override to Mistral

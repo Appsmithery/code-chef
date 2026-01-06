@@ -3,7 +3,7 @@ Agent Configuration Schema - Pydantic Models for YAML Validation
 
 Enforces:
 - Required fields (model, temperature, max_tokens)
-- Valid ranges (temperature 0-1, max_tokens >= 256 for Gradient)
+- Valid ranges (temperature 0-1, max_tokens >= 256)
 - Cost tracking metadata
 - Environment override support
 - Error recovery configuration validation
@@ -225,7 +225,7 @@ class AgentConfig(BaseModel):
 
     @field_validator("max_tokens")
     @classmethod
-    def validate_max_tokens_for_gradient(cls, v: int, info) -> int:
+    def validate_max_tokens(cls, v: int, info) -> int:
         """OpenRouter and other providers have flexible max_tokens requirements."""
         # No minimum validation needed for OpenRouter
         if v < 1:
