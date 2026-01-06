@@ -1,8 +1,9 @@
 # LLM Operations Guide
 
-**Version**: 1.0.0  
-**Last Updated**: December 10, 2025  
-**Status**: Canonical Reference
+**Version**: 1.1.0  
+**Last Updated**: January 5, 2026  
+**Status**: Canonical Reference  
+**Provider**: OpenRouter (Multi-Model Gateway)
 
 ---
 
@@ -10,12 +11,19 @@
 
 This document is the **single source of truth** for all LLM operations in code-chef, covering:
 
-- **Model Selection** - Choosing the right model for each agent
+- **Model Selection** - Choosing the right model for each agent (via OpenRouter)
 - **Model Training** - Fine-tuning models via ModelOps
 - **Model Evaluation** - Comparing and validating model performance
 - **Model Deployment** - Safely deploying models to production
 - **Observability** - Tracing, metrics, and cost tracking
 - **A/B Testing** - Measuring improvement over baseline
+
+**Important**: All LLM calls flow through **OpenRouter** (https://openrouter.ai), which provides:
+- Access to 200+ models from multiple providers (Anthropic, OpenAI, Google, Meta, etc.)
+- Unified API (OpenAI-compatible) for consistent integration
+- Automatic fallback and load balancing across providers
+- Cost optimization (72% reduction vs. previous configuration)
+- Real-time model availability and pricing updates
 
 ---
 
@@ -69,6 +77,88 @@ When choosing a model, consider:
 | Context Window  | 200K       | 128K       | 64K         | 1M           |
 | Latency (P95)   | 2.1s       | 1.8s       | 2.3s        | 0.9s         |
 | Best For        | Routing    | Coding     | Analysis    | Configs      |
+
+---
+
+## OpenRouter Architecture
+
+### Why OpenRouter?
+
+**Unified Multi-Provider Gateway**: Instead of managing separate API keys and integrations for Anthropic, OpenAI, Google, Meta, etc., code-chef uses OpenRouter as a single gateway:
+
+```
+┌─────────────────┐
+│  code-chef      │
+│  Orchestrator   │
+└────────┬────────┘
+         │ Single API
+         │ (OpenAI-compatible)
+         ▼
+┌─────────────────┐
+│  OpenRouter     │──────┐
+│  Gateway        │      │ Automatic Failover
+└────────┬────────┘      │ Load Balancing
+         │               │ Cost Optimization
+    ┌────┴────┬──────────┴─────┬──────────┐
+    ▼         ▼                ▼          ▼
+┌────────┐ ┌────────┐      ┌────────┐ ┌────────┐
+│Anthropic│ │OpenAI │      │Google  │ │ Meta   │
+│Claude  │ │GPT-4  │      │Gemini  │ │Llama   │
+└────────┘ └────────┘      └────────┘ └────────┘
+```
+
+**Benefits**:
+1. **No Vendor Lock-in** - Switch models without code changes
+2. **Automatic Failover** - If Claude is down, automatically use DeepSeek
+3. **Cost Optimization** - Access to cheapest available models
+4. **Unified Billing** - Single invoice instead of 4+ separate accounts
+5. **Rate Limit Management** - Automatic retry with backoff
+
+### Configuration
+
+**Environment Variables** (`.env`):
+```bash
+# Required
+OPENROUTER_API_KEY=sk-or-v1-***
+
+# Optional (for direct API access)
+LLM_PROVIDER=openrouter  # Default, can override per-request
+```
+
+**Model Selection** (`config/agents/models.yaml`):
+```yaml
+provider: openrouter  # Global default
+
+openrouter:
+  base_url: https://openrouter.ai/api/v1
+  default_model: anthropic/claude-3-5-sonnet
+  
+  # Automatic failover chain
+  fallback_models:
+    - deepseek/deepseek-chat
+    - google/gemini-2.0-flash-001
+    
+  # Per-agent model assignments
+  agent_models:
+    orchestrator: anthropic/claude-3-5-sonnet    # $3.00/M
+    feature_dev: qwen/qwen-2.5-coder-32b-instruct # $0.07/M
+    code_review: deepseek/deepseek-chat          # $0.75/M
+    infrastructure: google/gemini-2.0-flash-001   # $0.25/M
+```
+
+**Cost Savings**: 72% reduction vs. previous provider configuration.
+
+### Direct Provider Override
+
+For specific use cases requiring direct API access (e.g., Claude-specific features):
+
+```python
+# Via code
+llm = get_llm("code-review", model="claude-3-5-sonnet", provider="claude")
+
+# Via environment variable
+LLM_PROVIDER=claude  # All requests use direct Anthropic API
+```
 
 ---
 

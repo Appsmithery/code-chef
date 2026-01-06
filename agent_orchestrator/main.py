@@ -871,8 +871,7 @@ async def query_vendor_context(
     """
     # Vendor keywords that trigger RAG lookup
     vendor_keywords = [
-        "gradient",
-        "gradient ai",
+        "openrouter",
         "digitalocean",
         "linear",
         "graphql",
@@ -1668,7 +1667,9 @@ async def execute_orchestration_flow(
         )
         # Fallback to rule-based if LLM failed (returns empty list)
         if not subtasks:
-            logger.warning("[Orchestrator] LLM decomposition returned empty subtasks, falling back to rule-based")
+            logger.warning(
+                "[Orchestrator] LLM decomposition returned empty subtasks, falling back to rule-based"
+            )
             subtasks = decompose_request(request)
     else:
         subtasks = decompose_request(request)
@@ -3071,7 +3072,7 @@ async def decompose_with_llm(
     request: TaskRequest, task_id: str, available_tools: Optional[str] = None
 ) -> List[SubTask]:
     """
-    Decompose task using Gradient AI with LangChain tool binding.
+    Decompose task using OpenRouter LLMs with LangChain tool binding.
 
     Uses progressive tool disclosure pattern:
     1. Discover relevant MCP tools for task (via progressive_loader)
@@ -4676,7 +4677,7 @@ async def handle_orchestrator_request(request: AgentRequestEvent) -> Dict[str, A
         if not task_description:
             raise ValueError("task_description required for DECOMPOSE_TASK")
 
-        # Use Gradient AI to decompose (if available)
+        # Use OpenRouter LLM to decompose (if available)
         if llm_client.is_enabled():
             prompt = f"""Decompose this development task into 3-5 subtasks:
 
