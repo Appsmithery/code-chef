@@ -142,8 +142,34 @@ def looks_like_task_request(message: str) -> bool:
     if message.strip().startswith("/"):
         return False
 
-    # Common task indicators
+    message_lower = message.lower()
+
+    # Explicitly conversational (should NOT trigger task hint)
+    conversational_keywords = [
+        "explain",
+        "describe",
+        "tell me",
+        "what is",
+        "what are",
+        "how does",
+        "how do",
+        "why",
+        "when",
+        "where",
+        "which",
+        "who",
+        "can you explain",
+        "help me understand",
+    ]
+
+    # Check if it's conversational first
+    for pattern in conversational_keywords:
+        if message_lower.startswith(pattern):
+            return False
+
+    # Common task indicators (comprehensive list)
     task_keywords = [
+        # Core actions
         "implement",
         "create",
         "build",
@@ -159,9 +185,18 @@ def looks_like_task_request(message: str) -> bool:
         "review",
         "test",
         "migrate",
+        # Modification verbs
+        "modify",
+        "change",
+        "edit",
+        "delete",
+        "remove",
+        # Improvement verbs
+        "improve",
+        "optimize",
+        "enhance",
+        "upgrade",
     ]
-
-    message_lower = message.lower()
 
     # Check if message starts with imperative verb
     for keyword in task_keywords:
