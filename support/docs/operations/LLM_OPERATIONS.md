@@ -19,6 +19,7 @@ This document is the **single source of truth** for all LLM operations in code-c
 - **A/B Testing** - Measuring improvement over baseline
 
 **Important**: All LLM calls flow through **OpenRouter** (https://openrouter.ai), which provides:
+
 - Access to 200+ models from multiple providers (Anthropic, OpenAI, Google, Meta, etc.)
 - Unified API (OpenAI-compatible) for consistent integration
 - Automatic fallback and load balancing across providers
@@ -108,6 +109,7 @@ When choosing a model, consider:
 ```
 
 **Benefits**:
+
 1. **No Vendor Lock-in** - Switch models without code changes
 2. **Automatic Failover** - If Claude is down, automatically use DeepSeek
 3. **Cost Optimization** - Access to cheapest available models
@@ -117,6 +119,7 @@ When choosing a model, consider:
 ### Configuration
 
 **Environment Variables** (`.env`):
+
 ```bash
 # Required
 OPENROUTER_API_KEY=sk-or-v1-***
@@ -126,24 +129,25 @@ LLM_PROVIDER=openrouter  # Default, can override per-request
 ```
 
 **Model Selection** (`config/agents/models.yaml`):
+
 ```yaml
-provider: openrouter  # Global default
+provider: openrouter # Global default
 
 openrouter:
   base_url: https://openrouter.ai/api/v1
   default_model: anthropic/claude-3-5-sonnet
-  
+
   # Automatic failover chain
   fallback_models:
     - deepseek/deepseek-chat
     - google/gemini-2.0-flash-001
-    
+
   # Per-agent model assignments
   agent_models:
-    orchestrator: anthropic/claude-3-5-sonnet    # $3.00/M
+    orchestrator: anthropic/claude-3-5-sonnet # $3.00/M
     feature_dev: qwen/qwen-2.5-coder-32b-instruct # $0.07/M
-    code_review: deepseek/deepseek-chat          # $0.75/M
-    infrastructure: google/gemini-2.0-flash-001   # $0.25/M
+    code_review: deepseek/deepseek-chat # $0.75/M
+    infrastructure: google/gemini-2.0-flash-001 # $0.25/M
 ```
 
 **Cost Savings**: 72% reduction vs. previous provider configuration.
