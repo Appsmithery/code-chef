@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Set
 
 import httpx
 import yaml
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class GuardrailSeverity(str, Enum):
@@ -46,7 +46,9 @@ class GuardrailCheckResult(BaseModel):
 class GuardrailReport(BaseModel):
     """Aggregate report for a guardrail run."""
 
-    model_config = ConfigDict(use_enum_values=True, json_encoders={datetime: lambda dt: dt.isoformat()})
+    model_config = ConfigDict(
+        use_enum_values=True, json_encoders={datetime: lambda dt: dt.isoformat()}
+    )
 
     report_id: str
     agent: str
@@ -81,12 +83,22 @@ class GuardrailOrchestrator:
     _HIGH_RISK_SERVERS: Set[str] = {"gmail-mcp", "stripe"}
 
     def __init__(self) -> None:
-        self.env_template_path = Path(os.getenv("GUARDRAIL_ENV_TEMPLATE", "config/env/.env.template"))
+        self.env_template_path = Path(
+            os.getenv("GUARDRAIL_ENV_TEMPLATE", "config/env/.env.template")
+        )
         self.env_file_path = Path(os.getenv("GUARDRAIL_ENV_FILE", "config/env/.env"))
-        self.mcp_mapping_path = Path(os.getenv("GUARDRAIL_MCP_MAPPING", "config/mcp-agent-tool-mapping.yaml"))
-        self.prometheus_config_path = Path(os.getenv("GUARDRAIL_PROMETHEUS_CONFIG", "config/prometheus/prometheus.yml"))
-        self.state_service_url = os.getenv("STATE_SERVICE_URL", "http://state-persistence:8008")
-        self.enforcement_mode = os.getenv("GUARDRAIL_ENFORCEMENT", "observe").strip().lower()
+        self.mcp_mapping_path = Path(
+            os.getenv("GUARDRAIL_MCP_MAPPING", "config/mcp-agent-tool-mapping.yaml")
+        )
+        self.prometheus_config_path = Path(
+            os.getenv("GUARDRAIL_PROMETHEUS_CONFIG", "config/prometheus/prometheus.yml")
+        )
+        self.state_service_url = os.getenv(
+            "STATE_SERVICE_URL", "http://state-persistence:8008"
+        )
+        self.enforcement_mode = (
+            os.getenv("GUARDRAIL_ENFORCEMENT", "observe").strip().lower()
+        )
         self.http_timeout = float(os.getenv("GUARDRAIL_HTTP_TIMEOUT", "4.0"))
 
         user_defined_keys = {
@@ -119,9 +131,15 @@ class GuardrailOrchestrator:
         checks.append(self._check_prometheus_security())
 
         severity_counts = {
-            GuardrailSeverity.PASS.value: sum(1 for c in checks if c.severity == GuardrailSeverity.PASS),
-            GuardrailSeverity.WARN.value: sum(1 for c in checks if c.severity == GuardrailSeverity.WARN),
-            GuardrailSeverity.FAIL.value: sum(1 for c in checks if c.severity == GuardrailSeverity.FAIL),
+            GuardrailSeverity.PASS.value: sum(
+                1 for c in checks if c.severity == GuardrailSeverity.PASS
+            ),
+            GuardrailSeverity.WARN.value: sum(
+                1 for c in checks if c.severity == GuardrailSeverity.WARN
+            ),
+            GuardrailSeverity.FAIL.value: sum(
+                1 for c in checks if c.severity == GuardrailSeverity.FAIL
+            ),
         }
 
         if severity_counts[GuardrailSeverity.FAIL.value] > 0:
@@ -178,7 +196,8 @@ class GuardrailOrchestrator:
         weak_secret_keys = sorted(
             key
             for key in self.critical_secret_keys
-            if runtime_vars.get(key) in {"", "changeme", template_vars.get(key, ""), None}
+            if runtime_vars.get(key)
+            in {"", "changeme", template_vars.get(key, ""), None}
         )
 
         severity = GuardrailSeverity.PASS
@@ -246,11 +265,11 @@ class GuardrailOrchestrator:
             )
 
         declared_servers: Set[str] = set()
-        for section in (agent_mappings.get("recommended_tools") or []):
+        for section in agent_mappings.get("recommended_tools") or []:
             server = section.get("server")
             if server:
                 declared_servers.add(server)
-        for section in (agent_mappings.get("shared_tools") or []):
+        for section in agent_mappings.get("shared_tools") or []:
             server = section.get("server")
             if server:
                 declared_servers.add(server)
@@ -261,7 +280,8 @@ class GuardrailOrchestrator:
         high_risk_without_rationale = sorted(
             section.get("server")
             for section in (agent_mappings.get("recommended_tools") or [])
-            if section.get("server") in self._HIGH_RISK_SERVERS and not section.get("rationale")
+            if section.get("server") in self._HIGH_RISK_SERVERS
+            and not section.get("rationale")
         )
 
         severity = GuardrailSeverity.PASS
@@ -348,7 +368,10 @@ class GuardrailOrchestrator:
                 await client.post(url, json=payload)
         except Exception:
             # Guardrail persistence should not block workflows; log to stderr for visibility.
-            print("[guardrail] Failed to persist compliance report to state service", flush=True)
+            print(
+                "[guardrail] Failed to persist compliance report to state service",
+                flush=True,
+            )
 
     @staticmethod
     def _parse_env_file(path: Path) -> Dict[str, str]:
