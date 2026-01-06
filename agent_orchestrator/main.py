@@ -3604,6 +3604,12 @@ class ChatStreamRequest(BaseModel):
     workspace_root: Optional[str] = Field(
         None, description="Root path of the workspace"
     )
+    session_mode: Optional[str] = Field(
+        None, description="Session mode: 'ask' (Q&A) or 'execute' (task execution)"
+    )
+    prompt_enhanced: Optional[bool] = Field(
+        False, description="Whether Copilot enhanced the prompt with task specs"
+    )
 
 
 @app.post("/chat/stream", tags=["chat"])
@@ -3758,7 +3764,7 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
 
                 classifier = get_intent_classifier()
 
-                # Classify intent
+                # Classify intent with full context
                 intent, confidence, reasoning = classifier.classify(
                     request.message,
                     context={
@@ -3766,6 +3772,8 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                             request.file_attachments or request.active_file
                         ),
                         "project_context": request.project_context,
+                        "session_mode": getattr(request, "session_mode", None),
+                        "prompt_enhanced": getattr(request, "prompt_enhanced", False),
                     },
                 )
 

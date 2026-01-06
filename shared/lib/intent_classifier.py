@@ -159,7 +159,7 @@ class IntentClassifier:
 
         Args:
             message: User message text
-            context: Optional context (history, project info)
+            context: Optional context (history, project info, session_mode, prompt_enhanced)
             use_cache: Whether to use cached results
 
         Returns:
@@ -171,6 +171,32 @@ class IntentClassifier:
             return intent, confidence, "cached"
 
         message_lower = message.lower().strip()
+        context = context or {}
+
+        # Rule 0: Check for prompt enhancement + Ask mode combination
+        # This indicates Copilot expanded a simple question into a task spec
+        if context.get("prompt_enhanced") and context.get("session_mode") == "ask":
+            # User is in Ask mode - likely a question despite long prompt
+            # Check if original intent appears conversational
+            first_words = " ".join(message_lower.split()[:10])  # First 10 words
+            
+            # If starts with question pattern, it's QA
+            for keyword in self.QA_KEYWORDS:
+                if first_words.startswith(keyword):
+                    intent = IntentType.QA
+                    confidence = 0.95
+                    reasoning = "Prompt-enhanced Q&A (session_mode: ask)"
+                    self._cache_result(message, intent, confidence)
+                    return intent, confidence, reasoning
+            
+            # If starts with simple task pattern in Ask mode
+            for keyword in self.SIMPLE_TASK_KEYWORDS:
+                if first_words.startswith(keyword):
+                    intent = IntentType.SIMPLE_TASK
+                    confidence = 0.90
+                    reasoning = "Prompt-enhanced simple task (session_mode: ask)"
+                    self._cache_result(message, intent, confidence)
+                    return intent, confidence, reasoning
 
         # Rule 1: Explicit commands (/execute, /help, etc.)
         if self.COMMAND_PATTERN.match(message):
@@ -178,6 +204,7 @@ class IntentClassifier:
             confidence = 1.0
             reasoning = "Explicit command pattern"
             self._cache_result(message, intent, confidence)
+            return intent, confidence, reasoning
             return intent, confidence, reasoning
 
         # Rule 2: High complexity patterns
