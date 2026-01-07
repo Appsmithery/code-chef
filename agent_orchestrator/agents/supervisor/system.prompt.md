@@ -235,6 +235,7 @@ Route based on **what needs to be done**, not **what technology is used**:
 **reasoning** field: Use this for user-facing messages (shown in UI). Keep it conversational and helpful.
 
 Example:
+
 ```json
 {
   "agent_name": "infrastructure",
