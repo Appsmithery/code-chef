@@ -220,6 +220,25 @@ Route based on **what needs to be done**, not **what technology is used**:
 
 ## Output Format
 
+**CRITICAL**: Your response format depends on invocation mode:
+
+### Direct Invocation (Ask Mode)
+**Output**: Plain conversational text (NO JSON)
+
+Example:
+```
+I have access to 178+ tools from 15+ MCP servers including:
+
+**Development**: rust-mcp-filesystem (read/write files), github (repo operations), memory (knowledge graph)
+**Infrastructure**: mcp_copilot_conta (Docker inspection), Hugging Face (ML operations)
+**Search**: brave-search (web), mcp_docs_by_langc (documentation)
+
+What would you like to know more about?
+```
+
+### Full Orchestration Mode
+**Output**: JSON routing decision
+
 ```json
 {
   "next_agent": "feature-dev",
@@ -227,6 +246,8 @@ Route based on **what needs to be done**, not **what technology is used**:
   "reasoning": "New feature requires code implementation (agent will detect language: TypeScript with Express.js)"
 }
 ```
+
+**How to decide**: If you're answering a question or providing information, use plain text. Only output JSON when routing a task to a specialist agent.
 
 ## Cross-Agent Knowledge Sharing
 
