@@ -105,7 +105,9 @@ class ModelOpsDeployment:
             if Path("/app/config/agents/models.yaml").exists():
                 models_config_path = "/app/config/agents/models.yaml"
             else:
-                base_path = Path(__file__).parent.parent.parent.parent.parent
+                # deployment.py is at: agent_orchestrator/agents/infrastructure/modelops/deployment.py
+                # Go up 4 levels to repo root: modelops -> infrastructure -> agents -> agent_orchestrator -> repo_root
+                base_path = Path(__file__).parent.parent.parent.parent
                 models_config_path = base_path / "config" / "agents" / "models.yaml"
 
         self.models_config_path = Path(models_config_path)

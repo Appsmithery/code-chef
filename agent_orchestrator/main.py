@@ -3782,9 +3782,10 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                 )
 
                 # Fast path for simple queries (QA and SIMPLE_TASK)
+                # Lower threshold to 0.65 to catch more conversational queries
                 if (
                     intent in [IntentType.QA, IntentType.SIMPLE_TASK]
-                    and confidence > 0.75
+                    and confidence > 0.65
                 ):
                     logger.info(
                         f"[Chat Stream] Using direct conversational routing (bypass supervisor)"
