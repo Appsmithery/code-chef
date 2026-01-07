@@ -3942,11 +3942,16 @@ async def chat_stream_endpoint(request: ChatStreamRequest):
                             else str(response_message)
                         )
 
-                        # Stream response word-by-word for smooth UX
-                        words = content.split()
-                        for i, word in enumerate(words):
-                            yield f"data: {json.dumps({'type': 'content', 'content': word + ' '})}\n\n"
-                            await asyncio.sleep(0.03)  # Smooth streaming
+                        # Stream response with preserved formatting
+                        # Stream in chunks instead of word-by-word to preserve whitespace
+                        chunk_size = 10  # words per chunk
+                        words = content.split(' ')
+                        for i in range(0, len(words), chunk_size):
+                            chunk = ' '.join(words[i:i+chunk_size])
+                            if i + chunk_size < len(words):
+                                chunk += ' '  # Add space between chunks
+                            yield f"data: {json.dumps({'type': 'content', 'content': chunk})}\n\n"
+                            await asyncio.sleep(0.05)  # Smooth streaming
 
                         # Save to session history
                         try:
