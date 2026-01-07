@@ -100,8 +100,13 @@ class ModelOpsDeployment:
 
         # Auto-detect models.yaml path
         if models_config_path is None:
-            base_path = Path(__file__).parent.parent.parent.parent.parent
-            models_config_path = base_path / "config" / "agents" / "models.yaml"
+            # In Docker container, config is mounted at /app/config
+            # In local dev, use relative path from repo root
+            if Path("/app/config/agents/models.yaml").exists():
+                models_config_path = "/app/config/agents/models.yaml"
+            else:
+                base_path = Path(__file__).parent.parent.parent.parent.parent
+                models_config_path = base_path / "config" / "agents" / "models.yaml"
 
         self.models_config_path = Path(models_config_path)
 
