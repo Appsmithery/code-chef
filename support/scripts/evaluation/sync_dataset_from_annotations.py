@@ -398,6 +398,98 @@ class DatasetSyncer:
 
 
 # =============================================================================
+# ANNOTATION QUEUE SYNC
+# =============================================================================
+
+
+def sync_reviewed_traces_from_queue(
+    queue_name: str = "uat-review-queue", dataset_name: str = DEFAULT_DATASET
+):
+    """
+    Move reviewed traces from annotation queue to gold standard dataset.
+
+    Args:
+        queue_name: Name of the annotation queue
+        dataset_name: Target dataset name
+    """
+    if not LANGSMITH_AVAILABLE:
+        logger.error("LangSmith not available")
+        return
+
+    client = Client()
+
+    logger.info(f"Syncing from queue '{queue_name}' to dataset '{dataset_name}'")
+
+    try:
+        # Get runs with feedback marked as reviewed
+        runs = list(
+            client.list_runs(
+                project_name=DEFAULT_PROJECT,
+                filter='eq(feedback_key, "needs_review") and eq(feedback_score, 0.0)',  # Score 0 = reviewed
+                limit=100,
+            )
+        )
+
+        if not runs:
+            logger.info("No reviewed traces found in queue")
+            return
+
+        # Ensure dataset exists
+        try:
+            dataset = client.read_dataset(dataset_name=dataset_name)
+        except Exception:
+            logger.info(f"Creating dataset: {dataset_name}")
+            dataset = client.create_dataset(
+                dataset_name=dataset_name,
+                description="Gold standard evaluation dataset from UAT reviews",
+            )
+
+        # Add reviewed runs to dataset
+        added_count = 0
+        for run in runs:
+            try:
+                # Get human annotation from feedback
+                feedbacks = list(client.list_feedback(run_ids=[run.id]))
+
+                # Extract score and comment
+                human_score = None
+                reviewer_notes = ""
+                for feedback in feedbacks:
+                    if feedback.key == "human_quality_score":
+                        human_score = feedback.score
+                    if feedback.key == "reviewer_notes":
+                        reviewer_notes = feedback.comment or ""
+
+                # Create dataset example with reference output
+                client.create_example(
+                    dataset_id=dataset.id,
+                    inputs=run.inputs,
+                    outputs=run.outputs,
+                    metadata={
+                        "human_score": human_score,
+                        "reviewer_notes": reviewer_notes,
+                        "original_run_id": str(run.id),
+                        "review_date": datetime.utcnow().isoformat(),
+                        "source": "annotation_queue",
+                        "module": run.extra.get("metadata", {}).get(
+                            "module", "unknown"
+                        ),
+                    },
+                )
+
+                added_count += 1
+                logger.info(f"Added run {run.id} to dataset")
+
+            except Exception as e:
+                logger.warning(f"Failed to add run {run.id}: {e}")
+
+        logger.success(f"✅ Synced {added_count} examples from queue to {dataset_name}")
+
+    except Exception as e:
+        logger.error(f"Error syncing from queue: {e}")
+
+
+# =============================================================================
 # CLI
 # =============================================================================
 
@@ -443,8 +535,25 @@ def main():
         action="store_true",
         help="Preview changes without applying them",
     )
+    parser.add_argument(
+        "--from-queue",
+        action="store_true",
+        help="Sync from annotation queue instead of general traces",
+    )
+    parser.add_argument(
+        "--queue-name",
+        default="uat-review-queue",
+        help="Annotation queue name (default: uat-review-queue)",
+    )
 
     args = parser.parse_args()
+
+    # If syncing from queue, use dedicated function
+    if args.from_queue:
+        sync_reviewed_traces_from_queue(
+            queue_name=args.queue_name, dataset_name=args.dataset
+        )
+        return
 
     # Parse categories
     categories = None

@@ -1,0 +1,111 @@
+name: Pre-Deployment Evaluation
+
+on:
+    pull_request:
+        types: [labeled]
+        # Trigger when PR labeled "ready-to-deploy"
+
+permissions:
+    contents: read
+    pull-requests: write
+    issues: write
+
+jobs:
+    evaluate:
+        runs-on: ubuntu-latest
+        if: contains(github.event.pull_request.labels.*.name, 'ready-to-deploy')
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Install dependencies
+              run: |
+                  pip install -r requirements.txt
+                  pip install langsmith agentevals
+
+            - name: Run baseline evaluation
+              env:
+                  LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+                  LANGCHAIN_TRACING_V2: "true"
+                  TRACE_ENVIRONMENT: evaluation
+                  MODEL_VERSION: ${{ github.sha }}
+              run: |
+                  python support/scripts/evaluation/baseline_runner.py \
+                    --mode code-chef \
+                    --tasks support/scripts/evaluation/sample_tasks.json \
+                    --output evaluation-results.json \
+                    --store-db
+
+            - name: Check for regressions
+              id: regression_check
+              run: |
+                  python support/scripts/evaluation/detect_regression.py \
+                    --results evaluation-results.json \
+                    --threshold 0.05 \
+                    --output regression-report.json
+
+            - name: Comment results on PR
+              uses: actions/github-script@v7
+              if: always()
+              with:
+                  script: |
+                      const fs = require('fs');
+
+                      let results;
+                      try {
+                        results = JSON.parse(fs.readFileSync('evaluation-results.json', 'utf8'));
+                      } catch (e) {
+                        results = { error: 'Failed to load evaluation results' };
+                      }
+
+                      let regressionReport;
+                      try {
+                        regressionReport = JSON.parse(fs.readFileSync('regression-report.json', 'utf8'));
+                      } catch (e) {
+                        regressionReport = { status: 'unknown' };
+                      }
+
+                      const passed = regressionReport.status === 'passed';
+                      const emoji = passed ? '✅' : '⚠️';
+
+                      const comment = `## ${emoji} Pre-Deployment Evaluation Results\n\n` +
+                        `**Status**: ${regressionReport.status || 'unknown'}\n\n` +
+                        `### Metrics\n` +
+                        `- **Accuracy**: ${results.accuracy?.toFixed(2) || 'N/A'}\n` +
+                        `- **MCP Awareness**: ${results.mcp_awareness?.toFixed(2) || 'N/A'}\n` +
+                        `- **Routing Efficiency**: ${results.routing_efficiency?.toFixed(2) || 'N/A'}\n` +
+                        `- **Latency (P95)**: ${results.latency_p95?.toFixed(2) || 'N/A'}s\n\n` +
+                        `### Recommendation\n` +
+                        `${passed ? '✅ **Safe to deploy** - No regressions detected' : '⚠️ **Manual review required** - Potential regressions detected'}\n\n` +
+                        `${regressionReport.details ? `#### Details\n${regressionReport.details}\n\n` : ''}` +
+                        `<details>\n<summary>View full evaluation results</summary>\n\n` +
+                        `\`\`\`json\n${JSON.stringify(results, null, 2)}\n\`\`\`\n</details>`;
+
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: comment
+                      });
+
+            - name: Fail if regressions detected
+              if: steps.regression_check.outputs.status == 'failed'
+              run: |
+                  echo "❌ Regressions detected - review required before deployment"
+                  exit 1
+
+            - name: Upload evaluation artifacts
+              uses: actions/upload-artifact@v4
+              if: always()
+              with:
+                  name: evaluation-results
+                  path: |
+                      evaluation-results.json
+                      regression-report.json
+                  retention-days: 30
