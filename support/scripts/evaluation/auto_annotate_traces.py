@@ -246,6 +246,58 @@ async def export_for_training(trace, metrics: Dict[str, float]):
         json.dump(training_example, f, indent=2)
 
 
+def auto_populate_annotation_queue():
+    """Add uncertain traces to review queue automatically."""
+    if not LANGSMITH_AVAILABLE:
+        print("❌ LangSmith not available")
+        return
+
+    client = Client()
+
+    # Query traces from last 24 hours with low confidence
+    end_time = datetime.utcnow()
+    start_time = end_time - timedelta(days=1)
+
+    print("🔍 Searching for uncertain traces...")
+
+    try:
+        traces = list(
+            client.list_runs(
+                project_name="code-chef-production",
+                filter="lt(metadata.intent_confidence, 0.75)",
+                start_time=start_time,
+                end_time=end_time,
+                limit=50,
+            )
+        )
+
+        if not traces:
+            print("ℹ️  No uncertain traces found in last 24 hours")
+            return
+
+        # Add to annotation queue
+        queue_name = "uat-review-queue"
+        added_count = 0
+
+        for trace in traces:
+            try:
+                client.create_feedback(
+                    run_id=trace.id,
+                    key="needs_review",
+                    score=1.0,
+                    comment=f"Low confidence: {trace.extra.get('metadata', {}).get('intent_confidence', 'N/A')}",
+                )
+                added_count += 1
+            except Exception as e:
+                print(f"⚠️  Failed to flag trace {trace.id}: {e}")
+
+        print(f"✅ Flagged {added_count} traces for review in {queue_name}")
+        print(f"📊 View queue: https://smith.langchain.com/annotation-queues")
+
+    except Exception as e:
+        print(f"❌ Error querying traces: {e}")
+
+
 if __name__ == "__main__":
     import argparse
 
@@ -256,7 +308,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--experiment", type=str, help="Specific experiment ID to annotate"
     )
+    parser.add_argument(
+        "--populate-queue",
+        action="store_true",
+        help="Populate annotation queue with uncertain traces",
+    )
 
     args = parser.parse_args()
 
-    asyncio.run(annotate_recent_traces(days=args.days, experiment_id=args.experiment))
+    if args.populate_queue:
+        auto_populate_annotation_queue()
+    else:
+        asyncio.run(
+            annotate_recent_traces(days=args.days, experiment_id=args.experiment)
+        )
