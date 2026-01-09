@@ -35,7 +35,8 @@
         "hfloveyy.langgraphv",
         "appsmithery.vscode-devtools-copilot",
         "ms-vscode.powershell",
-        "appsmithery.vscode-codechef"
+        "appsmithery.vscode-codechef",
+        "Anthropic.claude-code"
       ]
     }
   }
