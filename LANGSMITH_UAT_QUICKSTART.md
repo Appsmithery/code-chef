@@ -67,14 +67,60 @@ python support/scripts/evaluation/create_annotation_queue.py
 📊 URL: https://smith.langchain.com/annotation-queues/<queue-id>
 
 ⚠️  Manual setup required in LangSmith UI:
-1. Go to Annotation Queues → uat-review-queue → Rules
-2. Add filters:
-   - metadata.intent_confidence < 0.75
-   - errors IS NOT NULL
-   - latency_ms > 5000
-3. Set sampling rate: 20%
-4. Enable auto-population
+See "Step 2.5: Set Up Automation Rules" below for detailed instructions
 ```
+
+### Step 2.5: Set Up Automation Rules to Populate Queue
+
+After creating the annotation queue, you need to configure **automation rules** to automatically route traces to the queue for review.
+
+**Navigation:**
+1. Go to LangSmith → **Tracing Projects**
+2. Select your project (e.g., `code-chef-production`)
+3. Click the **Automations** tab
+4. Click **+ New** → **New Automation**
+
+**Create Three Automation Rules:**
+
+#### Rule 1: Low Confidence Traces
+- **Name**: "UAT - Low Confidence Review"
+- **Filter**: `metadata.intent_confidence < 0.75`
+- **Sampling Rate**: `0.2` (20% of matching traces)
+- **Action**: Add to annotation queue → `uat-review-queue`
+- **Backfill**: Optional - select start date if you want to review historical traces
+
+#### Rule 2: Error Traces
+- **Name**: "UAT - Error Review"
+- **Filter**: `error IS NOT NULL`
+- **Sampling Rate**: `0.2` (20% of error traces)
+- **Action**: Add to annotation queue → `uat-review-queue`
+- **Backfill**: Optional
+
+#### Rule 3: High Latency Traces
+- **Name**: "UAT - Latency Review"
+- **Filter**: `latency_ms > 5000`
+- **Sampling Rate**: `0.2` (20% of slow traces)
+- **Action**: Add to annotation queue → `uat-review-queue`
+- **Backfill**: Optional
+
+**Configure Annotation Rubric:**
+
+After setting up automation rules, configure the annotation rubric:
+1. Go to **Annotation Queues** → `uat-review-queue`
+2. Edit the **Annotation Rubric** section (shown in your screenshots)
+3. Add **Instructions** for reviewers:
+   ```
+   Review traces for:
+   - Correctness of agent response
+   - Appropriate MCP tool usage
+   - Output format quality
+   - Error handling
+   ```
+4. Add **Feedback** keys:
+   - `correctness` (Score 0-1): "Is the response correct?"
+   - `tool_usage` (Score 0-1): "Are MCP tools used appropriately?"
+   - `format_quality` (Score 0-1): "Is the output well-formatted?"
+   - `notes` (Text): "Additional observations"
 
 ### Step 3: Configure Online Evaluators in LangSmith UI
 
