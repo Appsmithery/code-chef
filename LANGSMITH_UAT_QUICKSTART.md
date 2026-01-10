@@ -53,6 +53,40 @@ pip install langsmith agentevals openevals
 python -c "from langsmith import Client; Client()"
 ```
 
+---
+
+## 🔍 Understanding Annotation vs. Metadata Filtering
+
+**Common Confusion**: "How do I annotate `intent_confidence`?"
+
+**Answer**: You don't! Here's how it works:
+
+1. **Metadata Filtering** (Automation Rules):
+   - Filter: `metadata.intent_confidence < 0.75` → Selects traces WITH low confidence
+   - This is automatic - no manual annotation needed
+2. **What You Actually Annotate** (In the Queue):
+
+   - Correctness: "Was the agent response correct?" → Score 0-1
+   - Routing Quality: "Was the routing appropriate?" → Score 0-1
+   - Tool Usage: "Were tools used well?" → Score 0-1
+   - Notes: "What could be improved?" → Free text
+
+3. **Workflow**:
+
+   ```
+   Trace arrives with metadata.intent_confidence = 0.65
+   → Automation rule matches (< 0.75)
+   → Trace added to annotation queue
+   → You review the trace and score its QUALITY (0-1)
+   → NOT scoring the intent_confidence value itself!
+   ```
+
+4. **Where to See Metadata**:
+   - In the annotation UI, click the **"Metadata"** tab
+   - This shows why the trace was flagged, but you're scoring the trace quality
+
+---
+
 ### Step 2: Create Annotation Queue
 
 ```bash
@@ -75,6 +109,7 @@ See "Step 2.5: Set Up Automation Rules" below for detailed instructions
 After creating the annotation queue, you need to configure **automation rules** to automatically route traces to the queue for review.
 
 **Navigation:**
+
 1. Go to LangSmith → **Tracing Projects**
 2. Select your project (e.g., `code-chef-production`)
 3. Click the **Automations** tab
@@ -83,44 +118,74 @@ After creating the annotation queue, you need to configure **automation rules** 
 **Create Three Automation Rules:**
 
 #### Rule 1: Low Confidence Traces
+
 - **Name**: "UAT - Low Confidence Review"
 - **Filter**: `metadata.intent_confidence < 0.75`
-- **Sampling Rate**: `0.2` (20% of matching traces)
+- **Sampling Rate**: `1.0` (100% during initial training phase, reduce to 0.2 after Week 2)
 - **Action**: Add to annotation queue → `uat-review-queue`
 - **Backfill**: Optional - select start date if you want to review historical traces
 
 #### Rule 2: Error Traces
+
 - **Name**: "UAT - Error Review"
 - **Filter**: `error IS NOT NULL`
-- **Sampling Rate**: `0.2` (20% of error traces)
+- **Sampling Rate**: `1.0` (100% during initial training phase, reduce to 0.2 after Week 2)
 - **Action**: Add to annotation queue → `uat-review-queue`
 - **Backfill**: Optional
 
 #### Rule 3: High Latency Traces
+
 - **Name**: "UAT - Latency Review"
 - **Filter**: `latency_ms > 5000`
-- **Sampling Rate**: `0.2` (20% of slow traces)
+- **Sampling Rate**: `0.5` (50% during initial training phase, reduce to 0.2 after Week 2)
 - **Action**: Add to annotation queue → `uat-review-queue`
 - **Backfill**: Optional
+
+**⚠️ Important**: Start with **100% sampling** (1.0) for low-confidence and error traces during Week 1-2 to build a robust training dataset. Reduce to 20% (0.2) once you have 50+ annotated examples.
 
 **Configure Annotation Rubric:**
 
 After setting up automation rules, configure the annotation rubric:
+
 1. Go to **Annotation Queues** → `uat-review-queue`
 2. Edit the **Annotation Rubric** section (shown in your screenshots)
 3. Add **Instructions** for reviewers:
+
    ```
-   Review traces for:
-   - Correctness of agent response
-   - Appropriate MCP tool usage
-   - Output format quality
-   - Error handling
+   Review this trace to assess:
+   1. Was the agent routing correct? (supervisor → appropriate agent)
+   2. Was the final output high quality?
+   3. Were MCP tools used appropriately?
+
+   This trace was flagged because: [Check the metadata.intent_confidence or error fields]
    ```
+
 4. Add **Feedback** keys:
-   - `correctness` (Score 0-1): "Is the response correct?"
-   - `tool_usage` (Score 0-1): "Are MCP tools used appropriately?"
-   - `format_quality` (Score 0-1): "Is the output well-formatted?"
-   - `notes` (Text): "Additional observations"
+   - `correctness` (Score 0-1): "Was the agent response correct and helpful?"
+   - `routing_quality` (Score 0-1): "Was the supervisor routing decision appropriate?"
+   - `tool_usage` (Score 0-1): "Were MCP tools used effectively?"
+   - `notes` (Text): "What could be improved? What went wrong?"
+
+**How to Access Metadata While Annotating**:
+
+- In the annotation interface (right side), click the **"Metadata"** tab to see `intent_confidence`, `experiment_group`, etc.
+- This helps you understand WHY the trace was flagged
+- Your annotation scores (0-1) assess the QUALITY of the trace, not the metadata values
+
+**Example Annotation Workflow**:
+
+```
+1. Trace appears in queue (filtered by intent_confidence < 0.75)
+2. Click trace to review
+3. Review the Run → See what the agent did
+4. Check Metadata tab → See intent_confidence = 0.68 (why it was flagged)
+5. Score the trace quality:
+   - correctness: 0.8 (mostly correct, minor issues)
+   - routing_quality: 0.9 (supervisor chose right agent)
+   - tool_usage: 0.7 (could have used more MCP tools)
+   - notes: "Agent should have used filesystem tools for file inspection"
+6. Click "Submit" → Trace annotated!
+```
 
 ### Step 3: Configure Online Evaluators in LangSmith UI
 
