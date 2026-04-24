@@ -145,19 +145,23 @@ git push origin main
 
 ### Services
 
-| Service      | Port | Container Name        |
-| ------------ | ---- | --------------------- |
-| orchestrator | 8001 | deploy-orchestrator-1 |
-| gateway-mcp  | 8000 | deploy-gateway-mcp-1  |
-| rag-context  | 8007 | deploy-rag-context-1  |
-| state        | 8008 | deploy-state-1        |
-| postgres     | 5432 | deploy-postgres-1     |
+| Service      | Internal Port | Public Access |
+| ------------ | ------------- | ------------- |
+| caddy        | 80, 443       | Public        |
+| orchestrator | 8001          | Via Caddy     |
+| rag-context  | 8007          | Via Caddy     |
+| state        | 8008          | Via Caddy     |
+| agent-registry | 8009        | Internal only |
+| langgraph    | 8010          | Via Caddy     |
+| postgres     | 5432          | Internal only |
+| redis        | 6379          | Internal only |
 
 ### Networking
 
 - **Bridge Network:** `devtools-network`
 - **Internal DNS:** Services resolve by name (e.g., `postgres:5432`)
-- **External Access:** Ports exposed to 0.0.0.0
+- **External Access:** Only Caddy publishes host ports (`80` and `443`)
+- **Firewall:** Block direct public access to Redis, Postgres, and internal API ports. See [Security Remediation](../operations/SECURITY_REMEDIATION.md).
 
 ---
 
@@ -270,6 +274,9 @@ curl https://codechef.appsmithery.co/rag/health
 ```bash
 # Check service status
 ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose ps"
+
+# Confirm only Caddy publishes host ports
+ssh do-codechef-droplet "docker ps --format 'table {{.Names}}\t{{.Ports}}'"
 
 # View logs
 ssh do-codechef-droplet "cd /opt/Dev-Tools/deploy && docker compose logs orchestrator --tail=50"

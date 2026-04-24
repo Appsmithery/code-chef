@@ -276,38 +276,56 @@ function Deploy-QuickRestart {
 
 function Test-HealthEndpoints {
     Write-Step "Validating service health"
-    
+
     Write-Info "Waiting 15 seconds for services to stabilize..."
     Start-Sleep -Seconds 15
-    
-    # Core services for LangGraph single-orchestrator architecture
-    # Gateway-MCP deprecated Dec 2025 - see _archive/gateway-deprecated-2025-12-03/
-    $endpoints = @(
-        @{Port=8001; Name="Orchestrator"},
-        @{Port=8007; Name="RAG-Context"},
-        @{Port=8008; Name="State-Persistence"},
-        @{Port=8009; Name="Agent-Registry"},
-        @{Port=8010; Name="LangGraph"}
+
+    # Public traffic should enter only through Caddy on 80/443. Internal services
+    # are no longer published on host ports.
+    $publicEndpoints = @(
+        @{Url="https://codechef.appsmithery.co/api/health"; Name="Orchestrator"},
+        @{Url="https://codechef.appsmithery.co/rag/health"; Name="RAG-Context"},
+        @{Url="https://codechef.appsmithery.co/state/health"; Name="State-Persistence"},
+        @{Url="https://codechef.appsmithery.co/langgraph/health"; Name="LangGraph"}
     )
-    
+
     $healthyCount = 0
-    foreach ($ep in $endpoints) {
-        $health = ssh $DROPLET "curl -s http://localhost:$($ep.Port)/health 2>/dev/null"
-        
+    foreach ($ep in $publicEndpoints) {
+        $health = ssh $DROPLET "curl -fsS --max-time 10 $($ep.Url) 2>/dev/null"
+
         if ($health -match '"status"\s*:\s*"(ok|healthy)"') {
-            Write-Host "  [OK] $($ep.Name) (port $($ep.Port))" -ForegroundColor Green
+            Write-Host "  [OK] $($ep.Name) via HTTPS" -ForegroundColor Green
             $healthyCount++
         } else {
-            Write-Host "  [FAIL] $($ep.Name) (port $($ep.Port))" -ForegroundColor Red
+            Write-Host "  [FAIL] $($ep.Name) via HTTPS" -ForegroundColor Red
         }
     }
-    
+
+    $internalChecks = @(
+        @{Service="agent-registry"; Name="Agent-Registry"; Command="curl -fsS --max-time 10 http://localhost:8009/health"; Pattern='"status"\s*:\s*"(ok|healthy)"'},
+        @{Service="redis"; Name="Redis"; Command="redis-cli ping"; Pattern='PONG'},
+        @{Service="postgres"; Name="PostgreSQL"; Command="pg_isready -U devtools -d devtools"; Pattern='accepting connections'}
+    )
+
+    foreach ($check in $internalChecks) {
+        $health = ssh $DROPLET "cd $DEPLOY_PATH/deploy && docker compose exec -T $($check.Service) $($check.Command) 2>/dev/null"
+
+        if ($health -match $check.Pattern) {
+            Write-Host "  [OK] $($check.Name) internal" -ForegroundColor Green
+            $healthyCount++
+        } else {
+            Write-Host "  [FAIL] $($check.Name) internal" -ForegroundColor Red
+        }
+    }
+
+    $expectedCount = $publicEndpoints.Count + $internalChecks.Count
+
     Write-Host ""
-    if ($healthyCount -eq $endpoints.Count) {
+    if ($healthyCount -eq $expectedCount) {
         Write-Success "All $healthyCount services healthy"
         return $true
     } else {
-        Write-Failure "$($endpoints.Count - $healthyCount) service(s) unhealthy"
+        Write-Failure "$($expectedCount - $healthyCount) service(s) unhealthy"
         return $false
     }
 }

@@ -9,8 +9,6 @@ services:
     build:
       context: ..
       dockerfile: agent_orchestrator/Dockerfile
-    ports:
-      - "8001:8001"
     environment:
       - AGENT_NAME=orchestrator
       - PORT=8001
@@ -85,8 +83,6 @@ services:
     build:
       context: ..
       dockerfile: shared/services/rag/Dockerfile
-    ports:
-      - "8007:8007"
     environment:
       - SERVICE_NAME=rag-context
     env_file:
@@ -127,8 +123,6 @@ services:
     build:
       context: ..
       dockerfile: shared/services/state/Dockerfile
-    ports:
-      - "8008:8008"
     environment:
       - SERVICE_NAME=state-persistence
       - POSTGRES_HOST=postgres
@@ -177,8 +171,6 @@ services:
     build:
       context: ..
       dockerfile: shared/services/agent-registry/Dockerfile
-    ports:
-      - "8009:8009"
     environment:
       - PORT=8009
       - POSTGRES_HOST=postgres
@@ -226,8 +218,6 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:16-alpine
-    ports:
-      - "5432:5432"
     environment:
       - POSTGRES_DB=devtools
       - POSTGRES_USER=devtools
@@ -274,8 +264,6 @@ services:
   # Redis for Event Bus & Caching
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     command: redis-server --appendonly yes --appendfsync everysec --save 900 1 --save 300 10 --save 60 10000 --maxmemory 64mb --maxmemory-policy allkeys-lru
     networks:
       - devtools-network
@@ -309,8 +297,6 @@ services:
     build:
       context: ..
       dockerfile: shared/services/langgraph/Dockerfile
-    ports:
-      - "8010:8010"
     environment:
       - PORT=8010
       - DB_HOST=postgres
